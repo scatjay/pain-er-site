@@ -395,7 +395,7 @@
   function buildPrompt(p, ctx) {
     ctx = ctx || {};
     var lines = [];
-    lines.push('你現在扮演成大醫院急診的「' + p.name + '」（' + p.title.replace(/（草案）/, '') + '）。我是受醫院委託的 UX 研究員，正在調查「' + (ctx.topic || '衛教簡訊') + '」的使用情形。這是教學用的模擬訪談。');
+    lines.push('你現在扮演呼呼醫院急診的「' + p.name + '」（' + p.title.replace(/（草案）/, '') + '）。我是受醫院委託的 UX 研究員，正在調查「' + (ctx.topic || '衛教簡訊') + '」的使用情形。這是教學用的模擬訪談。');
     lines.push('請用繁體中文、口語回答，一次最多三句話。');
     lines.push('');
     lines.push('【你是誰】' + p.bio);

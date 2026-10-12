@@ -25,7 +25,8 @@
 
   function furnitureIcon(f) { return LABEL_ICON[f.label] || TYPE_ICON[f.type] || '▪️'; }
 
-  /* opts：{ width, highlight:房間id, you:房間id, eventRooms:[id], dots:[{x,y,kind,label}], showFurniture, showPins, pins:[clueId], clickable }
+  /* opts.visited:[房間id]＝去過的房間，左上角畫一個綠底白勾（10-13）。
+     opts：{ width, highlight:房間id, you:房間id, eventRooms:[id], dots:[{x,y,kind,label}], showFurniture, showPins, pins:[clueId], clickable }
      dots 的 x,y 是全圖座標（與 layout 的房間座標同一個系統） */
   var SHORT = { consultA: '診察一', consultB: '診察二', ct: '斷層', staff: '休息室', admin: '行政', ped: '兒科', service: '服務台', lobby: '掛號批價', discharge: '離院批價',
     pharmacy: '領藥', family: '家屬區', waiting: '候診區', triage: '檢傷', entrance: '入口', nurse: '護理站', resus: '急救', bays: '治療區', obs: '觀察室',
@@ -43,6 +44,7 @@
     out.push('<svg xmlns="http://www.w3.org/2000/svg" viewBox="' + num(x0 - pad) + ' ' + num(y0 - pad) + ' ' + num(W) + ' ' + num(H) + '" width="' + width + '" height="' + height + '" role="img" aria-label="急診室平面小地圖" font-family="\'Noto Sans TC\',\'Microsoft JhengHei\',sans-serif">');
     out.push('<rect x="' + num(x0 - pad) + '" y="' + num(y0 - pad) + '" width="' + num(W) + '" height="' + num(H) + '" fill="#fffdf5"/>');
     var event = {}; (opts.eventRooms || []).forEach(function (id) { event[id] = true; });
+    var seen = {}; (opts.visited || []).forEach(function (id) { seen[id] = true; });
     rooms.forEach(function (r) {
       var isHall = r.type === 'hall' || r.type === 'outside';
       var hl = opts.highlight === r.id || opts.you === r.id;
@@ -67,6 +69,11 @@
           out.push('<text x="' + (r.x + 14) + '" y="' + num(r.y + 8 + fs + 3) + '" font-size="' + num(fs - 2) + '">' + icon + '</text>');
           out.push('<text x="' + num(r.x + 14 + fs + 6) + '" y="' + num(r.y + 8 + fs + 3) + '" font-size="' + num(fs) + '" font-weight="900" fill="#1e1e1e">' + esc(nm) + '</text>');
         }
+      }
+      if (seen[r.id] && !isHall) {
+        var vr = compact ? 30 : 15 * F, vx = compact ? r.x + vr + 12 : r.x + r.w - vr - 10, vy = compact ? r.y + vr + 12 : r.y + r.h - vr - 10;
+        out.push('<g data-visited="' + esc(r.id) + '"><title>去過了</title><circle cx="' + num(vx) + '" cy="' + num(vy) + '" r="' + num(vr) + '" fill="#2f9e44" stroke="#1e1e1e" stroke-width="' + num(vr * .15) + '"/>' +
+          '<path d="M' + num(vx - vr * .48) + ' ' + num(vy + vr * .04) + ' l' + num(vr * .32) + ' ' + num(vr * .36) + ' l' + num(vr * .62) + ' ' + num(-vr * .72) + '" fill="none" stroke="#fff" stroke-width="' + num(vr * .26) + '" stroke-linecap="round" stroke-linejoin="round"/></g>');
       }
       out.push('</g>');
     });

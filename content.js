@@ -6,7 +6,7 @@
 window.ERG = (function(){
 
 var PHASES = [
-  { id:0, name:'進場',       minutes:3,  hint:'讀任務：你是受成大醫院委託的 UX 研究員，要弄清楚「衛教簡訊為什麼沒被看懂」。這一輪還不能提問，先看地圖。', markers:false, interview:false },
+  { id:0, name:'進場',       minutes:3,  hint:'讀任務：你是受呼呼醫院委託的 UX 研究員，要弄清楚「衛教簡訊為什麼沒被看懂」。這一輪還不能提問，先看地圖。', markers:false, interview:false },
   { id:1, name:'勘查',       minutes:10, hint:'只看，不問。點地圖上的線索卡閱讀，每人至少留 3 張證據或疑問標記。', markers:true,  interview:false },
   { id:2, name:'訪談一',     minutes:15, hint:'向關係人訪談（複製指令到 Gemini）。每人至少訪談兩位，把原話記成「訪談」標記。', markers:true, interview:true },
   { id:3, name:'對照與整理', minutes:10, hint:'全組把速記擺在一起，找出矛盾與缺口，寫「矛盾」「假設」標記。', markers:true, interview:false },
@@ -154,7 +154,7 @@ function drawState(persona, rnd){
 
 function buildPrompt(persona, st){
   return [
-    '你現在扮演成大醫院急診相關人員「' + persona.name.replace(/（草案）/,'') + '」。我是受醫院委託的 UX 研究員，正在調查「衛教簡訊」的使用情形。這是教學用的模擬訪談。',
+    '你現在扮演呼呼醫院急診相關人員「' + persona.name.replace(/（草案）/,'') + '」。我是受醫院委託的 UX 研究員，正在調查「衛教簡訊」的使用情形。這是教學用的模擬訪談。',
     '請用繁體中文、口語、簡短回答，一次最多三句話。',
     '',
     '【你的說話方式】' + persona.speech,

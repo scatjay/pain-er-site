@@ -1,4 +1,4 @@
-/* 問題回報與建議：學生在遊戲裡按「💬 回報」，內容連同當下狀態（房間、位置、時間、版本、最近的錯誤）存起來。
+/* 問題回報與建議：學生在遊戲裡按「🐛 回報」，內容連同當下狀態（房間、位置、時間、版本、最近的錯誤）存起來。
    目前存在這台電腦的瀏覽器（本機版）；老師後台與跨電腦收集要等新的獨立 Firebase 專案。純函式與介面分開，方便測試。 */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
@@ -55,7 +55,7 @@
     }
     function open() {
       var mineList = APP.me.sid ? mine(APP.storage, APP.me.sid) : [];
-      var html = '<div class="row"><b style="flex:1">回報問題或建議</b><button class="ghost" id="fbClose">關閉</button></div>' +
+      var html = '<div class="row"><b style="flex:1">🐛 回報問題或建議</b><button class="ghost" id="fbClose">關閉</button></div>' +
         '<div class="row" style="margin:8px 0" id="fbKinds">' + Object.keys(KINDS).map(function (k, i) { return '<button class="pill ' + (i === 0 ? 'on' : '') + '" data-k="' + k + '">' + KINDS[k] + '</button>'; }).join('') + '</div>' +
         '<label>寫下來（最多 ' + MAX + ' 字）<textarea id="fbText" maxlength="' + MAX + '" placeholder="例如：點牌子沒反應、走到一半卡住、這句話看不懂、希望可以……"></textarea></label>' +
         '<label style="display:flex;gap:8px;align-items:center;margin-top:6px"><input type="checkbox" id="fbState" checked style="width:auto"> 附上目前的畫面狀態（房間、位置、時間，方便老師重現）</label>' +

@@ -54,7 +54,7 @@
     cur.slow = setInterval(slowTick, 1500);
     DB.appendEvent(code, { kind: 'join', env: sid });
     setLoc(player.loc || 'entrance', true);
-    player.visited = player.visited || [player.loc || 'entrance'];
+    player.visited = player.visited || [player.loc || 'entrance'];player.roomsSeen=player.roomsSeen||{};(player.visited||[]).forEach(function(id){player.roomsSeen[id]=true;});   /* roomsSeen：去過的每一間（visited 只留最近 8 間） */
     buildTravelControls();
     updateSoundBtn();
   };
@@ -342,7 +342,7 @@
     if(cur.walk && cur.stageMode==='room'){cur.focus={x:cur.me.x-280,y:cur.me.y-190,w:560,h:380};fitView(true);}
     if(w.index>=w.points.length){var target=w.target;cur.walk=null;cur.stageMode='room';cur.focus=null;setLoc(target,true);refreshStageMode();DB.appendEvent(cur.code,{kind:'move',env:APP.me.sid,to:target});persist(true);}
   }
-  function rememberRoom(id){var v=cur.player.visited||[];cur.player.visited=[id].concat(v.filter(function(x){return x!==id;})).slice(0,8);}
+  function rememberRoom(id){var v=cur.player.visited||[];cur.player.visited=[id].concat(v.filter(function(x){return x!==id;})).slice(0,8);(cur.player.roomsSeen=cur.player.roomsSeen||{})[id]=true;}
   function buildTravelControls(){
     var stage=$('stage'), bar=document.getElementById('travelBar');
     if(!bar){bar=document.createElement('div');bar.id='travelBar';stage.appendChild(bar);}
@@ -423,7 +423,8 @@
       el.className = 'tok ' + (moving ? 'walk' : 'idle'); el.style.setProperty('--anim-speed', speed + 's'); el.style.zIndex = String(DEPTH ? DEPTH.z(pos.y) : Math.round(pos.y));
       el.style.setProperty('--walk-duration', (0.5 / speed) + 's'); el.style.setProperty('--idle-duration', (2.4 / speed) + 's');
       el.classList.toggle('off', !vis[ent.id]); el.style.opacity = !vis[ent.id] ? '0' : (here || inRoom === null ? '1' : '.7'); el.style.pointerEvents = vis[ent.id] ? 'auto' : 'none';
-      var focused=cur.selNpc===id||el.matches(':hover');var nm = el.querySelector('.nm'); nm.textContent = here ? ent.name : ''; nm.style.display = here&&focused ? 'inline-block' : 'none'; nm.className = 'nm ' + (ent.kind === 'bot' ? '' : av.level);
+      var focused=cur.selNpc===id||el.matches(':hover')||ent.kind==='patient';var nm = el.querySelector('.nm');   /* 10-13 楊老師：病患都加註名字 ⇒ 病患的名牌一直顯示，其他人照舊（選到或滑鼠移上去才有） */
+       nm.textContent = here ? ent.name : ''; nm.style.display = here&&focused ? 'inline-block' : 'none'; nm.className = 'nm ' + (ent.kind === 'bot' ? '' : av.level);
       var bw = el.querySelector('.bubWrap'), m = here ? cur.world.mutterFor(ent, pos, t) : null;
       bw.innerHTML = (pos.act && focused ? '<div class="act">' + esc(pos.act) + '</div>' : '') + (m&&focused ?   /* 10-12：「正在做什麼」只在滑到或選到這個人時顯示，平常不壓在物件上；現況條有同樣的資訊 */
          '<div class="bub ' + (m.kind === 'shout' ? 'shout' : (m.kind === 'thought' ? 'thought' : '')) + '">' + esc(m.text) + '</div>' : '');
@@ -618,7 +619,7 @@
     });
     dots.push({ x: cur.me.x, y: cur.me.y, kind: 'me' });
     var active = cur.world.sim.activeEvents(simMin).reduce(function (a, e) { return a.concat(e.rooms || []); }, []);
-    $('mm').innerHTML = MM.svg(LAYOUT, { compact:true,onlyMap:true,width:420, showFurniture: false, showPins: false, you: cur.player.loc, dots: dots, eventRooms: active, clickable: true });
+    $('mm').innerHTML = MM.svg(LAYOUT, { compact:true,onlyMap:true,width:420, showFurniture: false, showPins: false, you: cur.player.loc, dots: dots, eventRooms: active, clickable: true, visited: Object.keys(cur.player.roomsSeen || {}) });
     Array.prototype.forEach.call($('mm').querySelectorAll('[data-room]'), function (g) { g.onclick = function () { var id = g.getAttribute('data-room'); if (!/^hall|corridor|ambulance|street/.test(id)) startTravel(id); }; });
   }
   S.minimap = renderMinimap;

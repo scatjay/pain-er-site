@@ -244,7 +244,7 @@
     var mine = L.listMarkers(RM.markerEls());
     var html = '<div class="card" style="margin-top:0"><b>記一筆</b><div class="row" style="margin-top:6px">' + CARD_TYPES.map(function (t) { return '<button class="pill ' + ((pre.type || '便利貼') === t ? 'on' : '') + '" data-ct="' + t + '">' + t + '</button>'; }).join('') + '</div>' +
       '<div id="cardForm" style="margin-top:6px"></div></div>' +
-      '<div class="row"><button class="ghost" id="seeNb">看筆記本</button><button class="ghost" id="seeAll">回到全景</button></div><h2>筆記本裡的卡（' + mine.length + '）</h2>';
+      (cur().mobile ? '' : '<div class="row"><button class="ghost" id="seeNb">看筆記本</button><button class="ghost" id="seeAll">回到全景</button></div>') + '<h2>筆記本裡的卡（' + mine.length + '）</h2>';
     mine.forEach(function (m) { html += '<div class="card" style="padding:6px 10px;margin:6px 0;box-shadow:3px 3px 0 var(--ink)"><b>' + esc(m.id) + '</b> <span class="tag">' + esc(m.type) + '</span> <span class="muted" style="font-size:12px">' + (m.author === me() ? '我' : esc(m.author)) + '</span><div style="font-size:13px">' + esc(String(m.text || '').split('\n').slice(1).join(' ')) + '</div></div>'; });
     p.innerHTML = html;
     var type = pre.type || '便利貼';
@@ -272,8 +272,10 @@
     }
     form();
     Array.prototype.forEach.call(p.querySelectorAll('[data-ct]'), function (b) { b.onclick = function () { P.prefill = { type: b.dataset.ct }; renderCards(); }; });
-    $('seeNb').onclick = function () { RM.focusRect(window.ERG_LAYOUT.room('notebook')); };
-    $('seeAll').onclick = function () { RM.focusAll(); };
+    /* 10-13 楊老師：「按下回到全景沒有反應」。手機沒有畫布，這兩顆本來就是空的 ⇒ 手機不放；
+       電腦原本只有先按過「看筆記本」才看得出變化 ⇒ 改成跟頂列「⟲ 全景」同一件事（整張地圖）。 */
+    if ($('seeNb')) $('seeNb').onclick = function () { RM.focusRect(window.ERG_LAYOUT.room('notebook')); };
+    if ($('seeAll')) $('seeAll').onclick = function () { var b = $('fitBtn'); if (b) b.click(); else RM.focusAll(); };
   }
 
   /* ───── 結論 ───── */

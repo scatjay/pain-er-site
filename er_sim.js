@@ -106,6 +106,12 @@
       }
       return steps;
     }
+    /* 10-13 楊老師：「病患顯示都加註名字，用編號很難辨認」。原本是「病患07」。
+       名字只由流水號決定、不抽亂數（抽了會改掉整天的到院時間與路線）；53 與 120 互質，前 120 位不重複。
+       姓氏避開有設定的人物用過的（王、周、賴、林、陳、張、黃、李、楊）。 */
+    var PT_SURNAMES = ['吳', '蔡', '許', '鄭', '謝', '郭', '洪', '曾', '邱', '廖', '徐', '葉', '蘇', '莊', '呂', '江', '何', '羅', '高', '潘'];
+    var PT_TITLES = ['先生', '小姐', '太太', '伯伯', '阿姨', '大哥'], ambSeq = 0;
+    function patientName(n) { var k = (n * 53) % 120; return PT_SURNAMES[k % 20] + PT_TITLES[Math.floor(k / 20)]; }
     function patientRecord(fields, route) {
       var steps = buildSteps(route, fields.esi, fields.complaint, fields.mood, fields.appearSim);
       var id = fields.id;
@@ -133,7 +139,7 @@
         var cp = pick(matches.length ? matches : data.COMPLAINTS);
         var appears = hourStart + Math.floor(random() * 60);
         var person = { id: 'p-' + (generalSeq < 10 ? '0' : '') + generalSeq, persona: null,
-          name: '病患' + (generalSeq < 10 ? '0' : '') + generalSeq, esi: esi, complaint: cp.text,
+          name: patientName(generalSeq), esi: esi, complaint: cp.text,
           mood: pick(data.MOODS), phone: pick(data.PHONE_LEVELS), appearSim: appears };
         patients.push(patientRecord(person, getRoute(esi)));
       }
@@ -148,7 +154,7 @@
         while (first < base.length && base[first][0] !== 'BAY' && base[first][0] !== 'resus-1') first++;
         route = route.concat(base.slice(first));
         var id = 'amb-' + event.id + '-' + (i + 1);
-        patients.push(patientRecord({ id: id, persona: null, name: '病患' + id, esi: esi,
+        patients.push(patientRecord({ id: id, persona: null, name: patientName(generalSeq + (++ambSeq)), esi: esi,
           complaint: spawn.complaint || '急診病患', mood: null, phone: null, mode: 'ambulance',
           appearSim: event.start }, route));
       }
