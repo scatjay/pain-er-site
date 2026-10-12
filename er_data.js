@@ -100,7 +100,14 @@
           steps:[ ['guard-desk',0,'聽到亂喊'], ['entrance-mid',3,'上前勸離'], ['triage-desk',1,'架住對方'], ['street-gate',2,'把人架出大門'], ['guard-desk',1,'回崗位'] ], startAt:1 } } },
     { id:'E12', title:'連環車禍送來四位傷者', at:[960,1030], dur:40, rooms:['resus','bays','street'],
       busy:['er_doctor','nurse','triage_nurse'], spawn:{ esi:2, mode:'ambulance', complaint:'車禍外傷', count:4 }, effects:{ waitExtra:25 },
-      text:'連環車禍一次送來四位傷者，急救室和治療區全滿，候診區的人被告知要再等。' }
+      text:'連環車禍一次送來四位傷者，急救室和治療區全滿，候診區的人被告知要再等。' },
+    /* 社群語料來的三個事件（2026-10-12；出處見 npc_voice.js／docs/NPC行為設計_社群語料版.md），都不描寫暴力細節 */
+    { id:'E15', title:'縫合時保全幫忙按住小孩', at:[700,720], dur:12, rooms:['ped'], busy:['guard','nurse'],
+      text:'兒科診間在幫小米縫額頭，小孩掙扎，人手不夠，警衛被叫進去幫忙固定頭部；爸爸站在旁邊不知道該不該阻止。' },
+    { id:'E16', title:'沒帶健保卡要先自費', at:[800,830], dur:10, rooms:['lobby','discharge'], busy:['admin'],
+      text:'批價櫃台一位病人沒帶健保卡被告知要先自費九千多，聲音越來越大，櫃台人員一遍一遍解釋七天內補卡可以退。' },
+    { id:'E17', title:'家屬錄影被要求刪除', at:[860,890], dur:10, rooms:['consultA','corridor'], busy:['er_doctor','nurse'],
+      text:'診間裡一位家屬拿手機對著醫師錄影，護理師請他停止並刪除，雙方在門口僵持了幾分鐘。' }
   ];
 
   /* 指定時間出現的角色（含主角）。persona 對應 personas.js 的 id；route 為 null 表示依 esi 走一般路線。 */
