@@ -24,7 +24,8 @@
       });
       /* 連線狀態：給介面用（訪談面板看 daemon 心跳也靠它） */
       fdb.ref('.info/connected').on('value', function (s) { window.ERG_ONLINE_STATE = !!s.val(); data.fire('online'); });
-      fdb.ref('er/_daemon/heartbeat').on('value', function (s) { window.ERG_DAEMON_HB = Number(s.val() || 0); data.fire('daemon'); });
+      /* 代理程式節點很小：心跳、模型、liveNow（上課時段或老師手動開放才 true）。沒有 liveNow 欄位（舊版代理程式）視為開放 */
+      fdb.ref('er/_daemon').on('value', function (s) { var d = s.val() || {}; window.ERG_DAEMON_HB = Number(d.heartbeat || 0); window.ERG_LIVE_OPEN = d.liveNow === undefined ? true : !!d.liveNow; data.fire('daemon'); });
     } catch (e) { console.error('Firebase 啟動失敗，改用本機資料層', e); DB = data.DB; ONLINE = false; }
   })();
   var CASELIST = window.ERG_CASES.build(window.ERG, window.ERG_LAYOUT, window.ERG_PERSONAS, window.ERG_DATA).list;
@@ -226,6 +227,30 @@
   function joinCode(code) { try { $('lobbyErr').textContent = ''; openRoom(code); } catch (e) { $('lobbyErr').textContent = e.message; } }
   function openRoom(code) { window.ERG_ROOM.enter(code); }
   data.listeners.push(function (topic) { if (topic === 'lobby' && $('lobby').classList.contains('on')) renderLobby(); });
+
+  /* 成就：①頁面可見且在房間裡，每分鐘 playMin +1；②把自己的指標摘要寫到 er/{sess}/score/{sid}（小節點，全班可讀、排行用），內容沒變就不寫 */
+  var lastScoreJson = '';
+  function publishScore() {
+    var R = window.ERG_ROOM, c = R && R.cur, A = window.ERG_ACH, P = window.ERG_PANELS;
+    if (!ONLINE || !window.firebase || !c || !A || !APP.me.sid) return;
+    ensureScoreWatch();
+    var s = A.summary(c.player, P && P.achCtx ? P.achCtx() : {}); s.name = APP.me.name || APP.me.sid; s.cls = APP.me.cls || ''; s.t = Date.now();
+    var j = JSON.stringify([s.interviewees, s.rooms, s.cards, s.events, s.chatTurns, s.playMin, s.partners, s.conclusions, s.badges]);
+    if (j === lastScoreJson) return; lastScoreJson = j;
+    try { window.firebase.database().ref('er/' + APP.SESS + '/score/' + APP.me.sid).set(s); } catch (e) { if (window.console) console.warn('score 寫入失敗', e); }
+  }
+  window.ERG_PUBLISH_SCORE = publishScore;
+  setInterval(function () {
+    var R = window.ERG_ROOM, c = R && R.cur; if (!c || document.hidden) return;
+    c.player.playMin = (Number(c.player.playMin) || 0) + 1; if (R.persist) R.persist(true); publishScore();
+  }, 60000);
+  var scoreRef = null;
+  function ensureScoreWatch() {
+    if (scoreRef || !ONLINE || !window.firebase || !APP.me.sid) return;
+    scoreRef = window.firebase.database().ref('er/' + APP.SESS + '/score');
+    scoreRef.on('value', function (snap) { window.ERG_SCORES = snap.val() || {}; var R = window.ERG_ROOM; if (R && R.cur && R.cur.tab === 'ach' && window.ERG_PANELS) window.ERG_PANELS.renderAch(); });
+  }
+  window.ERG_ENSURE_SCORE_WATCH = ensureScoreWatch;
 
   window.__ERG_DEBUG = { APP: APP, DB: DB };
 })();

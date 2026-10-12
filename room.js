@@ -75,14 +75,14 @@
 
   /* ───── 頂端列 ───── */
   function buildTabs() {
-    var tabs = [['clue', '線索'], ['intv', '訪談'], ['cards', '筆記卡'], ['events', '事件簿'], ['concl', '結論'], ['disc', '討論'], ['cp', '檢核點']];
+    var tabs = [['clue', '線索'], ['intv', '訪談'], ['cards', '筆記卡'], ['events', '事件簿'], ['concl', '結論'], ['disc', '討論'], ['cp', '檢核點'], ['ach', '成就']];
     $('tabs').innerHTML = tabs.map(function (t) { return '<button data-t="' + t[0] + '" class="' + (t[0] === cur.tab ? 'on' : '') + '">' + t[1] + '</button>'; }).join('');
     Array.prototype.forEach.call($('tabs').children, function (b) { b.onclick = function () { S.switchTab(b.dataset.t); }; });
   }
   S.switchTab = function (t) {
     if (!cur) return; cur.tab = t; if (S.openSide) S.openSide();
     Array.prototype.forEach.call($('tabs').children, function (b) { b.classList.toggle('on', b.dataset.t === t); });
-    ['clue', 'intv', 'cards', 'events', 'concl', 'disc', 'cp'].forEach(function (n) { $('p-' + n).classList.toggle('on', n === t); });
+    ['clue', 'intv', 'cards', 'events', 'concl', 'disc', 'cp', 'ach'].forEach(function (n) { $('p-' + n).classList.toggle('on', n === t); });
     if (window.ERG_PANELS) window.ERG_PANELS.render(t);
   };
   function buildSpeed() {

@@ -13,7 +13,19 @@
   function isHost() { return String(cur().room.host) === String(me()); }
 
   P.renderAll = function () { ['clue', 'intv', 'cards', 'concl', 'disc', 'cp', 'events'].forEach(P.render); };
-  P.render = function (t) { ({ clue: renderClue, intv: renderIntv, cards: renderCards, concl: renderConcl, disc: renderDisc, cp: renderCp, events: renderEvents })[t](); };
+  P.render = function (t) { ({ clue: renderClue, intv: renderIntv, cards: renderCards, concl: renderConcl, disc: renderDisc, cp: renderCp, events: renderEvents, ach: renderAch })[t](); };
+  /* 成就分頁：自己的指標與徽章＋班級「誰最多」（線上模式讀 er/{sess}/score；本機版只有自己） */
+  function achCtx() { var c = cur(); var cp = (window.ERG_CORE && window.ERG_CP && c) ? (function () { try { var st = window.ERG_CORE.checkpointState(c, me()); return window.ERG_CP.evaluate(st).every(function (x) { return x.ok; }); } catch (e) { return false; } })() : false; return { cpAllOk: cp, shift: c && c.world && c.world.shift }; }
+  P.achCtx = achCtx;
+  function renderAch() {
+    var p = $('p-ach'), A = window.ERG_ACH; if (!p || !A || !cur()) return;
+    var m = A.metrics(player(), achCtx());
+    var board = window.ERG_SCORES ? A.leaderboard(window.ERG_SCORES, 3) : null;
+    var bh = board ? '<h2>班上誰最多</h2><div class="board">' + board.map(function (b) { return '<div class="b"><b>' + esc(b.label) + '</b>' + (b.rows.length ? '<ol style="margin:4px 0 0 18px;padding:0;font-size:13px">' + b.rows.map(function (r) { return '<li>' + esc(r.name) + '　' + r.v + ' ' + esc(b.unit) + '</li>'; }).join('') + '</ol>' : '<div class="muted" style="font-size:12px">還沒有人</div>') + '</div>'; }).join('') + '</div>' : '<p class="muted" style="font-size:12px">本機版沒有班級排行；線上版會列出班上誰最多。</p>';
+    p.innerHTML = '<h2>我的成就</h2>' + A.html(m, esc) + bh;
+    if (window.ERG_PUBLISH_SCORE) window.ERG_PUBLISH_SCORE();
+  }
+  P.renderAch = renderAch;
   P.onRoomChanged = function () { if (!typing()) P.render(cur().tab); };
   P.onSceneChanged = function () { if (!typing()) { if (cur().tab === 'cards') renderCards(); if (cur().tab === 'concl') renderConcl(); } };
   P.onMove = function () { renderClue(); renderIntv(); };
@@ -119,7 +131,11 @@
   P.onMove = (function (orig) { return function () { var c = cur(); if (c && c.pendingNpc) { var id = c.pendingNpc, here = RM.entityHere().some(function (h) { return h.ent.id === id; }); if (here) { c.pendingNpc = null; c.selNpc = id; RM.switchTab('intv'); } } orig(); }; })(P.onMove);
 
   /* ───── 即時訪談（Firebase 佇列 → 老師電腦上的代理程式 → Vertex → 寫回）───── */
-  function liveReady() { return !!(APP.online && window.ERG_DAEMON_HB && Date.now() - window.ERG_DAEMON_HB < 60000); }
+  function daemonUp() { return !!(APP.online && window.ERG_DAEMON_HB && Date.now() - window.ERG_DAEMON_HB < 60000); }
+  function liveReady() { return daemonUp() && window.ERG_LIVE_OPEN !== false; }
+  /* 狀態字：連線中／非上課時間暫停／目前離線 */
+  function liveLabel() { return liveReady() ? '連線中' : (daemonUp() ? '非上課時間，即時訪談暫停（可以逛、可以跟同學聊）' : '目前離線'); }
+  P.liveLabel = liveLabel;
   function safeKey(id) { return String(id).replace(/[.#$\[\]\/]/g, '_'); }
   function chatRef(recId) { return window.firebase.database().ref('er/' + APP.SESS + '/chat/' + cur().code + '/' + me() + '/' + safeKey(recId)); }
   /* 即時訪談的逐字稿網址（老師頁面可看），有回答後自動填進訪談紀錄的連結欄，滿足「每個訪談都有連結」的檢核 */
@@ -141,7 +157,7 @@
       }).join('') + (turns[turns.length - 1].role === 'u' ? '<div class="muted" style="font-size:12px">' + esc(ent.name) + ' 正在想……</div>' : '') : '<div class="muted" style="font-size:13px">還沒開始。先打招呼，或問一個開放式的問題。</div>';
       logEl.scrollTop = logEl.scrollHeight;
       if (recId && turns.some(function (t) { return t.role === 'a' && t.status === 'ok'; })) { var ix2 = recFor(ent.pid); if (ix2 >= 0 && !player().links[player().interviews[ix2].id]) { player().links[player().interviews[ix2].id] = liveLink(player().interviews[ix2].id); save(); var lk = $('lnk'); if (lk) lk.value = player().links[player().interviews[ix2].id]; } }
-      var st = $('chatStat'); if (st) st.textContent = liveReady() ? ('連線中・' + turns.filter(function (t) { return t.role === 'u'; }).length + ' 題') : '目前離線';
+      var st = $('chatStat'); if (st) st.textContent = liveReady() ? ('連線中・' + turns.filter(function (t) { return t.role === 'u'; }).length + ' 題') : liveLabel();
     }
     if (recId) { var ref = chatRef(recId), cb = function (s) { draw(s.val()); }; ref.on('value', cb); c.chatOff = function () { ref.off('value', cb); }; } else draw(null);
     function send() {
@@ -153,6 +169,7 @@
         var key = ref.child('turns').push({ role: 'u', text: text, t: now }).key;
         window.firebase.database().ref('er/_queue').push({ sess: APP.SESS, code: c.code, sid: me(), rec: safeKey(rec.id), turn: key, t: now });
       });
+      player().chatTurns = (Number(player().chatTurns) || 0) + 1; save();   /* 成就用：即時訪談送出幾題 */
       if ($('chatIn')) { $('chatIn').value = ''; $('chatIn').focus(); }
       if (c.role === 'member') DB.appendEvent(c.code, { kind: 'chat', env: me(), rec: rec.id });
     }
@@ -160,7 +177,7 @@
     if (sendBtn) sendBtn.onclick = send;
     if (inp) inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); send(); } });
   }
-  APP.data.listeners.push(function (topic) { if (topic === 'daemon' && cur() && cur().tab === 'intv' && !typing() && $('chatStat')) { var st = $('chatStat'); st.textContent = liveReady() ? '連線中' : '目前離線'; var inp = $('chatIn'), b = $('chatSend'); if (inp) { inp.disabled = !liveReady(); } if (b) b.disabled = !liveReady(); } });
+  APP.data.listeners.push(function (topic) { if (topic === 'daemon' && cur() && cur().tab === 'intv' && !typing() && $('chatStat')) { var st = $('chatStat'); st.textContent = liveLabel(); var inp = $('chatIn'), b = $('chatSend'); if (inp) { inp.disabled = !liveReady(); } if (b) b.disabled = !liveReady(); } });
   function setRec(ix, key, patch) { player().interviews[ix] = CL.setItem(player().interviews[ix], key, patch); save(); renderIntv(); }
   function selectText(el) { var rg = document.createRange(); rg.selectNodeContents(el); var s = window.getSelection(); s.removeAllRanges(); s.addRange(rg); }
 

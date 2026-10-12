@@ -34,6 +34,9 @@ body.proj{--fs:21px}body.proj .wrap{max-width:none}body.proj .small{display:none
   <label>場次 <select id="sessSel"></select></label>
   <button id="deidBtn">去識別化：關</button><button id="projBtn">投影模式：關</button><a href="#" id="logoutLink" class="muted small">登出</a></div>
 <div class="row" style="margin-top:6px"><span id="daemon" class="muted">代理程式：讀取中…</span><span id="usageSum" class="muted"></span></div>
+<div class="row" style="margin-top:6px;gap:6px;flex-wrap:wrap"><span id="liveState" class="muted">即時訪談：讀取中…</span>
+  <button id="liveOpen" class="small">開放即時訪談 2 小時</button><button id="liveClose" class="small ghost">關閉即時訪談</button><button id="liveAuto" class="small ghost">交回課表自動</button>
+  <span class="muted small">（課表自動：10/13、10/20、10/27 週二 07:10–11:00 與 11:50–15:40；10/15、10/22、10/29 週四 11:50–15:40，即上課前一小時到下課後一小時。其餘時間學生可以逛、可以跟同學聊，但不跟人物對話，不耗 Vertex。要延長改 `tools/er_chat_daemon.py` 的 CLASS_WINDOWS。）</span></div>
 <div class="card kpi"><div><div class="big" id="kStudents">0</div><div class="muted">人上線</div></div><div><div class="big" id="kRooms">0</div><div class="muted">間房</div></div><div><div class="big" id="kIv">0</div><div class="muted">次訪談</div></div><div><div class="big" id="kLit">0</div><div class="muted">人六點全亮</div></div></div>
 <h2>現在在哪裡、在訪談誰（即時）</h2>
 <div class="card"><div class="row" style="align-items:flex-start"><div id="liveMap" style="flex:2;min-width:300px"></div><div id="liveList" style="flex:1;min-width:220px;font-size:.95em"></div></div></div>
@@ -46,6 +49,8 @@ body.proj{--fs:21px}body.proj .wrap{max-width:none}body.proj .small{display:none
 <div id="chatView" class="card" hidden></div>
 <h2>學生進度（六個檢核點）</h2>
 <div class="card" id="students">載入中…</div>
+<h2>成就排行（誰最多；學生端「成就」分頁也看得到）</h2>
+<div class="card" id="board">載入中…</div>
 <h2>房間</h2>
 <div class="card" id="rooms"></div>
 <h2>回報與建議（學生按「💬 回報」送來的）</h2>
@@ -58,16 +63,16 @@ body.proj{--fs:21px}body.proj .wrap{max-width:none}body.proj .small{display:none
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-<script src="er_firebase.js?v=202610122117"></script>
-<script src="checklist.js?v=202610122117"></script>
-<script src="checkpoints.js?v=202610122117"></script>
-<script src="avatar.js?v=202610122117"></script>
-<script src="local_db.js?v=202610122117"></script>
-<script src="app_core.js?v=202610122117"></script>
-<script src="remote_db.js?v=202610122117"></script>
-<script src="layout.js?v=202610122117"></script>
-<script src="minimap.js?v=202610122117"></script>
-<script src="personas_inclusive.js?v=202610122117"></script><script src="er_data.js?v=202610122117"></script><script src="personas.js?v=202610122117"></script>
+<script src="er_firebase.js?v=202610122132"></script>
+<script src="checklist.js?v=202610122132"></script>
+<script src="checkpoints.js?v=202610122132"></script>
+<script src="avatar.js?v=202610122132"></script>
+<script src="local_db.js?v=202610122132"></script>
+<script src="app_core.js?v=202610122132"></script>
+<script src="achievements.js?v=202610122132"></script><script src="remote_db.js?v=202610122132"></script>
+<script src="layout.js?v=202610122132"></script>
+<script src="minimap.js?v=202610122132"></script>
+<script src="personas_inclusive.js?v=202610122132"></script><script src="er_data.js?v=202610122132"></script><script src="personas.js?v=202610122132"></script>
 <script>
 /* 教師名單：只有這裡的 Google 帳號能進。要加人就加在這裡（改完重新部署）。 */
 var TEACHER_EMAILS = ['scatjay@gmail.com'];
@@ -108,7 +113,11 @@ var TEACHER_EMAILS = ['scatjay@gmail.com'];
       $('sessSel').innerHTML = keys.map(function (k) { return '<option' + (k === SESS ? ' selected' : '') + '>' + k + '</option>'; }).join('');
     });
     $('sessSel').onchange = function () { SESS = $('sessSel').value; attach(); };
-    fdb.ref('er/_daemon').on('value', function (s) { var d = s.val() || {}, fresh = d.heartbeat && Date.now() - d.heartbeat < 60000; $('daemon').innerHTML = '即時訪談代理程式：' + (fresh ? '<span class="ok">連線中</span>（' + esc(d.model || '') + '）' : '<span class="bad">離線</span>'); });
+    fdb.ref('er/_daemon').on('value', function (s) { var d = s.val() || {}, fresh = d.heartbeat && Date.now() - d.heartbeat < 60000; $('daemon').innerHTML = '即時訪談代理程式：' + (fresh ? '<span class="ok">連線中</span>（' + esc(d.model || '') + '）' : '<span class="bad">離線</span>');
+      var lv = d.live || {}, manual = (lv.mode === 'open' || lv.mode === 'closed') && Number(lv.until || 0) > Date.now();
+      $('liveState').innerHTML = '即時訪談：' + (d.liveNow ? '<span class="ok">開放中</span>' : '<span class="bad">暫停</span>') + '（' + (manual ? ('手動' + (lv.mode === 'open' ? '開放' : '關閉') + '到 ' + new Date(Number(lv.until)).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })) : '課表自動') + '）'; });
+    function setLive(mode, hours) { fdb.ref('er/_daemon/live').set({ mode: mode, until: mode === 'auto' ? 0 : Date.now() + hours * 3600000, by: (auth.currentUser && auth.currentUser.email) || '', t: Date.now() }); }
+    $('liveOpen').onclick = function () { setLive('open', 2); }; $('liveClose').onclick = function () { setLive('closed', 12); }; $('liveAuto').onclick = function () { setLive('auto', 0); };
     attach();
     if (h) setTimeout(function () { showChats(h[2], h[3], h[4]); }, 900);
   }
@@ -119,6 +128,16 @@ var TEACHER_EMAILS = ['scatjay@gmail.com'];
     root.child('profiles').on('value', function (s) { profiles = s.val() || {}; schedule(); });
     attachChats(root);
     fdb.ref('usage/' + SESS.replace('ER-', '')).on('value', function (s) { renderUsage(s.val() || {}); });
+    root.child('score').on('value', function (s) { scores = s.val() || {}; renderBoard(); });
+  }
+  /* 成就排行：學生端每分鐘把自己的指標摘要寫到 er/{sess}/score/{sid}（achievements.js 的 summary） */
+  var scores = {};
+  function renderBoard() {
+    var A = window.ERG_ACH, el = $('board'); if (!A || !el) return;
+    var named = {}; Object.keys(scores).forEach(function (sid) { var s = scores[sid] || {}; named[sid] = Object.assign({}, s, { name: DEID ? aliasOf(sid) : (s.name || sid) }); });
+    var lb = A.leaderboard(named, 3), any = lb.some(function (b) { return b.rows.length; });
+    el.innerHTML = any ? '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px">' + lb.map(function (b) { return '<div style="border:2px solid var(--line);border-radius:8px;padding:6px 8px"><b>' + esc(b.label) + '</b>' + (b.rows.length ? '<ol style="margin:4px 0 0 18px;padding:0">' + b.rows.map(function (r) { return '<li>' + esc(r.name) + '　' + r.v + ' ' + esc(b.unit) + '</li>'; }).join('') + '</ol>' : '<div class="muted small">—</div>') + '</div>'; }).join('') + '</div>' +
+      '<div class="muted small" style="margin-top:6px">徽章清單：' + A.DEFS.map(function (d) { return d.icon + d.name; }).join('、') + '</div>' : '<span class="muted">還沒有人寫入分數（學生進房間一分鐘後會出現）。</span>';
   }
   /* ───── 即時位置、提問分析、再設計啟示 ───── */
   var chats = {}, LAYOUT = window.ERG_LAYOUT, MM = window.ERG_MINIMAP, PER = window.ERG_PERSONAS;
@@ -190,6 +209,7 @@ var TEACHER_EMAILS = ['scatjay@gmail.com'];
     }).join('');
     $('students').innerHTML = rowsHtml ? '<table><tr><th>學生</th><th>檢核點</th><th>房間</th><th>訪談數</th><th class="small">裝置</th></tr>' + rowsHtml + '</table>' : '<span class="muted">這個場次還沒有人。</span>';
     $('kStudents').textContent = all.length; $('kRooms').textContent = rooms.length; $('kIv').textContent = ivTotal; $('kLit').textContent = litAll;
+    renderBoard();
     $('rooms').innerHTML = rooms.length ? '<table><tr><th>代碼</th><th>案例・班別</th><th>主持</th><th>成員</th><th class="small">即時訪談</th></tr>' + rooms.map(function (r) {
       return '<tr><td><b>' + esc(r.code) + '</b></td><td>' + esc(r.case || 'sms') + '・' + (r.shift === 'night' ? '夜班' : '日班') + '</td><td>' + esc(aliasOf(String(r.host))) + '</td><td>' + Object.keys(r.members || {}).map(aliasOf).join(', ') + '</td><td class="small"><a href="#" data-chatroom="' + esc(r.code) + '">看逐字稿</a></td></tr>';
     }).join('') + '</table>' : '<span class="muted">還沒有房間。</span>';
