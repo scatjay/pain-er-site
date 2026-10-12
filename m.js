@@ -103,7 +103,7 @@
   }
   function setLoc(roomId, silent) {
     if (!cur) return; var rm = LAYOUT.room(roomId); if (!rm) return;
-    cur.player.loc = roomId; cur.watchRoom=roomId; cur.me = spotIn(roomId); cur.sceneKey = '';
+    cur.player.loc = roomId; cur.watchRoom=roomId; cur.me = spotIn(roomId); cur.sceneKey = ''; hidePop();
     $('locLabel').textContent = (MM.ROOM_ICON[roomId] || '') + ' ' + rm.name;
     $('caption').textContent = cur.world.captionFor(roomId) || rm.name;
     if (!silent) DB.appendEvent(cur.code, { kind: 'move', env: APP.me.sid, to: roomId });
@@ -177,6 +177,41 @@
     Array.prototype.forEach.call(Object.keys(cur.tokens), function (k) { cur.tokens[k].remove(); }); cur.tokens = {};
   }
   function pct(v, axis) { var r = cur.rect; return axis === 'x' ? ((v + 8) / (r.w + 16) * 100) + '%' : ((v + 8) / (r.h + 16) * 100) + '%'; }
+
+  /* ───── 點擊互動（手機）：點人、點家具都彈一張小卡；動作都在卡上 ───── */
+  function hidePop() { var p = $('popCard'); if (p) p.remove(); }
+  S.hidePop = hidePop;
+  function showPop(rx, ry, html) {   /* rx, ry：房間內相對座標 */
+    hidePop(); var p = document.createElement('div'); p.id = 'popCard'; p.className = 'popCard'; p.innerHTML = html + '<button class="popClose" aria-label="關閉">×</button>';
+    p.style.left = pct(rx, 'x'); p.style.top = pct(ry, 'y'); $('overlay').appendChild(p);
+    p.querySelector('.popClose').onclick = hidePop; p.onclick = function (e) { e.stopPropagation(); }; return p;
+  }
+  function onNpcClick(id) {
+    var it0 = null; cur.world.at(cur.clock.worldSec).forEach(function (it) { if (it.ent.id === id) it0 = it; }); if (!it0) return;
+    var ent = it0.ent, pos = it0.pos, av = cur.world.availability(ent, pos, S.simMin()), loc = LAYOUT.room(cur.player.loc), onHall = loc && (loc.type === 'hall' || loc.type === 'outside'), here = pos.room === cur.player.loc;
+    var m = cur.world.mutterFor(ent, pos, cur.clock.worldSec), lv = { free: '可以聊', short: '只能簡短聊（' + (av.reason || '正在忙') + '）', blocked: '現在不方便（' + (av.reason || '正在忙') + '）' }[av.level] || '';
+    var html = '<b>' + esc(ent.name) + '</b> <span class="muted">' + esc((ent.persona && ent.persona.title) || '') + '</span><div class="popLine">正在：' + esc(pos.act || '待著') + (av.fatigue && av.fatigue.level >= 2 ? '　看起來很累' : '') + '</div>' + (m ? '<div class="popLine muted">「' + esc(m.text) + '」</div>' : '') +
+      '<div class="popLine">' + (here ? esc(lv) : '在' + esc(roomName(pos.room)) + '，要走過去才問得到') + '</div><div class="row popBtns">' + (here && !onHall && av.level !== 'blocked' ? '<button data-act="intv">訪談</button>' : '') + (!here ? '<button data-act="go">走過去</button>' : '') + '<button class="ghost" data-act="note">記便利貼</button></div>';
+    var r = cur.rect, p = showPop(pos.x - r.x, pos.y - r.y - 30, html);
+    Array.prototype.forEach.call(p.querySelectorAll('[data-act]'), function (b) { b.onclick = function () { var a = b.dataset.act; hidePop(); if (a === 'intv') { if (onHall) { toast('走道上不能訪談，請先進入一間房。'); return; } cur.selNpc = id; S.switchTab('intv'); } else if (a === 'go') startTravel(pos.room); else if (a === 'note' && window.ERG_PANELS) window.ERG_PANELS.addOpenCard('便利貼', '觀察：' + ent.name + ' 正在' + (pos.act || '待著') + '（' + S.simTime() + '，' + roomName(pos.room) + '）'); }; });
+  }
+  function furnitureState(f) {
+    if (f.room === 'nurse' && f.type === 'board') return '白板上寫著：3 床待評估、家屬已到';
+    if (f.room === 'triage' && f.type === 'screen') return '叫號螢幕顯示 A018';
+    if (f.room === 'waiting' && f.type === 'seats') { var n = cur.world.at(cur.clock.worldSec).filter(function (it) { return it.pos.room === 'waiting' && /候診|等/.test(it.pos.act || ''); }).length; return '現在有 ' + n + ' 人在等'; }
+    return ({ desk: '櫃台上的動線與文件，看誰在排隊、排多久', counter: '櫃台：注意排隊方向與告示', bed: '病床：看誰在旁邊、有沒有人解釋', screen: '螢幕：上面顯示什麼、看得懂嗎', board: '白板：寫了什麼、給誰看', device: '設備：誰在操作、要等多久', sign: '告示：字夠大嗎、位置對嗎', lightbox: '燈箱／指標：從門口看得到嗎', phone: '電話：誰在用、講什麼', scanner: '掃描儀：流程卡在哪', rack: '架子：放了什麼單張', sofa: '沙發：誰坐在這裡等', stall: '隔間：隱私夠嗎', chair: '椅子：誰坐、有沒有人站著', glass: '玻璃窗：隔著窗溝通順不順', door: '門：誰進出、有沒有人卡住' })[f.type] || '可以觀察的物件';
+  }
+  function onFurnitureClick(f) {
+    if ((cur.watchRoom || cur.player.loc) !== cur.player.loc) { toast('這是別間房的物件，先走過去再看。'); return; }
+    var html = '<b>' + MM.furnitureIcon(f) + ' ' + esc(f.label || f.type) + '</b><div class="popLine">' + esc(furnitureState(f)) + '</div><div class="row popBtns"><button data-act="card">記一張勘查卡</button><button class="ghost" data-act="note">記便利貼</button></div>';
+    var p = showPop(f.rx + (f.w || 30) / 2, f.ry, html);
+    Array.prototype.forEach.call(p.querySelectorAll('[data-act]'), function (b) { b.onclick = function () { var a = b.dataset.act; hidePop(); if (a === 'card' && window.ERG_PANELS) { window.ERG_PANELS.prefill = { type: '勘查卡', text: (f.label || f.type) + '：' }; S.switchTab('cards'); } else if (a === 'note' && window.ERG_PANELS) window.ERG_PANELS.addOpenCard('便利貼', '看到：' + (f.label || f.type) + '，' + furnitureState(f) + '（' + S.simTime() + '，' + roomName(cur.player.loc) + '）'); }; });
+  }
+  $('roomSvg').addEventListener('click', function (e) {
+    var t = e.target; if (!t || !t.getAttribute) return; var fi = t.getAttribute('data-f');
+    if (fi === null) { hidePop(); return; }
+    var f = (cur.rv && cur.rv.furniture || [])[Number(fi)]; if (f) onFurnitureClick(f);
+  });
   var svgCache = {};
   function svgFor(look, key, mood) { var k = key + '|' + mood + JSON.stringify(look); if (!svgCache[k]) svgCache[k] = CH.character(look, { seed: CH.hash(key) % 97, mood: mood, size: 1 }); return svgCache[k]; }
   function renderTokens() {
@@ -185,7 +220,7 @@
     drawEnvironment(simMin);
     cur.world.at(t).filter(function(it){return it.pos.room===(cur.watchRoom||cur.player.loc)&&it.ent.kind!=='bot';}).map(function(it){return {ent:it.ent,pos:it.pos,av:cur.world.availability(it.ent,it.pos,simMin)};}).forEach(function (h) {
       var ent = h.ent, pos = h.pos, id = ent.id; seen[id] = true;
-      var el = cur.tokens[id]; if (!el) { el = cur.tokens[id] = document.createElement('div'); el.className = 'tok'; ov.appendChild(el); el.onclick = function () { var r=LAYOUT.room(cur.player.loc);if(r&&(r.type==='hall'||r.type==='outside')){toast('走道上不能訪談，請先進入一間房。');return;}cur.selNpc = id; S.switchTab('intv'); }; }
+      var el = cur.tokens[id]; if (!el) { el = cur.tokens[id] = document.createElement('div'); el.className = 'tok'; ov.appendChild(el); el.onclick = function (e) { e.stopPropagation(); onNpcClick(id); }; }
       var fatigue = h.av.fatigue || { level:0 }, mood = fatigue.level >= 2 ? 'sleepy' : (h.av.level === 'blocked' ? 'busy' : 'idle'), sig = mood + size + id;
       if (el._sig !== sig) { el._sig = sig; el.innerHTML = '<div class="bubWrap"></div>' + svgFor(ent.look, ent.id, mood) + '<span class="nm"></span>'; el.querySelector('svg').style.height = size + 'px'; el.querySelector('svg').style.width = 'auto'; }
       el._tx = pos.x; el._ty = pos.y; el._room=pos.room; el.style.zIndex = String(DEPTH?DEPTH.z(pos.y):Math.round(pos.y));

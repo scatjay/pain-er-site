@@ -83,6 +83,9 @@ th{font-size:12px;color:var(--muted)}
 @keyframes meRing{0%{opacity:.95;transform:translateX(-50%) scale(.8)}100%{opacity:0;transform:translateX(-50%) scale(1.5)}}
 @keyframes meBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
 @media (prefers-reduced-motion:reduce){.tok.me::before,.meTag{animation:none}}
+.popCard{position:absolute;transform:translate(-50%,-100%);min-width:180px;max-width:min(260px,80vw);background:var(--panel);color:var(--fg);border:3px solid var(--ink);border-radius:12px;padding:8px 26px 8px 10px;box-shadow:4px 4px 0 var(--ink);pointer-events:auto;font-size:13px;text-align:left;z-index:60}
+.popCard .popLine{margin-top:4px}.popCard .popBtns{margin-top:8px;gap:6px}.popCard .popBtns button{padding:4px 10px;font-size:13px;width:auto}
+.popCard .popClose{position:absolute;right:4px;top:2px;border:0;background:transparent;font-size:18px;font-weight:900;cursor:pointer;color:var(--fg);padding:0 4px;width:auto}
 .tok svg{display:block;margin:0 auto}
 .tok.walk svg{animation:waddle var(--walk-duration,.5s) ease-in-out infinite}
 .tok.idle svg{animation:bob var(--idle-duration,2.4s) ease-in-out infinite}
@@ -253,6 +256,7 @@ footer.note{padding:3px 12px;font-size:12px;color:var(--muted);border-top:3px so
   </div>
   <div id="nav"></div>
   <div id="side">
+    <div id="socialBox" class="card" style="margin:0 0 6px;padding:4px 8px"></div>
     <div id="tabs"></div>
     <div class="pane on" id="p-clue"></div>
     <div class="pane" id="p-intv"></div>
@@ -310,6 +314,6 @@ footer.note{padding:3px 12px;font-size:12px;color:var(--muted);border-top:3px so
 <script>window.ERG_FEEDBACK.install(window, window.ERG_APP);</script>
 <script src="roomview.js?v=2"></script>
 <script src="m.js?v=2"></script>
-<script src="panels.js?v=2"></script><script src="event_runtime.js?v=6e"></script><script src="event_ui.js?v=6e"></script><script src="rotation_ui.js?v=6e"></script>
+<script src="panels.js?v=2"></script><script src="social.js?v=fb1"></script><script src="event_runtime.js?v=6e"></script><script src="event_ui.js?v=6e"></script><script src="rotation_ui.js?v=6e"></script>
 <style>#eventPlay{position:absolute;z-index:35;left:10px;right:10px;top:10px;pointer-events:none}.eventNarration,.eventBubble{display:table;max-width:90%;margin:5px auto;background:#fff8c5;color:#1e1e1e;border:3px solid #1e1e1e;border-radius:12px;padding:8px 12px;box-shadow:4px 4px 0 #1e1e1e;animation:eventFade .35s}.eventBubble{background:#fff;font-size:14px}.eventSkip{pointer-events:auto;display:block;margin:4px auto}.eventEntry{border:2px solid #222;border-radius:8px;padding:8px;margin:6px 0;background:var(--panel)}.eventEntry summary{cursor:pointer}.eventAnswers{padding:6px}.replayStage{position:relative;min-height:300px;border:3px solid #222;margin:8px 0;background:#fff}.replayMap svg{width:100%;height:auto;max-height:52vh}.replayCaption{position:absolute;left:4%;right:4%;bottom:6px;background:#fff8c5;border:3px solid #222;padding:8px;box-shadow:3px 3px #222}.replaySfx{font-size:28px;font-weight:900;color:#e03131}@keyframes eventFade{from{opacity:0}to{opacity:1}}@media(prefers-reduced-motion:reduce){.eventNarration,.eventBubble{animation:none;transition:opacity .12s}#stage,#sceneBox{transition:opacity .12s!important}}#eventPlay.mobileComic .eventNarration,#eventPlay.mobileComic .eventBubble{width:86%;max-width:86%;border:4px solid #1e1e1e;background-color:#fff;background-image:radial-gradient(#dedede 1px,transparent 1px);background-size:10px 10px}#eventPlay.mobileComic .eventNarration{background:#fff3a6;font-weight:900}#eventPlay.mobileComic .eventBubble{margin-left:8%;transform:rotate(-1deg)}</style><style>#rotationBtn{position:absolute;z-index:45;right:8px;top:8px}#rotationBtn.on{background:#b2f2bb;color:#1e1e1e}#rotationBadge{display:none;position:absolute;z-index:45;right:8px;bottom:8px;padding:4px 8px;border:2px solid #222;border-radius:99px;background:#fff8c5;color:#222;font-size:12px;pointer-events:none}</style></body>
 </html>

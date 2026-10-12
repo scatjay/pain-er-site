@@ -150,6 +150,13 @@
       UIOptions: { canvasActions: { loadScene: false, saveToActiveFile: false, export: false, saveAsImage: false, toggleTheme: false, clearCanvas: false, changeViewBackgroundColor: false } }
     };
     cur.root = RD.createRoot(host); cur.root.render(R.createElement(XL.Excalidraw, props));
+    /* Excalidraw 在檢視模式下不一定會回呼 onPointerDown，所以自己聽畫布的點擊：按下與放開距離小於 6px 才算「點」（拖曳是平移） */
+    host.addEventListener('pointerdown', function (e) { host._pd = { x: e.clientX, y: e.clientY, t: Date.now() }; }, true);
+    host.addEventListener('pointerup', function (e) {
+      var d = host._pd; host._pd = null; if (!d || !cur || !cur.api || Math.hypot(e.clientX - d.x, e.clientY - d.y) > 6 || Date.now() - d.t > 600) return;
+      var st = cur.api.getAppState(), z = st.zoom.value, rect = host.getBoundingClientRect();
+      onBoardPointer({ origin: { x: (e.clientX - rect.left) / z - st.scrollX, y: (e.clientY - rect.top) / z - st.scrollY }, _own: true });
+    }, true);
     window.addEventListener('resize', onResize);
     if (window.ResizeObserver) { cur.resizeObserver = new ResizeObserver(function(){ if(cur){fitView(true);cur._placeKey='';placeTokens();} }); cur.resizeObserver.observe($('board')); }
   }
@@ -224,10 +231,19 @@
   /* 點房間（地板）就走過去 */
   function onBoardPointer(st) {
     if (!cur || !st || !st.origin) return;
-    var ox = st.origin.x, oy = st.origin.y, hit = null;
+    if (!st._own) { if (cur._ownPtrT && Date.now() - cur._ownPtrT < 400) return; } else cur._ownPtrT = Date.now();   /* 自己聽的與 Excalidraw 回呼的只處理一次 */
+    var ox = st.origin.x, oy = st.origin.y, hit = null; S._lastPointer = { x: ox, y: oy };   /* 測試用 */
     cur.world.clues.forEach(function (c) { var p = LAYOUT.abs(c.pin.room, c.pin.rx, c.pin.ry); if (ox >= p.x - 4 && ox <= p.x + 80 && oy >= p.y - 4 && oy <= p.y + 38) hit = c; });
-    if (hit) { cur.selClue = hit.id; S.switchTab('clue'); if (cur.role === 'member') DB.appendEvent(cur.code, { kind: 'clue-open', env: APP.me.sid, clue: hit.id }); return; }
+    if (hit) { hidePop(); cur.selClue = hit.id; S.switchTab('clue'); if (cur.role === 'member') DB.appendEvent(cur.code, { kind: 'clue-open', env: APP.me.sid, clue: hit.id }); return; }
     var r = LAYOUT.roomAt(ox, oy);
+    /* 點到自己這間房的家具／物件：彈小卡 */
+    if (r && r === cur.player.loc) {
+      var rm = LAYOUT.room(r), fhit = null;
+      (LAYOUT.FURNITURE || []).forEach(function (f) { if (f.room !== r) return; var fx = rm.x + f.rx, fy = rm.y + f.ry; if (ox >= fx && ox <= fx + (f.w || 30) && oy >= fy && oy <= fy + (f.h || 20)) fhit = f; });
+      if (fhit) { setTimeout(function () { onFurnitureClick(fhit, ox, oy); }, 0); return; }
+      hidePop(); return;
+    }
+    hidePop();
     if (r && r !== cur.player.loc && !/^hall|corridor|ambulance|street/.test(r)) { setTimeout(function () { startTravel(r); }, 0); }
   }
 
@@ -241,7 +257,7 @@
   function setLoc(roomId, silent) {
     if (!cur) return;
     var rm = LAYOUT.room(roomId); if (!rm) return;
-    cur.player.loc = roomId; cur.watchRoom=roomId; cur.me = spotIn(roomId); cur.meMoving = 8;
+    cur.player.loc = roomId; cur.watchRoom=roomId; cur.me = spotIn(roomId); cur.meMoving = 8; hidePop();
     rememberRoom(roomId); renderTravelChips();
     $('locLabel').textContent = '你在：' + rm.name;
     $('mmHere').textContent = rm.name;
@@ -417,13 +433,55 @@
     var sz = Math.max(40, Math.min(100, 112 * z));
     if (cur._sz !== sz) { cur._sz = sz; Array.prototype.forEach.call(ov.querySelectorAll('svg'), function (v) { v.style.height = sz + 'px'; v.style.width = 'auto'; }); }
   }
+  /* ───── 點擊互動：點人、點物件都彈一張小卡，動作都在卡上（單擊，不用長按）───── */
+  function hidePop() { var p = $('popCard'); if (p) p.remove(); }
+  S.hidePop = hidePop;
+  function showPop(wx, wy, html) {
+    hidePop(); var ov = $('overlay'), p = document.createElement('div'); p.id = 'popCard'; p.className = 'popCard'; p.innerHTML = html + '<button class="popClose" aria-label="關閉">×</button>';
+    var s = screenPos(wx, wy); p.style.left = s.x + 'px'; p.style.top = s.y + 'px'; p.style.zIndex = '2147483000'; ov.appendChild(p);
+    p.querySelector('.popClose').onclick = hidePop; p.onclick = function (e) { e.stopPropagation(); };
+    return p;
+  }
   function onNpcClick(id) {
     var ent = cur.world.entityById(id); if (!ent) return;
     var pos = null; cur.world.at(cur.clock.worldSec).forEach(function (it) { if (it.ent.id === id) pos = it.pos; });
     if (!pos) return;
-    var loc=LAYOUT.room(cur.player.loc); if(loc && (loc.type==='hall'||loc.type==='outside')){toast('走道上不能訪談，請先走進一間房。');return;}
-    if (pos.room !== cur.player.loc) { toast('「' + ent.name + '」在' + roomName(pos.room) + '。點那個房間走過去，才問得到。'); return; }
-    cur.selNpc = id; S.switchTab('intv');
+    var av = cur.world.availability(ent, pos, S.simMin()), here = pos.room === cur.player.loc, loc = LAYOUT.room(cur.player.loc), onHall = loc && (loc.type === 'hall' || loc.type === 'outside');
+    var m = cur.world.mutterFor(ent, pos, cur.clock.worldSec), lv = { free: '可以聊', short: '只能簡短聊（' + (av.reason || '正在忙') + '）', blocked: '現在不方便（' + (av.reason || '正在忙') + '）' }[av.level] || '';
+    var html = '<b>' + esc(ent.name) + '</b> <span class="muted">' + esc((ent.persona && ent.persona.title) || ent.kind || '') + '</span>' +
+      '<div class="popLine">正在：' + esc(pos.act || '待著') + (av.fatigue && av.fatigue.level >= 2 ? '　看起來很累' : '') + '</div>' +
+      (m ? '<div class="popLine muted">「' + esc(m.text) + '」</div>' : '') +
+      '<div class="popLine">' + (here ? esc(lv) : '在' + esc(roomName(pos.room)) + '，要走過去才問得到') + '</div><div class="row popBtns">' +
+      (here && !onHall && av.level !== 'blocked' && ent.kind !== 'bot' ? '<button data-act="intv">訪談</button>' : '') +
+      (!here && !/^hall|corridor|ambulance|street/.test(pos.room) ? '<button data-act="go">走過去</button>' : '') +
+      '<button class="ghost" data-act="note">記便利貼</button></div>';
+    var p = showPop(pos.x, pos.y - 20, html);
+    Array.prototype.forEach.call(p.querySelectorAll('[data-act]'), function (b) {
+      b.onclick = function () {
+        var a = b.dataset.act; hidePop();
+        if (a === 'intv') { if (onHall) { toast('走道上不能訪談，請先走進一間房。'); return; } cur.selNpc = id; S.switchTab('intv'); }
+        else if (a === 'go') startTravel(pos.room);
+        else if (a === 'note' && window.ERG_PANELS) window.ERG_PANELS.addOpenCard('便利貼', '觀察：' + ent.name + ' 正在' + (pos.act || '待著') + '（' + S.simTime() + '，' + roomName(pos.room) + '）');
+      };
+    });
+  }
+  /* 物件的「使用中狀態」：跟 roomview／syncRoomProps 示範的三個狀態一致，其餘給觀察提示 */
+  function furnitureState(f) {
+    if (f.room === 'nurse' && f.type === 'board') return '白板上寫著：3 床待評估、家屬已到';
+    if (f.room === 'triage' && f.type === 'screen') return '叫號螢幕顯示 A018';
+    if (f.room === 'waiting' && f.type === 'seats') { var n = cur.world.at(cur.clock.worldSec).filter(function (it) { return it.pos.room === 'waiting' && /候診|等/.test(it.pos.act || ''); }).length; return '現在有 ' + n + ' 人在等'; }
+    return ({ desk: '櫃台上的動線與文件，看誰在排隊、排多久', counter: '櫃台：注意排隊方向與告示', bed: '病床：看誰在旁邊、有沒有人解釋', screen: '螢幕：上面顯示什麼、看得懂嗎', board: '白板：寫了什麼、給誰看', device: '設備：誰在操作、要等多久', sign: '告示：字夠大嗎、位置對嗎', lightbox: '燈箱／指標：從門口看得到嗎', phone: '電話：誰在用、講什麼', scanner: '掃描儀：流程卡在哪', rack: '架子：放了什麼單張', sofa: '沙發：誰坐在這裡等', stall: '隔間：隱私夠嗎', chair: '椅子：誰坐、有沒有人站著', glass: '玻璃窗：隔著窗溝通順不順', door: '門：誰進出、有沒有人卡住' })[f.type] || '可以觀察的物件';
+  }
+  function onFurnitureClick(f, wx, wy) {
+    var html = '<b>' + MM.furnitureIcon(f) + ' ' + esc(f.label || f.type) + '</b><div class="popLine">' + esc(furnitureState(f)) + '</div><div class="row popBtns"><button data-act="card">記一張勘查卡</button><button class="ghost" data-act="note">記便利貼</button></div>';
+    var p = showPop(wx, wy, html);
+    Array.prototype.forEach.call(p.querySelectorAll('[data-act]'), function (b) {
+      b.onclick = function () {
+        var a = b.dataset.act; hidePop();
+        if (a === 'card' && window.ERG_PANELS) { window.ERG_PANELS.prefill = { type: '勘查卡', text: (f.label || f.type) + '：' }; S.switchTab('cards'); }
+        else if (a === 'note' && window.ERG_PANELS) window.ERG_PANELS.addOpenCard('便利貼', '看到：' + (f.label || f.type) + '，' + furnitureState(f) + '（' + S.simTime() + '，' + roomName(cur.player.loc) + '）');
+      };
+    });
   }
   S.entityHere = function () {
     var out = [], simMin = CLK.simMin(cur.clock);

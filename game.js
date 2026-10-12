@@ -113,6 +113,9 @@
     };
     AUTH.getRedirectResult().catch(explainAuth);
     if (/[?&]anon=1/.test(location.search)) AUTH.signInAnonymously().catch(explainAuth);   /* 測試用：匿名帳號走綁定流程 */
+    /* 測試用（只在本機伺服器有效）：?devsid=XXX 直接以該學號進入線上模式，不經 Google */
+    var devsid = (location.search.match(/[?&]devsid=([A-Za-z0-9_-]{3,16})/) || [])[1];
+    if (devsid && /^(127\.0\.0\.1|localhost)$/.test(location.hostname)) { setTimeout(function () { finishLogin(devsid, '其他', devsid.toLowerCase() + '@test.local', '測試' + devsid, null); }, 0); }
     AUTH.onAuthStateChanged(function (user) {
       if (!user) { setAuthUi('google'); authMsg(''); show('login'); return; }
       var email = user.email || ('anon-' + user.uid.slice(0, 6) + '@test.local');
@@ -122,6 +125,8 @@
         setAuthUi('bind'); $('bindEmail').textContent = '登入帳號：' + email;
         if ($('nameInput') && !$('nameInput').value) $('nameInput').value = user.displayName || '';
         if (!$('sidInput').value && /^[a-z0-9]+@office\.stust\.edu\.tw$/i.test(email)) $('sidInput').value = email.split('@')[0];
+        /* 老師自己用前台：自動帶老師的綁定值（也可以改） */
+        if (email === 'scatjay@gmail.com') { if (!$('sidInput').value) $('sidInput').value = 'TEACHER'; if (!$('nameInput').value) $('nameInput').value = '楊老師'; $('clsInput').value = '其他'; }
         $('loginBtn').onclick = function () {
           var f = readBindForm(); if (!f) return;
           var rec2 = { sid: f.sid, name: f.name, cls: f.cls, email: email, t: Date.now() };

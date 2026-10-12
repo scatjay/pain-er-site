@@ -17,9 +17,10 @@
     out.push('<svg xmlns="http://www.w3.org/2000/svg" viewBox="-8 -8 ' + (w + 16) + ' ' + (h + 16) + '" width="100%" role="img" aria-label="' + esc(r.name) + '平面圖" font-family="\'Noto Sans TC\',sans-serif">');
     out.push('<rect x="0" y="0" width="' + w + '" height="' + h + '" rx="12" fill="' + esc(r.color || '#eee') + '" stroke="#1e1e1e" stroke-width="6"' + (r.type === 'outside' || r.type === 'hall' ? ' stroke-dasharray="14 8"' : '') + '/>');
     var furn = (layout.FURNITURE || []).filter(function (f) { return f.room === roomId; });
-    furn.forEach(function (f) {
+    furn.forEach(function (f, fi) {
       var col = COLORS[f.type] || '#e9ecef', fw = f.w || 30, fh = f.h || 20;
-      out.push('<rect x="' + f.rx + '" y="' + f.ry + '" width="' + fw + '" height="' + fh + '" rx="6" fill="' + col + '" stroke="#1e1e1e" stroke-width="3"/>');
+      /* data-f：家具在這間房的序號，手機版用來接點擊 */
+      out.push('<rect data-f="' + fi + '" x="' + f.rx + '" y="' + f.ry + '" width="' + fw + '" height="' + fh + '" rx="6" fill="' + col + '" stroke="#1e1e1e" stroke-width="3" style="cursor:pointer"/>');
       if (fw >= 26 && fh >= 22) out.push('<text x="' + num(f.rx + fw / 2) + '" y="' + num(f.ry + fh / 2 + 7) + '" font-size="' + Math.min(22, fh * .6) + '" text-anchor="middle" opacity=".85">' + MM.furnitureIcon(f) + '</text>');
       if (f.label) out.push('<text x="' + num(f.rx + fw / 2) + '" y="' + num(f.ry + fh + 13) + '" font-size="12" font-weight="700" text-anchor="middle" fill="#1e1e1e" stroke="#fff" stroke-width="3" paint-order="stroke">' + esc(f.label) + '</text>');
     });
