@@ -76,6 +76,12 @@
     if (hair === 'tuft') { out.push(line(hx - 3, hy - 28, hx - 6, hy - 38, 3)); out.push(line(hx + 1, hy - 28, hx + 2, hy - 40, 3)); out.push(line(hx + 5, hy - 27, hx + 10, hy - 36, 3)); }
     else if (hair === 'curl') { for (var c = 0; c < 5; c++) out.push(circ(hx - 20 + c * 10, hy - 24 + (c % 2) * 3, 7, '#868e96', 2.5)); }
     else if (hair === 'cap') out.push(shape(closedSmooth([[hx - 27, hy - 14], [hx - 16, hy - 32], [hx + 16, hy - 32], [hx + 27, hy - 14], [hx, hy - 20]]), look.capColor || '#ffffff'));
+    else if (hair === 'scarf') { /* 頭巾：頭頂一條（像 cap 但壓低）＋兩側各一片垂到肩，三塊分開畫，不蓋到臉 */
+      var sc = look.scarfColor || '#845ef7';
+      out.push(shape(closedSmooth([[hx - 29, hy - 8], [hx - 18, hy - 33], [hx + 18, hy - 33], [hx + 29, hy - 8], [hx + 18, hy - 16], [hx, hy - 21], [hx - 18, hy - 16]]), sc));
+      out.push(shape(wobblyRect(hx - 33, hy - 12, 11, 36, r, 3), sc));
+      out.push(shape(wobblyRect(hx + 22, hy - 12, 11, 36, r, 3), sc));
+    }
     /* 眼睛：小、不對稱 */
     var ey = hy - 4, eyes = look.eyes || 'dots';
     var lx = hx - 10, rx2 = hx + 10 + (r() - 0.5) * 2;

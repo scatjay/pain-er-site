@@ -120,7 +120,17 @@
     { persona:'gay_partner', appear:790, esi:3, complaint:'陪伴侶來（伴侶在觀察室）',
       route:[ ['entrance-mid',[2,2],'走進急診'], ['svc-desk',[6,6],'登記成為家屬／探病'], ['family-1',[40,60],'在家屬區等候'],
               ['obs-1',[10,10],'進去看伴侶'], ['family-2',[20,30],'在家屬區等候'], ['street-dc',[2,2],'走出醫院'], ['AWAY',[0,0],'離開'] ] },
-    { persona:'drunk',       appear:750, esi:5, complaint:'喝多了跌倒擦傷' }
+    { persona:'drunk',       appear:750, esi:5, complaint:'喝多了跌倒擦傷' },
+    { persona:'migrant_caregiver', appear:600, esi:3, complaint:'陪雇主阿公來（阿公發燒、叫不醒，在治療區）',
+      route:[ ['entrance-mid',[3,3],'推阿公進急診'], ['triage-desk',[8,8],'陪阿公檢傷'], ['bay-4',[35,45],'在治療區陪阿公'], ['family-1',[25,35],'在家屬區等'],
+              ['bay-4',[15,15],'在治療區陪阿公'], ['dc-counter',[10,10],'領衛教'], ['street-dc',[2,2],'走出醫院'], ['AWAY',[0,0],'離開'] ] },
+    /* 親子：小米（病人）與爸爸同一條兒科動線，爸爸晚一分鐘到、站位錯開 */
+    { persona:'kid',         appear:665, esi:4, complaint:'額頭撞傷要縫',
+      route:[ ['entrance-mid',[2,2],'跟爸爸進急診'], ['triage-chair',[6,6],'檢傷'], ['ped-desk',[30,40],'在兒科區等'], ['ped-bed',[15,15],'縫合'],
+              ['ped-desk',[8,8],'等爸爸聽說明'], ['street-dc',[2,2],'走出醫院'], ['AWAY',[0,0],'離開'] ] },
+    { persona:'kid_dad',     appear:666, esi:4, complaint:'陪女兒小米來（額頭撞傷）',
+      route:[ ['entrance-mid',[2,2],'帶小米進急診'], ['triage-desk',[6,6],'陪小米檢傷'], ['pharm-wait',[30,40],'在兒科區等'], ['ped-bed',[14,14],'陪縫合'],
+              ['dc-counter',[8,8],'聽離院說明'], ['street-dc',[2,2],'走出醫院'], ['AWAY',[0,0],'離開'] ] }
   ];
 
   var NIGHT_EVENTS = [
