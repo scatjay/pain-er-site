@@ -55,10 +55,15 @@
     if (!p) return null;
     ['interviews', 'cards', 'conclusions', 'visited', 'replays'].forEach(function (k) { if (!Array.isArray(p[k])) p[k] = p[k] ? Object.keys(p[k]).map(function (i) { return p[k][i]; }) : []; });
     ['links', 'confirms', 'seenEv'].forEach(function (k) { if (!p[k] || typeof p[k] !== 'object') p[k] = {}; });
+    Object.keys(p.links).forEach(function (k) { var s = linkKey(k); if (s !== k) { if (!p.links[s]) p.links[s] = p.links[k]; delete p.links[k]; } });   /* 舊資料的鍵轉成安全的 */
     var d = p.discussion || {}; p.discussion = { partners: Array.isArray(d.partners) ? d.partners : [], checks: d.checks || { read: false, diff: false, complement: false, outcome: false }, notes: d.notes || { diff: '', complement: '', outcome: '' } };
     p.interviews.forEach(function (r) { if (r && r.items) Object.keys(r.items).forEach(function (k) { if (r.items[k] && !Array.isArray(r.items[k].tags)) r.items[k].tags = []; if (r.items[k] && r.items[k].note === undefined) r.items[k].note = ''; }); });
     return p;
   }
+  /* 訪談連結以訪談編號當鍵，但編號長得像「#學號-04」，而 Firebase 的鍵不能有 . # $ / [ ]。
+     10-13 以前直接用編號當鍵：一有連結，整份玩家紀錄之後每次存檔都被資料庫拒絕（而且只印警告）。鍵一律轉成安全字元，讀的時候新舊都認。 */
+  function linkKey(id) { return String(id).replace(/[.#$\[\]\/]/g, '_'); }
+  function getLink(links, id) { return (links && (links[linkKey(id)] || links[id])) || ''; }
   function getPlayer(room, sid) { return normPlayer((room.players && room.players[sid]) || null); }
   function savePlayer(DB, code, sid, player) { var patch = {}; patch[sid] = player; DB.patchRoom(code, { players: patch }); }
   function nextId(player, sid) { player.seq = (player.seq || 0) + 1; return '#' + sid + '-' + (player.seq < 10 ? '0' : '') + player.seq; }
@@ -94,13 +99,14 @@
     var interviews = ownPlayer ? ownPlayer.interviews : [];
     var links = ownPlayer ? ownPlayer.links || {} : {};
     var doneIv = interviews.filter(function (r) { return CL.progress(r).complete; });
-    var haveLinks = doneIv.length > 0 && doneIv.every(function (r) { return /^https:\/\//.test(links[r.id] || ''); });
+    var haveLinks = doneIv.length > 0 && doneIv.every(function (r) { return /^https:\/\//.test(getLink(links, r.id)); });
     return {
       student: { id: sid, cls: profile.cls }, case: { directions: (caseInfo && caseInfo.directions) || [] },
       markers: ownRoom ? (markersByRoom[ownRoom.code] || []) : [], interviews: interviews,
       conclusions: ownPlayer ? ownPlayer.conclusions : [],
       sessions: sessions, discussion: { room: vr ? vr.code : '', partners: partners, checks: disc.checks || {} },
       submitted: { scene: !!(ownPlayer && ownPlayer.submitted), text: !!(ownPlayer && ownPlayer.submitted), links: !!(ownPlayer && ownPlayer.submitted && haveLinks) },
+      linksOk: haveLinks,
       _ownRoom: ownRoom ? ownRoom.code : null
     };
   }
@@ -108,10 +114,11 @@
   /* 提交資格：第 1–5 點亮，且每個完整訪談都存了 https 連結 */
   function submitGate(state) {
     var c = CP.canSubmit(state), blockers = c.blockers.map(function (b) { return b.label + '：' + b.detail; });
-    var done = state.interviews.filter(function (r) { return CL.progress(r).complete; });
-    return { ok: c.ok, blockers: blockers };
+    /* 10-12：連結也是門檻。原本只看前五點，沒有連結也能提交，結果畫面顯示「已通過」但第六點其實沒亮。 */
+    if (state.linksOk === false) blockers.push('對話連結：問完的訪談還有沒附連結的（到「訪談」補上）');
+    return { ok: c.ok && state.linksOk !== false, blockers: blockers };
   }
 
   return { makeData: makeData, getProfile: getProfile, saveProfile: saveProfile, validSid: validSid, blankPlayer: blankPlayer, getPlayer: getPlayer,
-    savePlayer: savePlayer, nextId: nextId, mcardEls: mcardEls, checkpointState: checkpointState, submitGate: submitGate, clone: clone };
+    savePlayer: savePlayer, linkKey: linkKey, getLink: getLink, nextId: nextId, mcardEls: mcardEls, checkpointState: checkpointState, submitGate: submitGate, clone: clone };
 });

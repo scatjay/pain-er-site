@@ -50,6 +50,8 @@
     var arrivals = opts.arrivalRate === undefined ? 4 : opts.arrivalRate;
     return round(base * (1 + clamp(arrivals - 4, -3, 8) * 0.06) * (opts.weekend ? 1.1 : 1));
   }
+  /* 人潮燈號（10-12 楊老師：畫面上一直跑車子很怪，直接用一個燈號）：同一個忙碌程度，改成不會動的一顆燈＋文字 */
+  function busyLight(rate) { return rate >= 1.5 ? { level: 'high', color: '#e03131', text: '人潮多（尖峰）' } : rate >= 0.8 ? { level: 'mid', color: '#f59f00', text: '人潮普通' } : rate >= 0.4 ? { level: 'low', color: '#2f9e44', text: '人潮少' } : { level: 'idle', color: '#adb5bd', text: '幾乎沒人' }; }
   function busyLabel(rate) { return rate >= 1.5 ? '車流很多（尖峰）' : rate >= 0.8 ? '車流普通' : rate >= 0.4 ? '車流稀疏' : '街上幾乎沒車'; }
 
   function hash(s) { var h = 7, i; s = String(s); for (i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0; return h; }
@@ -69,5 +71,5 @@
     return out.filter(function (c) { return c.t >= fromMin && c.t < toMin; }).sort(function (a, b) { return a.t - b.t || (a.id < b.id ? -1 : 1); });
   }
 
-  return { darkness: darkness, phase: phase, tint: tint, light: light, trafficRate: trafficRate, busyLabel: busyLabel, cars: cars, SUNRISE: SUNRISE, SUNSET: SUNSET, NIGHT_DARK: NIGHT_DARK };
+  return { darkness: darkness, phase: phase, tint: tint, light: light, trafficRate: trafficRate, busyLabel: busyLabel, busyLight: busyLight, cars: cars, SUNRISE: SUNRISE, SUNSET: SUNSET, NIGHT_DARK: NIGHT_DARK };
 });

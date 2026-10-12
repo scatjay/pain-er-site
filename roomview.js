@@ -22,7 +22,7 @@
       /* data-f：家具在這間房的序號，手機版用來接點擊 */
       out.push('<rect data-f="' + fi + '" x="' + f.rx + '" y="' + f.ry + '" width="' + fw + '" height="' + fh + '" rx="6" fill="' + col + '" stroke="#1e1e1e" stroke-width="3" style="cursor:pointer"/>');
       if (fw >= 26 && fh >= 22) out.push('<text x="' + num(f.rx + fw / 2) + '" y="' + num(f.ry + fh / 2 + 7) + '" font-size="' + Math.min(22, fh * .6) + '" text-anchor="middle" opacity=".85">' + MM.furnitureIcon(f) + '</text>');
-      if (f.label) out.push('<text x="' + num(f.rx + fw / 2) + '" y="' + num(f.ry + fh + 13) + '" font-size="12" font-weight="700" text-anchor="middle" fill="#1e1e1e" stroke="#fff" stroke-width="3" paint-order="stroke">' + esc(f.label) + '</text>');
+      if (f.label) out.push('<text class="fl" x="' + num(f.rx + fw / 2) + '" y="' + num(f.ry + fh + 13) + '" font-size="12" font-weight="700" text-anchor="middle" fill="#1e1e1e" stroke="#fff" stroke-width="3" paint-order="stroke">' + esc(f.label) + '</text>');
     });
     /* 三個可見的使用中道具狀態：白板更新、候診有人、叫號螢幕有號碼。 */
     if(roomId==='nurse') out.push('<text x="105" y="39" font-size="13" font-weight="900" text-anchor="middle" fill="#1864ab">3床待評估</text><text x="105" y="51" font-size="10" text-anchor="middle" fill="#495057">家屬已到</text>');

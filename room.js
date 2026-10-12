@@ -16,7 +16,13 @@
 
   function simText(c) { return CLK.format(c); }
   function roomName(id) { var r = LAYOUT.room(id); return r ? r.name : id; }
-  function toast(msg) { var t = $('ticker'); t.textContent = msg; t.style.display = 'block'; clearTimeout(toast._t); toast._t = setTimeout(function () { refreshTicker(); }, 3500); }
+  /* 10-13：提示訊息原本寫在左下角的事件字幕那一格，而那一格被底部「去過的房間」那條蓋住，等於沒顯示。改成浮在那條上方、置中的黃底框，4 秒後消失。 */
+  function toast(msg) {
+    var t = $('toastBox'), st = $('stage'), tb = $('travelBar');
+    if (!t) { t = document.createElement('div'); t.id = 'toastBox'; t.setAttribute('role', 'status'); t.style.cssText = 'position:absolute;left:50%;transform:translateX(-50%);z-index:2147483200;max-width:min(560px,86%);background:var(--yellow);color:#1e1e1e;border:3px solid #1e1e1e;border-radius:10px;padding:6px 14px;font-size:14px;font-weight:700;line-height:1.45;box-shadow:3px 3px 0 #1e1e1e;pointer-events:none;text-align:center'; (st || document.body).appendChild(t); }
+    t.style.bottom = ((tb ? tb.offsetHeight : 40) + 22) + 'px'; t.textContent = msg; t.style.display = 'block';
+    clearTimeout(toast._t); toast._t = setTimeout(function () { t.style.display = 'none'; }, 4000);
+  }
   S.toast = toast;
 
   /* ───── 進入／離開 ───── */
@@ -34,7 +40,8 @@
     cur = S.cur = { code: code, room: room, role: j.role, world: world, player: player, api: null, root: null, canon: [], applying: false, lastHash: '',
       clock: CLK.create({ speed: player.speed || APP.me.profile.speed || '標準', worldSec: player.worldSec || 0, shift: shift }), tab: 'clue', selClue: null, selNpc: null,
       lastSave: 0, seenEv: {}, tickT: 0, tokens: {}, view: null, lastRoomForSound: null, amb: null, bgm: null, soundOn: APP.me.profile.sound !== false,
-      musicOn: APP.me.profile.music !== false, stageMode: 'room' };
+      musicOn: APP.me.profile.music === true,   /* 10-12 楊老師：背景音樂有點干擾 ⇒ 預設關，想聽的人自己按 🎵 開 */
+      stageMode: 'room' };
     APP.show('game');
     $('roomLabel').textContent = '房間 ' + code + '・' + world.day.short + '・' + (shift === 'night' ? '夜班' : '日班') + '・' + world.meta.name;
     buildTabs(); if(window.ERG_ROTATION_UI)window.ERG_ROTATION_UI.bind(S); buildSpeed(); buildDots();
@@ -67,8 +74,11 @@
 
   function persist(force) {
     if (!cur) return;
-    var now = Date.now(); if (!force && now - cur.lastSave < 4000) return; cur.lastSave = now;
+    if (window.ERG_KICKED) return;      /* 這個帳號已在別處登入：這裡不再存檔 */
+    /* 10-13：時鐘每走一格就會叫到這裡。線上模式原本每 4 秒把整份玩家紀錄寫回去；現在定時的只寫時鐘兩個小欄位、60 秒一次。有動作（force）才寫整份。 */
+    var now = Date.now(), gap = APP.online ? 60000 : 4000; if (!force && now - cur.lastSave < gap) return; cur.lastSave = now;
     var p = cur.player; p.worldSec = cur.clock.worldSec; p.speed = cur.clock.speed === '自訂' ? '標準' : cur.clock.speed;
+    if (!force && APP.online && DB.patchPlayerFields) { try { if (DB.patchPlayerFields(cur.code, APP.me.sid, { worldSec: p.worldSec, speed: p.speed })) return; } catch (e) { return; } }
     CORE.savePlayer(DB, cur.code, APP.me.sid, p);
   }
   S.persist = persist;
@@ -163,9 +173,11 @@
   function onResize() { if (cur && cur.api) { fitView(true); cur._placeKey=''; placeTokens(); } }
   /* 把整間急診室（或指定區域）塞進看板，不留捲動 */
   function viewFor(rect) {
-    var W = $('board').clientWidth || 900, H = $('board').clientHeight || 600, pad = 24;
-    var z = Math.min((W - pad * 2) / rect.w, (H - pad * 2) / rect.h);
-    return { zoom: z, scrollX: (W / 2) / z - (rect.x + rect.w / 2), scrollY: (H / 2) / z - (rect.y + rect.h / 2), W: W, H: H };
+    /* 上方有房間現況條（約 34px）、下方有移動列（約 52px）蓋在畫布上：鏡頭只用中間那一段來置中與縮放，房間才不會被蓋住（10-12） */
+    var W = $('board').clientWidth || 900, H = $('board').clientHeight || 600, pad = 16, top = 41, bot = ($('travelBar') ? $('travelBar').offsetHeight + 21 : 61);   /* 對齊 #stageFrame（上 38、下 移動列+18，各加框線 3） */
+    if (H - top - bot < 160) { top = 0; bot = 0; }
+    var z = Math.min((W - pad * 2) / rect.w, (H - top - bot - pad * 2) / rect.h);
+    return { zoom: z, scrollX: (W / 2) / z - (rect.x + rect.w / 2), scrollY: (top + (H - top - bot) / 2) / z - (rect.y + rect.h / 2), W: W, H: H };
   }
   function fitView(force) {
     if (!cur || !cur.api) return;
@@ -178,11 +190,25 @@
   function stageRect() {
     var r = LAYOUT.room(cur.watchRoom || cur.player.loc);
     if (!r || r.type === 'hall' || r.type === 'outside') { var p = cur.me || { x: 850, y: 500 }; return { x: p.x - 280, y: p.y - 190, w: 560, h: 380 }; }
-    var pad = 32; return { x: r.x - pad, y: r.y - pad, w: r.w + pad * 2, h: r.h + pad * 2 };
+    var pad = 8; return { x: r.x - pad, y: r.y - pad, w: r.w + pad * 2, h: r.h + pad * 2 };   /* 10-12：32→12，貼著外牆裁，不露出隔壁房間的碎片（楊老師：邊緣很突兀） */
+  }
+  /* 畫布上的房間大標題（rtitle-*）：全地圖才顯示。restoreBase 只比對位置、大小、文字與鎖定，改透明度不會被還原；底圖元素也不存進資料庫。 */
+  function syncRoomTitles() {
+    if (!cur || !cur.api) return;
+    var want = cur.stageMode === 'map' ? 100 : 0, changed = false, found = 0;
+    var out = allEls().map(function (e) {
+      var cd = e.customData || {}; if (!(cd.title || (e.type === 'text' && cd.furniture))) return e;   /* 房間大標題＋家具名稱（id 會被 Excalidraw 重新產生，要用 customData 認） */
+      found += 1; if (e.opacity === want) return e;
+      changed = true; return Object.assign({}, e, { opacity: want, version: (e.version || 1) + 1, versionNonce: Math.floor(Math.random() * 2147483647) });
+    });
+    if (!changed) return found > 0;   /* 畫布元素還沒載入時回 false，下一輪再試 */
+    cur.applying = true; cur.lastHash = L.hashElements(out); cur.api.updateScene({ elements: out });
+    setTimeout(function () { if (cur) cur.applying = false; }, 0);
+    return true;
   }
   function refreshStageMode() {
     var btn = $('stageModeBtn'); if (btn) { btn.textContent = cur.stageMode === 'map' ? '房間' : '全地圖'; btn.classList.toggle('on', cur.stageMode === 'map'); }
-    fitView(true); renderOverlay();
+    fitView(true); syncRoomTitles(); cur._titleMode = cur.stageMode; renderOverlay();
   }
 
   function allEls() { return cur.api ? cur.api.getSceneElementsIncludingDeleted() : []; }
@@ -251,8 +277,26 @@
   function spotIn(roomId) {
     var st = LAYOUT.STATIONS.filter(function (s) { return s.room === roomId; });
     var rm = LAYOUT.room(roomId);
-    if (st.length) { var p = LAYOUT.abs(roomId, st[0].rx, st[0].ry); return { x: p.x + 30, y: p.y + 10 }; }
-    return { x: rm.x + rm.w / 2, y: rm.y + rm.h * 0.7 };
+    /* 10-12：原本固定站在第一個駐點旁，入口大廳會剛好踩在警衛與線索牌 C-01 上，牌子點不到。
+       改成在房裡挑一個離線索牌、駐點最遠的位置（候選點固定，不隨機，同一間房每次站同一處）。 */
+    var avoid = st.map(function (q) { return LAYOUT.abs(roomId, q.rx, q.ry); });
+    if (cur && cur.world) cur.world.clues.forEach(function (c) { if (c.pin.room === roomId) { var q = LAYOUT.abs(roomId, c.pin.rx, c.pin.ry); avoid.push({ x: q.x + 38, y: q.y + 17 }); } });
+    (LAYOUT.FURNITURE || []).forEach(function (f) { if (f.room === roomId) avoid.push({ x: rm.x + f.rx + (f.w || 30) / 2, y: rm.y + f.ry + (f.h || 20) / 2 + 20 }); });   /* 也不要站在家具與它的名稱上 */
+    if (!avoid.length) return { x: rm.x + rm.w / 2, y: rm.y + rm.h * 0.7 };
+    /* 10-13：只看「離得遠」不夠，身體還是常壓在牌子上。把自己的身體連同頭上的「你」標籤當成一塊（寬 60、高 98，腳底在站的位置），
+       碰到線索牌（84×42）或告示、白板、螢幕、燈箱就大扣分；候選點 9×5，順序固定，所以同一間房每次站同一處。 */
+    var blocks = [];
+    if (cur && cur.world) cur.world.clues.forEach(function (c) { if (c.pin.room === roomId) { var q = LAYOUT.abs(roomId, c.pin.rx, c.pin.ry); blocks.push({ x: q.x - 6, y: q.y - 6, w: 88, h: 46 }); } });
+    (LAYOUT.FURNITURE || []).forEach(function (f) { if (f.room === roomId && /^(sign|board|screen|lightbox)$/.test(f.type || '')) blocks.push({ x: rm.x + f.rx - 2, y: rm.y + f.ry - 2, w: (f.w || 30) + 4, h: (f.h || 20) + 4 }); });
+    function hits(x, y) { var n = 0, bx = x - 30, by = y - 98; blocks.forEach(function (b) { if (bx < b.x + b.w && bx + 60 > b.x && by < b.y + b.h && by + 98 > b.y) n += 1; }); return n; }
+    var best = null;
+    [0.5, 0.4, 0.6, 0.3, 0.7, 0.2, 0.8, 0.12, 0.88].forEach(function (fx) { [0.72, 0.62, 0.82, 0.52, 0.9].forEach(function (fy) {
+      var x = rm.x + rm.w * fx, y = rm.y + rm.h * fy, d = Infinity;
+      avoid.forEach(function (q) { d = Math.min(d, Math.hypot((q.x - x) / 1.4, q.y - y)); });
+      d -= 1000 * hits(x, y);
+      if (!best || d > best.d + 1) best = { x: x, y: y, d: d };
+    }); });
+    return { x: best.x, y: best.y };
   }
   function setLoc(roomId, silent) {
     if (!cur) return;
@@ -262,6 +306,7 @@
     $('locLabel').textContent = '你在：' + rm.name;
     $('mmHere').textContent = rm.name;
     var cap = cur.world.captionFor(roomId); $('caption').textContent = cap || rm.name;
+    cur._capText = cap || ''; cur._capUntil = Date.now() + 8000; cur._locT = Date.now();   /* 旁白頭 8 秒顯示在頂端那一條；「你」標籤 6 秒後淡出 */
     if (!silent) DB.appendEvent(cur.code, { kind: 'move', env: APP.me.sid, to: roomId });
     soundForRoom(roomId);
     persist(true);
@@ -302,13 +347,14 @@
     var stage=$('stage'), bar=document.getElementById('travelBar');
     if(!bar){bar=document.createElement('div');bar.id='travelBar';stage.appendChild(bar);}
     if(!document.getElementById('boardMask')){var mask=document.createElement('div');mask.id='boardMask';stage.appendChild(mask);}
+    if(!document.getElementById('stageFrame')){var fr=document.createElement('div');fr.id='stageFrame';stage.appendChild(fr);}   /* 10-12：固定外框，每間房看起來都在同一個大小的框裡 */
     bar.innerHTML='<button class="ghost" id="stageModeBtn">全地圖</button><span id="visitedChips"></span>';
     $('stageModeBtn').onclick=function(){cur.stageMode=cur.stageMode==='map'?'room':'map';refreshStageMode();};
     renderTravelChips();
   }
   function renderTravelChips(){var host=$('visitedChips');if(!host||!cur)return;host.innerHTML='<b>去過的房間：</b>'+((cur.player.visited||[]).map(function(id){var r=LAYOUT.room(id);return r?'<button class="ghost" data-visit="'+esc(id)+'">'+esc(r.name)+'</button>':'';}).join('')||'尚無');Array.prototype.forEach.call(host.querySelectorAll('[data-visit]'),function(b){b.onclick=function(){startTravel(b.dataset.visit);};});}
   S.travel = startTravel;
-  S.teleport = function(id){if(!cur)return;cur.walk=null;setLoc(id);rememberRoom(id);renderTravelChips();};
+  S.teleport = function(id){if(!cur)return;cur.walk=null;setLoc(id);rememberRoom(id);renderTravelChips();refreshStageMode();};   /* 測試用；跟真的走到一樣要重新對準鏡頭 */
 
   /* ───── 環境音 ───── */
   function soundForRoom(roomId) {
@@ -330,7 +376,7 @@
   function bindMusic(){var b=$('musicBtn');if(!b)return;b.onclick=function(){if(!cur)return;cur.musicOn=!cur.musicOn;APP.me.profile.music=cur.musicOn;CORE.saveProfile(APP.storage,APP.me.sid,APP.me.profile);if(cur.bgm)cur.bgm.setEnabled(cur.musicOn);else if(cur.musicOn)musicForRoom(cur.player.loc);updateMusicBtn();};updateMusicBtn();}
 
   /* ───── 時鐘與畫面更新 ───── */
-  function clockActive() { return !document.hidden && cur.tab !== 'concl' && cur.tab !== 'disc' && cur.tab !== 'cp' && !cur.modalOpen; }
+  function clockActive() { return !document.hidden && cur.tab !== 'concl' && cur.tab !== 'disc' && cur.tab !== 'cp' && !cur.modalOpen && !(cur.tab === 'intv' && cur.intvHold); }   /* 10-13：在訪談分頁選了現場的人＝正在訪談，時間先暫停 */
   function frame() {
     if (!cur) return;
     var now = Date.now(), dt = cur.tickT ? (now - cur.tickT) / 1000 : 0; cur.tickT = now;
@@ -366,7 +412,7 @@
       if ((!vis[ent.id] && !cur.tokens[ent.id]) || (cur.stageMode !== 'map' && pos.room !== inRoom)) return;
       var id = ent.id, here = pos.room === inRoom;
       var el = cur.tokens[id];
-      if (!el) { el = cur.tokens[id] = document.createElement('div'); el.className = 'tok'; ov.appendChild(el); el.onclick = function () { onNpcClick(id); }; }
+      if (!el) { el = cur.tokens[id] = document.createElement('div'); el.className = 'tok'; ov.appendChild(el); el._eid = id; el.onclick = function (e) { onNpcClick(pickTokenAt(e, id)); }; }
       seen[id] = true;
       var av = cur.world.availability(ent, pos, simMin), moving = pos.state === 'move';
       var fatigue = av.fatigue || { level: 0 }, mood = fatigue.level >= 2 ? 'sleepy' : (av.level === 'blocked' ? 'busy' : (moving ? 'idle' : (ent.kind === 'incident' ? 'angry' : 'idle')));
@@ -379,7 +425,8 @@
       el.classList.toggle('off', !vis[ent.id]); el.style.opacity = !vis[ent.id] ? '0' : (here || inRoom === null ? '1' : '.7'); el.style.pointerEvents = vis[ent.id] ? 'auto' : 'none';
       var focused=cur.selNpc===id||el.matches(':hover');var nm = el.querySelector('.nm'); nm.textContent = here ? ent.name : ''; nm.style.display = here&&focused ? 'inline-block' : 'none'; nm.className = 'nm ' + (ent.kind === 'bot' ? '' : av.level);
       var bw = el.querySelector('.bubWrap'), m = here ? cur.world.mutterFor(ent, pos, t) : null;
-      bw.innerHTML = (pos.act ? '<div class="act">' + esc(pos.act) + '</div>' : '') + (m&&focused ? '<div class="bub ' + (m.kind === 'shout' ? 'shout' : (m.kind === 'thought' ? 'thought' : '')) + '">' + esc(m.text) + '</div>' : '');
+      bw.innerHTML = (pos.act && focused ? '<div class="act">' + esc(pos.act) + '</div>' : '') + (m&&focused ?   /* 10-12：「正在做什麼」只在滑到或選到這個人時顯示，平常不壓在物件上；現況條有同樣的資訊 */
+         '<div class="bub ' + (m.kind === 'shout' ? 'shout' : (m.kind === 'thought' ? 'thought' : '')) + '">' + esc(m.text) + '</div>' : '');
     });
     Object.keys(cur.tokens).forEach(function (id) { if (!seen[id] && id !== 'me') { cur.tokens[id].remove(); delete cur.tokens[id]; } });
     cur._dirty = true;
@@ -388,9 +435,12 @@
     if (!me) { me = cur.tokens.me = document.createElement('div'); me.className = 'tok me'; ov.appendChild(me); }
     var look = AV.toCharLook(APP.me.profile.avatar.look), msig = lookKey(look) + size;
     if (me._sig !== msig) { me._sig = msig; me.innerHTML = svgFor(look, 'me:' + APP.me.sid, 'idle'); me.querySelector('svg').style.height = size + 'px'; me.querySelector('svg').style.width = 'auto'; }
-    var tag=cur.youTag;if(!tag){tag=cur.youTag=document.createElement('div');tag.className='youTagLayer';tag.textContent='你';ov.appendChild(tag);}tag.style.left=((cur.me.x+(cur.api.getAppState().scrollX))*liveZoom())+'px';tag.style.top=((cur.me.y+cur.api.getAppState().scrollY)*liveZoom()-size-30)+'px';tag.style.zIndex='2147483647';
+    var tag=cur.youTag;if(!tag){tag=cur.youTag=document.createElement('div');tag.className='youTagLayer';tag.textContent='你';ov.appendChild(tag);}tag.style.left=((cur.me.x+(cur.api.getAppState().scrollX))*liveZoom())+'px';tag.style.top=((cur.me.y+cur.api.getAppState().scrollY)*liveZoom()-size-30)+'px';tag.style.zIndex='2147483647';tag.style.opacity=(cur.walk||Date.now()-(cur._locT||0)<6000)?'1':'0';
     me._tx = cur.me.x; me._ty = cur.me.y; me._room = cur.player.loc; me._fixed = true; me.style.zIndex = String(DEPTH ? DEPTH.z(cur.me.y) : Math.round(cur.me.y));
+    syncRoomTitles();   /* 每次重繪都檢查：底圖被還原或場景重新載入後，畫布上的名稱會回來，只藏一次不夠（入口大廳出現重複的字就是這樣） */
     syncRoomProps();
+    syncPinHits();
+    syncFurnLabels();
     spreadTokens();
     me.className = 'tok me idle';
   }
@@ -399,12 +449,54 @@
     var D = window.ERG_DAYLIGHT, info = D.light(simMin), rate = D.trafficRate(simMin, { arrivalRate: cur.world.data.ARRIVAL_PROFILE[Math.min(11, Math.floor((simMin-cur.world.data.SIM.START)/60))] || 1, weekend: cur.world.day.weekend });
     var cars = D.cars(simMin - 12, simMin + 30, { seed: cur.code, arrivalRate: rate }); if (!cars.length) cars = [{id:'fallback-a',t:simMin-2,kind:'car',dir:1},{id:'fallback-b',t:simMin+2,kind:'scooter',dir:-1}];
     var html = '<div class="tint" style="background:' + info.tint + ';opacity:' + info.darkness + '"></div>';
-    html += '<div class="lightBeam doorBeam" style="left:5%;opacity:' + info.daylightShaft + '"></div><div class="lightBeam" style="left:24%;opacity:' + info.daylightShaft + '"></div><div class="lightBeam windowBeam" style="right:30%;opacity:' + info.daylightShaft + '"></div><div class="lampGlow" style="right:11%;opacity:' + info.lampGlow + '"></div>';
-    html += '<div class="trafficTrack">' + cars.filter(function(c){return Math.abs(c.t-simMin)<8;}).slice(0,9).map(function(c){var x=((c.t-simMin+8)/16*100), night=info.headlights;return '<i class="car ' + c.kind + (night?' lit':'') + '" style="left:' + x + '%;transform:scaleX(' + (c.dir<0?-1:1) + ')"></i>';}).join('') + '</div>';
+    /* 10-12：斜射光束與燈暈拿掉（畫面上不要有干擾的東西），只留日夜色調 */
+    /* 10-12 楊老師：畫面下方一直有車子跑很怪 ⇒ 車流動畫拿掉，忙碌程度改用右上角一顆不會動的燈號（D.busyLight） */
     var emergency = cur.world.sim.activeEvents(simMin).some(function(e){return e.spawn&&e.spawn.mode==='ambulance';});
     if (emergency) html += '<i class="ambulanceCar">🚑<b></b></i>';
-    html += '<div class="busyHint">' + D.busyLabel(rate) + '・' + info.phase + '</div>';
+    cur.busy = { light: D.busyLight(rate), phase: info.phase };   /* 人潮燈號：顯示在「房間現況」那一條的開頭（renderRoomNow） */
     layer.innerHTML = html;
+  }
+  /* 一間房要顯示哪些家具名稱：同名只留最下面那個；預設放在家具下方，會壓到線索牌或超出房間就改放上方。回傳 [{text,x,y}]（房間內相對座標，x 是中心） */
+  function furnLabelsFor(roomId) {
+    var rm = LAYOUT.room(roomId); if (!rm) return [];
+    var pins = cur.world.clues.filter(function (c) { return c.pin.room === roomId; }).map(function (c) { return { x: c.pin.rx - 4, y: c.pin.ry - 4, w: 84, h: 42 }; });
+    function hitsPin(x, y, w) { return pins.some(function (p) { return x - w / 2 < p.x + p.w && x + w / 2 > p.x && y < p.y + p.h && y + 18 > p.y; }); }
+    var best = {};
+    (LAYOUT.FURNITURE || []).forEach(function (f) {
+      if (f.room !== roomId || !f.label) return;
+      var fw = f.w || 30, fh = f.h || 20, x = f.rx + fw / 2, w = f.label.length * 13 + 10, below = f.ry + fh + 4, above = f.ry - 20;
+      var y = (below + 18 > rm.h || hitsPin(x, below, w)) ? above : below;
+      if (y < 0 || (y === above && hitsPin(x, above, w))) y = below;
+      var o = { text: f.label, x: x, y: y, bad: hitsPin(x, y, w) ? 1 : 0 };
+      var b = best[f.label]; if (!b || o.bad < b.bad || (o.bad === b.bad && o.y > b.y)) best[f.label] = o;
+    });
+    return Object.keys(best).map(function (k) { return best[k]; });
+  }
+  /* 家具名稱（單房模式）：疊在人物之上的 DOM 標籤，位置由 placeTokens 每幀跟著鏡頭（_wx/_wy）。全地圖模式不畫，改用畫布上的文字。 */
+  function syncFurnLabels() {
+    var host = $('overlay'), room = cur.stageMode === 'map' ? null : (cur.watchRoom || cur.player.loc), key = String(room);
+    if (cur._flKey === key) return; cur._flKey = key;
+    Array.prototype.forEach.call(host.querySelectorAll('.fLabel'), function (e) { e.remove(); });
+    var rm = room && LAYOUT.room(room); if (!rm || rm.type !== 'room') return;
+    furnLabelsFor(room).forEach(function (o) {
+      var e = document.createElement('div'); e.className = 'fLabel'; e.textContent = o.text; e._wx = rm.x + o.x; e._wy = rm.y + o.y; host.appendChild(e);
+    });
+    cur._dirty = true;
+  }
+  /* 線索牌的點擊區：牌子畫在畫布上，人物（DOM）站在上面時會攔走點擊 ⇒ 另外疊一層透明的點擊區在人物之上。位置每幀由 placeTokens 跟著鏡頭更新。 */
+  function openClue(id) { hidePop(); cur.selClue = id; S.switchTab('clue'); if (cur.role === 'member') DB.appendEvent(cur.code, { kind: 'clue-open', env: APP.me.sid, clue: id }); }
+  function syncPinHits() {
+    var host = $('overlay'), room = cur.stageMode === 'map' ? null : (cur.watchRoom || cur.player.loc), want = {};
+    cur.pinHits = cur.pinHits || {};
+    cur.world.clues.forEach(function (c) { if (room && c.pin.room === room && room === cur.player.loc) want[c.id] = c; });
+    Object.keys(cur.pinHits).forEach(function (id) { if (!want[id]) { cur.pinHits[id].remove(); delete cur.pinHits[id]; } });
+    Object.keys(want).forEach(function (id) {
+      var el = cur.pinHits[id];
+      if (!el) { el = cur.pinHits[id] = document.createElement('div'); el.className = 'pinHit'; el.dataset.clue = id; el.title = '線索 ' + id + '（點了就讀）'; el.textContent = '線索 ' + id; el.onclick = function (e) { e.stopPropagation(); openClue(id); }; host.appendChild(el); }
+      var c = want[id], p = LAYOUT.abs(c.pin.room, c.pin.rx, c.pin.ry), a = screenPos(p.x - 4, p.y - 4), z = a.z;
+      el._pwx = p.x - 4; el._pwy = p.y - 4;
+      el.style.left = a.x + 'px'; el.style.top = a.y + 'px'; el.style.width = (84 * z) + 'px'; el.style.height = (42 * z) + 'px'; el.style.fontSize = Math.max(11, 12.5 * z) + 'px';
+    });
   }
   function syncRoomProps(){var host=$('overlay'),r=LAYOUT.room(cur.player.loc),old=host.querySelectorAll('.roomProp');Array.prototype.forEach.call(old,function(e){e.remove();});if(!r||r.type!=='room'||cur.stageMode==='map')return;var items=[];if(r.id==='nurse')items.push({x:r.x+105,y:r.y+35,text:'3床待評估\n家屬已到',cls:'board'});if(r.id==='triage')items.push({x:r.x+230,y:r.y+24,text:'A018',cls:'screen'});if(r.id==='waiting'){items.push({x:r.x+76,y:r.y+127,text:'●',cls:'seat'});items.push({x:r.x+120,y:r.y+127,text:'●',cls:'seat'});}items.forEach(function(p){var e=document.createElement('div'),s=screenPos(p.x,p.y);e.className='roomProp '+p.cls;e.textContent=p.text;e.style.left=s.x+'px';e.style.top=s.y+'px';e.style.zIndex='4';host.appendChild(e);});}
   /* 同房間的人互相推開，不要全部疊在一起；位置慢慢滑過去，不跳 */
@@ -412,7 +504,11 @@
     var items = [], ids = Object.keys(cur.tokens), bounds = {};
     LAYOUT.ROOMS.forEach(function (r) { bounds[r.id] = r; });
     ids.forEach(function (id) { var el = cur.tokens[id]; if (el._tx === undefined || el.classList.contains('off')) return; items.push({ id: id, x: el._tx, y: el._ty, room: el._room, fixed: !!el._fixed }); });
-    var out = window.ERG_SPREAD.spread(items, { iter: 6, bounds: bounds });
+    /* 10-12：線索牌當成推不動的障礙物（牌子下方兩個點），人物會被推到旁邊，不再蓋住牌子（警衛原本整個站在 C-01 上） */
+    /* 障礙物：線索牌（兩排兩欄，整塊牌子都要露出來）與告示類家具（上面有字），人物會被推到旁邊 */
+    cur.world.clues.forEach(function (c) { var q = LAYOUT.abs(c.pin.room, c.pin.rx, c.pin.ry); [[20, 34], [56, 34], [20, 84], [56, 84]].forEach(function (o, k) { items.push({ id: 'pin:' + c.id + ':' + k, x: q.x + o[0], y: q.y + o[1], room: c.pin.room, fixed: true }); }); });
+    (LAYOUT.FURNITURE || []).forEach(function (f, k) { if (f.type !== 'sign' && f.type !== 'board' && f.type !== 'screen' && f.type !== 'lightbox') return; var rm0 = LAYOUT.room(f.room); if (!rm0) return; items.push({ id: 'sign:' + k, x: rm0.x + f.rx + (f.w || 30) / 2, y: rm0.y + f.ry + (f.h || 20) + 40, room: f.room, fixed: true }); });
+    var out = window.ERG_SPREAD.spread(items, { iter: 8, bounds: bounds });
     ids.forEach(function (id) {
       var el = cur.tokens[id], o = out[id]; if (!o) return;
       if (el._fixed || (id==='me' && cur.walk)) { el._wx = id==='me'?cur.me.x:o.x; el._wy = id==='me'?cur.me.y:o.y; }
@@ -426,10 +522,12 @@
     if (!cur || !cur.api) return;
     var st = cur.api.getAppState(), z = st.zoom.value, sx = st.scrollX, sy = st.scrollY, key = z + '|' + sx + '|' + sy + '|' + (cur._tn || 0);
     var ov = $('overlay'), nodes = ov.children, n = nodes.length, i, el;
-    var mask=$('boardMask'); if(mask){if(cur.stageMode==='map'){mask.style.display='none';}else{var mr=stageRect(),a=screenPos(mr.x,mr.y),b=screenPos(mr.x+mr.w,mr.y+mr.h);mask.style.display='block';mask.style.position='absolute';mask.style.left=a.x+'px';mask.style.top=a.y+'px';mask.style.width=Math.max(0,b.x-a.x)+'px';mask.style.height=Math.max(0,b.y-a.y)+'px';mask.style.zIndex='5';mask.style.pointerEvents='none';mask.style.boxShadow='0 0 0 3000px rgba(20,28,32,.94)';}}
+    var frame=$('stageFrame'); if(frame){frame.style.display=cur.stageMode==='map'?'none':'block';frame.style.bottom=(($('travelBar')?$('travelBar').offsetHeight:40)+18)+'px';}
+    var mask=$('boardMask'); if(mask){if(cur.stageMode==='map'){mask.style.display='none';}else{var mr=(cur.walk&&cur.focus)?cur.focus:stageRect(),a=screenPos(mr.x,mr.y),b=screenPos(mr.x+mr.w,mr.y+mr.h);mask.style.borderRadius='14px';mask.style.display='block';mask.style.position='absolute';mask.style.left=a.x+'px';mask.style.top=a.y+'px';mask.style.width=Math.max(0,b.x-a.x)+'px';mask.style.height=Math.max(0,b.y-a.y)+'px';mask.style.zIndex='5';mask.style.pointerEvents='none';mask.style.boxShadow='0 0 0 3000px var(--panel)';   /* 10-12：原本是近黑色，楊老師說像黑邊；改成頁面底色 */}}
     key += '|' + $('board').clientWidth + '|' + $('board').clientHeight;
     if (key === cur._placeKey && n === cur._placeN && !cur._dirty) return; cur._placeKey = key; cur._placeN = n; cur._dirty = false;
     for (i = 0; i < n; i++) { el = nodes[i]; if (el._wx === undefined) continue; el.style.left = ((el._wx + sx) * z) + 'px'; el.style.top = ((el._wy + sy) * z) + 'px'; if(DEPTH) { var rr=LAYOUT.room(el._room), ww=el.offsetWidth, hh=el.offsetHeight, cuts=rr&&DEPTH.cutouts(LAYOUT.FURNITURE,rr,{x:el._wx,y:el._wy,w:ww/z,h:hh/z}), pix=(cuts||[]).map(function(q){return{x:(q.x-el._wx+ww/(2*z))*z,y:(q.y-el._wy+hh*.92/z)*z,w:q.w*z,h:q.h*z};}); el.style.clipPath=DEPTH.clipPath(pix,{w:ww,h:hh}); } }
+    if (cur.pinHits) Object.keys(cur.pinHits).forEach(function (id) { var e = cur.pinHits[id]; e.style.left = ((e._pwx + sx) * z) + 'px'; e.style.top = ((e._pwy + sy) * z) + 'px'; e.style.width = (84 * z) + 'px'; e.style.height = (42 * z) + 'px'; e.style.fontSize = Math.max(11, 12.5 * z) + 'px'; });
     var sz = Math.max(40, Math.min(100, 112 * z));
     if (cur._sz !== sz) { cur._sz = sz; Array.prototype.forEach.call(ov.querySelectorAll('svg'), function (v) { v.style.height = sz + 'px'; v.style.width = 'auto'; }); }
   }
@@ -441,6 +539,15 @@
     var s = screenPos(wx, wy); p.style.left = s.x + 'px'; p.style.top = s.y + 'px'; p.style.zIndex = '2147483000'; ov.appendChild(p);
     p.querySelector('.popClose').onclick = hidePop; p.onclick = function (e) { e.stopPropagation(); };
     return p;
+  }
+  /* 點到人物時：同一個點底下疊了好幾個人，就優先選「可以訪談的真人物」，其次才是模擬同學（模擬同學常站在警衛或護理師身上，會把點擊攔走，變成點不到要訪談的人）。 */
+  function pickTokenAt(e, id) {
+    try {
+      var ent0 = cur.world.entityById(id); if (!e || !ent0 || ent0.kind !== 'bot' || !document.elementsFromPoint) return id;
+      var stack = document.elementsFromPoint(e.clientX, e.clientY), better = null;
+      stack.forEach(function (n) { var t = n.closest ? n.closest('.tok') : null; if (!t || better || !t._eid || t._eid === id) return; var en = cur.world.entityById(t._eid); if (en && en.kind !== 'bot') better = t._eid; });
+      return better || id;
+    } catch (x) { return id; }
   }
   function onNpcClick(id) {
     var ent = cur.world.entityById(id); if (!ent) return;
@@ -530,7 +637,8 @@
   function refreshTicker() {
     if (!cur) return;
     var simMin = S.simMin(), tk = cur.world.sim.ticker(simMin, 1);
-    var t = $('ticker'); if (!tk.length) { t.style.display = 'none'; return; }
+    var t = $('ticker'); if (!t) return;
+    if (!tk.length) { t.style.display = 'none'; return; }
     t.style.display = 'block'; t.textContent = tk[0].time + '　' + tk[0].title + '：' + tk[0].text;
   }
   function eventWatch() {
@@ -540,7 +648,10 @@
     waiters.forEach(function(it){(it.ent.timeline.segments||[]).forEach(function(s){if(s.kind==='idle'&&s.act===it.pos.act&&cur.clock.worldSec>=it.ent.timeline.appearAt+s.t0&&cur.clock.worldSec<=it.ent.timeline.appearAt+s.t1)waitMax=Math.max(waitMax,(cur.clock.worldSec-it.ent.timeline.appearAt-s.t0)/cur.world.data.SIM.SECONDS_PER_SIM_MIN);});});
     var clueCount=cur.world.clues.filter(function(c){return c.pin.room===cur.player.loc;}).length;
     var tired = present.filter(function(it){var a=cur.world.availability(it.ent,it.pos,simMin);return a.fatigue&&a.fatigue.level>=2;})[0];
-    $('roomNow').textContent=(here.length?'這間房現在：'+here[0].title+'。':'這間房現在：')+(actions.join('；')||'暫時安靜，留意桌面與等候區。')+' 等候 '+waiters.length+' 人，約 '+Math.floor(waitMax)+' 分；線索 '+clueCount+' 張。'+(tired?' '+tired.ent.name+'看起來很累。':'');
+    var nowTxt=(here.length?'這間房現在：'+here[0].title+'。':'這間房現在：')+(actions.join('；')||'暫時安靜，留意桌面與等候區。')+' 等候 '+waiters.length+' 人，約 '+Math.floor(waitMax)+' 分；線索 '+clueCount+' 張。'+(tired?' '+tired.ent.name+'看起來很累。':'');
+    var rn=$('roomNow'),showCap=!!(cur._capText&&Date.now()<(cur._capUntil||0));rn.classList.toggle('cap',showCap);
+    if(showCap){rn.textContent=cur._capText;return;}
+    var bz=cur.busy;rn.innerHTML=(bz?'<i class="lamp" style="background:'+bz.light.color+'"></i>'+esc(bz.light.text+'・'+bz.phase)+'　':'')+esc(nowTxt);
     if (here.length) { sfx.style.display = 'block'; sfx.textContent = COMIC.sfxFor(here[0]); } else sfx.style.display = 'none';
     here.forEach(function (e) { if (!cur.seenEv[e.id] && !(cur.player.seenEv || {})[e.id]) { cur.seenEv[e.id] = true; cur.player.seenEv = Object.assign({}, cur.player.seenEv, (function () { var o = {}; o[e.id] = true; return o; })()); window.ERG_EVENT_UI.startLive(cur,e,cur.player.loc); } });
   }

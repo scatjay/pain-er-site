@@ -83,14 +83,14 @@ body.proj{--fs:21px}body.proj .wrap{max-width:none}body.proj .small{display:none
   <div class="stat" id="stLive"><div class="lab">人物即時對話</div><div class="val" id="liveState">讀取中…</div>
     <div class="row" style="margin-top:6px;gap:6px"><button id="liveOpen" class="sm">開放 2 小時</button><button id="liveClose" class="sm warn">關閉</button><button id="liveAuto" class="sm ghost">照課表</button></div>
     <div class="lab small" id="liveNext" style="margin-top:4px"></div></div>
-  <div class="stat"><div class="lab">今天用量（每人每天 60 題）</div><div class="val" id="usageSum">讀取中…</div><div class="lab small" id="updated"></div></div>
+  <div class="stat"><div class="lab">這個場次用量（每人每天 60 題）</div><div class="val" id="usageSum">讀取中…</div><div class="lab" id="usageCum"></div><div class="lab small" id="updated"></div></div>
 </div>
 <details class="small muted" style="font-size:.85em;margin-top:4px"><summary style="cursor:pointer">開關怎麼運作</summary><div id="liveHelp"></div></details>
 
 <div class="kpi"><div><div class="big" id="kOnline">0</div><div class="muted">人在線</div></div><div><div class="big" id="kStudents">0</div><div class="muted">人進過本場次</div></div><div><div class="big" id="kRooms">0</div><div class="muted">間房</div></div><div><div class="big" id="kIv">0</div><div class="muted">次訪談</div></div><div><div class="big" id="kQ">0</div><div class="muted">個提問</div></div><div><div class="big" id="kLit">0</div><div class="muted">人六點全亮</div></div></div>
 
 <nav class="tabs" id="tabs">
-  <button data-tab="live">現場</button><button data-tab="ask">提問與啟示</button><button data-tab="stu">學生 <span class="n" id="nStu">0</span></button><button data-tab="room">房間與逐字稿 <span class="n" id="nRoom">0</span></button><button data-tab="board">成就排行</button><button data-tab="fb">回報 <span class="n" id="nFb">0</span></button><button data-tab="use" class="small">用量明細</button>
+  <button data-tab="live">現場</button><button data-tab="ask">提問與啟示</button><button data-tab="stu">學生 <span class="n" id="nStu">0</span></button><button data-tab="room">房間與逐字稿 <span class="n" id="nRoom">0</span></button><button data-tab="board">成就排行</button><button data-tab="fb">回報 <span class="n" id="nFb">0</span></button><button data-tab="use">用量與花費</button>
 </nav>
 
 <section class="pane" data-pane="live">
@@ -135,7 +135,13 @@ body.proj{--fs:21px}body.proj .wrap{max-width:none}body.proj .small{display:none
 </section>
 
 <section class="pane" data-pane="use">
-  <h2>即時訪談用量（今天）</h2>
+  <h2>本遊戲的累積用量與花費（代理程式逐題記錄）</h2>
+  <div class="card scroll" id="useDays">讀取中…</div>
+  <h2>Vertex 專案計量（來自 LLM 後台：Cloud Monitoring）</h2>
+  <div class="card scroll" id="useVertex">讀取中…</div>
+  <h2>EDU 抵免額（來自 LLM 後台：GCP 帳務頁）</h2>
+  <div class="card scroll" id="useCredit">讀取中…</div>
+  <h2>這個場次每位學生的用量</h2>
   <div class="card scroll" id="usage"></div>
 </section>
 
@@ -148,16 +154,16 @@ body.proj{--fs:21px}body.proj .wrap{max-width:none}body.proj .small{display:none
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-<script src="er_firebase.js?v=202610122243"></script>
-<script src="checklist.js?v=202610122243"></script>
-<script src="checkpoints.js?v=202610122243"></script>
-<script src="avatar.js?v=202610122243"></script>
-<script src="local_db.js?v=202610122243"></script>
-<script src="app_core.js?v=202610122243"></script>
-<script src="achievements.js?v=202610122243"></script><script src="remote_db.js?v=202610122243"></script>
-<script src="layout.js?v=202610122243"></script>
-<script src="minimap.js?v=202610122243"></script>
-<script src="personas_inclusive.js?v=202610122243"></script><script src="er_data.js?v=202610122243"></script><script src="npc_voice.js?v=202610122243"></script><script src="personas.js?v=202610122243"></script>
+<script src="er_firebase.js?v=202610130133"></script>
+<script src="checklist.js?v=202610130133"></script>
+<script src="checkpoints.js?v=202610130133"></script>
+<script src="avatar.js?v=202610130133"></script>
+<script src="local_db.js?v=202610130133"></script>
+<script src="app_core.js?v=202610130133"></script>
+<script src="achievements.js?v=202610130133"></script><script src="remote_db.js?v=202610130133"></script>
+<script src="layout.js?v=202610130133"></script>
+<script src="minimap.js?v=202610130133"></script>
+<script src="personas_inclusive.js?v=202610130133"></script><script src="er_data.js?v=202610130133"></script><script src="npc_voice.js?v=202610130133"></script><script src="personas.js?v=202610130133"></script>
 <script>
 /* 教師名單：只有這裡的 Google 帳號能進。要加人就加在這裡（改完重新部署；資料庫規則 tools/er_after_google_enabled.py 也要加）。 */
 var TEACHER_EMAILS = ['scatjay@gmail.com'];
@@ -227,11 +233,12 @@ var CLASS_WINDOWS = [].concat(
   var DEID = false, PROJ = false, alias = {};
   function aliasOf(sid) { if (!DEID) return sid; if (!alias[sid]) { var n = Object.keys(alias).length + 1; alias[sid] = '學生' + (n < 10 ? '0' : '') + n; } return alias[sid]; }
   function buildAlias(sids) { alias = {}; sids.slice().sort().forEach(function (s) { aliasOf(s); }); }
-  $('deidBtn').onclick = function () { DEID = !DEID; $('deidBtn').textContent = '去識別化：' + (DEID ? '開' : '關'); $('deidBtn').classList.toggle('on', DEID); render(); renderFb(); renderUsage(usage); };
-  $('projBtn').onclick = function () { PROJ = !PROJ; $('projBtn').textContent = '投影模式：' + (PROJ ? '開' : '關'); $('projBtn').classList.toggle('on', PROJ); document.body.classList.toggle('proj', PROJ); if (PROJ && TAB === 'use') setTab('live'); };
+  $('deidBtn').onclick = function () { DEID = !DEID; $('deidBtn').textContent = '去識別化：' + (DEID ? '開' : '關'); $('deidBtn').classList.toggle('on', DEID); render(); renderFb(); renderUsageAll(); };
+  $('projBtn').onclick = function () { PROJ = !PROJ; $('projBtn').textContent = '投影模式：' + (PROJ ? '開' : '關'); $('projBtn').classList.toggle('on', PROJ); document.body.classList.toggle('proj', PROJ); };
 
-  function today() { var d = new Date(); function p(n) { return (n < 10 ? '0' : '') + n; } return 'ER-' + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()); }
-  function sessLabel(k) { var m = k.match(/^ER-(\d{4})(\d\d)(\d\d)$/); if (!m) return k; var d = new Date(+m[1], +m[2] - 1, +m[3]); return (+m[2]) + '/' + (+m[3]) + '（' + '日一二三四五六'.charAt(d.getDay()) + '）' + (k === today() ? ' 今天' : ''); }
+  /* 10-13：這個單元三個班、三週共用同一個場次（與 game.js 的 UNIT_SESS 同一個值，要一起改） */
+  function today() { return 'ER-20261013'; }
+  function sessLabel(k) { var m = k.match(/^ER-(\d{4})(\d\d)(\d\d)$/); if (!m) return k; var d = new Date(+m[1], +m[2] - 1, +m[3]); return (+m[2]) + '/' + (+m[3]) + '（' + '日一二三四五六'.charAt(d.getDay()) + '）' + (k === today() ? ' 本單元' : ''); }
   var SESS = today(), DB = null, profiles = {}, presence = {}, CP = window.ERG_CHECKPOINTS, CORE = window.ERG_CORE, booted = false, rooms = [], offs = [];
   var h = location.hash.match(/^#chat\/([^/]+)\/([^/]+)\/([^/]+)\/([^/]+)$/); if (h) SESS = decodeURIComponent(h[1]);
   var qs0 = location.search.match(/[?&]sess=(ER-[A-Za-z0-9-]{4,24})/); if (isLocal && qs0) SESS = qs0[1];
@@ -282,6 +289,7 @@ var CLASS_WINDOWS = [].concat(
       disarm(); setLive('closed', 12, b, '已關閉 12 小時');
     };
     $('liveHelp').innerHTML = '課表自動開放的時段（上課前一小時到下課後一小時）：' + CLASS_WINDOWS.map(function (w) { return fmtWin({ a: new Date(w[0] + 'T' + w[1] + ':00').getTime(), b: new Date(w[0] + 'T' + w[2] + ':00').getTime() }); }).join('、') + '。其餘時間學生可以逛、可以跟同學聊，但人物不回話，不耗 Vertex。「開放 2 小時」與「關閉」是暫時蓋過課表，時間到自動交回。';
+    fdb.ref('usage').on('value', function (s) { usageAll = s.val() || {}; renderUsageAll(); }, function (e) { $('usageSum').innerHTML = '<span class="muted">讀不到（' + esc((e && e.code) || e) + '）</span>'; ['usage', 'useDays', 'useVertex', 'useCredit'].forEach(function (id) { denied($(id), '用量')(e); }); });
     fdb.ref('er/_feedback').limitToLast(100).on('value', function (s) { fbData = s.val() || {}; renderFb(); }, denied($('fbBox'), '回報'));
     ['fCls', 'fSort', 'fOnline'].forEach(function (id) { $(id).onchange = renderStudents; }); $('fQ').oninput = renderStudents;
     attach();
@@ -290,15 +298,15 @@ var CLASS_WINDOWS = [].concat(
   var tt = null; function schedule() { clearTimeout(tt); tt = setTimeout(render, 300); }
   function attach() {
     offs.forEach(function (f) { try { f(); } catch (e) {} }); offs = [];
-    profiles = {}; presence = {}; chats = {}; scores = {}; usage = {}; $('chatView').hidden = true;
+    profiles = {}; presence = {}; chats = {}; scores = {}; $('chatView').hidden = true;
     var root = fdb.ref('er/' + SESS);
     function on(ref, fn, err) { ref.on('value', fn, err); offs.push(function () { ref.off('value', fn); }); }
-    DB = window.ERG_REMOTE.makeRemoteDb({ root: root, sess: SESS, notify: function (t) { if (/^(room:|lobby|scene:)/.test(t)) schedule(); } });
+    DB = window.ERG_REMOTE.makeRemoteDb({ root: root, sess: SESS, watchAll: true, notify: function (t) { if (/^(room:|lobby|scene:)/.test(t)) schedule(); } });
     on(root.child('profiles'), function (s) { profiles = s.val() || {}; schedule(); });
     on(root.child('presence'), function (s) { presence = s.val() || {}; schedule(); });
     on(root.child('chat'), function (s) { chats = s.val() || {}; schedule(); });
     on(root.child('analysis/summary'), function (s) { var v = s.val(); $('sumBox').textContent = v ? v.text : ''; $('sumStat').textContent = v ? ('上次摘要：' + hm(v.t) + '，' + v.n + ' 個問題') : ''; });
-    on(fdb.ref('usage/' + SESS.replace('ER-', '')), function (s) { usage = s.val() || {}; renderUsage(usage); }, function (e) { $('usageSum').innerHTML = '<span class="muted">讀不到（' + esc((e && e.code) || e) + '）</span>'; denied($('usage'), '用量')(e); });
+    renderUsageAll();
     on(root.child('score'), function (s) { scores = s.val() || {}; renderBoard(); });
     schedule();
   }
@@ -337,7 +345,7 @@ var CLASS_WINDOWS = [].concat(
     Object.keys(chats).forEach(function (code) { Object.keys(chats[code] || {}).forEach(function (sid) { var o = out[sid] || (out[sid] = { n: 0, last: null }); Object.keys(chats[code][sid] || {}).forEach(function (rec) { var c = chats[code][sid][rec] || {}; Object.keys(c.turns || {}).forEach(function (k) { var t = c.turns[k]; if (t.role !== 'u') return; o.n += 1; if (!o.last || t.t > o.last.t) o.last = { t: t.t, who: c.personaName || personaName(c.personaId), text: t.text, code: code }; }); }); }); });
     return out;
   }
-  function isOnline(sid) { var p = presence[sid]; return !!(p && Date.now() - Number(p.t || 0) < 90000); }
+  function isOnline(sid) { var p = presence[sid]; return !!(p && Date.now() - Number(p.t || 0) < 200000); }
   function renderLive(ask) {
     var dots = [], list = [], now = Date.now();
     rooms.forEach(function (r) {
@@ -423,12 +431,56 @@ var CLASS_WINDOWS = [].concat(
     try { renderLive(ask); renderAnalysis(); } catch (e) { console.error(e); }
     $('updated').textContent = '畫面更新 ' + new Date().toLocaleTimeString('zh-TW', { hour12: false });
   }
-  var usage = {};
+  /* ───── 用量與花費 ─────
+     本遊戲：代理程式每題記 token 與金額（nusd＝十億分之一美元，依型號牌價當場算）；舊紀錄沒有金額就用 flash-lite 牌價補算。
+     Vertex 專案計量與 EDU 抵免額：tools/er_vertex_usage.py 從 LLM 後台（llm-ops）取來寫在 usage/_vertex，代理程式每 10 分鐘更新。
+     新台幣是用固定匯率粗估（讓人有感），實際扣抵以 GCP 帳務為準。 */
+  var usageAll = {}, USD_TWD = 32.5, PRICE_FALLBACK = [0.10, 0.40];
+  function costUsd(n) { n = n || {}; return n.nusd ? n.nusd / 1e9 : ((n.tokIn || 0) * PRICE_FALLBACK[0] + (n.tokOut || 0) * PRICE_FALLBACK[1]) / 1e6; }
+  function fUsd(x) { return 'US$' + (x < 0.1 ? x.toFixed(4) : x.toFixed(2)); }
+  function fNtd(x) { var v = x * USD_TWD; return 'NT$' + (v < 10 ? v.toFixed(2) : String(Math.round(v))); }
+  function num(n) { return Number(n || 0).toLocaleString('en-US'); }
+  function twd(x) { return 'NT$' + Number(x || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+  function dayLabel(k) { return Number(k.slice(4, 6)) + '/' + Number(k.slice(6, 8)); }
+  function ago(ts) { var t = typeof ts === 'number' ? ts : new Date(ts).getTime(); if (!t) return ''; var m = Math.round((Date.now() - t) / 60000); return m < 1 ? '剛剛' : m < 90 ? m + ' 分鐘前' : m < 2880 ? Math.round(m / 60) + ' 小時前' : Math.round(m / 1440) + ' 天前'; }
+  function renderUsageAll() {
+    var day = SESS.replace('ER-', ''); renderUsage(usageAll[day] || {});
+    var days = Object.keys(usageAll).filter(function (k) { return /^\d{8}$/.test(k); }).sort();
+    var tot = { turns: 0, tin: 0, tout: 0, usd: 0, sum: 0 };
+    var rows = days.map(function (d) {
+      var u = usageAll[d] || {}, t = u._total || {}, s = u._summary || {}, people = Object.keys(u).filter(function (k) { return k.charAt(0) !== '_'; }).length;
+      var c = costUsd(t) + (s.nusd ? s.nusd / 1e9 : 0), tin = (t.tokIn || 0) + (s.tokIn || 0), tout = (t.tokOut || 0) + (s.tokOut || 0);
+      tot.turns += t.turns || 0; tot.tin += tin; tot.tout += tout; tot.usd += c; tot.sum += s.n || 0;
+      return '<tr><td>' + dayLabel(d) + '</td><td class="num">' + num(t.turns) + '</td><td class="num">' + people + '</td><td class="num">' + num(tin) + '</td><td class="num">' + num(tout) + '</td><td class="num">' + (s.n || 0) + '</td><td class="num">' + fUsd(c) + '</td><td class="num">' + fNtd(c) + '</td></tr>';
+    });
+    $('usageCum').innerHTML = days.length ? ('累積 ' + num(tot.turns) + ' 題・花費 ' + fUsd(tot.usd) + '（約 ' + fNtd(tot.usd) + '）') : '';
+    $('useDays').innerHTML = days.length ? '<table><thead><tr><th>日期</th><th class="num">題數</th><th class="num">人數</th><th class="num">輸入 tokens</th><th class="num">輸出 tokens</th><th class="num">主題摘要</th><th class="num">花費</th><th class="num">約新台幣</th></tr></thead><tbody>' + rows.join('') +
+      '<tr style="font-weight:900"><td>合計</td><td class="num">' + num(tot.turns) + '</td><td></td><td class="num">' + num(tot.tin) + '</td><td class="num">' + num(tot.tout) + '</td><td class="num">' + tot.sum + '</td><td class="num">' + fUsd(tot.usd) + '</td><td class="num">' + fNtd(tot.usd) + '</td></tr></tbody></table>' +
+      '<div class="muted" style="font-size:.85em;margin-top:6px">花費＝實際計費的 token 數 × Google 牌價（gemini-2.5-flash-lite 每百萬 token 輸入 0.10、輸出 0.40 美元；主題摘要用 gemini-2.5-flash，0.30／2.50），這筆會從 EDU 抵免額扣。新台幣用 1 美元＝' + USD_TWD + ' 元粗估。</div>' : '<span class="muted">還沒有任何用量。</span>';
+    var v = usageAll._vertex;
+    if (!v) { $('useVertex').innerHTML = '<span class="muted">還沒有資料。代理程式每 10 分鐘從 LLM 後台取一次。</span>'; $('useCredit').innerHTML = $('useVertex').innerHTML; return; }
+    function meter(m, title) {
+      if (!m) return '';
+      if (m.err) return '<div><b>' + title + '</b>　<span class="bad">讀不到</span> <span class="muted">' + esc(m.err) + '</span></div>';
+      var rs = (m.rows || []).slice().sort(function (a, b) { return (b.game ? 1 : 0) - (a.game ? 1 : 0) || b['in'] - a['in']; });
+      return '<div style="margin:6px 0 2px"><b>' + title + '</b></div>' + (rs.length ? '<table><thead><tr><th>型號</th><th class="num">輸入 tokens</th><th class="num">輸出 tokens</th><th class="num">牌價金額</th><th>說明</th></tr></thead><tbody>' + rs.map(function (r) {
+        return '<tr' + (r.game ? ' style="font-weight:900"' : '') + '><td>' + esc(r.model) + '</td><td class="num">' + num(r['in']) + '</td><td class="num">' + num(r.out) + '</td><td class="num">' + (r.usd == null ? '<span class="muted">沒查牌價</span>' : fUsd(r.usd) + '（約 ' + fNtd(r.usd) + '）') + '</td><td>' + (r.game ? '<span class="pill ok">本遊戲的即時訪談</span>' : '<span class="muted">別的工作也在用，不能算在本遊戲</span>') + '</td></tr>'; }).join('') + '</tbody></table>' : '<div class="muted">這段時間沒有用量。</div>');
+    }
+    $('useVertex').innerHTML = meter(v.h24, '近 24 小時') + meter(v.since, '累積（自 ' + ((v.since && v.since.start) ? dayLabel(v.since.start) : '') + ' 起）') +
+      '<div class="muted" style="font-size:.85em;margin-top:6px">這是整個 GCP 專案的權威計量（不管哪個程式打的都算得到）。' + esc(v.gameModel || '') + ' 目前只有本遊戲在用，所以那一列可以拿來跟上面的「本遊戲累積」對帳。更新於 ' + ago(v.t) + '。</div>';
+    var c = v.credits || {};
+    if (!c.ok) { $('useCredit').innerHTML = '<span class="bad">讀不到抵免額</span> <span class="muted">' + esc(c.why || '') + '</span>'; return; }
+    function delta(x, since) { return x == null ? '<span class="muted">—</span>' : ((x < 0 ? '<span class="bad">−' : '<span>' + (x > 0 ? '+' : '')) + twd(Math.abs(x)) + '</span>' + (since ? '<div class="muted" style="font-size:.8em">自 ' + esc(String(since).slice(5, 16).replace('T', ' ')) + '</div>' : '')); }
+    $('useCredit').innerHTML = '<table><thead><tr><th>抵免額</th><th class="num">餘額</th><th>到期</th><th class="num">跟上一筆讀數比</th><th class="num">跟最早一筆比</th></tr></thead><tbody>' + (c.rows || []).map(function (r) {
+      return '<tr><td>' + esc(r.name) + '</td><td class="num"><b>' + twd(r.left) + '</b></td><td>' + esc(r.end || '') + '</td><td class="num">' + delta(r.delta, r.prevTs) + '</td><td class="num">' + delta(r.totalDelta, r.firstTs) + '</td></tr>'; }).join('') + '</tbody></table>' +
+      '<div style="margin-top:6px" class="' + (c.stale ? 'bad' : 'muted') + '">' + (c.stale ? '⚠ 這是 ' + ago(c.ts) + ' 讀到的舊數字。' : '讀於 ' + ago(c.ts) + '。') + '</div>' +
+      '<div class="muted" style="font-size:.85em;margin-top:4px">抵免額是整個帳戶的實際餘額（新台幣），變化量包含所有用到這個帳戶的工作，不只本遊戲。它要透過「LLM 平台」那顆瀏覽器讀 GCP 帳務頁' + (c.browser9270 ? '，目前瀏覽器開著，會自動更新。' : '；那顆瀏覽器現在沒開，所以不會更新。開起來之後十分鐘內這裡會跟著更新。') + '</div>';
+  }
   function renderUsage(u) {
-    var tot = u._total || {}, rows = Object.keys(u).filter(function (k) { return k !== '_total'; }).sort(function (a, b) { return (u[b].turns || 0) - (u[a].turns || 0); });
+    var tot = u._total || {}, rows = Object.keys(u).filter(function (k) { return k.charAt(0) !== '_'; }).sort(function (a, b) { return (u[b].turns || 0) - (u[a].turns || 0); });
     var capped = rows.filter(function (k) { return (u[k].turns || 0) >= 60; }).length;
-    $('usageSum').innerHTML = (tot.turns || 0) + ' 題・' + rows.length + ' 人' + (capped ? ' <span class="pill bad">' + capped + ' 人到上限</span>' : '');
-    $('usage').innerHTML = rows.length ? '<table><thead><tr><th>學生</th><th class="num">題數</th><th class="num">tokens（入/出）</th><th>最後</th></tr></thead><tbody>' + rows.map(function (k) { return '<tr><td>' + esc(aliasOf(k)) + '</td><td class="num">' + (u[k].turns || 0) + (u[k].turns >= 60 ? ' <span class="pill bad">已達上限</span>' : '') + '</td><td class="num">' + (u[k].tokIn || 0) + ' / ' + (u[k].tokOut || 0) + '</td><td class="muted">' + (u[k].last ? hm(u[k].last) : '') + '</td></tr>'; }).join('') + '</tbody></table><div class="muted" style="font-size:.85em;margin-top:6px">全班 tokens 入 ' + (tot.tokIn || 0) + ' / 出 ' + (tot.tokOut || 0) + '</div>' : '<span class="muted">今天還沒有人用即時訪談。</span>';
+    $('usageSum').innerHTML = num(tot.turns) + ' 題・' + rows.length + ' 人' + (capped ? ' <span class="pill bad">' + capped + ' 人到上限</span>' : '');
+    $('usage').innerHTML = rows.length ? '<table><thead><tr><th>學生</th><th class="num">題數</th><th class="num">tokens（入/出）</th><th class="num">花費</th><th>最後</th></tr></thead><tbody>' + rows.map(function (k) { return '<tr><td>' + esc(aliasOf(k)) + '</td><td class="num">' + (u[k].turns || 0) + (u[k].turns >= 60 ? ' <span class="pill bad">已達上限</span>' : '') + '</td><td class="num">' + num(u[k].tokIn) + ' / ' + num(u[k].tokOut) + '</td><td class="num">' + fUsd(costUsd(u[k])) + '</td><td class="muted">' + (u[k].last ? hm(u[k].last) : '') + '</td></tr>'; }).join('') + '</tbody></table>' : '<span class="muted">這個場次還沒有人用即時訪談。</span>';
   }
   function showChats(code, sid, rec) {
     setTab('room');

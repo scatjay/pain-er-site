@@ -29,6 +29,14 @@
   P.onRoomChanged = function () { if (!typing()) P.render(cur().tab); };
   P.onSceneChanged = function () { if (!typing()) { if (cur().tab === 'cards') renderCards(); if (cur().tab === 'concl') renderConcl(); } };
   P.onMove = function () { renderClue(); renderIntv(); };
+  /* 每秒看一次：正在看的人物如果離開這間房，訪談分頁改成顯示他的紀錄（檢核表還在） */
+  setInterval(function () {
+    var c = cur(); if (!c || c.tab !== 'intv' || !c.selNpc || typing()) return;
+    var still = false, pid = null; RM.entityHere().forEach(function (h) { if (h.ent.id === c.selNpc) still = true; });
+    if (still) return;
+    c.world.at(c.clock.worldSec).forEach(function (it) { if (it.ent.id === c.selNpc) pid = it.ent.pid; });
+    if (pid && recFor(pid) >= 0) c.selRecPid = pid; c.selNpc = null; renderIntv();
+  }, 1000);
   function renderEvents() { var p = $('p-events'); if (window.ERG_EVENT_UI && p) window.ERG_EVENT_UI.renderBook(cur(), p); }
 
   /* ───── 線索 ───── */
@@ -37,7 +45,7 @@
     var c = cur().selClue ? clueById(cur().selClue) : null, p = $('p-clue'), loc = player().loc;
     var here = cur().world.clues.filter(function (x) { return x.pin.room === loc; }).length;
     var head = '<div class="card" style="margin-top:0"><b>' + esc(cur().world.meta.name) + '</b><div class="muted" style="font-size:13px">' + esc(cur().world.meta.brief) + '</div></div>';
-    if (!c) { p.innerHTML = head + '<p>你在「' + esc(roomNameOf(loc)) + '」，這間房有 <b>' + here + '</b> 個線索（黃色小牌）。點牌子就能讀。</p><p class="muted">要換房間：點地圖上的房間，或點右下角小地圖。</p>'; return; }
+    if (!c) { p.innerHTML = head + '<p>你在「' + esc(roomNameOf(loc)) + '」，這間房有 <b>' + here + '</b> 個線索（黃色小牌）。點牌子就能讀。</p>' + (function () { var cp = ''; try { cp = cur().world.captionFor(loc) || ''; } catch (e) {} return cp ? '<p class="muted" style="border-left:4px solid var(--yellow);padding-left:8px">' + esc(cp) + '</p>' : ''; })() + '<p class="muted">要換房間：點地圖上的房間，或點右下角小地圖。</p>'; return; }
     if (c.pin.room !== loc) { p.innerHTML = head + '<p>線索 <b>' + esc(c.id) + '</b> 在「' + esc(roomNameOf(c.pin.room)) + '」，你現在在「' + esc(roomNameOf(loc)) + '」，要走過去才讀得到。</p><button id="goClue">走到「' + esc(roomNameOf(c.pin.room)) + '」</button>'; $('goClue').onclick = function () { RM.travel(c.pin.room); }; return; }
     p.innerHTML = head + '<h2 style="margin-top:0">' + esc(c.id) + '　' + esc(c.title) + '</h2><span class="tag ' + (c.material === '模擬' ? 'warn' : '') + '">素材：' + esc(c.material || '模擬') + '</span><p>' + esc(c.body) + '</p><button id="mkClue">記一張勘查卡</button>';
     $('mkClue').onclick = function () { P.prefill = { type: '勘查卡', clue: c.id }; RM.switchTab('cards'); };
@@ -62,24 +70,41 @@
   function renderIntv() {
     var p = $('p-intv'), here = RM.entityHere();
     if (cur().role !== 'member') { p.innerHTML = '<p class="muted">旁觀者不能訪談。</p>'; return; }
-    var selId = cur().selNpc, sel = null;
+    var selId = cur().selNpc, sel = null, recs = player().interviews, c0 = cur();
     here.forEach(function (h) { if (h.ent.id === selId) sel = h; });
+    /* 10-13：人物會照班表走到別間房。原本人一走，訪談的檢核表就跟著不見、不能打勾。
+       現在列出「我問過的人」：人不在這間房也能回來把問到的事打勾（要繼續問才需要走過去）。 */
+    function nameOf(pid) { var w = c0.world.personas && c0.world.personas[pid]; return w ? w.name : pid; }
+    function whereIs(pid) { var out = null; c0.world.at(c0.clock.worldSec).forEach(function (it) { if (it.ent.pid === pid && it.pos.room) out = it.pos.room; }); return out; }
+    var recPid = sel ? sel.ent.pid : (c0.selRecPid || null);
+    if (!sel && recPid && recFor(recPid) < 0) recPid = null;
+    /* 選了現場的人在訪談時，急診室的時間先暫停（不然問到一半他就照班表走掉了） */
+    c0.intvHold = !!sel;
     var html = '<div class="muted" style="font-size:13px">這間房裡的人（只有在同一房間才問得到）：</div><div class="row" style="margin:6px 0">' +
       (here.length ? here.map(function (h) { return '<button class="pill ' + (sel && sel.ent.id === h.ent.id ? 'on' : '') + '" data-npc="' + esc(h.ent.id) + '">' + esc(h.ent.name) + '・' + ({ free: '可聊', short: '簡短', blocked: '正忙' })[h.av.level] + '</button>'; }).join('') : '<span class="muted">現在這間房沒有人。</span>') + '</div>';
-    /* 所有可訪談的人（整間急診室），依房間分組；點不在同房的人會直接走過去，到了自動選取 */
-    html += '<details' + (here.length ? '' : ' open') + ' style="margin:6px 0"><summary class="muted" style="cursor:pointer;font-size:13px">所有可訪談的人（點了就走過去）</summary><div id="allNpc" style="font-size:13px">' + allNpcHtml() + '</div></details>';
-    if (!sel) { p.innerHTML = html + '<p class="muted">點上面的人，或直接點畫面上的角色。</p>'; bindNpc(p); bindAllNpc(p); return; }
-    var ent = sel.ent, persona = ent.persona, ix = recFor(ent.pid), rec = ix >= 0 ? player().interviews[ix] : null;
-    html += '<div class="card" style="margin-top:6px"><b>' + esc(ent.name) + '</b>　<span class="tag ' + (persona.material === '模擬' ? 'warn' : '') + '">素材：' + esc(persona.material || '模擬') + '</span><div class="muted" style="font-size:12px">' + esc(persona.title || '') + '</div>' +
-      '<div style="font-size:13px">' + ({ free: '現在可以好好聊。', short: '正在忙，只能簡短回答（' + esc(sel.av.reason) + '）。', blocked: '現在不方便（' + esc(sel.av.reason) + '），晚一點再來。' })[sel.av.level] + '</div></div>';
-    var live = liveReady();
-    if (sel.av.level !== 'blocked' && APP.online) html += '<div class="card" id="chatBox" style="margin-top:6px"><div class="row"><b style="flex:1">💬 即時訪談</b><span id="chatStat" class="muted" style="font-size:12px">' + (live ? '連線中' : '目前離線') + '</span></div>' +
-      '<div id="chatLog" style="max-height:260px;overflow:auto;font-size:14px;margin:6px 0;padding:4px 0;border-top:2px dashed var(--line)"></div>' +
-      '<div class="row"><input id="chatIn" maxlength="300" placeholder="' + (live ? '問 ' + esc(ent.name) + ' 一個問題（Enter 送出）' : '即時訪談離線：老師的電腦沒開，請用下面的指令貼到 Gemini') + '"' + (live ? '' : ' disabled') + '><button id="chatSend"' + (live ? '' : ' disabled') + '>送出</button></div></div>';
-    if (sel.av.level !== 'blocked') html += '<details' + (APP.online && live ? '' : ' open') + ' style="margin-top:6px"><summary class="muted" style="cursor:pointer;font-size:13px">' + (APP.online ? '備援：' : '') + '產生訪談指令，貼到 Gemini 訪談</summary><button id="genP" style="margin-top:6px">產生訪談指令</button><div id="pOut"></div></details>';
+    /* 其他房間的人：灰色、不能選，後面標在哪間房（10-12 楊老師）。要訪談就先走過去——用地圖或下方的房間按鈕。 */
+    html += '<div class="muted" style="font-size:13px;margin-top:8px">其他房間的人（要先走到那間房才問得到）：</div><div id="allNpc" style="font-size:13px;margin:4px 0 6px">' + allNpcHtml() + '</div>';
+    if (recs.length) html += '<div class="muted" style="font-size:13px;margin-top:8px">我問過的人（人不在也可以回來打勾）：</div><div class="row" id="myRecs" style="margin:4px 0 6px">' + recs.map(function (r) { var pr = CL.progress(r); return '<button class="pill ' + (recPid === r.personaId ? 'on' : '') + '" data-rec="' + esc(r.personaId) + '">' + esc(nameOf(r.personaId)) + '　' + pr.done + '/' + pr.total + (pr.complete ? ' ✔' : '') + '</button>'; }).join('') + '</div>';
+    if (!sel && !recPid) { p.innerHTML = html + '<p class="muted">點上面的人，或直接點畫面上的角色。</p>'; bindNpc(p); bindAllNpc(p); return; }
+    var ent = sel ? sel.ent : null, pid = recPid, ix = recFor(pid), rec = ix >= 0 ? recs[ix] : null;
+    if (sel) {
+      var persona = ent.persona;
+      html += '<div class="card" style="margin-top:6px"><b>' + esc(ent.name) + '</b>　<span class="tag ' + (persona.material === '模擬' ? 'warn' : '') + '">素材：' + esc(persona.material || '模擬') + '</span><div class="muted" style="font-size:12px">' + esc(persona.title || '') + '</div>' +
+        '<div style="font-size:13px">' + ({ free: '現在可以好好聊。', short: '正在忙，只能簡短回答（' + esc(sel.av.reason) + '）。', blocked: '現在不方便（' + esc(sel.av.reason) + '），晚一點再來。' })[sel.av.level] + '</div>' +
+        '<div class="muted" id="holdNote" style="font-size:12px">⏸ 你在訪談，急診室的時間先暫停；切到別的分頁或走開就會繼續。</div></div>';
+      var live = liveReady();
+      if (sel.av.level !== 'blocked' && APP.online) html += '<div class="card" id="chatBox" style="margin-top:6px"><div class="row"><b style="flex:1">💬 即時訪談</b><span id="chatStat" class="muted" style="font-size:12px">' + (live ? '連線中' : '目前離線') + '</span></div>' +
+        '<div id="chatLog" style="max-height:260px;overflow:auto;font-size:14px;margin:6px 0;padding:4px 0;border-top:2px dashed var(--line)"></div>' +
+        '<div class="row"><input id="chatIn" maxlength="300" placeholder="' + (live ? '問 ' + esc(ent.name) + ' 一個問題（Enter 送出）' : '即時訪談離線：老師的電腦沒開，請用下面的指令貼到 Gemini') + '"' + (live ? '' : ' disabled') + '><button id="chatSend"' + (live ? '' : ' disabled') + '>送出</button></div></div>';
+      if (sel.av.level !== 'blocked') html += '<details' + (APP.online && live ? '' : ' open') + ' style="margin-top:6px"><summary class="muted" style="cursor:pointer;font-size:13px">' + (APP.online ? '備援：' : '') + '產生訪談指令，貼到 Gemini 訪談</summary><button id="genP" style="margin-top:6px">產生訪談指令</button><div id="pOut"></div></details>';
+    } else {
+      var wr = whereIs(pid);
+      html += '<div class="card" id="awayCard" style="margin-top:6px"><b>' + esc(nameOf(pid)) + '</b><div style="font-size:13px">' + (wr ? '他現在在「' + esc(roomNameOf(wr)) + '」，不在這間房。' : '他現在不在急診室裡。') + '要繼續問得走過去；已經問到的事，可以先在下面打勾。</div>' + (wr && wr !== player().loc ? '<button class="ghost" id="goNpc" style="margin-top:6px">走到「' + esc(roomNameOf(wr)) + '」</button>' : '') + '</div>';
+    }
     if (rec) {
       var pr = CL.progress(rec);
-      html += '<div class="row" style="margin-top:10px"><b style="flex:1">訪談檢核 ' + esc(rec.id) + '</b><span>' + pr.done + ' / ' + pr.total + '</span></div><div class="bar"><i style="width:' + Math.round(pr.ratio * 100) + '%"></i></div>';
+      html += '<div class="row" style="margin-top:10px"><b style="flex:1">訪談檢核 ' + esc(rec.id) + '</b><span>' + pr.done + ' / ' + pr.total + '</span></div><div class="bar"><i style="width:' + Math.round(pr.ratio * 100) + '%"></i></div>' +
+        '<div class="muted" style="font-size:12px">問到了就打勾，三項都勾才算問完這一位。每個勾要選這是你親眼見到的、對方說的，還是你猜的。</div>';
       CL.ITEMS.forEach(function (it) {
         var v = rec.items[it.k], done = v.done;
         html += '<div class="ck ' + (done ? 'done' : '') + '"><button class="box" data-tick="' + it.k + '" aria-pressed="' + done + '">' + (done ? '✔' : '') + '</button><div style="flex:1;min-width:0"><div style="font-weight:900">' + it.label + '</div>';
@@ -90,11 +115,12 @@
         }
         html += '</div></div>';
       });
-      html += '<label>這段 Gemini 對話的分享連結（https）<input id="lnk" placeholder="https://g.co/gemini/share/…" value="' + esc(player().links[rec.id] || '') + '"></label><div class="row" style="margin-top:6px"><button class="ghost" id="lnkSave">儲存連結</button><button id="toConcl" class="ghost">加進我的結論</button><span id="lnkMsg" class="muted"></span></div>';
-    } else if (sel.av.level !== 'blocked') html += '<p class="muted" style="margin-top:10px">開始訪談後，就會出現檢核表。</p>';
+      html += '<label>這段對話的連結（即時訪談會自動帶入；貼到 Gemini 訪談的請貼分享連結）<input id="lnk" placeholder="https://g.co/gemini/share/…" value="' + esc(CORE.getLink(player().links, rec.id)) + '"></label><div class="row" style="margin-top:6px"><button class="ghost" id="lnkSave">儲存連結</button><button id="toConcl" class="ghost">加進我的結論</button><span id="lnkMsg" class="muted"></span></div>';
+    } else if (sel && sel.av.level !== 'blocked') html += '<p class="muted" style="margin-top:10px">開始訪談後，就會出現檢核表。</p>';
     p.innerHTML = html; bindNpc(p); bindAllNpc(p);
-    if ($('chatBox')) bindChat(sel, ent);
-    var g = $('genP'); if (g) g.onclick = function () {
+    if ($('goNpc')) $('goNpc').onclick = function () { var wr2 = whereIs(pid); if (wr2) RM.travel(wr2); };
+    if (sel && $('chatBox')) bindChat(sel, ent);
+    var g = $('genP'); if (g && sel) g.onclick = function () {
       if (recFor(ent.pid) < 0) { var r = CL.newRecord({ id: CORE.nextId(player(), me()), author: me(), round: 1, loc: player().loc, simTime: RM.simTime(), personaId: ent.pid, link: '' }); player().interviews.push(r); save(); }
       var text = promptFor(sel); renderIntv();
       var o = $('pOut'); o.innerHTML = '<pre class="prompt" id="pTxt"></pre><div class="row"><button id="pCopy">複製指令</button><span id="pCopied" class="muted"></span></div>'; $('pTxt').textContent = text;
@@ -105,20 +131,27 @@
       Array.prototype.forEach.call(p.querySelectorAll('[data-trust]'), function (b) { b.onclick = function () { var a = b.dataset.trust.split('|'); setRec(ix, a[0], { trust: a[1] }); }; });
       Array.prototype.forEach.call(p.querySelectorAll('[data-note]'), function (el) { el.onchange = function () { setRec(ix, el.dataset.note, { note: el.value }); }; });
       Array.prototype.forEach.call(p.querySelectorAll('[data-tag]'), function (b) { b.onclick = function () { var a = b.dataset.tag.split('|'), cur0 = rec.items[a[0]].tags.slice(), i = cur0.indexOf(a[1]); if (i >= 0) cur0.splice(i, 1); else cur0.push(a[1]); setRec(ix, a[0], { tags: cur0 }); }; });
-      $('lnkSave').onclick = function () { var v = $('lnk').value.trim(); if (v && !/^https:\/\//.test(v)) { $('lnkMsg').textContent = '連結要以 https:// 開頭'; return; } player().links[rec.id] = v; save(); $('lnkMsg').textContent = '已儲存'; };
+      $('lnkSave').onclick = function () { var v = $('lnk').value.trim(); if (v && !/^https:\/\//.test(v)) { $('lnkMsg').textContent = '連結要以 https:// 開頭'; return; } player().links[CORE.linkKey(rec.id)] = v; save(); $('lnkMsg').textContent = '已儲存'; };
       $('toConcl').onclick = function () { addConclusionRef(rec.id); RM.switchTab('concl'); };
     }
   }
-  function bindNpc(p) { Array.prototype.forEach.call(p.querySelectorAll('[data-npc]'), function (b) { b.onclick = function () { cur().selNpc = b.dataset.npc; renderIntv(); }; }); }
+  function bindNpc(p) {
+    Array.prototype.forEach.call(p.querySelectorAll('[data-npc]'), function (b) { b.onclick = function () { cur().selNpc = b.dataset.npc; cur().selRecPid = null; renderIntv(); }; });
+    /* 「我問過的人」：人在現場就直接選他；不在就只開他的檢核表 */
+    Array.prototype.forEach.call(p.querySelectorAll('[data-rec]'), function (b) { b.onclick = function () {
+      var pid = b.dataset.rec, hit = null; RM.entityHere().forEach(function (h) { if (h.ent.pid === pid) hit = h; });
+      cur().selRecPid = pid; cur().selNpc = hit ? hit.ent.id : null; renderIntv();
+    }; });
+  }
   function allNpcHtml() {
     var c = cur(), simMin = RM.simMin(), byRoom = {}, LAY = window.ERG_LAYOUT, mine = player().loc;
     c.world.at(c.clock.worldSec).forEach(function (it) {
       if (it.ent.kind === 'bot' || !it.pos.room) return; var r = LAY.room(it.pos.room); if (!r || r.type !== 'room') return;
       var av = c.world.availability(it.ent, it.pos, simMin); (byRoom[it.pos.room] = byRoom[it.pos.room] || []).push({ ent: it.ent, av: av });
     });
-    var rooms = Object.keys(byRoom).sort(function (a, b) { return (b === mine) - (a === mine) || LAY.room(a).name.localeCompare(LAY.room(b).name); });
-    if (!rooms.length) return '<span class="muted">現在沒有人在房間裡。</span>';
-    return rooms.map(function (rid) { return '<div style="margin:3px 0"><b>' + esc(roomNameOf(rid)) + (rid === mine ? '（你在這）' : '') + '</b>：' + byRoom[rid].map(function (h) { return '<button class="pill' + (c.selNpc === h.ent.id ? ' on' : '') + '" data-goto="' + esc(h.ent.id) + '" data-room="' + esc(rid) + '" style="font-size:12px;padding:1px 7px">' + esc(h.ent.name) + '・' + ({ free: '可聊', short: '簡短', blocked: '正忙' })[h.av.level] + '</button>'; }).join(' ') + '</div>'; }).join('');
+    var rooms = Object.keys(byRoom).filter(function (rid) { return rid !== mine; }).sort(function (a, b) { return LAY.room(a).name.localeCompare(LAY.room(b).name); });
+    if (!rooms.length) return '<span class="muted">現在其他房間沒有可以訪談的人。</span>';
+    return rooms.map(function (rid) { return byRoom[rid].map(function (h) { return '<span class="pill" aria-disabled="true" title="要先走到' + esc(roomNameOf(rid)) + '" style="font-size:12px;padding:1px 7px;margin:2px;opacity:.5;border-style:dashed;cursor:not-allowed">' + esc(h.ent.name) + '　<span style="font-weight:400">在' + esc(roomNameOf(rid)) + '</span></span>'; }).join(''); }).join('');
   }
   function bindAllNpc(p) {
     Array.prototype.forEach.call(p.querySelectorAll('[data-goto]'), function (b) { b.onclick = function () {
@@ -156,7 +189,7 @@
         return '<div style="margin:4px 0;display:flex;' + (mine ? 'justify-content:flex-end' : '') + '"><div style="max-width:88%;padding:6px 10px;border:2px solid var(--ink);border-radius:12px;background:' + (mine ? 'var(--yellow)' : 'var(--panel)') + ';' + (t.status && t.status !== 'ok' ? 'opacity:.75;font-style:italic' : '') + '">' + (mine ? '' : '<b style="font-size:12px">' + esc(ent.name) + '</b><br>') + esc(t.text) + '</div></div>';
       }).join('') + (turns[turns.length - 1].role === 'u' ? '<div class="muted" style="font-size:12px">' + esc(ent.name) + ' 正在想……</div>' : '') : '<div class="muted" style="font-size:13px">還沒開始。先打招呼，或問一個開放式的問題。</div>';
       logEl.scrollTop = logEl.scrollHeight;
-      if (recId && turns.some(function (t) { return t.role === 'a' && t.status === 'ok'; })) { var ix2 = recFor(ent.pid); if (ix2 >= 0 && !player().links[player().interviews[ix2].id]) { player().links[player().interviews[ix2].id] = liveLink(player().interviews[ix2].id); save(); var lk = $('lnk'); if (lk) lk.value = player().links[player().interviews[ix2].id]; } }
+      if (recId && turns.some(function (t) { return t.role === 'a' && t.status === 'ok'; })) { var ix2 = recFor(ent.pid); if (ix2 >= 0 && !CORE.getLink(player().links, player().interviews[ix2].id)) { player().links[CORE.linkKey(player().interviews[ix2].id)] = liveLink(player().interviews[ix2].id); save(); var lk = $('lnk'); if (lk) lk.value = CORE.getLink(player().links, player().interviews[ix2].id); } }
       var st = $('chatStat'); if (st) st.textContent = liveReady() ? ('連線中・' + turns.filter(function (t) { return t.role === 'u'; }).length + ' 題') : liveLabel();
     }
     if (recId) { var ref = chatRef(recId), cb = function (s) { draw(s.val()); }; ref.on('value', cb); c.chatOff = function () { ref.off('value', cb); }; } else draw(null);
@@ -207,11 +240,21 @@
       var f = $('cardForm'), t = CARDS.TYPES[type], h = '';
       if (type === '勘查卡') h = '<label>線索<select id="cf-clue">' + cur().world.clues.map(function (c) { return '<option value="' + esc(c.id) + '"' + (pre.clue === c.id || cur().selClue === c.id ? ' selected' : '') + '>' + esc(c.id) + ' ' + esc(c.title) + '</option>'; }).join('') + '</select></label><label>我看到（一句話）<input id="cf-saw" maxlength="60"></label>';
       else h = '<label>' + esc(t.fields[0].label) + '<input id="cf-text" maxlength="80" placeholder="' + esc(t.fields[0].ph) + '"></label>';
-      if (type === '想法' || type === '矛盾') h += '<label>根據的編號（逗號分隔，可不填）<input id="cf-refs" placeholder="#' + esc(me()) + '-01"></label>';
+      if (type === '想法' || type === '矛盾') {
+        var mineIds = myIds();
+        h += '<div class="muted" style="font-size:12px;margin-top:4px">' + (type === '矛盾' ? '例：護理師說「現在都傳簡訊，很方便」，線索卻寫「三則全部看完要點 21 步」。' : '例：我猜病人不是不想看，是點到一半就放棄了。') + '</div>' +
+          '<label>根據哪一張卡或哪一段訪談（要填，檢核點 3 才會亮）<input id="cf-refs" placeholder="點下面的編號，或自己打 #' + esc(me()) + '-01"></label>' +
+          '<div id="cf-refPick">' + (mineIds.length ? mineIds.map(function (id) { return '<button type="button" class="pill" data-rp="' + esc(id) + '">' + esc(id) + '</button>'; }).join('') : '<span class="muted" style="font-size:12px">你還沒有卡片或訪談可以當根據，先去記一張勘查卡。</span>') + '</div>';
+      }
       f.innerHTML = h + '<div class="row" style="margin-top:6px"><button id="cf-add">加到筆記本</button><span id="cf-err" class="err"></span></div>';
+      Array.prototype.forEach.call(f.querySelectorAll('[data-rp]'), function (b) { b.onclick = function () {
+        var inp = $('cf-refs'), list = inp.value.split(/[,，\s]+/).filter(Boolean), i = list.indexOf(b.dataset.rp);
+        if (i >= 0) list.splice(i, 1); else list.push(b.dataset.rp);
+        inp.value = list.join(', '); b.classList.toggle('on', i < 0);
+      }; });
       $('cf-add').onclick = function () {
         var fields = type === '勘查卡' ? { clue: $('cf-clue').value, saw: $('cf-saw').value.trim() } : { text: $('cf-text').value.trim() };
-        if ($('cf-refs')) fields.refs = $('cf-refs').value.split(/[,，\s]+/).filter(Boolean);
+        if ($('cf-refs')) { fields.refs = $('cf-refs').value.split(/[,，\s]+/).filter(Boolean); if (!fields.refs.length) { $('cf-err').textContent = '請填它根據哪一張卡（點上面的編號）'; return; } }
         try { makeCard(type, fields); renderCards(); } catch (e) { $('cf-err').textContent = e.message; }
       };
     }
@@ -284,10 +327,12 @@
   function renderCp() {
     var p = $('p-cp'), e = APP.evaluate(); if (!e) return; cur().ev = e;
     var html = '<div class="row"><b style="flex:1">檢核點　' + e.ev.lit + ' / ' + e.ev.total + '</b>' + (e.ev.passed ? '<span class="tag ok">全部完成</span>' : '') + '</div>' +
-      e.ev.list.map(function (x) { return '<div class="ck ' + (x.ok ? 'done' : '') + '"><div class="box" style="display:flex;align-items:center;justify-content:center">' + (x.ok ? '✔' : x.id) + '</div><div style="flex:1;min-width:0"><div style="font-weight:900">' + x.id + ' ' + esc(x.label) + '</div><div class="muted" style="font-size:12px">' + esc(x.detail) + '</div></div></div>'; }).join('');
+      (e.ev.next ? '<div id="cpNext" class="card" style="margin:6px 0;padding:8px 12px;box-shadow:3px 3px 0 var(--ink);background:var(--yellow);color:#1e1e1e"><b>下一步</b>　' + esc(e.ev.next.text) + '</div>' : '') +
+      CP.listHtml(e.ev);
     var gate = CORE.submitGate(e.state), sub = !!(player().submitted);
-    if (!sub) html += '<button id="submitBtn" ' + (gate.ok && isHost() ? '' : 'disabled') + '>提交</button> <span class="muted" style="font-size:12px">' + (isHost() ? (gate.ok ? '前五個檢核點都亮了，可以提交。' : '還缺：' + esc(gate.blockers.join('；'))) : '提交要在自己的房間做。') + '</span>';
-    else html += passedBlock(e);
+    if (!sub) html += '<button id="submitBtn" ' + (gate.ok && isHost() ? '' : 'disabled') + '>提交</button> <span class="muted" style="font-size:12px">' + (isHost() ? (gate.ok ? '前面都完成了，可以提交。' : '還不能提交，先把上面打叉的補完。') : '提交要回到自己開的房間做。') + '</span>';
+    else if (e.ev.passed) html += passedBlock(e);
+    else html += '<div class="card" style="border-color:var(--bad)"><b>已經按過提交，但還有打叉的項目</b><div class="muted" style="font-size:13px">把上面打叉的補完，這裡就會變成綠色的「已通過」。</div></div>';
     p.innerHTML = html;
     var sb = $('submitBtn'); if (sb) sb.onclick = doSubmit;
     var rb = $('reportBtn'); if (rb) rb.onclick = function () { showReport(e); };
@@ -301,8 +346,8 @@
   }
   function passedBlock(e) {
     var code = CP.verifyCode(me(), new Date(player().submittedAt || Date.now()).toISOString().slice(0, 16), 'local');
-    return '<div class="card" style="background:#b2f2bb;color:#1e1e1e"><div style="font-size:40px;font-weight:900;line-height:1.1">已通過</div><div style="font-size:13px">' + esc(cur().world.meta.name) + '　六個檢核點全部完成。截這一頁連同 PDF 報告交到 flipclass。</div>' +
-      '<div style="font-size:13px;margin-top:6px">' + esc(APP.me.cls) + '　學號 ' + esc(me()) + '</div><div style="font-size:12px">驗證碼（本機版）：<b>' + code + '</b></div></div><button id="reportBtn">匯出訪談報告（PDF）</button>';
+    return '<div class="card" style="background:#b2f2bb;color:#1e1e1e"><div style="font-size:40px;font-weight:900;line-height:1.1">已通過</div><div style="font-size:13px">' + esc(cur().world.meta.name) + '　六個檢核點全部完成。把這個綠色畫面截圖，上傳到 flipclass 的作業就完成了。</div>' +
+      '<div style="font-size:13px;margin-top:6px">' + esc(APP.me.cls) + '　學號 ' + esc(me()) + '</div><div style="font-size:12px">驗證碼：<b>' + code + '</b></div></div><button id="reportBtn" class="ghost">想留一份紀錄：匯出訪談報告</button>';
   }
   function showReport(e) {
     var w = cur().world, names = {}; Object.keys(w.personas).forEach(function (k) { names[k] = w.personas[k].name; });

@@ -207,7 +207,7 @@
       }
       pinBoxes.push({ id:pin.clue, x:x, y:y, w:w, h:h });
       out.push(rect('pin-' + pin.clue, x, y, w, h, '#ffd43b', INK, 3, 2,
-        { clueId:pin.clue, pin:true, room:pin.room }, { roundness:{ type:3 }, label:{ text:pin.clue, fontSize:16 } }));
+        { clueId:pin.clue, pin:true, room:pin.room }, { roundness:{ type:3 }, label:{ text:'線索 ' + pin.clue, fontSize:13 } }));   /* 10-12：牌面寫「線索 C-04」，只寫編號看不懂 */
       out.push(ellipse('pinhead-' + pin.clue, x + w / 2 - 5, y - 5, 10, 10, '#fa5252', INK, 1, 2,
         { clueId:pin.clue, room:pin.room, pinHead:true }));
     });
