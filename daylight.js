@@ -71,5 +71,7 @@
     return out.filter(function (c) { return c.t >= fromMin && c.t < toMin; }).sort(function (a, b) { return a.t - b.t || (a.id < b.id ? -1 : 1); });
   }
 
-  return { darkness: darkness, phase: phase, tint: tint, light: light, trafficRate: trafficRate, busyLabel: busyLabel, busyLight: busyLight, cars: cars, SUNRISE: SUNRISE, SUNSET: SUNSET, NIGHT_DARK: NIGHT_DARK };
+  /* 10-13：時間旁邊的太陽／月亮（天色暗過一半就算晚上，約 05:55 之前與 17:40 之後） */
+  function icon(simMin) { return darkness(simMin) >= NIGHT_DARK / 2 ? '🌙' : '☀️'; }
+  return { icon: icon, darkness: darkness, phase: phase, tint: tint, light: light, trafficRate: trafficRate, busyLabel: busyLabel, busyLight: busyLight, cars: cars, SUNRISE: SUNRISE, SUNSET: SUNSET, NIGHT_DARK: NIGHT_DARK };
 });

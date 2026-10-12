@@ -382,7 +382,7 @@
     var now = Date.now(), dt = cur.tickT ? (now - cur.tickT) / 1000 : 0; cur.tickT = now;
     if (clockActive()) cur.clock = CLK.tick(cur.clock, Math.min(dt, 1));
     advanceWalk(Math.min(dt,1));
-    $('clock').textContent = simText(cur.clock);
+    $('clock').textContent = simText(cur.clock); (function(){var D=window.ERG_DAYLIGHT,c=$('clock'),el=$('dayIcon');if(!D||!D.icon||!c)return;if(!el){el=document.createElement('span');el.id='dayIcon';el.style.cssText='font-size:18px;line-height:1';c.parentNode.insertBefore(el,c);}var ic=D.icon(S.simMin());if(el.textContent!==ic){el.textContent=ic;el.setAttribute('aria-label',ic==='🌙'?'現在是晚上':'現在是白天');el.title=ic==='🌙'?'現在是晚上':'現在是白天';}})();
     if (CLK.isDayOver(cur.clock) && !cur.dayOverShown) { cur.dayOverShown = true; toast('本班急診時段結束（07:00）。去寫結論吧。'); }
     persist(false);
     eventWatch(); if (window.ERG_EVENT_UI) window.ERG_EVENT_UI.tick(cur,S); if(window.ERG_ROTATION_UI)window.ERG_ROTATION_UI.tick(S);
@@ -448,7 +448,7 @@
     var layer = $('environment'); if (!layer) return;
     var D = window.ERG_DAYLIGHT, info = D.light(simMin), rate = D.trafficRate(simMin, { arrivalRate: cur.world.data.ARRIVAL_PROFILE[Math.min(11, Math.floor((simMin-cur.world.data.SIM.START)/60))] || 1, weekend: cur.world.day.weekend });
     var cars = D.cars(simMin - 12, simMin + 30, { seed: cur.code, arrivalRate: rate }); if (!cars.length) cars = [{id:'fallback-a',t:simMin-2,kind:'car',dir:1},{id:'fallback-b',t:simMin+2,kind:'scooter',dir:-1}];
-    var html = '<div class="tint" style="background:' + info.tint + ';opacity:' + info.darkness + '"></div>';
+    var html = '';   /* 10-13 楊老師：室內不分日夜、完全不加色調（原本晚上蓋一層深藍灰）；日夜改用時間旁邊的太陽／月亮 */
     /* 10-12：斜射光束與燈暈拿掉（畫面上不要有干擾的東西），只留日夜色調 */
     /* 10-12 楊老師：畫面下方一直有車子跑很怪 ⇒ 車流動畫拿掉，忙碌程度改用右上角一顆不會動的燈號（D.busyLight） */
     var emergency = cur.world.sim.activeEvents(simMin).some(function(e){return e.spawn&&e.spawn.mode==='ambulance';});

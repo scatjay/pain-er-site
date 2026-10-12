@@ -166,6 +166,18 @@
   /* ───── 即時訪談（Firebase 佇列 → 老師電腦上的代理程式 → Vertex → 寫回）───── */
   function daemonUp() { return !!(APP.online && window.ERG_DAEMON_HB && Date.now() - window.ERG_DAEMON_HB < 60000); }
   function liveReady() { return daemonUp() && window.ERG_LIVE_OPEN !== false; }
+  /* 10-13：不是即時訪談的開放時間時，在頂列下面清楚寫出來（原本只有訪談分頁裡的小字，學生不進訪談分頁就不知道）。
+     只在線上模式、已經收到代理程式狀態之後才顯示；開放時整條收起來。 */
+  function liveBar() {
+    var tb = $('topbar'), b = $('liveBar'); if (!tb) return;
+    var show = !!(APP.online && cur() && window.ERG_DAEMON_HB !== undefined && !liveReady());
+    if (!show) { if (b) b.style.display = 'none'; return; }
+    if (!b) { b = document.createElement('div'); b.id = 'liveBar'; b.setAttribute('role', 'status'); b.style.cssText = 'flex:none;background:#fff3bf;color:#1e1e1e;border-bottom:3px solid #1e1e1e;padding:4px 10px;font-size:13px;font-weight:700;line-height:1.45;text-align:center'; tb.parentNode.insertBefore(b, tb.nextSibling); }
+    b.textContent = daemonUp() ? '⏸ 現在不是即時訪談的開放時間（上課時間才開），人物不會直接回話。逛現場、讀線索、記筆記、寫結論都可以做。' : '⏸ 即時訪談目前連不上，人物不會直接回話。逛現場、讀線索、記筆記、寫結論都可以做。';
+    b.style.display = 'block';
+  }
+  if (APP.data && APP.data.listeners) APP.data.listeners.push(function (topic) { if (topic === 'daemon') liveBar(); });
+  setInterval(liveBar, 5000);
   /* 狀態字：連線中／非上課時間暫停／目前離線 */
   function liveLabel() { return liveReady() ? '連線中' : (daemonUp() ? '非上課時間，即時訪談暫停（可以逛、可以跟同學聊）' : '目前離線'); }
   P.liveLabel = liveLabel;

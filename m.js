@@ -194,7 +194,7 @@
     if (!cur) return; var now = Date.now(), dt = cur.tickT ? (now - cur.tickT) / 1000 : 0; cur.tickT = now;
     if (clockActive()) cur.clock = CLK.tick(cur.clock, Math.min(dt, 1));
     advanceWalk(Math.min(dt,1));
-    $('clock').textContent = CLK.format(cur.clock); persist(false); renderTokens(); eventWatch(); if (window.ERG_EVENT_UI) window.ERG_EVENT_UI.tick(cur,S); if(window.ERG_ROTATION_UI)window.ERG_ROTATION_UI.tick(S);
+    $('clock').textContent = CLK.format(cur.clock); (function(){var D=window.ERG_DAYLIGHT,c=$('clock'),el=$('dayIcon');if(!D||!D.icon||!c)return;if(!el){el=document.createElement('span');el.id='dayIcon';el.style.cssText='font-size:18px;line-height:1';c.parentNode.insertBefore(el,c);}var ic=D.icon(S.simMin());if(el.textContent!==ic){el.textContent=ic;el.setAttribute('aria-label',ic==='🌙'?'現在是晚上':'現在是白天');el.title=ic==='🌙'?'現在是晚上':'現在是白天';}})(); persist(false); renderTokens(); eventWatch(); if (window.ERG_EVENT_UI) window.ERG_EVENT_UI.tick(cur,S); if(window.ERG_ROTATION_UI)window.ERG_ROTATION_UI.tick(S);
     if (CLK.isDayOver(cur.clock) && !cur.dayOverShown) { cur.dayOverShown = true; toast('本班急診時段結束（07:00）。去寫結論吧。'); }
   }
   function slowTick() { if (!cur) return; refreshTicker(); S.refreshDots(); }
@@ -321,7 +321,7 @@
     var layer = $('environment'); if (!layer) return;
     var D = window.ERG_DAYLIGHT, info = D.light(simMin), profile = cur.world.data.ARRIVAL_PROFILE, ix = Math.min(11, Math.max(0, Math.floor((simMin-cur.world.data.SIM.START)/60))), rate = D.trafficRate(simMin, { arrivalRate: profile[ix] || 1, weekend: cur.world.day.weekend });
     var cars = D.cars(simMin-12, simMin+30, { seed:cur.code, arrivalRate:rate }); if(!cars.length)cars=[{id:'fallback-a',t:simMin-2,kind:'car',dir:1},{id:'fallback-b',t:simMin+2,kind:'scooter',dir:-1}];
-    var html = '<div class="tint" style="background:'+info.tint+';opacity:'+info.darkness+'"></div>';
+    var html = '';   /* 10-13 楊老師：室內不分日夜、完全不加色調（原本晚上蓋一層深藍灰）；日夜改用時間旁邊的太陽／月亮 */
     /* 10-12 楊老師：車流動畫拿掉，改用一顆不會動的人潮燈號 */
     if (cur.world.sim.activeEvents(simMin).some(function(e){return e.spawn&&e.spawn.mode==='ambulance';})) html += '<i class="ambulanceCar">🚑<b></b></i>';
     cur.busy = { light: D.busyLight(rate), phase: info.phase }; layer.innerHTML=html;
