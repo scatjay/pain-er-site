@@ -8,7 +8,16 @@
 
   var S = window.ERG_ROOM = { cur: null }, cur = null;
   function roomName(id) { var r = LAYOUT.room(id); return r ? r.name : id; }
-  function toast(msg) { var t = $('ticker'); t.textContent = msg; t.style.display = 'block'; clearTimeout(toast._t); toast._t = setTimeout(refreshTicker, 3500); }
+  function toTop() { try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) { window.scrollTo(0, 0); } }
+  function toast(msg, onTap) {
+    /* 10-13：提示訊息原本寫在場景下面的事件字幕那一格，但那一格每秒會被事件字幕更新蓋掉，而且整頁能捲之後可能根本不在畫面上。
+       改成固定在畫面下方的浮動框，4 秒後消失。 */
+    var f = $('toastFloat'); if (!f) { f = document.createElement('div'); f.id = 'toastFloat'; f.setAttribute('role', 'status'); document.body.appendChild(f); }
+    /* onTap：這一句可以點（例如「別處發生事件，點這裡過去看」）。可以點的多留 2 秒。 */
+    f.textContent = msg; f.style.display = 'block'; f.style.pointerEvents = onTap ? 'auto' : 'none'; f.style.cursor = onTap ? 'pointer' : '';
+    f.onclick = onTap ? function () { f.style.display = 'none'; onTap(); } : null;
+    clearTimeout(toast._f); toast._f = setTimeout(function () { f.style.display = 'none'; f.onclick = null; }, onTap ? 6000 : 4000);
+  }
   S.toast = toast;
 
   S.enter = function (code) {
@@ -19,6 +28,7 @@
       tab: 'clue', selClue: null, selNpc: null, lastSave: 0, seenEv: {}, tickT: 0, tokens: {}, soundOn: APP.me.profile.sound !== false, musicOn:APP.me.profile.music===true,amb: null,bgm:null,walk:null, mobile: true };
     APP.show('game');
     $('roomLabel').textContent = world.day.short + '・' + (shift === 'night' ? '夜班' : '日班') + '・' + world.meta.short;
+    cur.singleRoom = true;   /* 手機一次只看一間房；事件演出用這個旗標決定鏡頭不離開玩家所在的房間 */
     buildTabs(); if(window.ERG_ROTATION_UI)window.ERG_ROTATION_UI.bind(S); buildDots(); updateSpeedBtn();bindMusic();
     if (window.ERG_PANELS) window.ERG_PANELS.renderAll();
     cur.timer = setInterval(frame, 250); cur.slow = setInterval(slowTick, 1500);
@@ -51,12 +61,19 @@
     Array.prototype.forEach.call($('tabs').children, function (b) { b.classList.toggle('on', b.dataset.t === t); });
     ['clue', 'intv', 'cards', 'events', 'concl', 'disc', 'cp', 'ach'].forEach(function (n) { $('p-' + n).classList.toggle('on', n === t); });
     if (window.ERG_PANELS) window.ERG_PANELS.render(t);
-    $('side').scrollTop = 0;
+    /* 10-13 整頁捲動：分頁列不在畫面上半部時（在第一屏底部，或已經捲過頭），把它捲到最上面，底下整個畫面就是面板。
+       在上半部就不動，免得畫面亂跳。捲過頭的情況直接跳（新面板要從頭看），其餘用滑的。 */
+    var an = $('tabsAnchor');
+    if (an && an.getBoundingClientRect) {
+      var top = an.getBoundingClientRect().top, y = top + (window.pageYOffset || document.documentElement.scrollTop || 0);
+      if (top < -1 || top > (window.innerHeight || 0) * 0.5) { try { window.scrollTo({ top: y, behavior: top < 0 ? 'auto' : 'smooth' }); } catch (e) { window.scrollTo(0, y); } }
+    }
   };
-  function buildDots() { $('ckDots').innerHTML = '<i></i><i></i><i></i><i></i><i></i><i></i>'; }
+  function buildDots() { $('ckDots').innerHTML = '<i></i><i></i><i></i><i></i><i></i><i></i>'; var cb = $('ckBtn'); if (cb) cb.onclick = function () { S.switchTab('cp'); }; }
   S.refreshDots = function () {
     var e = APP.evaluate(); if (!e) return; cur.ev = e;
     Array.prototype.forEach.call($('ckDots').children, function (d, i) { d.classList.toggle('lit', !!e.ev.list[i] && e.ev.list[i].ok); });
+    var cl = $('ckLabel'); if (cl) cl.textContent = '檢核 ' + e.ev.lit + '/6';
     var prev = cur.litPrev === undefined ? e.ev.lit : cur.litPrev;
     if (e.ev.lit > prev) { var un = AV.newlyUnlocked(prev, e.ev.lit); toast('檢核點 ' + e.ev.lit + ' / 6' + (un.length ? '　解鎖外觀：' + un.map(function (u) { return u.label; }).join('、') : '')); }
     cur.litPrev = e.ev.lit;
@@ -71,11 +88,12 @@
   /* 速度：一顆鈕輪流切 慢→標準→快→暫停 */
   var SPEEDS = ['慢', '標準', '快', '暫停'];
   function speedKey() { return cur.clock.paused ? '暫停' : cur.clock.speed; }
-  function updateSpeedBtn() { $('speedBtn').textContent = '⏱ ' + speedKey(); }
+  function updateSpeedBtn() { var k = speedKey(); $('speedBtn').textContent = (k === '暫停' ? '⏸ 時間 ' : '⏱ 時間 ') + k; }
   $('speedBtn').onclick = function () {
     var i = (SPEEDS.indexOf(speedKey()) + 1) % SPEEDS.length, k = SPEEDS[i];
     if (k === '暫停') cur.clock = CLK.setPaused(cur.clock, true); else { cur.clock = CLK.setPaused(CLK.setSpeed(cur.clock, k), false); APP.me.profile.speed = k; CORE.saveProfile(APP.storage, APP.me.sid, APP.me.profile); }
     updateSpeedBtn(); persist(true);
+    toast(k === '暫停' ? '急診室的時間暫停了。再點一下「時間」會繼續（慢）。' : '急診室的時間速度：' + k + '。再點一下換成「' + SPEEDS[(i + 1) % SPEEDS.length] + '」。');
   };
 
   /* 卡片：沒有 Excalidraw，存在 room.mcards，電腦版也看得到 */
@@ -151,10 +169,12 @@
 
   /* 左右滑換房 */
   (function () {
-    var x0 = null;
-    $('stage').addEventListener('touchstart', function (e) { x0 = e.touches[0].clientX; }, { passive: true });
+    var x0 = null, y0 = 0;
+    $('stage').addEventListener('touchstart', function (e) { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; }, { passive: true });
     $('stage').addEventListener('touchend', function (e) {
-      if (x0 === null || !cur) return; var dx = e.changedTouches[0].clientX - x0; x0 = null; if (Math.abs(dx) < 60) return;
+      if (x0 === null || !cur) return; var dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0; x0 = null;
+      /* 10-13：整頁可以上下捲之後，從舞台往上滑、手指偏一點就會被當成換房 ⇒ 只認橫向為主的滑動（橫向至少 60，而且是直向的兩倍以上） */
+      if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 2) return;
       var list = nearby(cur.player.loc); if (!list.length) return;
       var all = [LAYOUT.room(cur.player.loc)].concat(list).sort(function (a, b) { return a.y - b.y || a.x - b.x; }), i = all.map(function (r) { return r.id; }).indexOf(cur.player.loc);
       var j = dx < 0 ? Math.min(all.length - 1, i + 1) : Math.max(0, i - 1); if (j !== i) startTravel(all[j].id);
@@ -308,16 +328,38 @@
   }
 
   /* ───── 事件 ───── */
-  function refreshTicker() { if (!cur) return; var tk = cur.world.sim.ticker(S.simMin(), 1), t = $('ticker'); if (!tk.length) { t.style.display = 'none'; return; } t.style.display = 'block'; t.textContent = tk[0].time + '　' + tk[0].title + '：' + tk[0].text; }
+  function refreshTicker() {
+    if (!cur) return; var min = S.simMin(), tk = cur.world.sim.ticker(min, 1), t = $('ticker');
+    /* 10-13：卡片優先顯示「正在發生」的最新一件；事件不在我這間房時，卡片可以點，點了直接到那間房去看 */
+    var act = cur.world.sim.activeEvents(min).slice().sort(function (a, b) { return (b.start || 0) - (a.start || 0); })[0];
+    var item = act ? { time: cur.world.sim.formatSim(act.start), title: act.title, text: act.text } : tk[0];
+    if (!item) { t.style.display = 'none'; t.onclick = null; t.classList.remove('go'); return; }
+    var rooms = act ? (act.rooms || []).filter(function (r) { var x = LAYOUT.room(r); return x && x.type === 'room'; }) : [];
+    var go = rooms.length && rooms.indexOf(cur.player.loc) < 0 ? rooms[0] : null;
+    t.style.display = 'block'; t.textContent = item.time + '　' + item.title + '：' + item.text + (go ? '　▶ 點這裡直接過去看（' + roomName(go) + '）' : (act ? '　（正在發生）' : ''));
+    t.classList.toggle('go', !!go); if (go) t.setAttribute('role', 'button'); else t.removeAttribute('role');
+    t.onclick = go ? function () { hidePop(); S.teleport(go); toTop(); toast('到了' + roomName(go) + '。'); refreshTicker(); } : null;
+  }
   function eventWatch() {
-    var act = cur.world.sim.activeEvents(S.simMin()), sfx = $('sfx'), here=act.filter(function(e){var g=window.ERG_EVENT_GUIDE.build().filter(function(x){return x.id===e.id;})[0];return (e.rooms||[]).indexOf(cur.player.loc)>=0||(g&&g.importance===3&&(e.rooms||[]).some(function(r){return (cur.player.visited||[]).indexOf(r)>=0;}));});
+    var act = cur.world.sim.activeEvents(S.simMin()), sfx = $('sfx'), guides=window.ERG_EVENT_GUIDE.build(),inRoom=((LAYOUT.room(cur.player.loc)||{}).type==='room'),here=act.filter(function(e){return (e.rooms||[]).indexOf(cur.player.loc)>=0&&(inRoom||!(e.rooms||[]).some(function(r){var x=LAYOUT.room(r);return x&&x.type==='room';}));}),far=act.filter(function(e){var g=guides.filter(function(x){return x.id===e.id;})[0];return (e.rooms||[]).indexOf(cur.player.loc)<0&&g&&g.importance===3;});
+    /* 10-13：原本「重要事件＋去過它的房間」就算在場，結果人在洗手間也顯示「這間房現在：救護車到院」。手機一次只看一間房：在場才演，別處的只提示一句。 */
     var people=cur.world.at(cur.clock.worldSec).filter(function(it){return it.pos.room===cur.player.loc;}),acts=people.map(function(it){return it.ent.name+'：'+(it.pos.act||'正在忙');}).slice(0,2),clues=cur.world.clues.filter(function(c){return c.pin.room===cur.player.loc;}).length,waiters=people.filter(function(it){return it.ent.kind==='patient'&&/候診|等結果|等候/.test(it.pos.act||'');}),waitMax=0;
     waiters.forEach(function(it){(it.ent.timeline.segments||[]).forEach(function(s){if(s.kind==='idle'&&s.act===it.pos.act&&cur.clock.worldSec>=it.ent.timeline.appearAt+s.t0&&cur.clock.worldSec<=it.ent.timeline.appearAt+s.t1)waitMax=Math.max(waitMax,(cur.clock.worldSec-it.ent.timeline.appearAt-s.t0)/cur.world.data.SIM.SECONDS_PER_SIM_MIN);});});
     var tired=people.filter(function(it){var a=cur.world.availability(it.ent,it.pos,S.simMin());return a.fatigue&&a.fatigue.level>=2;})[0];
-    var nowTxt='這間房現在：'+(here.length?here[0].title+'。':'')+(acts.join('；')||'暫時安靜，看看家具與線索。')+' 等候 '+waiters.length+' 人，約 '+Math.floor(waitMax)+' 分；線索 '+clues+' 張。'+(tired?' '+tired.ent.name+'看起來很累。':'');
+    var nowTxt='這間房現在：'+(here.length?here[0].title+'。':'')+(acts.join('；')||'暫時安靜，看看家具與線索。')+' 等候 '+waiters.length+' 人，約 '+Math.floor(waitMax)+' 分；線索 '+clues+' 張。'+(tired?' '+tired.ent.name+'看起來很累。':'')+(far.length?'　📣 別處：'+far[0].title+'（在'+(far[0].rooms||[]).filter(function(r){var x=LAYOUT.room(r);return x&&x.type==='room';}).map(roomName).join('、')+'）':'');
+    cur.farTold = cur.farTold || {};
+    var fresh = far.filter(function (e) { return !(cur.farTold[e.id] || cur.seenEv[e.id] || (cur.player.seenEv || {})[e.id]); });
+    if (fresh.length) {
+      fresh.forEach(function (e) { cur.farTold[e.id] = true; });
+      var goRooms = (fresh[0].rooms || []).filter(function (r) { var x = LAYOUT.room(r); return x && x.type === 'room'; }), goTo = goRooms[0];
+      toast('📣 別處發生事件：' + fresh.map(function (e) { return e.title; }).join('、') + (goTo ? '（在' + roomName(goTo) + '）。點這裡直接過去看。' : '。'),
+        goTo ? function () { hidePop(); S.teleport(goTo); toTop(); } : null);
+    }
     var bz=cur.busy;$('roomNow').innerHTML=(bz?'<i class="lamp" style="background:'+bz.light.color+'"></i>'+esc(bz.light.text+'・'+bz.phase)+'　':'')+esc(nowTxt);
     if (here.length) { sfx.style.display = 'block'; sfx.textContent = COMIC.sfxFor(here[0]); } else sfx.style.display = 'none';
-    here.forEach(function (e) { if (!cur.seenEv[e.id] && !(cur.player.seenEv || {})[e.id]) { cur.seenEv[e.id] = true; var o = {}; o[e.id] = true; cur.player.seenEv = Object.assign({}, cur.player.seenEv, o); window.ERG_EVENT_UI.startLive(cur,e,cur.player.loc); } });
+    here.forEach(function (e) { if (!cur.seenEv[e.id] && !(cur.player.seenEv || {})[e.id]) { cur.seenEv[e.id] = true; var o = {}; o[e.id] = true; cur.player.seenEv = Object.assign({}, cur.player.seenEv, o); window.ERG_EVENT_UI.startLive(cur,e,cur.player.loc);
+      /* 10-13：整頁捲到面板區時，演出在畫面上方看不到 ⇒ 提示一句，點了捲回上面 */
+      if ($('stage').getBoundingClientRect().bottom < 60) toast('📣 這間房正在發生：' + e.title + '。點這裡回到上面看現場。', toTop); } });
   }
   function showStrip(ev) {
     var third = ev.incident ? '警衛老陳趕到，兩個人一起被請出大門。' : (ev.text || '');
