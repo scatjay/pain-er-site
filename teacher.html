@@ -67,9 +67,9 @@ body.proj{--fs:21px}body.proj .wrap{max-width:none}body.proj .small{display:none
   <hr style="border:0;border-top:1px solid var(--line);margin:14px 0">
   <div class="qrcard">
     <div class="qr" id="qrSmall"></div>
-    <div style="flex:1;min-width:12em"><b>學生入口</b><div class="muted" style="font-size:.9em">手機掃 QR，或輸入網址；用校信箱的 Google 帳號登入。</div>
+    <div style="flex:1;min-width:12em"><b>用手機開老師後台</b><div class="muted" style="font-size:.9em">掃這個 QR，用同一個 Google 帳號登入。</div>
       <div class="qrurl" id="qrUrl"></div>
-      <div class="row" style="margin-top:6px"><button id="qrBigBtn">放大給全班掃</button><button id="qrCopy" class="ghost">複製網址</button></div></div>
+      <div class="row" style="margin-top:6px"><button id="qrBigBtn">放大</button><button id="qrCopy" class="ghost">複製網址</button></div></div>
   </div>
 </div>
 <div id="dashboard" hidden>
@@ -142,27 +142,29 @@ body.proj{--fs:21px}body.proj .wrap{max-width:none}body.proj .small{display:none
 <p class="muted small" style="font-size:.8em;margin-top:16px">只讀（除了即時對話的三顆開關與主題摘要）。資料來自 Firebase 專案 gen-lang-client-0556836042（Spark 免費方案，沒有綁帳單）。檢核點用遊戲同一套規則計算。去識別化：學號、姓名、信箱換成當場次的固定代號（學生01、02…）。</p>
 </div>
 </div>
-<div id="qrBig" hidden><h1>痛點急診室</h1><div class="qr" id="qrBigBox"></div><div class="qrurl" id="qrBigUrl"></div><div class="muted">用校信箱的 Google 帳號登入</div><button id="qrBigClose">關閉</button></div>
+<div id="qrBig" hidden><h1>痛點急診室 老師後台</h1><div class="qr" id="qrBigBox"></div><div class="qrurl" id="qrBigUrl"></div><div class="muted">只有教師名單裡的 Google 帳號能進</div><button id="qrBigClose">關閉</button></div>
 <div id="toast" hidden></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-<script src="er_firebase.js?v=202610122232"></script>
-<script src="checklist.js?v=202610122232"></script>
-<script src="checkpoints.js?v=202610122232"></script>
-<script src="avatar.js?v=202610122232"></script>
-<script src="local_db.js?v=202610122232"></script>
-<script src="app_core.js?v=202610122232"></script>
-<script src="achievements.js?v=202610122232"></script><script src="remote_db.js?v=202610122232"></script>
-<script src="layout.js?v=202610122232"></script>
-<script src="minimap.js?v=202610122232"></script>
-<script src="personas_inclusive.js?v=202610122232"></script><script src="er_data.js?v=202610122232"></script><script src="npc_voice.js?v=202610122232"></script><script src="personas.js?v=202610122232"></script>
+<script src="er_firebase.js?v=202610122236"></script>
+<script src="checklist.js?v=202610122236"></script>
+<script src="checkpoints.js?v=202610122236"></script>
+<script src="avatar.js?v=202610122236"></script>
+<script src="local_db.js?v=202610122236"></script>
+<script src="app_core.js?v=202610122236"></script>
+<script src="achievements.js?v=202610122236"></script><script src="remote_db.js?v=202610122236"></script>
+<script src="layout.js?v=202610122236"></script>
+<script src="minimap.js?v=202610122236"></script>
+<script src="personas_inclusive.js?v=202610122236"></script><script src="er_data.js?v=202610122236"></script><script src="npc_voice.js?v=202610122236"></script><script src="personas.js?v=202610122236"></script>
 <script>
 /* 教師名單：只有這裡的 Google 帳號能進。要加人就加在這裡（改完重新部署；資料庫規則 tools/er_after_google_enabled.py 也要加）。 */
 var TEACHER_EMAILS = ['scatjay@gmail.com'];
-/* 學生入口（QR 用）。 */
-var STUDENT_URL = 'https://scatjay.github.io/pain-er-site/';
+/* 老師後台自己的網址（登入頁的 QR：老師用手機掃了開後台）。 */
+var TEACHER_URL = 'https://scatjay.github.io/pain-er-site/teacher.html';
+/* QR 用的網址多帶一個參數：LINE 掃到會改用手機的預設瀏覽器開（LINE 內建瀏覽器不能做 Google 登入） */
+var TEACHER_QR_URL = TEACHER_URL + '?openExternalBrowser=1';
 /* 課表自動開放的時段：只用來顯示「下一次什麼時候開」，真正的判斷在 tools/er_chat_daemon.py 的 CLASS_WINDOWS，改那邊時這裡要一起改。 */
 var CLASS_WINDOWS = [].concat(
   ['2026-10-13', '2026-10-20', '2026-10-27'].map(function (d) { return [d, '07:10', '11:00']; }),
@@ -181,8 +183,14 @@ var CLASS_WINDOWS = [].concat(
   var DEV = isLocal && /[?&]devteacher=1/.test(location.search);
   function provider() { var p = new firebase.auth.GoogleAuthProvider(); p.setCustomParameters({ prompt: 'select_account' }); return p; }
   function explain(e) { var c = (e && e.code) || ''; say(c === 'auth/operation-not-allowed' ? '🔴 這個 Firebase 專案還沒啟用 Google 登入（主控台 → Authentication → Sign-in method → Google）。' : c === 'auth/unauthorized-domain' ? '🔴 這個網域還沒加進授權網域。' : '登入沒完成（' + esc(c || e) + '）。再按一次試試。'); }
-  $('gGoogle').onclick = function () { say('登入中…'); if (isMobile) auth.signInWithRedirect(provider()).catch(explain); else auth.signInWithPopup(provider()).catch(function (e) { if (/popup/.test(e.code || '')) auth.signInWithRedirect(provider()).catch(explain); else explain(e); }); };
-  auth.getRedirectResult().catch(explain);
+  /* 手機也先用彈出視窗：整頁跳轉在 github.io 上會被手機瀏覽器擋跨網域登入資料（跳回來等於沒登入），只留作備援 */
+  var INAPP = /Line\/|FBAN|FBAV|FB_IAB|Instagram|MicroMessenger|; wv\)/i.test(navigator.userAgent), redirBack = false;
+  var inappMsg = '這是 App 內建的瀏覽器（例如 LINE、FB），Google 不允許在這裡登入。請點右上角選單「用預設瀏覽器開啟」，或把網址貼到 Chrome／Safari。';
+  try { redirBack = sessionStorage.getItem('ergT_redir') === '1'; sessionStorage.removeItem('ergT_redir'); } catch (e) {}
+  function goRedirect() { try { sessionStorage.setItem('ergT_redir', '1'); } catch (e) {} auth.signInWithRedirect(provider()).catch(explain); }
+  if (INAPP) say(inappMsg);
+  $('gGoogle').onclick = function () { if (INAPP) { say(inappMsg); return; } say('登入中…（會跳出 Google 的視窗）'); auth.signInWithPopup(provider()).catch(function (e) { var c = (e && e.code) || ''; if (c === 'auth/popup-blocked' || c === 'auth/operation-not-supported-in-this-environment') goRedirect(); else explain(e); }); };
+  auth.getRedirectResult().then(function (r) { if (redirBack && !(r && r.user) && !auth.currentUser) say('跳轉登入在這個瀏覽器沒有成功。請再按一次登入並允許彈出視窗；還是不行就改用 Chrome 或 Safari。'); }).catch(explain);
   if (DEV) auth.signInAnonymously().catch(explain);
   auth.onAuthStateChanged(function (u) {
     if (!u) { $('gate').hidden = false; $('dashboard').hidden = true; return; }
@@ -207,12 +215,12 @@ var CLASS_WINDOWS = [].concat(
   /* ───── 學生入口 QR ───── */
   function qrSvg(text) { try { var q = window.qrcode(0, 'M'); q.addData(text); q.make(); return q.createSvgTag({ cellSize: 4, margin: 2, scalable: true }); } catch (e) { return ''; } }
   (function () {
-    var svg = qrSvg(STUDENT_URL), shown = STUDENT_URL.replace(/^https:\/\//, '');
+    var svg = qrSvg(TEACHER_QR_URL), shown = TEACHER_URL.replace(/^https:\/\//, '');
     $('qrSmall').innerHTML = svg || '<span class="muted" style="line-height:1.5">QR 產生不了，請直接用網址</span>'; $('qrBigBox').innerHTML = svg;
     $('qrUrl').textContent = shown; $('qrBigUrl').textContent = shown;
     $('qrBigBtn').onclick = function () { $('qrBig').hidden = false; }; $('qrBigClose').onclick = function () { $('qrBig').hidden = true; };
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') $('qrBig').hidden = true; });
-    $('qrCopy').onclick = function () { (navigator.clipboard ? navigator.clipboard.writeText(STUDENT_URL) : Promise.reject()).then(function () { toast('已複製網址'); }, function () { toast('複製不了，請手動選取網址'); }); };
+    $('qrCopy').onclick = function () { (navigator.clipboard ? navigator.clipboard.writeText(TEACHER_URL) : Promise.reject()).then(function () { toast('已複製網址'); }, function () { toast('複製不了，請手動選取網址'); }); };
   })();
 
   /* ───── 去識別化與投影 ───── */

@@ -106,20 +106,28 @@
   if (ONLINE) {
     AUTH = firebase.auth(); setAuthUi('google');
     var provider = function () { var p = new firebase.auth.GoogleAuthProvider(); p.setCustomParameters({ prompt: 'select_account' }); return p; };
-    var triedPopup = false;
+    /* 登入方式（10-12 改）：手機也先用彈出視窗。整頁跳轉（redirect）在本站行不通——登入網域是 firebaseapp.com、網站在 github.io，
+       手機 Chrome 與 Safari 會擋跨網域的登入資料，跳回來等於沒登入而且不報錯。跳轉只留作彈出視窗被擋時的備援，並記旗標以便回來後說明。 */
+    var redirFail = false;
+    var triedPopup = false, INAPP = /Line\/|FBAN|FBAV|FB_IAB|Instagram|MicroMessenger|; wv\)/i.test(navigator.userAgent);
+    var inappMsg = '這是 App 內建的瀏覽器（例如 LINE、FB），Google 不允許在這裡登入。請點右上角選單「用預設瀏覽器開啟」，或把網址貼到 Chrome／Safari。';
+    function goRedirect() { try { sessionStorage.setItem('erg_redir', '1'); } catch (e) {} AUTH.signInWithRedirect(provider()).catch(explainAuth); }
+    if (INAPP) authMsg(inappMsg);
     $('googleBtn').onclick = function () {
-      authMsg('登入中…');
-      if (isMobile || triedPopup) { AUTH.signInWithRedirect(provider()).catch(explainAuth); return; }
+      if (INAPP) { authMsg(inappMsg); return; }
+      authMsg('登入中…（會跳出 Google 的視窗）');
+      if (triedPopup) { goRedirect(); return; }
       triedPopup = true;
-      AUTH.signInWithPopup(provider()).catch(function (e) { if (/popup/.test((e && e.code) || '')) AUTH.signInWithRedirect(provider()).catch(explainAuth); else explainAuth(e); });
+      AUTH.signInWithPopup(provider()).catch(function (e) { var c = (e && e.code) || ''; if (c === 'auth/popup-blocked' || c === 'auth/operation-not-supported-in-this-environment') goRedirect(); else explainAuth(e); });
     };
-    AUTH.getRedirectResult().catch(explainAuth);
+    var redirBack = false; try { redirBack = sessionStorage.getItem('erg_redir') === '1'; sessionStorage.removeItem('erg_redir'); } catch (e) {}
+    AUTH.getRedirectResult().then(function (r) { if (redirBack && !(r && r.user) && !AUTH.currentUser) { redirFail = true; authMsg('跳轉登入在這個瀏覽器沒有成功（瀏覽器擋了跨網站的登入資料）。請再按一次登入並允許彈出視窗；還是不行就改用 Chrome 或 Safari 開這個網址。'); } }).catch(explainAuth);
     if (/[?&]anon=1/.test(location.search)) AUTH.signInAnonymously().catch(explainAuth);   /* 測試用：匿名帳號走綁定流程 */
     /* 測試用（只在本機伺服器有效）：?devsid=XXX 直接以該學號進入線上模式，不經 Google */
     var devsid = (location.search.match(/[?&]devsid=([A-Za-z0-9_-]{3,16})/) || [])[1];
     if (devsid && /^(127\.0\.0\.1|localhost)$/.test(location.hostname)) { var go = function () { finishLogin(devsid, '其他', devsid.toLowerCase() + '@test.local', '測試' + devsid, (AUTH.currentUser || {}).uid || null); }; AUTH.signInAnonymously().then(go, function () { go(); }); }
     AUTH.onAuthStateChanged(function (user) {
-      if (!user) { setAuthUi('google'); authMsg(''); show('login'); return; }
+      if (!user) { setAuthUi('google'); if (!INAPP && !redirFail && !redirBack) authMsg(''); show('login'); return; }
       var email = user.email || ('anon-' + user.uid.slice(0, 6) + '@test.local');
       firebase.database().ref('er/users/' + user.uid).once('value', function (s) {
         var rec = s.val();
