@@ -135,6 +135,9 @@
     { persona:'kid',         appear:665, esi:4, complaint:'額頭撞傷要縫',
       route:[ ['entrance-mid',[2,2],'跟爸爸進急診'], ['triage-chair',[6,6],'檢傷'], ['ped-desk',[30,40],'在兒科區等'], ['ped-bed',[15,15],'縫合'],
               ['ped-desk',[8,8],'等爸爸聽說明'], ['street-dc',[2,2],'走出醫院'], ['AWAY',[0,0],'離開'] ] },
+    { persona:'pep_patient', appear:690, esi:4, complaint:'暴露後預防投藥（PEP）',
+      route:[ ['entrance-mid',[2,2],'走進急診'], ['triage-desk',[5,5],'檢傷'], ['wait-3',[45,60],'候診'], ['consultB-desk',[10,10],'看診'],
+              ['pharm-counter',[8,8],'領藥'], ['street-dc',[2,2],'走出醫院'], ['AWAY',[0,0],'離開'] ] },
     { persona:'kid_dad',     appear:666, esi:4, complaint:'陪女兒小米來（額頭撞傷）',
       route:[ ['entrance-mid',[2,2],'帶小米進急診'], ['triage-desk',[6,6],'陪小米檢傷'], ['pharm-wait',[30,40],'在兒科區等'], ['ped-bed',[14,14],'陪縫合'],
               ['dc-counter',[8,8],'聽離院說明'], ['street-dc',[2,2],'走出醫院'], ['AWAY',[0,0],'離開'] ] }

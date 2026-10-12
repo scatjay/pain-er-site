@@ -362,7 +362,7 @@
   /* 身形：讓人群看起來不是同一個模子（沒列出的維持標準身形） */
   var BODY = { guard: 'broad', family: 'round', volunteer: 'round', elder: 'short', lonely_elder: 'short', toddler_mom: 'slim', teen: 'tall', er_doctor: 'tall',
     street_man: 'slim', drunk: 'round', admin: 'pear', radiology: 'slim', rowdy_family: 'broad', rowdy_drunk: 'pear', clinic_doctor: 'normal', gay_partner: 'tall',
-    trans_woman: 'slim', new_resident: 'short', triage_nurse: 'slim', nurse: 'normal', worker: 'broad', migrant_caregiver: 'slim', er_director: 'normal', superintendent: 'round', kid: 'short', kid_dad: 'tall' };
+    trans_woman: 'slim', new_resident: 'short', triage_nurse: 'slim', nurse: 'normal', worker: 'broad', migrant_caregiver: 'slim', er_director: 'normal', superintendent: 'round', kid: 'short', kid_dad: 'tall', pep_patient: 'slim' };
   P.forEach(function (q) { if (q.look && !q.look.body && BODY[q.id]) q.look.body = BODY[q.id]; });
 
   function byId(id) { for (var i = 0; i < P.length; i++) if (P[i].id === id) return P[i]; return null; }
