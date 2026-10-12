@@ -93,8 +93,10 @@
     $('bindIntro').style.display = step === 'bind' ? '' : 'none';
     $('bindEmail').style.display = step === 'bind' ? '' : 'none';
     $('loginBtn').textContent = step === 'bind' ? '綁定並進入' : '進入';
+    if ($('bindLogout')) $('bindLogout').style.display = step === 'bind' ? '' : 'none';   /* 登入錯帳號時可以直接換 */
   }
   function authMsg(t) { $('authMsg').textContent = t; }
+  document.addEventListener('click', function (e) { var b = e.target && e.target.closest ? e.target.closest('[data-logout]') : null; if (b && $('logoutBtn')) $('logoutBtn').click(); });
   function explainAuth(e) {
     var c = (e && e.code) || '';
     authMsg(c === 'auth/operation-not-allowed' ? 'Google 登入還沒開通，請告訴老師。' :
