@@ -37,14 +37,20 @@
     var log = typeof opts.log === 'function' ? opts.log : function () {};
     var M = { rooms: {}, scenes: {}, snaps: {}, subs: {}, stats: {}, ready: false }, sceneSubs = {}, snapSubs = {}, subSubs = {}, statSubs = {};
 
-    root.child('rooms').on('value', function (snap) {
-      var v = (snap && typeof snap.val === 'function') ? snap.val() : snap, next = v || {}, changed = [];
-      Object.keys(next).forEach(function (c) { if (JSON.stringify(next[c]) !== JSON.stringify(M.rooms[c])) changed.push(c); });
-      Object.keys(M.rooms).forEach(function (c) { if (!next[c]) changed.push(c); });
-      M.rooms = next; M.ready = true;
-      changed.forEach(function (c) { notify('room:' + c); });
-      if (changed.length || !M.readyOnce) { M.readyOnce = true; notify('lobby'); }
-    });
+    /* 規則要求登入後才能讀 ⇒ 監聽可以延後到登入完成再掛（opts.deferred，之後呼叫 attach()） */
+    var attached = false;
+    function attach() {
+      if (attached) return; attached = true;
+      root.child('rooms').on('value', function (snap) {
+        var v = (snap && typeof snap.val === 'function') ? snap.val() : snap, next = v || {}, changed = [];
+        Object.keys(next).forEach(function (c) { if (JSON.stringify(next[c]) !== JSON.stringify(M.rooms[c])) changed.push(c); });
+        Object.keys(M.rooms).forEach(function (c) { if (!next[c]) changed.push(c); });
+        M.rooms = next; M.ready = true;
+        changed.forEach(function (c) { notify('room:' + c); });
+        if (changed.length || !M.readyOnce) { M.readyOnce = true; notify('lobby'); }
+      }, function (err) { log('rooms 監聽被拒：' + (err && err.message)); });
+    }
+    if (!opts.deferred) attach();
     function val(snap) { return (snap && typeof snap.val === 'function') ? snap.val() : snap; }
     function watchScene(code) {
       if (sceneSubs[code]) return; sceneSubs[code] = true;
@@ -68,6 +74,7 @@
     function update(path, obj) { try { root.child(path).update(obj); } catch (e) { log('update 失敗 ' + path + '：' + e.message); } }
 
     return {
+      attach: attach,
       ready: function () { return M.ready; },
       createRoom: function (s, env) {
         var code = newCode(), stamp = now();

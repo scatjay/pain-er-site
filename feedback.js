@@ -62,7 +62,7 @@
         '<div class="row" style="margin-top:8px"><button id="fbSend">送出</button><span id="fbMsg" class="err"></span></div>' +
         '<h2>我送過的（' + mineList.length + '）</h2><div style="max-height:30vh;overflow:auto">' + (mineList.length ? mineList.slice().reverse().map(function (e) { return '<div class="card" style="padding:6px 10px;margin:6px 0;box-shadow:3px 3px 0 var(--ink)"><span class="tag">' + esc(KINDS[e.kind] || e.kind) + '</span> <span class="muted" style="font-size:12px">' + new Date(e.t).toLocaleString() + '</span><div style="font-size:14px">' + esc(e.text) + '</div></div>'; }).join('') : '<p class="muted">還沒有。</p>') + '</div>' +
         '<div class="row" style="margin-top:8px"><button class="ghost" id="fbCopy">複製我的全部回報（貼給老師）</button><span id="fbCopied" class="muted" style="font-size:12px"></span></div>' +
-        '<p class="muted" style="font-size:12px">本機版：回報存在這台電腦的瀏覽器裡。要老師收到，請按「複製」貼給老師；之後接上後台就會自動送達。</p>';
+        (APP.online ? '<p class="muted" style="font-size:12px">送出後老師後台會即時收到；也可以按「複製」留一份。</p>' : '<p class="muted" style="font-size:12px">本機版：回報存在這台電腦的瀏覽器裡。要老師收到，請按「複製」貼給老師。</p>');
       doc.getElementById('modalBox').innerHTML = html; doc.getElementById('modal').classList.add('on');
       var kind = 'bug';
       Array.prototype.forEach.call(doc.querySelectorAll('#fbKinds [data-k]'), function (b) { b.onclick = function () { kind = b.getAttribute('data-k'); Array.prototype.forEach.call(doc.querySelectorAll('#fbKinds [data-k]'), function (x) { x.classList.toggle('on', x === b); }); }; });
@@ -70,7 +70,10 @@
       doc.getElementById('fbSend').onclick = function () {
         try {
           var e = buildEntry({ kind: kind, text: doc.getElementById('fbText').value, includeState: doc.getElementById('fbState').checked }, ctxNow());
-          save(APP.storage, e); open(); doc.getElementById('fbMsg').textContent = ''; var m = doc.getElementById('fbMsg'); m.className = 'muted'; m.textContent = '已送出，謝謝！';
+          save(APP.storage, e);
+          /* 線上模式：同時送到 Firebase er/_feedback，老師後台即時看得到（比照文化遊戲松） */
+          if (APP.online && win.firebase) { try { win.firebase.database().ref('er/_feedback').push(Object.assign({}, e, { sess: APP.SESS, name: APP.me.name || '', ctx: e.ctx ? Object.assign({}, e.ctx, { ua: String(e.ctx.ua || '').slice(0, 120) }) : null })); } catch (x) { if (win.console) win.console.warn('feedback 上傳失敗', x); } }
+          open(); doc.getElementById('fbMsg').textContent = ''; var m = doc.getElementById('fbMsg'); m.className = 'muted'; m.textContent = APP.online ? '已送出，老師那邊看得到了，謝謝！' : '已送出，謝謝！';
         } catch (x) { doc.getElementById('fbMsg').textContent = x.message; }
       };
       doc.getElementById('fbCopy').onclick = function () {

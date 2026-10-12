@@ -54,7 +54,9 @@
     here.forEach(function (h) { if (h.ent.id === selId) sel = h; });
     var html = '<div class="muted" style="font-size:13px">這間房裡的人（只有在同一房間才問得到）：</div><div class="row" style="margin:6px 0">' +
       (here.length ? here.map(function (h) { return '<button class="pill ' + (sel && sel.ent.id === h.ent.id ? 'on' : '') + '" data-npc="' + esc(h.ent.id) + '">' + esc(h.ent.name) + '・' + ({ free: '可聊', short: '簡短', blocked: '正忙' })[h.av.level] + '</button>'; }).join('') : '<span class="muted">現在這間房沒有人。</span>') + '</div>';
-    if (!sel) { p.innerHTML = html + '<p class="muted">點上面的人，或直接點畫面上的角色。</p>'; bindNpc(p); return; }
+    /* 所有可訪談的人（整間急診室），依房間分組；點不在同房的人會直接走過去，到了自動選取 */
+    html += '<details' + (here.length ? '' : ' open') + ' style="margin:6px 0"><summary class="muted" style="cursor:pointer;font-size:13px">所有可訪談的人（點了就走過去）</summary><div id="allNpc" style="font-size:13px">' + allNpcHtml() + '</div></details>';
+    if (!sel) { p.innerHTML = html + '<p class="muted">點上面的人，或直接點畫面上的角色。</p>'; bindNpc(p); bindAllNpc(p); return; }
     var ent = sel.ent, persona = ent.persona, ix = recFor(ent.pid), rec = ix >= 0 ? player().interviews[ix] : null;
     html += '<div class="card" style="margin-top:6px"><b>' + esc(ent.name) + '</b>　<span class="tag ' + (persona.material === '模擬' ? 'warn' : '') + '">素材：' + esc(persona.material || '模擬') + '</span><div class="muted" style="font-size:12px">' + esc(persona.title || '') + '</div>' +
       '<div style="font-size:13px">' + ({ free: '現在可以好好聊。', short: '正在忙，只能簡短回答（' + esc(sel.av.reason) + '）。', blocked: '現在不方便（' + esc(sel.av.reason) + '），晚一點再來。' })[sel.av.level] + '</div></div>';
@@ -78,7 +80,7 @@
       });
       html += '<label>這段 Gemini 對話的分享連結（https）<input id="lnk" placeholder="https://g.co/gemini/share/…" value="' + esc(player().links[rec.id] || '') + '"></label><div class="row" style="margin-top:6px"><button class="ghost" id="lnkSave">儲存連結</button><button id="toConcl" class="ghost">加進我的結論</button><span id="lnkMsg" class="muted"></span></div>';
     } else if (sel.av.level !== 'blocked') html += '<p class="muted" style="margin-top:10px">開始訪談後，就會出現檢核表。</p>';
-    p.innerHTML = html; bindNpc(p);
+    p.innerHTML = html; bindNpc(p); bindAllNpc(p);
     if ($('chatBox')) bindChat(sel, ent);
     var g = $('genP'); if (g) g.onclick = function () {
       if (recFor(ent.pid) < 0) { var r = CL.newRecord({ id: CORE.nextId(player(), me()), author: me(), round: 1, loc: player().loc, simTime: RM.simTime(), personaId: ent.pid, link: '' }); player().interviews.push(r); save(); }
@@ -96,6 +98,25 @@
     }
   }
   function bindNpc(p) { Array.prototype.forEach.call(p.querySelectorAll('[data-npc]'), function (b) { b.onclick = function () { cur().selNpc = b.dataset.npc; renderIntv(); }; }); }
+  function allNpcHtml() {
+    var c = cur(), simMin = RM.simMin(), byRoom = {}, LAY = window.ERG_LAYOUT, mine = player().loc;
+    c.world.at(c.clock.worldSec).forEach(function (it) {
+      if (it.ent.kind === 'bot' || !it.pos.room) return; var r = LAY.room(it.pos.room); if (!r || r.type !== 'room') return;
+      var av = c.world.availability(it.ent, it.pos, simMin); (byRoom[it.pos.room] = byRoom[it.pos.room] || []).push({ ent: it.ent, av: av });
+    });
+    var rooms = Object.keys(byRoom).sort(function (a, b) { return (b === mine) - (a === mine) || LAY.room(a).name.localeCompare(LAY.room(b).name); });
+    if (!rooms.length) return '<span class="muted">現在沒有人在房間裡。</span>';
+    return rooms.map(function (rid) { return '<div style="margin:3px 0"><b>' + esc(roomNameOf(rid)) + (rid === mine ? '（你在這）' : '') + '</b>：' + byRoom[rid].map(function (h) { return '<button class="pill' + (c.selNpc === h.ent.id ? ' on' : '') + '" data-goto="' + esc(h.ent.id) + '" data-room="' + esc(rid) + '" style="font-size:12px;padding:1px 7px">' + esc(h.ent.name) + '・' + ({ free: '可聊', short: '簡短', blocked: '正忙' })[h.av.level] + '</button>'; }).join(' ') + '</div>'; }).join('');
+  }
+  function bindAllNpc(p) {
+    Array.prototype.forEach.call(p.querySelectorAll('[data-goto]'), function (b) { b.onclick = function () {
+      var id = b.dataset.goto, rid = b.dataset.room, c = cur();
+      if (rid === player().loc) { c.selNpc = id; renderIntv(); return; }
+      c.pendingNpc = id; RM.toast('走去' + roomNameOf(rid) + '找 ' + (b.textContent.split('・')[0]) + '…'); RM.travel(rid);
+    }; });
+  }
+  /* 走到目的房間後，自動選取剛才點的人 */
+  P.onMove = (function (orig) { return function () { var c = cur(); if (c && c.pendingNpc) { var id = c.pendingNpc, here = RM.entityHere().some(function (h) { return h.ent.id === id; }); if (here) { c.pendingNpc = null; c.selNpc = id; RM.switchTab('intv'); } } orig(); }; })(P.onMove);
 
   /* ───── 即時訪談（Firebase 佇列 → 老師電腦上的代理程式 → Vertex → 寫回）───── */
   function liveReady() { return !!(APP.online && window.ERG_DAEMON_HB && Date.now() - window.ERG_DAEMON_HB < 60000); }

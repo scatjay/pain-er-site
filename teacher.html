@@ -48,6 +48,8 @@ body.proj{--fs:21px}body.proj .wrap{max-width:none}body.proj .small{display:none
 <div class="card" id="students">載入中…</div>
 <h2>房間</h2>
 <div class="card" id="rooms"></div>
+<h2>回報與建議（學生按「💬 回報」送來的）</h2>
+<div class="card" id="fbBox">載入中…</div>
 <h2 class="small">即時訪談用量（今天）</h2>
 <div class="card small" id="usage"></div>
 <p class="muted small" style="font-size:.8em">只讀。資料來自 Firebase 專案 gen-lang-client-0556836042（Spark 免費方案，沒有綁帳單）。檢核點用遊戲同一套規則計算。去識別化：學號、姓名、信箱換成當場次的固定代號（學生01、02…）。</p>
@@ -56,16 +58,16 @@ body.proj{--fs:21px}body.proj .wrap{max-width:none}body.proj .small{display:none
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-<script src="er_firebase.js?v=fb1"></script>
-<script src="checklist.js?v=2"></script>
-<script src="checkpoints.js?v=2"></script>
-<script src="avatar.js?v=2"></script>
-<script src="local_db.js?v=2"></script>
-<script src="app_core.js?v=2"></script>
-<script src="remote_db.js?v=fb1"></script>
-<script src="layout.js?v=2"></script>
-<script src="minimap.js?v=2"></script>
-<script src="personas_inclusive.js?v=2"></script><script src="er_data.js?v=2"></script><script src="personas.js?v=2"></script>
+<script src="er_firebase.js?v=202610122047"></script>
+<script src="checklist.js?v=202610122047"></script>
+<script src="checkpoints.js?v=202610122047"></script>
+<script src="avatar.js?v=202610122047"></script>
+<script src="local_db.js?v=202610122047"></script>
+<script src="app_core.js?v=202610122047"></script>
+<script src="remote_db.js?v=202610122047"></script>
+<script src="layout.js?v=202610122047"></script>
+<script src="minimap.js?v=202610122047"></script>
+<script src="personas_inclusive.js?v=202610122047"></script><script src="er_data.js?v=202610122047"></script><script src="personas.js?v=202610122047"></script>
 <script>
 /* 教師名單：只有這裡的 Google 帳號能進。要加人就加在這裡（改完重新部署）。 */
 var TEACHER_EMAILS = ['scatjay@gmail.com'];
@@ -162,6 +164,11 @@ var TEACHER_EMAILS = ['scatjay@gmail.com'];
     rooms.forEach(function (r) { Object.keys(r.players || {}).forEach(function (sid) { var p = CORE.getPlayer(r, sid); p.interviews.forEach(function (iv) { Object.keys(iv.items || {}).forEach(function (k) { (iv.items[k].tags || []).forEach(function (tg) { tags[tg] = (tags[tg] || 0) + 1; }); }); }); p.conclusions.forEach(function (c) { var d = (c && (c.direction || c.dir || c.title)) || ''; if (d) concl[String(d).slice(0, 30)] = (concl[String(d).slice(0, 30)] || 0) + 1; }); }); });
     $('iTags').innerHTML = bar(tags, Object.keys(tags).reduce(function (a, k) { return a + tags[k]; }, 0)); $('iConcl').innerHTML = bar(concl, Object.keys(concl).reduce(function (a, k) { return a + concl[k]; }, 0));
   }
+  var KINDS = { bug: '有問題', idea: '建議', confused: '看不懂' };
+  fdb.ref('er/_feedback').limitToLast(100).on('value', function (s) {
+    var v = s.val() || {}, keys = Object.keys(v).sort(function (a, b) { return Number(v[b].t) - Number(v[a].t); }), el = $('fbBox'); if (!el) return;
+    el.innerHTML = keys.length ? keys.map(function (k) { var e = v[k], c = e.ctx || {}; return '<div style="border-bottom:1px solid var(--line);padding:4px 0"><span class="pill" style="font-size:11px">' + esc(KINDS[e.kind] || e.kind) + '</span> <b>' + esc(DEID ? aliasOf(String(e.sid)) : (e.sid + (e.name ? '　' + e.name : ''))) + '</b> <span class="muted" style="font-size:.85em">' + new Date(e.t).toLocaleString() + (c.room ? '・房 ' + esc(c.room) : '') + (c.loc ? '・' + esc(c.loc) : '') + (c.simTime ? '・' + esc(c.simTime) : '') + '</span><div>' + esc(e.text) + '</div>' + (c.errors && c.errors.length ? '<div class="muted small" style="font-size:.8em">錯誤：' + esc(c.errors.join(' ｜ ')) + '</div>' : '') + '</div>'; }).join('') : '<span class="muted">還沒有回報。</span>';
+  });
   function attachChats(root) { root.child('chat').on('value', function (s) { chats = s.val() || {}; schedule(); }); root.child('analysis/summary').on('value', function (s) { var v = s.val(); $('sumBox').textContent = v ? v.text : ''; $('sumStat').textContent = v ? ('上次摘要：' + new Date(v.t).toLocaleTimeString() + '，' + v.n + ' 個問題') : ''; }); }
   $('sumBtn').onclick = function () { $('sumStat').textContent = '已送出，等代理程式…'; fdb.ref('er/_cmd').push({ kind: 'summarize', sess: SESS, t: Date.now() }); };
   function markersByRoom(rs) { var out = {}; rs.forEach(function (r) { try { out[r.code] = CORE.mcardEls(r).concat(DB.getScene(r.code).filter(function (e) { return !e.isDeleted && e.customData && e.customData.marker; })).map(function (e) { var m = e.customData.marker; return { id: m.id, type: m.type, author: m.author, refs: m.refs }; }); } catch (e) { out[r.code] = []; } }); return out; }

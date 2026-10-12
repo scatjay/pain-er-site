@@ -14,7 +14,7 @@
       if (/[?&]local=1/.test(location.search) || !window.ERG_FB || !window.firebase || !window.ERG_REMOTE) return;
       if (!firebase.apps || !firebase.apps.length) firebase.initializeApp(window.ERG_FB);
       var fdb = firebase.database(), root = fdb.ref('er/' + sess());
-      DB = window.ERG_REMOTE.makeRemoteDb({ root: root, sess: sess(), notify: data.fire, log: function (m) { console.warn('[remote_db]', m); } });
+      DB = window.ERG_REMOTE.makeRemoteDb({ root: root, sess: sess(), deferred: true, notify: data.fire, log: function (m) { console.warn('[remote_db]', m); } });   /* deferred：登入後才掛監聽（規則要 auth） */
       data.DB = DB; ONLINE = true;
       /* 省流量：分頁被收到背景超過 3 分鐘就斷線，回到前景再連（免費方案同時連線上限 100） */
       var offT = null;
@@ -68,6 +68,7 @@
     prof.cls = cls; prof.email = email; prof.name = name || prof.name || ''; APP.me.profile = prof; CORE.saveProfile(APP.storage, sid, prof);
     /* 線上模式：把學號、班級、信箱登記到 er/{sess}/profiles，老師頁面與審查寄信用 */
     if (ONLINE) { try { firebase.database().ref('er/' + APP.SESS + '/profiles/' + sid).update({ cls: cls, email: email, name: name || '', uid: uid || '', t: Date.now(), ua: isMobile ? 'mobile' : 'desktop' }); } catch (e) { console.warn(e); } }
+    if (ONLINE && DB.attach) DB.attach();
     try { sessionStorage.setItem('erg2_sid', sid); sessionStorage.setItem('erg2_cls', cls); } catch (e) {}
     $('loginErr').textContent = '';
     if (!prof.chosen) openAvatar(true); else enterLobby();
@@ -115,7 +116,7 @@
     if (/[?&]anon=1/.test(location.search)) AUTH.signInAnonymously().catch(explainAuth);   /* 測試用：匿名帳號走綁定流程 */
     /* 測試用（只在本機伺服器有效）：?devsid=XXX 直接以該學號進入線上模式，不經 Google */
     var devsid = (location.search.match(/[?&]devsid=([A-Za-z0-9_-]{3,16})/) || [])[1];
-    if (devsid && /^(127\.0\.0\.1|localhost)$/.test(location.hostname)) { setTimeout(function () { finishLogin(devsid, '其他', devsid.toLowerCase() + '@test.local', '測試' + devsid, null); }, 0); }
+    if (devsid && /^(127\.0\.0\.1|localhost)$/.test(location.hostname)) { var go = function () { finishLogin(devsid, '其他', devsid.toLowerCase() + '@test.local', '測試' + devsid, (AUTH.currentUser || {}).uid || null); }; AUTH.signInAnonymously().then(go, function () { go(); }); }
     AUTH.onAuthStateChanged(function (user) {
       if (!user) { setAuthUi('google'); authMsg(''); show('login'); return; }
       var email = user.email || ('anon-' + user.uid.slice(0, 6) + '@test.local');
