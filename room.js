@@ -1,0 +1,521 @@
+/* 房間裡的遊戲：整間急診室一次看完（不用捲動）、NPC 與玩家疊層、個人時鐘、小地圖、事件分鏡、環境音。
+   側邊面板（線索、訪談、筆記卡、結論、討論、檢核點）在 panels.js。 */
+(function () {
+  'use strict';
+  var APP = window.ERG_APP, DB = APP.DB, $ = APP.$, esc = APP.esc;
+  var CORE = window.ERG_CORE, L = window.ERG_LOGIC, XL = window.ExcalidrawLib, R = window.React, RD = window.ReactDOM;
+  var LAYOUT = window.ERG_LAYOUT, FP = window.ERG_FLOORPLAN, MM = window.ERG_MINIMAP, CH = window.ERG_CHARS, AV = window.ERG_AVATAR, CLK = window.ERG_CLOCK;
+  var COMIC = window.ERG_COMIC, AMB = window.ERG_AMBIENCE, BGM = window.ERG_BGM, DEPTH = window.ERG_DEPTH, CP = window.ERG_CHECKPOINTS, CL = window.ERG_CHECKLIST;
+
+  /* 地圖的可視範圍：整間急診室（不含地圖外的家、回診、筆記本）；一次看完，不捲動 */
+  var MAP = { x: 0, y: 0, w: 1700, h: 1150 };
+  var REMOTE = { home: true, clinic: true, notebook: true };
+
+  var S = window.ERG_ROOM = { cur: null };
+  var cur = null;           /* 目前房間的執行狀態 */
+
+  function simText(c) { return CLK.format(c); }
+  function roomName(id) { var r = LAYOUT.room(id); return r ? r.name : id; }
+  function toast(msg) { var t = $('ticker'); t.textContent = msg; t.style.display = 'block'; clearTimeout(toast._t); toast._t = setTimeout(function () { refreshTicker(); }, 3500); }
+  S.toast = toast;
+
+  /* ───── 進入／離開 ───── */
+  S.enter = function (code) {
+    var sid = APP.me.sid, j = DB.joinRoom(code, sid);
+    var room = DB.getRoom(code), shift = room.shift === 'night' ? 'night' : 'day', world = window.ERG_WORLD.makeWorld({ caseId: room.case || 'sms', seed: room.code, dow: room.dow, shift: shift });
+    var player = CORE.getPlayer(room, sid);
+    if (!player) {
+      player = CORE.blankPlayer(APP.me.profile, 'entrance');
+      player.visit = String(room.host) !== String(sid);
+      player.clock = CLK.create({ speed: APP.me.profile.speed });
+      player.worldSec = 0;
+      CORE.savePlayer(DB, code, sid, player);
+    }
+    cur = S.cur = { code: code, room: room, role: j.role, world: world, player: player, api: null, root: null, canon: [], applying: false, lastHash: '',
+      clock: CLK.create({ speed: player.speed || APP.me.profile.speed || '標準', worldSec: player.worldSec || 0, shift: shift }), tab: 'clue', selClue: null, selNpc: null,
+      lastSave: 0, seenEv: {}, tickT: 0, tokens: {}, view: null, lastRoomForSound: null, amb: null, bgm: null, soundOn: APP.me.profile.sound !== false,
+      musicOn: APP.me.profile.music !== false, stageMode: 'room' };
+    APP.show('game');
+    $('roomLabel').textContent = '房間 ' + code + '・' + world.day.short + '・' + (shift === 'night' ? '夜班' : '日班') + '・' + world.meta.name;
+    buildTabs(); if(window.ERG_ROTATION_UI)window.ERG_ROTATION_UI.bind(S); buildSpeed(); buildDots();
+    mountBoard();
+    buildTravelControls(); refreshStageMode(); bindMusic();
+    if (window.ERG_PANELS) window.ERG_PANELS.renderAll();
+    cur.timer = setInterval(frame, 250);
+    cur.wstep = setInterval(function () { if (cur) renderOverlay(); }, 100);
+    (function raf() { if (!cur) return; placeTokens(); cur.raf = requestAnimationFrame(raf); })();
+    cur.slow = setInterval(slowTick, 1500);
+    DB.appendEvent(code, { kind: 'join', env: sid });
+    setLoc(player.loc || 'entrance', true);
+    player.visited = player.visited || [player.loc || 'entrance'];
+    buildTravelControls();
+    updateSoundBtn();
+  };
+  S.leave = function (silent) {
+    if (!cur) return;
+    persist(true);
+    clearInterval(cur.timer); clearInterval(cur.slow); clearInterval(cur.wstep); if (cur.raf) cancelAnimationFrame(cur.raf);
+    if (cur.resizeObserver) cur.resizeObserver.disconnect(); window.removeEventListener('resize', onResize);
+    if (cur.amb) { try { cur.amb.stop(); } catch (e) {} }
+    if (cur.bgm) { try { cur.bgm.stop(); } catch (e) {} }
+    if (cur.root) { try { cur.root.unmount(); } catch (e) {} }
+    $('board').innerHTML = ''; $('overlay').innerHTML = '';
+    cur = S.cur = null;
+    if (!silent) APP.enterLobby();
+  };
+  $('leaveBtn').onclick = function () { S.leave(false); };
+
+  function persist(force) {
+    if (!cur) return;
+    var now = Date.now(); if (!force && now - cur.lastSave < 4000) return; cur.lastSave = now;
+    var p = cur.player; p.worldSec = cur.clock.worldSec; p.speed = cur.clock.speed === '自訂' ? '標準' : cur.clock.speed;
+    CORE.savePlayer(DB, cur.code, APP.me.sid, p);
+  }
+  S.persist = persist;
+
+  /* ───── 頂端列 ───── */
+  function buildTabs() {
+    var tabs = [['clue', '線索'], ['intv', '訪談'], ['cards', '筆記卡'], ['events', '事件簿'], ['concl', '結論'], ['disc', '討論'], ['cp', '檢核點']];
+    $('tabs').innerHTML = tabs.map(function (t) { return '<button data-t="' + t[0] + '" class="' + (t[0] === cur.tab ? 'on' : '') + '">' + t[1] + '</button>'; }).join('');
+    Array.prototype.forEach.call($('tabs').children, function (b) { b.onclick = function () { S.switchTab(b.dataset.t); }; });
+  }
+  S.switchTab = function (t) {
+    if (!cur) return; cur.tab = t; if (S.openSide) S.openSide();
+    Array.prototype.forEach.call($('tabs').children, function (b) { b.classList.toggle('on', b.dataset.t === t); });
+    ['clue', 'intv', 'cards', 'events', 'concl', 'disc', 'cp'].forEach(function (n) { $('p-' + n).classList.toggle('on', n === t); });
+    if (window.ERG_PANELS) window.ERG_PANELS.render(t);
+  };
+  function buildSpeed() {
+    var keys = ['慢', '標準', '快', '暫停'];
+    $('speedSeg').innerHTML = keys.map(function (k) { return '<button data-s="' + k + '">' + k + '</button>'; }).join('');
+    Array.prototype.forEach.call($('speedSeg').children, function (b) {
+      b.onclick = function () {
+        var k = b.dataset.s;
+        if (k === '暫停') cur.clock = CLK.setPaused(cur.clock, !cur.clock.paused);
+        else { cur.clock = CLK.setPaused(CLK.setSpeed(cur.clock, k), false); APP.me.profile.speed = k; CORE.saveProfile(APP.storage, APP.me.sid, APP.me.profile); }
+        updateSpeedUi(); persist(true);
+      };
+    });
+    updateSpeedUi();
+  }
+  function updateSpeedUi() {
+    Array.prototype.forEach.call($('speedSeg').children, function (b) {
+      var k = b.dataset.s; b.classList.toggle('on', k === '暫停' ? !!cur.clock.paused : (!cur.clock.paused && cur.clock.speed === k));
+    });
+  }
+  function buildDots() { $('ckDots').innerHTML = '<i></i><i></i><i></i><i></i><i></i><i></i>'; }
+  S.refreshDots = function () {
+    var e = APP.evaluate(); if (!e) return; cur.ev = e;
+    Array.prototype.forEach.call($('ckDots').children, function (d, i) { d.classList.toggle('lit', !!e.ev.list[i] && e.ev.list[i].ok); d.title = e.ev.list[i] ? e.ev.list[i].label + '：' + e.ev.list[i].detail : ''; });
+    var prev = cur.litPrev === undefined ? e.ev.lit : cur.litPrev;
+    if (e.ev.lit > prev) {
+      var un = AV.newlyUnlocked(prev, e.ev.lit);
+      toast('檢核點 ' + e.ev.lit + ' / 6' + (un.length ? '　解鎖外觀：' + un.map(function (u) { return u.label; }).join('、') : ''));
+      var a = $('ckDots'); a.animate && a.animate([{ transform: 'scale(1.5)' }, { transform: 'scale(1)' }], { duration: 400 });
+    }
+    cur.litPrev = e.ev.lit;
+    if (window.ERG_PANELS && cur.tab === 'cp') window.ERG_PANELS.render('cp');
+  };
+  data_listen();
+  function data_listen() {
+    APP.data.listeners.push(function (topic) {
+      if (!cur) return;
+      if (topic === 'scene:' + cur.code) pullRemoteScene();
+      if (topic === 'room:' + cur.code) { cur.room = DB.getRoom(cur.code); var p = CORE.getPlayer(cur.room, APP.me.sid); if (p) { cur.player.confirms = p.confirms || cur.player.confirms; } S.refreshDots(); if (window.ERG_PANELS) window.ERG_PANELS.onRoomChanged(); }
+    });
+  }
+
+  /* ───── 看板（Excalidraw）───── */
+  function layoutWithClues() {
+    var clues = cur.world.clues;
+    return Object.assign({}, LAYOUT, { PINS: clues.map(function (c) { return { clue: c.id, room: c.pin.room, rx: c.pin.rx, ry: c.pin.ry }; }) });
+  }
+  function buildCanon() {
+    var sk = FP.buildFloorplanSkeleton(layoutWithClues(), cur.world.clues);
+    sk = sk.filter(function (e) { return !(e.customData && e.customData.route); });   /* 路線虛線在新的平面圖上會橫跨房間，不畫 */
+    var els = XL.convertToExcalidrawElements(sk);
+    return els.map(function (e) { var c = Object.assign({}, e); c.locked = true; c.customData = Object.assign({}, e.customData, { base: true }); return c; });
+  }
+  function mountBoard() {
+    cur.canon = buildCanon();
+    var cards = DB.getScene(cur.code) || [];
+    var elements = cur.canon.concat(cards);
+    cur.lastHash = L.hashElements(elements);
+    var host = document.createElement('div'); host.style.cssText = 'position:absolute;inset:0'; $('board').innerHTML = ''; $('board').appendChild(host);
+    var props = {
+      excalidrawAPI: function (api) { cur.api = api; setTimeout(function () { fitView(true); }, 200); },
+      initialData: { elements: elements, appState: { viewBackgroundColor: '#fffdf5', currentItemFontFamily: 2, zenModeEnabled: false, gridSize: null }, scrollToContent: false },
+      onChange: onBoardChange, viewModeEnabled: true, langCode: 'zh-TW',
+      onPointerDown: function (tool, st) { onBoardPointer(st); },
+      UIOptions: { canvasActions: { loadScene: false, saveToActiveFile: false, export: false, saveAsImage: false, toggleTheme: false, clearCanvas: false, changeViewBackgroundColor: false } }
+    };
+    cur.root = RD.createRoot(host); cur.root.render(R.createElement(XL.Excalidraw, props));
+    window.addEventListener('resize', onResize);
+    if (window.ResizeObserver) { cur.resizeObserver = new ResizeObserver(function(){ if(cur){fitView(true);cur._placeKey='';placeTokens();} }); cur.resizeObserver.observe($('board')); }
+  }
+  function onResize() { if (cur && cur.api) { fitView(true); cur._placeKey=''; placeTokens(); } }
+  /* 把整間急診室（或指定區域）塞進看板，不留捲動 */
+  function viewFor(rect) {
+    var W = $('board').clientWidth || 900, H = $('board').clientHeight || 600, pad = 24;
+    var z = Math.min((W - pad * 2) / rect.w, (H - pad * 2) / rect.h);
+    return { zoom: z, scrollX: (W / 2) / z - (rect.x + rect.w / 2), scrollY: (H / 2) / z - (rect.y + rect.h / 2), W: W, H: H };
+  }
+  function fitView(force) {
+    if (!cur || !cur.api) return;
+    var rect = cur.focus || (cur.stageMode === 'map' ? MAP : stageRect()), v = viewFor(rect); cur.view = v;
+    cur.api.updateScene({ appState: { scrollX: v.scrollX, scrollY: v.scrollY, zoom: { value: v.zoom } } });
+  }
+  S.fit = fitView;
+  S.focusRect = function (rect) { cur.focus = rect; fitView(true); };
+  S.focusAll = function () { cur.focus = null; fitView(true); }; S.setWatchRoom=function(id){if(!LAYOUT.room(id)||LAYOUT.room(id).type!=='room')return;cur.watchRoom=id;var scene=document.getElementById(cur.mobile?'sceneBox':'stage');if(scene){scene.style.transition='opacity .18s';scene.style.opacity='.55';setTimeout(function(){scene.style.opacity='1';},30);}if(cur.mobile){renderScene();renderTokens();}else{S.focusRect(LAYOUT.room(id));renderOverlay();}};
+  function stageRect() {
+    var r = LAYOUT.room(cur.watchRoom || cur.player.loc);
+    if (!r || r.type === 'hall' || r.type === 'outside') { var p = cur.me || { x: 850, y: 500 }; return { x: p.x - 280, y: p.y - 190, w: 560, h: 380 }; }
+    var pad = 32; return { x: r.x - pad, y: r.y - pad, w: r.w + pad * 2, h: r.h + pad * 2 };
+  }
+  function refreshStageMode() {
+    var btn = $('stageModeBtn'); if (btn) { btn.textContent = cur.stageMode === 'map' ? '房間' : '全地圖'; btn.classList.toggle('on', cur.stageMode === 'map'); }
+    fitView(true); renderOverlay();
+  }
+
+  function allEls() { return cur.api ? cur.api.getSceneElementsIncludingDeleted() : []; }
+  function nonBase(els) { return els.filter(function (e) { return !(e.customData && e.customData.base); }); }
+  function onBoardChange(elements, appState) {
+    if (!cur || !cur.api) return;
+    cur.appState = appState;
+    selectionWatch(elements, appState);
+    if (cur.role !== 'member' || cur.applying) return;
+    var els = allEls(), h = L.hashElements(els);
+    if (h === cur.lastHash) return;
+    var res = L.restoreBase(els, cur.canon, Math.random);
+    if (res.changed) {
+      cur.applying = true; cur.lastHash = L.hashElements(res.elements); cur.api.updateScene({ elements: res.elements });
+      setTimeout(function () { cur.applying = false; }, 0);
+      DB.putScene(cur.code, L.mergeElements(nonBase(res.elements), DB.getScene(cur.code)));
+      return;
+    }
+    cur.lastHash = h;
+    DB.putScene(cur.code, L.mergeElements(nonBase(els), DB.getScene(cur.code)));
+    S.refreshDots();
+  }
+  function pullRemoteScene() {
+    if (!cur || !cur.api) return;
+    var merged = L.mergeElements(allEls(), DB.getScene(cur.code)), h = L.hashElements(merged);
+    if (h === L.hashElements(allEls())) return;
+    cur.applying = true; cur.lastHash = h; cur.api.updateScene({ elements: merged });
+    setTimeout(function () { cur.applying = false; if (window.ERG_PANELS) window.ERG_PANELS.onSceneChanged(); S.refreshDots(); }, 0);
+  }
+  S.api = function () { return cur && cur.api; };
+  S.addElements = function (skeleton) {
+    var els = XL.convertToExcalidrawElements(skeleton);
+    cur.api.updateScene({ elements: allEls().concat(els) });
+  };
+  S.allEls = allEls;
+  S.markerEls = function () { return allEls().concat(CORE.mcardEls(DB.getRoom(cur.code))); };
+
+  /* 點到線索牌：只有在同一個房間才讀得到 */
+  function selectionWatch(elements, appState) {
+    var ids = Object.keys(appState.selectedElementIds || {}).filter(function (k) { return appState.selectedElementIds[k]; });
+    var byId = {}; elements.forEach(function (e) { byId[e.id] = e; });
+    var found = null;
+    ids.forEach(function (id) { var e = byId[id]; if (!e) return; if (e.containerId && byId[e.containerId]) e = byId[e.containerId]; if (e.customData && e.customData.clueId) found = e.customData.clueId; });
+    if (found && found !== cur.selClue) { cur.selClue = found; S.switchTab('clue'); if (cur.role === 'member') DB.appendEvent(cur.code, { kind: 'clue-open', env: APP.me.sid, clue: found }); }
+  }
+  /* 點房間（地板）就走過去 */
+  function onBoardPointer(st) {
+    if (!cur || !st || !st.origin) return;
+    var ox = st.origin.x, oy = st.origin.y, hit = null;
+    cur.world.clues.forEach(function (c) { var p = LAYOUT.abs(c.pin.room, c.pin.rx, c.pin.ry); if (ox >= p.x - 4 && ox <= p.x + 80 && oy >= p.y - 4 && oy <= p.y + 38) hit = c; });
+    if (hit) { cur.selClue = hit.id; S.switchTab('clue'); if (cur.role === 'member') DB.appendEvent(cur.code, { kind: 'clue-open', env: APP.me.sid, clue: hit.id }); return; }
+    var r = LAYOUT.roomAt(ox, oy);
+    if (r && r !== cur.player.loc && !/^hall|corridor|ambulance|street/.test(r)) { setTimeout(function () { startTravel(r); }, 0); }
+  }
+
+  /* ───── 位置與移動 ───── */
+  function spotIn(roomId) {
+    var st = LAYOUT.STATIONS.filter(function (s) { return s.room === roomId; });
+    var rm = LAYOUT.room(roomId);
+    if (st.length) { var p = LAYOUT.abs(roomId, st[0].rx, st[0].ry); return { x: p.x + 30, y: p.y + 10 }; }
+    return { x: rm.x + rm.w / 2, y: rm.y + rm.h * 0.7 };
+  }
+  function setLoc(roomId, silent) {
+    if (!cur) return;
+    var rm = LAYOUT.room(roomId); if (!rm) return;
+    cur.player.loc = roomId; cur.watchRoom=roomId; cur.me = spotIn(roomId); cur.meMoving = 8;
+    rememberRoom(roomId); renderTravelChips();
+    $('locLabel').textContent = '你在：' + rm.name;
+    $('mmHere').textContent = rm.name;
+    var cap = cur.world.captionFor(roomId); $('caption').textContent = cap || rm.name;
+    if (!silent) DB.appendEvent(cur.code, { kind: 'move', env: APP.me.sid, to: roomId });
+    soundForRoom(roomId);
+    persist(true);
+    renderMinimap();
+    if (window.ERG_PANELS) window.ERG_PANELS.onMove();
+  }
+  function nearestNode(point, roomId) {
+    var ids = Object.keys(cur.world.graph.nodes), best = null, bd = Infinity;
+    ids.forEach(function (id) { var n = cur.world.graph.nodes[id]; if (roomId && n.room !== roomId) return; var d = Math.hypot(n.x-point.x,n.y-point.y); if(d<bd){bd=d;best=id;} });
+    return best;
+  }
+  function startTravel(roomId) {
+    if (!cur) return false;
+    var target = LAYOUT.room(roomId); if (!target || target.type === 'remote') return false;
+    if (cur.walk) cur.walk = null;
+    var start = cur.me || spotIn(cur.player.loc), dest = spotIn(roomId), from = nearestNode(start), to = nearestNode(dest, roomId) || nearestNode(dest);
+    if (!from || !to) { toast('找不到可走的路線，請從附近房間前往。'); return false; }
+    var route = cur.world.graph.nodes[from].x === cur.world.graph.nodes[to].x && cur.world.graph.nodes[from].y === cur.world.graph.nodes[to].y ? { ids:[from] } : window.ERG_NPC.shortestPath(cur.world.graph, from, to);
+    if (!route) { toast('找不到可走的路線，請從附近房間前往。'); return false; }
+    var pts = [{x:start.x,y:start.y}]; route.ids.forEach(function(id){var n=cur.world.graph.nodes[id]; if(Math.hypot(n.x-pts[pts.length-1].x,n.y-pts[pts.length-1].y)>1)pts.push({x:n.x,y:n.y});});
+    if (Math.hypot(dest.x-pts[pts.length-1].x,dest.y-pts[pts.length-1].y)>1) pts.push(dest);
+    cur.walk = { points:pts, index:1, target:roomId, lastRoom:cur.player.loc };
+    $('locLabel').textContent = '前往：' + target.name;
+    return true;
+  }
+  function advanceWalk(realDt) {
+    if (!cur.walk || cur.clock.paused || !realDt) return;
+    var w=cur.walk, budget=70*cur.world.data.SIM.SECONDS_PER_SIM_MIN/cur.clock.secPerMin*realDt;
+    while(budget>0 && w.index<w.points.length){var a=cur.me,b=w.points[w.index],d=Math.hypot(b.x-a.x,b.y-a.y);if(d<=budget){cur.me={x:b.x,y:b.y};budget-=d;w.index++;}else{cur.me={x:a.x+(b.x-a.x)*budget/d,y:a.y+(b.y-a.y)*budget/d};budget=0;}}
+    var roomId=LAYOUT.roomAt(cur.me.x,cur.me.y);
+    if(roomId && roomId!==cur.player.loc){cur.player.loc=roomId;cur.watchRoom=roomId; $('locLabel').textContent='你在：'+roomName(roomId); $('mmHere').textContent=roomName(roomId); soundForRoom(roomId); if(cur.stageMode==='room') fitView(true); if(window.ERG_PANELS)window.ERG_PANELS.onMove();}
+    cur._dirty=true;
+    if(cur.walk && cur.stageMode==='room'){cur.focus={x:cur.me.x-280,y:cur.me.y-190,w:560,h:380};fitView(true);}
+    if(w.index>=w.points.length){var target=w.target;cur.walk=null;cur.stageMode='room';cur.focus=null;setLoc(target,true);refreshStageMode();DB.appendEvent(cur.code,{kind:'move',env:APP.me.sid,to:target});persist(true);}
+  }
+  function rememberRoom(id){var v=cur.player.visited||[];cur.player.visited=[id].concat(v.filter(function(x){return x!==id;})).slice(0,8);}
+  function buildTravelControls(){
+    var stage=$('stage'), bar=document.getElementById('travelBar');
+    if(!bar){bar=document.createElement('div');bar.id='travelBar';stage.appendChild(bar);}
+    if(!document.getElementById('boardMask')){var mask=document.createElement('div');mask.id='boardMask';stage.appendChild(mask);}
+    bar.innerHTML='<button class="ghost" id="stageModeBtn">全地圖</button><span id="visitedChips"></span>';
+    $('stageModeBtn').onclick=function(){cur.stageMode=cur.stageMode==='map'?'room':'map';refreshStageMode();};
+    renderTravelChips();
+  }
+  function renderTravelChips(){var host=$('visitedChips');if(!host||!cur)return;host.innerHTML='<b>去過的房間：</b>'+((cur.player.visited||[]).map(function(id){var r=LAYOUT.room(id);return r?'<button class="ghost" data-visit="'+esc(id)+'">'+esc(r.name)+'</button>':'';}).join('')||'尚無');Array.prototype.forEach.call(host.querySelectorAll('[data-visit]'),function(b){b.onclick=function(){startTravel(b.dataset.visit);};});}
+  S.travel = startTravel;
+  S.teleport = function(id){if(!cur)return;cur.walk=null;setLoc(id);rememberRoom(id);renderTravelChips();};
+
+  /* ───── 環境音 ───── */
+  function soundForRoom(roomId) {
+    musicForRoom(roomId);
+    if (!AMB || !cur.soundOn) return;
+    try {
+      if (!cur.amb) cur.amb = AMB.createPlayer(window.AudioContext || window.webkitAudioContext, { volume: 0.5, seed: 11 });
+      cur.amb.setEnabled(true); cur.amb.enter(roomId);
+    } catch (e) {}
+  }
+  function updateSoundBtn() { $('soundBtn').textContent = cur.soundOn ? '🔊' : '🔇'; $('soundBtn').title = cur.soundOn ? '環境音：開' : '環境音：關'; }
+  $('soundBtn').onclick = function () {
+    if (!cur) return; cur.soundOn = !cur.soundOn; APP.me.profile.sound = cur.soundOn; CORE.saveProfile(APP.storage, APP.me.sid, APP.me.profile);
+    if (!cur.soundOn && cur.amb) cur.amb.setEnabled(false); else soundForRoom(cur.player.loc);
+    updateSoundBtn();
+  };
+  function musicForRoom(roomId){if(!BGM||!cur.musicOn)return;try{if(!cur.bgm)cur.bgm=BGM.createPlayer(window.AudioContext||window.webkitAudioContext,{volume:.05,seed:42});cur.bgm.setEnabled(true);cur.bgm.enter(roomId);}catch(e){}}
+  function updateMusicBtn(){var b=$('musicBtn');if(b){b.textContent=cur.musicOn?'🎵':'🎵̸';b.title=cur.musicOn?'音樂：開':'音樂：關';}}
+  function bindMusic(){var b=$('musicBtn');if(!b)return;b.onclick=function(){if(!cur)return;cur.musicOn=!cur.musicOn;APP.me.profile.music=cur.musicOn;CORE.saveProfile(APP.storage,APP.me.sid,APP.me.profile);if(cur.bgm)cur.bgm.setEnabled(cur.musicOn);else if(cur.musicOn)musicForRoom(cur.player.loc);updateMusicBtn();};updateMusicBtn();}
+
+  /* ───── 時鐘與畫面更新 ───── */
+  function clockActive() { return !document.hidden && cur.tab !== 'concl' && cur.tab !== 'disc' && cur.tab !== 'cp' && !cur.modalOpen; }
+  function frame() {
+    if (!cur) return;
+    var now = Date.now(), dt = cur.tickT ? (now - cur.tickT) / 1000 : 0; cur.tickT = now;
+    if (clockActive()) cur.clock = CLK.tick(cur.clock, Math.min(dt, 1));
+    advanceWalk(Math.min(dt,1));
+    $('clock').textContent = simText(cur.clock);
+    if (CLK.isDayOver(cur.clock) && !cur.dayOverShown) { cur.dayOverShown = true; toast('本班急診時段結束（07:00）。去寫結論吧。'); }
+    persist(false);
+    eventWatch(); if (window.ERG_EVENT_UI) window.ERG_EVENT_UI.tick(cur,S); if(window.ERG_ROTATION_UI)window.ERG_ROTATION_UI.tick(S);
+  }
+  function slowTick() { if (!cur) return; renderMinimap(); refreshTicker(); S.refreshDots(); }
+
+  function screenPos(x, y) {
+    var st = (cur.api && cur.api.getAppState && cur.api.getAppState()) || cur.appState, z = st ? st.zoom.value : (cur.view ? cur.view.zoom : 1), sx = st ? st.scrollX : 0, sy = st ? st.scrollY : 0;
+    return { x: (x + sx) * z, y: (y + sy) * z, z: z };
+  }
+  var svgCache = {};
+  function svgFor(look, key, mood) {
+    var k = key + '|' + mood; if (svgCache[k]) return svgCache[k];
+    svgCache[k] = CH.character(look, { seed: CH.hash ? CH.hash(key) % 97 : 3, mood: mood, size: 1 }); return svgCache[k];
+  }
+  function lookKey(look) { return JSON.stringify(look); }
+  function renderOverlay() {
+    if (!cur.api) return;
+    var t = cur.clock.worldSec, simMin = S.simMin(), list = cur.world.at(t), ov = $('overlay'), seen = {};
+    drawEnvironment(simMin);
+    var z = liveZoom(), size = Math.max(40, Math.min(100, 112 * z));
+    var inRoom = cur.watchRoom || cur.player.loc;
+    var vis = window.ERG_DENSITY.pick(list.filter(function (q) { return q.pos.x !== undefined; }).map(function (q) { return { id: q.ent.id, kind: q.ent.kind, room: q.pos.room, main: !!(q.ent.patient && q.ent.patient.main) }; }), { myRoom: inRoom, t: t, budget: 8, inRoomMax: 8 });
+    cur.vis = vis;
+    list.forEach(function (it) {
+      var ent = it.ent, pos = it.pos; if (pos.x === undefined) return;
+      if ((!vis[ent.id] && !cur.tokens[ent.id]) || (cur.stageMode !== 'map' && pos.room !== inRoom)) return;
+      var id = ent.id, here = pos.room === inRoom;
+      var el = cur.tokens[id];
+      if (!el) { el = cur.tokens[id] = document.createElement('div'); el.className = 'tok'; ov.appendChild(el); el.onclick = function () { onNpcClick(id); }; }
+      seen[id] = true;
+      var av = cur.world.availability(ent, pos, simMin), moving = pos.state === 'move';
+      var fatigue = av.fatigue || { level: 0 }, mood = fatigue.level >= 2 ? 'sleepy' : (av.level === 'blocked' ? 'busy' : (moving ? 'idle' : (ent.kind === 'incident' ? 'angry' : 'idle')));
+      var speed = window.ERG_FATIGUE ? window.ERG_FATIGUE.animSpeed(fatigue.level) : 1;
+      var sig = lookKey(ent.look) + mood + size;
+      if (el._sig !== sig) { el._sig = sig; el.innerHTML = '<div class="bubWrap"></div>' + svgFor(ent.look, ent.id, mood) + '<span class="nm"></span>'; el.querySelector('svg').style.height = size + 'px'; el.querySelector('svg').style.width = 'auto'; }
+      el._tx = pos.x; el._ty = pos.y; el._room = pos.room;
+      el.className = 'tok ' + (moving ? 'walk' : 'idle'); el.style.setProperty('--anim-speed', speed + 's'); el.style.zIndex = String(DEPTH ? DEPTH.z(pos.y) : Math.round(pos.y));
+      el.style.setProperty('--walk-duration', (0.5 / speed) + 's'); el.style.setProperty('--idle-duration', (2.4 / speed) + 's');
+      el.classList.toggle('off', !vis[ent.id]); el.style.opacity = !vis[ent.id] ? '0' : (here || inRoom === null ? '1' : '.7'); el.style.pointerEvents = vis[ent.id] ? 'auto' : 'none';
+      var focused=cur.selNpc===id||el.matches(':hover');var nm = el.querySelector('.nm'); nm.textContent = here ? ent.name : ''; nm.style.display = here&&focused ? 'inline-block' : 'none'; nm.className = 'nm ' + (ent.kind === 'bot' ? '' : av.level);
+      var bw = el.querySelector('.bubWrap'), m = here ? cur.world.mutterFor(ent, pos, t) : null;
+      bw.innerHTML = (pos.act ? '<div class="act">' + esc(pos.act) + '</div>' : '') + (m&&focused ? '<div class="bub ' + (m.kind === 'shout' ? 'shout' : (m.kind === 'thought' ? 'thought' : '')) + '">' + esc(m.text) + '</div>' : '');
+    });
+    Object.keys(cur.tokens).forEach(function (id) { if (!seen[id] && id !== 'me') { cur.tokens[id].remove(); delete cur.tokens[id]; } });
+    cur._dirty = true;
+    /* 玩家自己 */
+    var me = cur.tokens.me;
+    if (!me) { me = cur.tokens.me = document.createElement('div'); me.className = 'tok me'; ov.appendChild(me); }
+    var look = AV.toCharLook(APP.me.profile.avatar.look), msig = lookKey(look) + size;
+    if (me._sig !== msig) { me._sig = msig; me.innerHTML = svgFor(look, 'me:' + APP.me.sid, 'idle'); me.querySelector('svg').style.height = size + 'px'; me.querySelector('svg').style.width = 'auto'; }
+    var tag=cur.youTag;if(!tag){tag=cur.youTag=document.createElement('div');tag.className='youTagLayer';tag.textContent='你';ov.appendChild(tag);}tag.style.left=((cur.me.x+(cur.api.getAppState().scrollX))*liveZoom())+'px';tag.style.top=((cur.me.y+cur.api.getAppState().scrollY)*liveZoom()-size-30)+'px';tag.style.zIndex='2147483647';
+    me._tx = cur.me.x; me._ty = cur.me.y; me._room = cur.player.loc; me._fixed = true; me.style.zIndex = String(DEPTH ? DEPTH.z(cur.me.y) : Math.round(cur.me.y));
+    syncRoomProps();
+    spreadTokens();
+    me.className = 'tok me idle';
+  }
+  function drawEnvironment(simMin) {
+    var layer = $('environment'); if (!layer) return;
+    var D = window.ERG_DAYLIGHT, info = D.light(simMin), rate = D.trafficRate(simMin, { arrivalRate: cur.world.data.ARRIVAL_PROFILE[Math.min(11, Math.floor((simMin-cur.world.data.SIM.START)/60))] || 1, weekend: cur.world.day.weekend });
+    var cars = D.cars(simMin - 12, simMin + 30, { seed: cur.code, arrivalRate: rate }); if (!cars.length) cars = [{id:'fallback-a',t:simMin-2,kind:'car',dir:1},{id:'fallback-b',t:simMin+2,kind:'scooter',dir:-1}];
+    var html = '<div class="tint" style="background:' + info.tint + ';opacity:' + info.darkness + '"></div>';
+    html += '<div class="lightBeam doorBeam" style="left:5%;opacity:' + info.daylightShaft + '"></div><div class="lightBeam" style="left:24%;opacity:' + info.daylightShaft + '"></div><div class="lightBeam windowBeam" style="right:30%;opacity:' + info.daylightShaft + '"></div><div class="lampGlow" style="right:11%;opacity:' + info.lampGlow + '"></div>';
+    html += '<div class="trafficTrack">' + cars.filter(function(c){return Math.abs(c.t-simMin)<8;}).slice(0,9).map(function(c){var x=((c.t-simMin+8)/16*100), night=info.headlights;return '<i class="car ' + c.kind + (night?' lit':'') + '" style="left:' + x + '%;transform:scaleX(' + (c.dir<0?-1:1) + ')"></i>';}).join('') + '</div>';
+    var emergency = cur.world.sim.activeEvents(simMin).some(function(e){return e.spawn&&e.spawn.mode==='ambulance';});
+    if (emergency) html += '<i class="ambulanceCar">🚑<b></b></i>';
+    html += '<div class="busyHint">' + D.busyLabel(rate) + '・' + info.phase + '</div>';
+    layer.innerHTML = html;
+  }
+  function syncRoomProps(){var host=$('overlay'),r=LAYOUT.room(cur.player.loc),old=host.querySelectorAll('.roomProp');Array.prototype.forEach.call(old,function(e){e.remove();});if(!r||r.type!=='room'||cur.stageMode==='map')return;var items=[];if(r.id==='nurse')items.push({x:r.x+105,y:r.y+35,text:'3床待評估\n家屬已到',cls:'board'});if(r.id==='triage')items.push({x:r.x+230,y:r.y+24,text:'A018',cls:'screen'});if(r.id==='waiting'){items.push({x:r.x+76,y:r.y+127,text:'●',cls:'seat'});items.push({x:r.x+120,y:r.y+127,text:'●',cls:'seat'});}items.forEach(function(p){var e=document.createElement('div'),s=screenPos(p.x,p.y);e.className='roomProp '+p.cls;e.textContent=p.text;e.style.left=s.x+'px';e.style.top=s.y+'px';e.style.zIndex='4';host.appendChild(e);});}
+  /* 同房間的人互相推開，不要全部疊在一起；位置慢慢滑過去，不跳 */
+  function spreadTokens() {
+    var items = [], ids = Object.keys(cur.tokens), bounds = {};
+    LAYOUT.ROOMS.forEach(function (r) { bounds[r.id] = r; });
+    ids.forEach(function (id) { var el = cur.tokens[id]; if (el._tx === undefined || el.classList.contains('off')) return; items.push({ id: id, x: el._tx, y: el._ty, room: el._room, fixed: !!el._fixed }); });
+    var out = window.ERG_SPREAD.spread(items, { iter: 6, bounds: bounds });
+    ids.forEach(function (id) {
+      var el = cur.tokens[id], o = out[id]; if (!o) return;
+      if (el._fixed || (id==='me' && cur.walk)) { el._wx = id==='me'?cur.me.x:o.x; el._wy = id==='me'?cur.me.y:o.y; }
+      else if (el._wx === undefined) { el._wx = o.x; el._wy = o.y; }
+      else { el._wx += (o.x - el._wx) * 0.45; el._wy += (o.y - el._wy) * 0.45; }
+    });
+  }
+  function liveZoom() { var st = cur.api && cur.api.getAppState && cur.api.getAppState(); return st ? st.zoom.value : (cur.view ? cur.view.zoom : 1); }
+  /* 每個畫面幀：依即時的捲動與縮放放置角色（平移、縮放時角色跟著走） */
+  function placeTokens() {
+    if (!cur || !cur.api) return;
+    var st = cur.api.getAppState(), z = st.zoom.value, sx = st.scrollX, sy = st.scrollY, key = z + '|' + sx + '|' + sy + '|' + (cur._tn || 0);
+    var ov = $('overlay'), nodes = ov.children, n = nodes.length, i, el;
+    var mask=$('boardMask'); if(mask){if(cur.stageMode==='map'){mask.style.display='none';}else{var mr=stageRect(),a=screenPos(mr.x,mr.y),b=screenPos(mr.x+mr.w,mr.y+mr.h);mask.style.display='block';mask.style.position='absolute';mask.style.left=a.x+'px';mask.style.top=a.y+'px';mask.style.width=Math.max(0,b.x-a.x)+'px';mask.style.height=Math.max(0,b.y-a.y)+'px';mask.style.zIndex='5';mask.style.pointerEvents='none';mask.style.boxShadow='0 0 0 3000px rgba(20,28,32,.94)';}}
+    key += '|' + $('board').clientWidth + '|' + $('board').clientHeight;
+    if (key === cur._placeKey && n === cur._placeN && !cur._dirty) return; cur._placeKey = key; cur._placeN = n; cur._dirty = false;
+    for (i = 0; i < n; i++) { el = nodes[i]; if (el._wx === undefined) continue; el.style.left = ((el._wx + sx) * z) + 'px'; el.style.top = ((el._wy + sy) * z) + 'px'; if(DEPTH) { var rr=LAYOUT.room(el._room), ww=el.offsetWidth, hh=el.offsetHeight, cuts=rr&&DEPTH.cutouts(LAYOUT.FURNITURE,rr,{x:el._wx,y:el._wy,w:ww/z,h:hh/z}), pix=(cuts||[]).map(function(q){return{x:(q.x-el._wx+ww/(2*z))*z,y:(q.y-el._wy+hh*.92/z)*z,w:q.w*z,h:q.h*z};}); el.style.clipPath=DEPTH.clipPath(pix,{w:ww,h:hh}); } }
+    var sz = Math.max(40, Math.min(100, 112 * z));
+    if (cur._sz !== sz) { cur._sz = sz; Array.prototype.forEach.call(ov.querySelectorAll('svg'), function (v) { v.style.height = sz + 'px'; v.style.width = 'auto'; }); }
+  }
+  function onNpcClick(id) {
+    var ent = cur.world.entityById(id); if (!ent) return;
+    var pos = null; cur.world.at(cur.clock.worldSec).forEach(function (it) { if (it.ent.id === id) pos = it.pos; });
+    if (!pos) return;
+    var loc=LAYOUT.room(cur.player.loc); if(loc && (loc.type==='hall'||loc.type==='outside')){toast('走道上不能訪談，請先走進一間房。');return;}
+    if (pos.room !== cur.player.loc) { toast('「' + ent.name + '」在' + roomName(pos.room) + '。點那個房間走過去，才問得到。'); return; }
+    cur.selNpc = id; S.switchTab('intv');
+  }
+  S.entityHere = function () {
+    var out = [], simMin = CLK.simMin(cur.clock);
+    cur.world.at(cur.clock.worldSec).forEach(function (it) {
+      if (it.pos.room !== cur.player.loc || it.ent.kind === 'bot') return;
+      out.push({ ent: it.ent, pos: it.pos, av: cur.world.availability(it.ent, it.pos, simMin) });
+    });
+    return out;
+  };
+  S.simMin = function () { return CLK.simMin(cur.clock); };
+  S.simTime = function () { return simText(cur.clock); };
+
+  /* ───── 小地圖 ───── */
+  function renderMinimap() {
+    if (!cur || !$('minimapBox').classList.contains('open')) return;
+    var t = cur.clock.worldSec, dots = [], simMin = S.simMin();
+    cur.world.at(t).forEach(function (it) {
+      if (it.pos.x === undefined || (cur.vis && !cur.vis[it.ent.id])) return;
+      dots.push({ x: it.pos.x, y: it.pos.y, kind: it.ent.kind === 'bot' ? 'bot' : 'npc' });
+    });
+    /* 同房間的其他真人 */
+    var room = DB.getRoom(cur.code);
+    Object.keys(room.players || {}).forEach(function (sid) {
+      if (sid === APP.me.sid) return;
+      var p = room.players[sid], sp = spotIn(p.loc || 'entrance');
+      dots.push({ x: sp.x, y: sp.y, kind: 'player', label: sid.slice(-4) });
+    });
+    dots.push({ x: cur.me.x, y: cur.me.y, kind: 'me' });
+    var active = cur.world.sim.activeEvents(simMin).reduce(function (a, e) { return a.concat(e.rooms || []); }, []);
+    $('mm').innerHTML = MM.svg(LAYOUT, { compact:true,onlyMap:true,width:420, showFurniture: false, showPins: false, you: cur.player.loc, dots: dots, eventRooms: active, clickable: true });
+    Array.prototype.forEach.call($('mm').querySelectorAll('[data-room]'), function (g) { g.onclick = function () { var id = g.getAttribute('data-room'); if (!/^hall|corridor|ambulance|street/.test(id)) startTravel(id); }; });
+  }
+  S.minimap = renderMinimap;
+  $('fitBtn').onclick = function () { if (cur) { cur.stageMode='map';cur.focus = null;refreshStageMode(); } };
+  function afterLayout() { setTimeout(function () { if (cur && cur.api) { fitView(true); cur._placeKey=''; placeTokens(); } }, 60); }
+  $('sideBtn').onclick = function () { $('game').classList.toggle('sideOff'); afterLayout(); };
+  $('fsBtn').onclick = function () {
+    try { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen(); } catch (e) { toast('這個瀏覽器不能全螢幕'); }
+  };
+  document.addEventListener('fullscreenchange', afterLayout);
+  S.openSide = function () { if ($('game').classList.contains('sideOff')) { $('game').classList.remove('sideOff'); afterLayout(); } };
+  $('mmBtn').onclick = function () { $('minimapBox').classList.toggle('open'); renderMinimap(); };
+  $('mapExpand').onclick=function(){var t=cur.clock.worldSec,dots=[{x:cur.me.x,y:cur.me.y,kind:'me'}];cur.world.at(t).forEach(function(it){if(it.pos.x!==undefined&&cur.vis[it.ent.id])dots.push({x:it.pos.x,y:it.pos.y,kind:it.ent.kind==='bot'?'bot':'npc'});});S.openModal('<div class="row"><b class="grow">急診室全地圖</b><button class="ghost" id="mapClose">關閉</button></div>'+MM.svg(LAYOUT,{compact:true,fontScale:1.3,onlyMap:true,width:900,showFurniture:false,you:cur.player.loc,dots:dots,clickable:true}));$('modalBox').style.maxWidth='96vw';$('mapClose').onclick=function(){S.closeModal();$('modalBox').style.maxWidth='';};Array.prototype.forEach.call($('modalBox').querySelectorAll('[data-room]'),function(g){g.onclick=function(){var id=g.getAttribute('data-room'),r=LAYOUT.room(id);if(r&&r.type==='room'){S.closeModal();$('modalBox').style.maxWidth='';startTravel(id);}};});};
+
+  /* ───── 事件（漫畫分鏡）、跑馬燈 ───── */
+  function refreshTicker() {
+    if (!cur) return;
+    var simMin = S.simMin(), tk = cur.world.sim.ticker(simMin, 1);
+    var t = $('ticker'); if (!tk.length) { t.style.display = 'none'; return; }
+    t.style.display = 'block'; t.textContent = tk[0].time + '　' + tk[0].title + '：' + tk[0].text;
+  }
+  function eventWatch() {
+    var simMin = S.simMin(), act = cur.world.sim.activeEvents(simMin), sfx = $('sfx');
+    var known=window.ERG_EVENT_GUIDE.build(), visited=cur.player.visited||[]; var here = act.filter(function(e){var g=known.filter(function(x){return x.id===e.id;})[0];return (e.rooms||[]).indexOf(cur.player.loc)>=0 || (g&&g.importance===3&&(e.rooms||[]).some(function(r){return visited.indexOf(r)>=0;}));});
+    var present=cur.world.at(cur.clock.worldSec).filter(function(it){return it.pos.room===cur.player.loc;}), actions=present.map(function(it){return it.ent.name+'：'+(it.pos.act||'忙著手邊工作');}).slice(0,2),waiters=present.filter(function(it){return it.ent.kind==='patient'&&/候診|等結果|等候/.test(it.pos.act||'');}),waitMax=0;
+    waiters.forEach(function(it){(it.ent.timeline.segments||[]).forEach(function(s){if(s.kind==='idle'&&s.act===it.pos.act&&cur.clock.worldSec>=it.ent.timeline.appearAt+s.t0&&cur.clock.worldSec<=it.ent.timeline.appearAt+s.t1)waitMax=Math.max(waitMax,(cur.clock.worldSec-it.ent.timeline.appearAt-s.t0)/cur.world.data.SIM.SECONDS_PER_SIM_MIN);});});
+    var clueCount=cur.world.clues.filter(function(c){return c.pin.room===cur.player.loc;}).length;
+    var tired = present.filter(function(it){var a=cur.world.availability(it.ent,it.pos,simMin);return a.fatigue&&a.fatigue.level>=2;})[0];
+    $('roomNow').textContent=(here.length?'這間房現在：'+here[0].title+'。':'這間房現在：')+(actions.join('；')||'暫時安靜，留意桌面與等候區。')+' 等候 '+waiters.length+' 人，約 '+Math.floor(waitMax)+' 分；線索 '+clueCount+' 張。'+(tired?' '+tired.ent.name+'看起來很累。':'');
+    if (here.length) { sfx.style.display = 'block'; sfx.textContent = COMIC.sfxFor(here[0]); } else sfx.style.display = 'none';
+    here.forEach(function (e) { if (!cur.seenEv[e.id] && !(cur.player.seenEv || {})[e.id]) { cur.seenEv[e.id] = true; cur.player.seenEv = Object.assign({}, cur.player.seenEv, (function () { var o = {}; o[e.id] = true; return o; })()); window.ERG_EVENT_UI.startLive(cur,e,cur.player.loc); } });
+  }
+  function stripPanels(ev) {
+    var loc = roomName(cur.player.loc), inc = ev.incident;
+    var third = inc ? '警衛老陳趕到，兩個人一起被請出大門。' : (ev.text || '');
+    return [{ cap: loc + '　' + S.simTime(), body: ev.title }, { big: COMIC.sfxFor(ev) }, { cap: third }];
+  }
+  function showStrip(ev) {
+    var panels = stripPanels(ev);
+    var html = '<h2 style="margin-top:0">' + esc(ev.title) + '</h2><div class="strip">' +
+      panels.map(function (p, i) { return '<div class="panel">' + (p.cap ? '<span class="cap">' + esc(p.cap) + '</span>' : '') + (p.body ? '<div style="font-size:22px;font-weight:900;margin-top:10px">' + esc(p.body) + '</div>' : '') + (p.big ? '<div class="big">' + esc(p.big) + '</div>' : '') + '</div>'; }).join('') + '</div>' +
+      '<p class="muted" style="margin:10px 0 6px">看完分鏡，三選一（您的模擬時間照走）：</p><div class="row">' +
+      '<button id="evWatch">看熱鬧（拿一張「目擊」便利貼）</button><button id="evCase" class="ghost">繼續查案</button><button id="evGame" class="ghost">玩 5 秒點泡泡</button></div><div id="evGameBox"></div>';
+    openModal(html);
+    $('evWatch').onclick = function () { addWitnessCard(ev); closeModal(); };
+    $('evCase').onclick = closeModal;
+    $('evGame').onclick = function () { popGame(); };
+  }
+  function addWitnessCard(ev) {
+    if (window.ERG_PANELS) window.ERG_PANELS.addOpenCard('便利貼', '目擊：' + ev.title + '（' + S.simTime() + '，' + roomName(cur.player.loc) + '）');
+    toast('已記下一張「目擊」便利貼。');
+  }
+  function popGame() {
+    var box = $('evGameBox'), n = 0, left = 5;
+    box.innerHTML = '<div style="position:relative;height:200px;border:4px solid var(--ink);border-radius:10px;margin-top:8px;overflow:hidden" id="pg"></div><div id="pgInfo" class="muted">點掉泡泡！剩 5 秒</div>';
+    var pg = $('pg');
+    function spawn() { var b = document.createElement('button'); b.className = 'pop'; b.style.left = Math.random() * (pg.clientWidth - 50) + 'px'; b.style.top = Math.random() * 150 + 'px'; b.setAttribute('aria-label', '泡泡'); b.onclick = function () { n += 1; b.remove(); }; pg.appendChild(b); }
+    spawn(); var sp = setInterval(spawn, 450);
+    var tm = setInterval(function () { left -= 1; $('pgInfo').textContent = left > 0 ? '點掉泡泡！剩 ' + left + ' 秒（已點 ' + n + '）' : '時間到！點掉了 ' + n + ' 個，神清氣爽。'; if (left <= 0) { clearInterval(sp); clearInterval(tm); } }, 1000);
+  }
+  function openModal(html) { $('modalBox').innerHTML = html; $('modal').classList.add('on'); if (cur) cur.modalOpen = false; }
+  function closeModal() { $('modal').classList.remove('on'); }
+  S.openModal = openModal; S.closeModal = closeModal;
+  $('modal').addEventListener('click', function (e) { if (e.target === $('modal')) closeModal(); });
+})();
