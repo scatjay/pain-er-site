@@ -5,19 +5,55 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>痛點急診室 老師後台</title>
 <style>
-:root{--bg:#fbf7ee;--panel:#fff;--ink:#1e1e1e;--muted:#6b6b6b;--line:#ddd;--ok:#2b8a3e;--bad:#c92a2a;--yellow:#ffe066;--fs:15px}
-@media (prefers-color-scheme:dark){:root{--bg:#10191f;--panel:#18262e;--ink:#e8eff2;--muted:#9fb0b9;--line:#2c3f4a;--yellow:#e0b82a;color-scheme:dark}}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:'Noto Sans TC',system-ui,sans-serif;font-size:var(--fs)}
-.wrap{max-width:1200px;margin:0 auto;padding:16px}
-h1{font-size:1.5em;margin:0 0 6px}h2{font-size:1.15em;margin:18px 0 6px}
-.card{background:var(--panel);border:2px solid var(--ink);border-radius:12px;padding:10px 12px;margin:8px 0}
-table{width:100%;border-collapse:collapse;font-size:.95em}th,td{border-bottom:1px solid var(--line);padding:5px 6px;text-align:left;vertical-align:top}
+:root{--bg:#fbf7ee;--panel:#fff;--panel2:#f4eedf;--ink:#1e1e1e;--muted:#6b6b6b;--line:#d9d2c0;--ok:#2b8a3e;--okbg:#d3f9d8;--bad:#c92a2a;--badbg:#ffe3e3;--yellow:#ffe066;--onyellow:#1e1e1e;--info:#1864ab;--infobg:#d0ebff;--fs:15px}
+@media (prefers-color-scheme:dark){:root{--bg:#10191f;--panel:#18262e;--panel2:#21343f;--ink:#e8eff2;--muted:#9fb0b9;--line:#2c3f4a;--ok:#69db7c;--okbg:#173b22;--bad:#ff8787;--badbg:#4a1c1c;--yellow:#e0b82a;--onyellow:#1e1e1e;--info:#74c0fc;--infobg:#14344f;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'Noto Sans TC',system-ui,sans-serif;font-size:var(--fs);line-height:1.5}
+.wrap{max-width:1240px;margin:0 auto;padding-inline:16px;padding-block:12px 40px}
+h1{font-size:1.35em;margin:0}h2{font-size:1.08em;margin:16px 0 6px}
+.card{background:var(--panel);border:2px solid var(--ink);border-radius:12px;padding:10px 12px;margin:8px 0;min-width:0}
+.scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.95em}th,td{border-bottom:1px solid var(--line);padding:6px 6px;text-align:left;vertical-align:top}
+th{font-size:.85em;color:var(--muted);white-space:nowrap}tbody tr:hover{background:var(--panel2)}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .muted{color:var(--muted)}.ok{color:var(--ok);font-weight:900}.bad{color:var(--bad);font-weight:900}
-.dots i{display:inline-block;width:1em;height:1em;border-radius:50%;border:2px solid var(--ink);margin-right:2px;background:transparent;vertical-align:middle}.dots i.lit{background:var(--yellow)}
-.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}input,select,button{font:inherit;padding:6px 10px;border:2px solid var(--ink);border-radius:8px;background:var(--panel);color:var(--ink)}button{cursor:pointer}button.on{background:var(--yellow)}
-.bub{max-width:80%;padding:6px 10px;border:2px solid var(--ink);border-radius:12px;margin:4px 0}.u{background:var(--yellow);margin-left:auto}.a{background:var(--panel)}.turn{display:flex}
+.dots{white-space:nowrap}.dots i{display:inline-block;width:1em;height:1em;border-radius:50%;border:2px solid var(--ink);margin-right:2px;background:transparent;vertical-align:middle}.dots i.lit{background:var(--yellow)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.row>*{min-width:0}
+input,select,button{font:inherit;padding:6px 10px;border:2px solid var(--ink);border-radius:8px;background:var(--panel);color:var(--ink)}
+input[type=checkbox]{padding:0;width:1.1em;height:1.1em;vertical-align:middle}
+button{cursor:pointer;font-weight:700}button:hover{background:var(--panel2)}button.on,button.on:hover{background:var(--yellow);color:var(--onyellow)}button:disabled{opacity:.5;cursor:wait}
+button.ghost{border-color:var(--line);font-weight:400}button.warn{border-color:var(--bad);color:var(--bad)}button.warn.arm,button.warn.arm:hover{background:var(--bad);color:#fff}
+button.sm{padding:3px 8px;font-size:.88em}
+a{color:var(--info)}
+.pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:.8em;font-weight:700;background:var(--panel2);border:1px solid var(--line);white-space:nowrap}
+.pill.ok{background:var(--okbg);color:var(--ok);border-color:var(--ok)}.pill.bad{background:var(--badbg);color:var(--bad);border-color:var(--bad)}.pill.info{background:var(--infobg);color:var(--info);border-color:var(--info)}
+.bub{max-width:80%;padding:6px 10px;border:2px solid var(--ink);border-radius:12px;margin:4px 0}.u{background:var(--yellow);color:var(--onyellow);margin-left:auto}.a{background:var(--panel)}.turn{display:flex}
+/* 頂列與狀態列 */
+.top{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.top h1{flex:1;min-width:10em}
+.status{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:8px;margin-top:8px}
+.stat{background:var(--panel);border:2px solid var(--ink);border-radius:12px;padding:8px 12px;min-width:0}
+.stat .lab{font-size:.8em;color:var(--muted)}.stat .val{font-weight:900;font-size:1.1em}
+.stat.isok{border-color:var(--ok);background:var(--okbg)}.stat.isbad{border-color:var(--bad);background:var(--badbg)}
+.kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-top:8px}
+.kpi>div{background:var(--panel);border:2px solid var(--ink);border-radius:12px;padding:6px 8px;text-align:center}
+.big{font-size:2em;font-weight:900;line-height:1.1;font-variant-numeric:tabular-nums}
+/* 分頁 */
+.tabs{position:sticky;top:0;z-index:5;background:var(--bg);display:flex;gap:6px;overflow-x:auto;padding:8px 0;margin-top:8px;border-bottom:2px solid var(--ink)}
+.tabs button{white-space:nowrap;flex:none}.tabs .n{display:inline-block;min-width:1.5em;margin-left:4px;padding:0 5px;border-radius:999px;background:var(--ink);color:var(--bg);font-size:.78em;text-align:center}
+.tabs .n.alert{background:var(--bad);color:#fff}
+.pane{display:none}.pane.cur{display:block}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px}
+.barrow{display:flex;gap:6px;margin:3px 0;align-items:center}.barrow .k{width:7em;flex:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.barrow .t{flex:1;height:.9em;border:1px solid var(--ink);border-radius:4px;overflow:hidden}.barrow .t>div{height:100%;background:var(--yellow)}.barrow .v{width:3em;text-align:right;flex:none;color:var(--muted);font-variant-numeric:tabular-nums}
+.livegrid{display:grid;grid-template-columns:minmax(0,2fr) minmax(220px,1fr);gap:12px}@media (max-width:760px){.livegrid{grid-template-columns:1fr}}
+.fb{border-bottom:1px solid var(--line);padding:6px 0}.fb:last-child{border-bottom:0}
+/* QR：白底黑碼固定不跟主題（掃描器要高對比） */
+.qrcard{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.qr{background:#fff;padding:8px;border-radius:8px;border:2px solid var(--ink);line-height:0;flex:none}.qr svg{display:block;width:132px;height:132px}
+.qrurl{font-family:ui-monospace,Consolas,monospace;font-size:1.05em;font-weight:700;word-break:break-all;user-select:all}
+#qrBig{position:fixed;inset:0;z-index:30;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:16px;text-align:center}
+#qrBig .qr svg{width:min(70vmin,620px);height:min(70vmin,620px)}#qrBig .qrurl{font-size:clamp(1.1em,3.2vw,2.2em)}
+#toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 16px;border-radius:999px;font-weight:700;z-index:40;max-width:90vw}
 body.proj{--fs:21px}body.proj .wrap{max-width:none}body.proj .small{display:none}
-.big{font-size:2.2em;font-weight:900}.kpi{display:flex;gap:16px;flex-wrap:wrap}.kpi>div{flex:1;min-width:140px;text-align:center}
 [hidden]{display:none!important}
 </style>
 </head>
@@ -26,110 +62,240 @@ body.proj{--fs:21px}body.proj .wrap{max-width:none}body.proj .small{display:none
 <div id="gate" class="card" style="max-width:520px;margin:40px auto">
   <h1>痛點急診室 老師後台</h1>
   <p class="muted">只有教師名單裡的 Google 帳號能進。</p>
-  <button id="gGoogle" style="font-size:1.1em">用 Google 登入</button>
+  <button id="gGoogle" class="on" style="font-size:1.1em">用 Google 登入</button>
   <div id="gateStatus" class="muted" style="margin-top:8px;font-size:.9em"></div>
+  <hr style="border:0;border-top:1px solid var(--line);margin:14px 0">
+  <div class="qrcard">
+    <div class="qr" id="qrSmall"></div>
+    <div style="flex:1;min-width:12em"><b>學生入口</b><div class="muted" style="font-size:.9em">手機掃 QR，或輸入網址；用校信箱的 Google 帳號登入。</div>
+      <div class="qrurl" id="qrUrl"></div>
+      <div class="row" style="margin-top:6px"><button id="qrBigBtn">放大給全班掃</button><button id="qrCopy" class="ghost">複製網址</button></div></div>
+  </div>
 </div>
 <div id="dashboard" hidden>
-<div class="row"><h1 style="flex:1;margin:0">痛點急診室 老師後台 <span id="whoami" class="muted" style="font-size:.6em"></span></h1>
-  <label>場次 <select id="sessSel"></select></label>
-  <button id="deidBtn">去識別化：關</button><button id="projBtn">投影模式：關</button><a href="#" id="logoutLink" class="muted small">登出</a></div>
-<div class="row" style="margin-top:6px"><span id="daemon" class="muted">代理程式：讀取中…</span><span id="usageSum" class="muted"></span></div>
-<div class="row" style="margin-top:6px;gap:6px;flex-wrap:wrap"><span id="liveState" class="muted">即時訪談：讀取中…</span>
-  <button id="liveOpen" class="small">開放即時訪談 2 小時</button><button id="liveClose" class="small ghost">關閉即時訪談</button><button id="liveAuto" class="small ghost">交回課表自動</button>
-  <span class="muted small">（課表自動：10/13、10/20、10/27 週二 07:10–11:00 與 11:50–15:40；10/15、10/22、10/29 週四 11:50–15:40，即上課前一小時到下課後一小時。其餘時間學生可以逛、可以跟同學聊，但不跟人物對話，不耗 Vertex。要延長改 `tools/er_chat_daemon.py` 的 CLASS_WINDOWS。）</span></div>
-<div class="card kpi"><div><div class="big" id="kStudents">0</div><div class="muted">人上線</div></div><div><div class="big" id="kRooms">0</div><div class="muted">間房</div></div><div><div class="big" id="kIv">0</div><div class="muted">次訪談</div></div><div><div class="big" id="kLit">0</div><div class="muted">人六點全亮</div></div></div>
-<h2>現在在哪裡、在訪談誰（即時）</h2>
-<div class="card"><div class="row" style="align-items:flex-start"><div id="liveMap" style="flex:2;min-width:300px"></div><div id="liveList" style="flex:1;min-width:220px;font-size:.95em"></div></div></div>
-<h2>大家怎麼問、在關注什麼</h2>
-<div class="card"><div class="row" style="align-items:flex-start;gap:20px"><div style="flex:1;min-width:240px"><b>提問方式</b><div id="qStyle"></div></div><div style="flex:1;min-width:240px"><b>關注主題</b><div id="qTopic"></div></div><div style="flex:1;min-width:240px"><b>訪談對象</b><div id="qWho"></div></div></div>
-<details class="small" style="margin-top:8px"><summary class="muted" style="cursor:pointer">最近 30 個問題</summary><div id="qRecent" style="font-size:.85em"></div></details></div>
-<h2>對「衛教簡訊再設計」的啟示</h2>
-<div class="card"><div class="row" style="align-items:flex-start;gap:20px"><div style="flex:1;min-width:240px"><b>訪談檢核標到的問題</b><div id="iTags"></div></div><div style="flex:1;min-width:240px"><b>結論裡的方向</b><div id="iConcl"></div></div></div>
-<div class="row" style="margin-top:8px"><button id="sumBtn">請 Vertex 做主題摘要</button><span id="sumStat" class="muted small"></span></div><div id="sumBox" style="margin-top:6px;white-space:pre-wrap"></div></div>
-<div id="chatView" class="card" hidden></div>
-<h2>學生進度（六個檢核點）</h2>
-<div class="card" id="students">載入中…</div>
-<h2>成就排行（誰最多；學生端「成就」分頁也看得到）</h2>
-<div class="card" id="board">載入中…</div>
-<h2>房間</h2>
-<div class="card" id="rooms"></div>
-<h2>回報與建議（學生按「💬 回報」送來的）</h2>
-<div class="card" id="fbBox">載入中…</div>
-<h2 class="small">即時訪談用量（今天）</h2>
-<div class="card small" id="usage"></div>
-<p class="muted small" style="font-size:.8em">只讀。資料來自 Firebase 專案 gen-lang-client-0556836042（Spark 免費方案，沒有綁帳單）。檢核點用遊戲同一套規則計算。去識別化：學號、姓名、信箱換成當場次的固定代號（學生01、02…）。</p>
+<div class="top"><h1>痛點急診室 老師後台</h1>
+  <label class="muted">場次 <select id="sessSel"></select></label>
+  <button id="deidBtn" title="學號、姓名、信箱換成代號，投影時用">去識別化：關</button><button id="projBtn" title="字放大、藏掉次要資訊">投影模式：關</button>
+  <span class="small muted" id="whoami" style="font-size:.85em"></span><button id="logoutBtn" class="ghost">登出</button></div>
+
+<div class="status">
+  <div class="stat" id="stDaemon"><div class="lab">即時訪談代理程式</div><div class="val" id="daemon">讀取中…</div><div class="lab small" id="daemonSub"></div></div>
+  <div class="stat" id="stLive"><div class="lab">人物即時對話</div><div class="val" id="liveState">讀取中…</div>
+    <div class="row" style="margin-top:6px;gap:6px"><button id="liveOpen" class="sm">開放 2 小時</button><button id="liveClose" class="sm warn">關閉</button><button id="liveAuto" class="sm ghost">照課表</button></div>
+    <div class="lab small" id="liveNext" style="margin-top:4px"></div></div>
+  <div class="stat"><div class="lab">今天用量（每人每天 60 題）</div><div class="val" id="usageSum">讀取中…</div><div class="lab small" id="updated"></div></div>
+</div>
+<details class="small muted" style="font-size:.85em;margin-top:4px"><summary style="cursor:pointer">開關怎麼運作</summary><div id="liveHelp"></div></details>
+
+<div class="kpi"><div><div class="big" id="kOnline">0</div><div class="muted">人在線</div></div><div><div class="big" id="kStudents">0</div><div class="muted">人進過本場次</div></div><div><div class="big" id="kRooms">0</div><div class="muted">間房</div></div><div><div class="big" id="kIv">0</div><div class="muted">次訪談</div></div><div><div class="big" id="kQ">0</div><div class="muted">個提問</div></div><div><div class="big" id="kLit">0</div><div class="muted">人六點全亮</div></div></div>
+
+<nav class="tabs" id="tabs">
+  <button data-tab="live">現場</button><button data-tab="ask">提問與啟示</button><button data-tab="stu">學生 <span class="n" id="nStu">0</span></button><button data-tab="room">房間與逐字稿 <span class="n" id="nRoom">0</span></button><button data-tab="board">成就排行</button><button data-tab="fb">回報 <span class="n" id="nFb">0</span></button><button data-tab="use" class="small">用量明細</button>
+</nav>
+
+<section class="pane" data-pane="live">
+  <h2>現在在哪裡、在訪談誰</h2>
+  <div class="card livegrid"><div id="liveMap" class="scroll"></div><div id="liveList" style="font-size:.95em"></div></div>
+</section>
+
+<section class="pane" data-pane="ask">
+  <h2>大家怎麼問、在關注什麼</h2>
+  <div class="card"><div class="cols"><div><b>提問方式</b><div id="qStyle"></div></div><div><b>關注主題</b><div id="qTopic"></div></div><div><b>訪談對象</b><div id="qWho"></div></div></div>
+  <details style="margin-top:8px"><summary class="muted" style="cursor:pointer">最近 30 個問題</summary><div id="qRecent" style="font-size:.9em"></div></details></div>
+  <h2>對「衛教簡訊再設計」的啟示</h2>
+  <div class="card"><div class="cols"><div><b>訪談檢核標到的問題</b><div id="iTags"></div></div><div><b>結論裡的方向</b><div id="iConcl"></div></div></div>
+  <div class="row" style="margin-top:10px"><button id="sumBtn">請 Vertex 做主題摘要</button><span id="sumStat" class="muted small"></span></div><div id="sumBox" style="margin-top:6px;white-space:pre-wrap"></div></div>
+</section>
+
+<section class="pane" data-pane="stu">
+  <h2>學生進度（六個檢核點）</h2>
+  <div class="card"><div class="row" style="margin-bottom:6px">
+    <select id="fCls"><option value="">全部班級</option></select>
+    <select id="fSort"><option value="sid">依學號</option><option value="lit">檢核點少的在前</option><option value="iv">訪談多的在前</option><option value="q">提問多的在前</option><option value="idle">最久沒提問的在前</option></select>
+    <label><input type="checkbox" id="fOnline"> 只看在線</label>
+    <input id="fQ" placeholder="找學號或姓名" style="flex:1;min-width:8em">
+    <span class="muted" id="stuCount"></span></div>
+    <div class="scroll" id="students">載入中…</div></div>
+</section>
+
+<section class="pane" data-pane="room">
+  <h2>房間</h2>
+  <div class="card scroll" id="rooms"></div>
+  <div id="chatView" class="card" hidden></div>
+</section>
+
+<section class="pane" data-pane="board">
+  <h2>成就排行（學生端「成就」分頁也看得到）</h2>
+  <div class="card" id="board">載入中…</div>
+</section>
+
+<section class="pane" data-pane="fb">
+  <h2>回報與建議（學生按「💬 回報」送來的，最近 100 則）</h2>
+  <div class="card"><div class="row" id="fbFilter" style="margin-bottom:6px"></div><div id="fbBox">載入中…</div></div>
+</section>
+
+<section class="pane" data-pane="use">
+  <h2>即時訪談用量（今天）</h2>
+  <div class="card scroll" id="usage"></div>
+</section>
+
+<p class="muted small" style="font-size:.8em;margin-top:16px">只讀（除了即時對話的三顆開關與主題摘要）。資料來自 Firebase 專案 gen-lang-client-0556836042（Spark 免費方案，沒有綁帳單）。檢核點用遊戲同一套規則計算。去識別化：學號、姓名、信箱換成當場次的固定代號（學生01、02…）。</p>
 </div>
 </div>
+<div id="qrBig" hidden><h1>痛點急診室</h1><div class="qr" id="qrBigBox"></div><div class="qrurl" id="qrBigUrl"></div><div class="muted">用校信箱的 Google 帳號登入</div><button id="qrBigClose">關閉</button></div>
+<div id="toast" hidden></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-<script src="er_firebase.js?v=202610122214"></script>
-<script src="checklist.js?v=202610122214"></script>
-<script src="checkpoints.js?v=202610122214"></script>
-<script src="avatar.js?v=202610122214"></script>
-<script src="local_db.js?v=202610122214"></script>
-<script src="app_core.js?v=202610122214"></script>
-<script src="achievements.js?v=202610122214"></script><script src="remote_db.js?v=202610122214"></script>
-<script src="layout.js?v=202610122214"></script>
-<script src="minimap.js?v=202610122214"></script>
-<script src="personas_inclusive.js?v=202610122214"></script><script src="er_data.js?v=202610122214"></script><script src="npc_voice.js?v=202610122214"></script><script src="personas.js?v=202610122214"></script>
+<script src="er_firebase.js?v=202610122232"></script>
+<script src="checklist.js?v=202610122232"></script>
+<script src="checkpoints.js?v=202610122232"></script>
+<script src="avatar.js?v=202610122232"></script>
+<script src="local_db.js?v=202610122232"></script>
+<script src="app_core.js?v=202610122232"></script>
+<script src="achievements.js?v=202610122232"></script><script src="remote_db.js?v=202610122232"></script>
+<script src="layout.js?v=202610122232"></script>
+<script src="minimap.js?v=202610122232"></script>
+<script src="personas_inclusive.js?v=202610122232"></script><script src="er_data.js?v=202610122232"></script><script src="npc_voice.js?v=202610122232"></script><script src="personas.js?v=202610122232"></script>
 <script>
-/* 教師名單：只有這裡的 Google 帳號能進。要加人就加在這裡（改完重新部署）。 */
+/* 教師名單：只有這裡的 Google 帳號能進。要加人就加在這裡（改完重新部署；資料庫規則 tools/er_after_google_enabled.py 也要加）。 */
 var TEACHER_EMAILS = ['scatjay@gmail.com'];
+/* 學生入口（QR 用）。 */
+var STUDENT_URL = 'https://scatjay.github.io/pain-er-site/';
+/* 課表自動開放的時段：只用來顯示「下一次什麼時候開」，真正的判斷在 tools/er_chat_daemon.py 的 CLASS_WINDOWS，改那邊時這裡要一起改。 */
+var CLASS_WINDOWS = [].concat(
+  ['2026-10-13', '2026-10-20', '2026-10-27'].map(function (d) { return [d, '07:10', '11:00']; }),
+  ['2026-10-13', '2026-10-20', '2026-10-27', '2026-10-15', '2026-10-22', '2026-10-29'].map(function (d) { return [d, '11:50', '15:40']; }));
 (function () {
   var $ = function (id) { return document.getElementById(id); };
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function hm(t) { return new Date(Number(t)).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false }); }
+  var toastT = null; function toast(m) { var el = $('toast'); el.textContent = m; el.hidden = false; clearTimeout(toastT); toastT = setTimeout(function () { el.hidden = true; }, 3200); }
+  function denied(el, what) { return function (e) { if (el) el.innerHTML = '<span class="bad">讀不到' + esc(what) + '</span> <span class="muted">（' + esc((e && e.code) || e) + '；多半是登入的帳號沒有權限）</span>'; }; }
   firebase.initializeApp(window.ERG_FB); var fdb = firebase.database(), auth = firebase.auth();
   var say = function (m) { $('gateStatus').innerHTML = m; };
   var isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+  var isLocal = /^(127\.0\.0\.1|localhost)$/.test(location.hostname);
+  /* 測試用（只在本機伺服器有效）：?devteacher=1 用匿名帳號看版面；資料庫規則照樣擋，老師專屬的資料會顯示讀不到。 */
+  var DEV = isLocal && /[?&]devteacher=1/.test(location.search);
   function provider() { var p = new firebase.auth.GoogleAuthProvider(); p.setCustomParameters({ prompt: 'select_account' }); return p; }
-  function explain(e) { var c = (e && e.code) || ''; say(c === 'auth/operation-not-allowed' ? '🔴 這個 Firebase 專案還沒啟用 Google 登入（主控台 → Authentication → Sign-in method → Google）。' : c === 'auth/unauthorized-domain' ? '🔴 這個網域還沒加進授權網域。' : '登入沒完成（' + (c || e) + '）。'); }
+  function explain(e) { var c = (e && e.code) || ''; say(c === 'auth/operation-not-allowed' ? '🔴 這個 Firebase 專案還沒啟用 Google 登入（主控台 → Authentication → Sign-in method → Google）。' : c === 'auth/unauthorized-domain' ? '🔴 這個網域還沒加進授權網域。' : '登入沒完成（' + esc(c || e) + '）。再按一次試試。'); }
   $('gGoogle').onclick = function () { say('登入中…'); if (isMobile) auth.signInWithRedirect(provider()).catch(explain); else auth.signInWithPopup(provider()).catch(function (e) { if (/popup/.test(e.code || '')) auth.signInWithRedirect(provider()).catch(explain); else explain(e); }); };
   auth.getRedirectResult().catch(explain);
+  if (DEV) auth.signInAnonymously().catch(explain);
   auth.onAuthStateChanged(function (u) {
     if (!u) { $('gate').hidden = false; $('dashboard').hidden = true; return; }
     var email = (u.email || '').toLowerCase();
-    if (TEACHER_EMAILS.indexOf(email) < 0) { say('這個帳號（' + esc(email) + '）不在教師名單裡。'); auth.signOut(); return; }
-    $('gate').hidden = true; $('dashboard').hidden = false; $('whoami').textContent = email; boot();
+    if (!(DEV && u.isAnonymous) && TEACHER_EMAILS.indexOf(email) < 0) { say('這個帳號（' + esc(email) + '）不在教師名單裡。請換一個帳號登入。'); auth.signOut(); return; }
+    $('gate').hidden = true; $('dashboard').hidden = false; $('whoami').textContent = email || '（本機測試・匿名）'; boot();
   });
-  $('logoutLink').onclick = function (e) { e.preventDefault(); auth.signOut(); };
+  /* 登出：登出後整頁重新載入，清掉所有監聽與畫面上的學生資料（共用電腦時不留東西） */
+  $('logoutBtn').onclick = function () { $('logoutBtn').disabled = true; auth.signOut().then(function () { location.href = location.pathname; }, function (e) { $('logoutBtn').disabled = false; toast('登出沒成功：' + ((e && e.code) || e)); }); };
+
+  /* ───── 分頁 ───── */
+  var TAB = 'live';
+  function setTab(t) {
+    if (!document.querySelector('[data-pane="' + t + '"]')) t = 'live'; TAB = t;
+    Array.prototype.forEach.call(document.querySelectorAll('[data-pane]'), function (p) { p.classList.toggle('cur', p.dataset.pane === t); });
+    Array.prototype.forEach.call(document.querySelectorAll('#tabs [data-tab]'), function (b) { b.classList.toggle('on', b.dataset.tab === t); });
+    try { localStorage.setItem('ergT_tab', t); } catch (e) {}
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('#tabs [data-tab]'), function (b) { b.onclick = function () { setTab(b.dataset.tab); }; });
+  (function () { var t = 'live'; try { t = localStorage.getItem('ergT_tab') || 'live'; } catch (e) {} setTab(t); })();
+
+  /* ───── 學生入口 QR ───── */
+  function qrSvg(text) { try { var q = window.qrcode(0, 'M'); q.addData(text); q.make(); return q.createSvgTag({ cellSize: 4, margin: 2, scalable: true }); } catch (e) { return ''; } }
+  (function () {
+    var svg = qrSvg(STUDENT_URL), shown = STUDENT_URL.replace(/^https:\/\//, '');
+    $('qrSmall').innerHTML = svg || '<span class="muted" style="line-height:1.5">QR 產生不了，請直接用網址</span>'; $('qrBigBox').innerHTML = svg;
+    $('qrUrl').textContent = shown; $('qrBigUrl').textContent = shown;
+    $('qrBigBtn').onclick = function () { $('qrBig').hidden = false; }; $('qrBigClose').onclick = function () { $('qrBig').hidden = true; };
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') $('qrBig').hidden = true; });
+    $('qrCopy').onclick = function () { (navigator.clipboard ? navigator.clipboard.writeText(STUDENT_URL) : Promise.reject()).then(function () { toast('已複製網址'); }, function () { toast('複製不了，請手動選取網址'); }); };
+  })();
 
   /* ───── 去識別化與投影 ───── */
   var DEID = false, PROJ = false, alias = {};
   function aliasOf(sid) { if (!DEID) return sid; if (!alias[sid]) { var n = Object.keys(alias).length + 1; alias[sid] = '學生' + (n < 10 ? '0' : '') + n; } return alias[sid]; }
   function buildAlias(sids) { alias = {}; sids.slice().sort().forEach(function (s) { aliasOf(s); }); }
-  $('deidBtn').onclick = function () { DEID = !DEID; $('deidBtn').textContent = '去識別化：' + (DEID ? '開' : '關'); $('deidBtn').classList.toggle('on', DEID); render(); };
-  $('projBtn').onclick = function () { PROJ = !PROJ; $('projBtn').textContent = '投影模式：' + (PROJ ? '開' : '關'); $('projBtn').classList.toggle('on', PROJ); document.body.classList.toggle('proj', PROJ); };
+  $('deidBtn').onclick = function () { DEID = !DEID; $('deidBtn').textContent = '去識別化：' + (DEID ? '開' : '關'); $('deidBtn').classList.toggle('on', DEID); render(); renderFb(); renderUsage(usage); };
+  $('projBtn').onclick = function () { PROJ = !PROJ; $('projBtn').textContent = '投影模式：' + (PROJ ? '開' : '關'); $('projBtn').classList.toggle('on', PROJ); document.body.classList.toggle('proj', PROJ); if (PROJ && TAB === 'use') setTab('live'); };
 
   function today() { var d = new Date(); function p(n) { return (n < 10 ? '0' : '') + n; } return 'ER-' + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()); }
-  var SESS = today(), DB = null, profiles = {}, CP = window.ERG_CHECKPOINTS, CORE = window.ERG_CORE, booted = false, rooms = [];
+  function sessLabel(k) { var m = k.match(/^ER-(\d{4})(\d\d)(\d\d)$/); if (!m) return k; var d = new Date(+m[1], +m[2] - 1, +m[3]); return (+m[2]) + '/' + (+m[3]) + '（' + '日一二三四五六'.charAt(d.getDay()) + '）' + (k === today() ? ' 今天' : ''); }
+  var SESS = today(), DB = null, profiles = {}, presence = {}, CP = window.ERG_CHECKPOINTS, CORE = window.ERG_CORE, booted = false, rooms = [], offs = [];
   var h = location.hash.match(/^#chat\/([^/]+)\/([^/]+)\/([^/]+)\/([^/]+)$/); if (h) SESS = decodeURIComponent(h[1]);
+  var qs0 = location.search.match(/[?&]sess=(ER-[A-Za-z0-9-]{4,24})/); if (isLocal && qs0) SESS = qs0[1];
+
+  /* ───── 即時對話開關 ───── */
+  var daemon = {};
+  function nextWindow() {
+    var now = Date.now(), best = null;
+    CLASS_WINDOWS.forEach(function (w) { var a = new Date(w[0] + 'T' + w[1] + ':00').getTime(), b = new Date(w[0] + 'T' + w[2] + ':00').getTime(); if (b > now && (!best || a < best.a)) best = { a: a, b: b }; });
+    return best;
+  }
+  function fmtWin(w) { var d = new Date(w.a); return (d.getMonth() + 1) + '/' + d.getDate() + '（' + '日一二三四五六'.charAt(d.getDay()) + '）' + hm(w.a) + '–' + hm(w.b); }
+  function renderDaemon() {
+    var d = daemon, age = d.heartbeat ? Date.now() - d.heartbeat : Infinity, fresh = age < 60000;
+    $('daemon').innerHTML = fresh ? '<span class="ok">連線中</span>' : '<span class="bad">離線</span>';
+    $('daemonSub').textContent = fresh ? ('模型 ' + (d.model || '') + '・心跳 ' + Math.round(age / 1000) + ' 秒前') : (d.heartbeat ? '最後心跳 ' + hm(d.heartbeat) + '。請跟助教說「急診室代理程式離線」。' : '還沒有心跳。');
+    $('stDaemon').className = 'stat ' + (fresh ? 'isok' : 'isbad');
+    var lv = d.live || {}, manual = (lv.mode === 'open' || lv.mode === 'closed') && Number(lv.until || 0) > Date.now(), open = !!d.liveNow && fresh;
+    $('liveState').innerHTML = (open ? '<span class="ok">開放中</span>' : '<span class="bad">暫停</span>') + ' <span class="pill">' + (manual ? ('手動' + (lv.mode === 'open' ? '開放' : '關閉') + '到 ' + hm(lv.until)) : '照課表') + '</span>';
+    $('stLive').className = 'stat ' + (open ? 'isok' : '');
+    $('liveOpen').classList.toggle('on', manual && lv.mode === 'open'); $('liveAuto').classList.toggle('on', !manual);
+    var w = nextWindow(); $('liveNext').textContent = !fresh ? '代理程式離線時，人物不會回話。' : manual ? '到時間會自動交回課表。' : w ? ((w.a <= Date.now() ? '這個時段：' : '下一次自動開放：') + fmtWin(w)) : '課表上沒有之後的時段了，要開請按「開放 2 小時」。';
+  }
+  function setLive(mode, hours, btn, msg) {
+    btn.disabled = true;
+    fdb.ref('er/_daemon/live').set({ mode: mode, until: mode === 'auto' ? 0 : Date.now() + hours * 3600000, by: (auth.currentUser && auth.currentUser.email) || '', t: Date.now() })
+      .then(function () { toast(msg + '（約 15 秒後生效）'); }, function (e) { toast('🔴 沒有寫進去：' + ((e && e.code) || e)); })
+      .then(function () { btn.disabled = false; });
+  }
+  var armT = null;
+  function disarm() { clearTimeout(armT); $('liveClose').classList.remove('arm'); $('liveClose').textContent = '關閉'; }
 
   function boot() {
     if (booted) return; booted = true;
-    fdb.ref('er').once('value', function (s) {
-      var v = s.val() || {}, keys = Object.keys(v).filter(function (k) { return /^ER-\d{8}$/.test(k); }).sort().reverse();
-      if (keys.indexOf(SESS) < 0) keys.unshift(SESS);
-      $('sessSel').innerHTML = keys.map(function (k) { return '<option' + (k === SESS ? ' selected' : '') + '>' + k + '</option>'; }).join('');
-    });
+    /* 場次清單：只抓鍵名（shallow），不下載整個資料庫的逐字稿 */
+    var fill = function (keys) { keys = keys.filter(function (k) { return /^ER-\d{8}$/.test(k); }).sort().reverse(); if (keys.indexOf(SESS) < 0) keys.unshift(SESS); $('sessSel').innerHTML = keys.map(function (k) { return '<option value="' + esc(k) + '"' + (k === SESS ? ' selected' : '') + '>' + esc(sessLabel(k)) + '</option>'; }).join(''); };
+    fill([SESS]);
+    auth.currentUser.getIdToken().then(function (tok) { return fetch(window.ERG_FB.databaseURL + '/er.json?shallow=true&auth=' + encodeURIComponent(tok)); }).then(function (r) { return r.ok ? r.json() : {}; }).then(function (v) { fill(Object.keys(v || {})); }).catch(function () {});
     $('sessSel').onchange = function () { SESS = $('sessSel').value; attach(); };
-    fdb.ref('er/_daemon').on('value', function (s) { var d = s.val() || {}, fresh = d.heartbeat && Date.now() - d.heartbeat < 60000; $('daemon').innerHTML = '即時訪談代理程式：' + (fresh ? '<span class="ok">連線中</span>（' + esc(d.model || '') + '）' : '<span class="bad">離線</span>');
-      var lv = d.live || {}, manual = (lv.mode === 'open' || lv.mode === 'closed') && Number(lv.until || 0) > Date.now();
-      $('liveState').innerHTML = '即時訪談：' + (d.liveNow ? '<span class="ok">開放中</span>' : '<span class="bad">暫停</span>') + '（' + (manual ? ('手動' + (lv.mode === 'open' ? '開放' : '關閉') + '到 ' + new Date(Number(lv.until)).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })) : '課表自動') + '）'; });
-    function setLive(mode, hours) { fdb.ref('er/_daemon/live').set({ mode: mode, until: mode === 'auto' ? 0 : Date.now() + hours * 3600000, by: (auth.currentUser && auth.currentUser.email) || '', t: Date.now() }); }
-    $('liveOpen').onclick = function () { setLive('open', 2); }; $('liveClose').onclick = function () { setLive('closed', 12); }; $('liveAuto').onclick = function () { setLive('auto', 0); };
+    fdb.ref('er/_daemon').on('value', function (s) { daemon = s.val() || {}; renderDaemon(); });
+    setInterval(renderDaemon, 10000);
+    $('liveOpen').onclick = function () { disarm(); setLive('open', 2, $('liveOpen'), '已開放 2 小時'); };
+    $('liveAuto').onclick = function () { disarm(); setLive('auto', 0, $('liveAuto'), '已交回課表'); };
+    /* 關閉要按兩次：上課中誤觸會讓全班的人物都不回話 */
+    $('liveClose').onclick = function () {
+      var b = $('liveClose');
+      if (!b.classList.contains('arm')) { b.classList.add('arm'); b.textContent = '再按一次確認關閉'; armT = setTimeout(disarm, 6000); return; }
+      disarm(); setLive('closed', 12, b, '已關閉 12 小時');
+    };
+    $('liveHelp').innerHTML = '課表自動開放的時段（上課前一小時到下課後一小時）：' + CLASS_WINDOWS.map(function (w) { return fmtWin({ a: new Date(w[0] + 'T' + w[1] + ':00').getTime(), b: new Date(w[0] + 'T' + w[2] + ':00').getTime() }); }).join('、') + '。其餘時間學生可以逛、可以跟同學聊，但人物不回話，不耗 Vertex。「開放 2 小時」與「關閉」是暫時蓋過課表，時間到自動交回。';
+    fdb.ref('er/_feedback').limitToLast(100).on('value', function (s) { fbData = s.val() || {}; renderFb(); }, denied($('fbBox'), '回報'));
+    ['fCls', 'fSort', 'fOnline'].forEach(function (id) { $(id).onchange = renderStudents; }); $('fQ').oninput = renderStudents;
     attach();
     if (h) setTimeout(function () { showChats(h[2], h[3], h[4]); }, 900);
   }
   var tt = null; function schedule() { clearTimeout(tt); tt = setTimeout(render, 300); }
   function attach() {
+    offs.forEach(function (f) { try { f(); } catch (e) {} }); offs = [];
+    profiles = {}; presence = {}; chats = {}; scores = {}; usage = {}; $('chatView').hidden = true;
     var root = fdb.ref('er/' + SESS);
+    function on(ref, fn, err) { ref.on('value', fn, err); offs.push(function () { ref.off('value', fn); }); }
     DB = window.ERG_REMOTE.makeRemoteDb({ root: root, sess: SESS, notify: function (t) { if (/^(room:|lobby|scene:)/.test(t)) schedule(); } });
-    root.child('profiles').on('value', function (s) { profiles = s.val() || {}; schedule(); });
-    attachChats(root);
-    fdb.ref('usage/' + SESS.replace('ER-', '')).on('value', function (s) { renderUsage(s.val() || {}); });
-    root.child('score').on('value', function (s) { scores = s.val() || {}; renderBoard(); });
+    on(root.child('profiles'), function (s) { profiles = s.val() || {}; schedule(); });
+    on(root.child('presence'), function (s) { presence = s.val() || {}; schedule(); });
+    on(root.child('chat'), function (s) { chats = s.val() || {}; schedule(); });
+    on(root.child('analysis/summary'), function (s) { var v = s.val(); $('sumBox').textContent = v ? v.text : ''; $('sumStat').textContent = v ? ('上次摘要：' + hm(v.t) + '，' + v.n + ' 個問題') : ''; });
+    on(fdb.ref('usage/' + SESS.replace('ER-', '')), function (s) { usage = s.val() || {}; renderUsage(usage); }, function (e) { $('usageSum').innerHTML = '<span class="muted">讀不到（' + esc((e && e.code) || e) + '）</span>'; denied($('usage'), '用量')(e); });
+    on(root.child('score'), function (s) { scores = s.val() || {}; renderBoard(); });
+    schedule();
   }
+  setInterval(function () { if (DB) schedule(); }, 30000);   /* 在線人數會隨時間過期，定時重算 */
+
   /* 成就排行：學生端每分鐘把自己的指標摘要寫到 er/{sess}/score/{sid}（achievements.js 的 summary） */
   var scores = {};
   function renderBoard() {
@@ -155,85 +321,121 @@ var TEACHER_EMAILS = ['scatjay@gmail.com'];
   function bar(counts, total) {
     var keys = Object.keys(counts).sort(function (a, b) { return counts[b] - counts[a]; });
     if (!keys.length) return '<span class="muted">還沒有資料。</span>';
-    return keys.map(function (k) { var pct = total ? Math.round(counts[k] / total * 100) : 0; return '<div class="row" style="gap:6px;margin:3px 0;flex-wrap:nowrap"><span style="width:7em;flex:none">' + esc(k) + '</span><div style="flex:1;height:.9em;border:1px solid var(--ink);border-radius:4px;overflow:hidden"><div style="width:' + pct + '%;height:100%;background:var(--yellow)"></div></div><span class="muted" style="width:3em;text-align:right;flex:none">' + counts[k] + '</span></div>'; }).join('');
+    return keys.map(function (k) { var pct = total ? Math.round(counts[k] / total * 100) : 0; return '<div class="barrow"><span class="k" title="' + esc(k) + '">' + esc(k) + '</span><div class="t"><div style="width:' + pct + '%"></div></div><span class="v">' + counts[k] + '</span></div>'; }).join('');
   }
-  function renderLive() {
+  /* 每位學生的提問統計：{ n, last:{t,who,text} } */
+  function askStats() {
+    var out = {};
+    Object.keys(chats).forEach(function (code) { Object.keys(chats[code] || {}).forEach(function (sid) { var o = out[sid] || (out[sid] = { n: 0, last: null }); Object.keys(chats[code][sid] || {}).forEach(function (rec) { var c = chats[code][sid][rec] || {}; Object.keys(c.turns || {}).forEach(function (k) { var t = c.turns[k]; if (t.role !== 'u') return; o.n += 1; if (!o.last || t.t > o.last.t) o.last = { t: t.t, who: c.personaName || personaName(c.personaId), text: t.text, code: code }; }); }); }); });
+    return out;
+  }
+  function isOnline(sid) { var p = presence[sid]; return !!(p && Date.now() - Number(p.t || 0) < 90000); }
+  function renderLive(ask) {
     var dots = [], list = [], now = Date.now();
     rooms.forEach(function (r) {
       Object.keys(r.players || {}).forEach(function (sid) {
         var p = r.players[sid], rm = LAYOUT.room(p.loc || 'entrance'); if (!rm) return;
-        var recent = null; Object.keys((chats[r.code] || {})[sid] || {}).forEach(function (rec) { var c = chats[r.code][sid][rec]; Object.keys(c.turns || {}).forEach(function (k) { var t = c.turns[k]; if (t.role === 'u' && (!recent || t.t > recent.t)) recent = { t: t.t, who: c.personaName || c.personaId, text: t.text }; }); });
-        var active = !!(recent && now - recent.t < 5 * 60000);
+        var recent = (ask[sid] || {}).last, active = !!(recent && now - recent.t < 5 * 60000);
         dots.push({ x: rm.x + rm.w * (0.3 + 0.4 * ((sid.charCodeAt(sid.length - 1) % 7) / 7)), y: rm.y + rm.h * (0.35 + 0.4 * ((sid.charCodeAt(Math.max(0, sid.length - 2)) % 5) / 5)), kind: active ? 'me' : 'npc', label: aliasOf(sid).slice(-2) });
         list.push({ sid: sid, room: rm.name, code: r.code, recent: recent, active: active });
       });
     });
     $('liveMap').innerHTML = MM.svg(LAYOUT, { compact: true, fontScale: 1.2, onlyMap: true, width: 560, showFurniture: false, dots: dots, clickable: false });
     list.sort(function (a, b) { return (b.recent ? b.recent.t : 0) - (a.recent ? a.recent.t : 0); });
-    $('liveList').innerHTML = list.length ? list.slice(0, 30).map(function (it) { return '<div style="margin:3px 0">' + (it.active ? '🟡 ' : '⚪ ') + '<b>' + esc(aliasOf(it.sid)) + '</b> 在 ' + esc(it.room) + (it.recent ? '，問 ' + esc(it.recent.who) + '：「' + esc(String(it.recent.text).slice(0, 24)) + '」' : '，還沒訪談') + '</div>'; }).join('') + '<div class="muted" style="font-size:.8em">🟡＝5 分鐘內有提問</div>' : '<span class="muted">還沒有人進房。</span>';
+    $('liveList').innerHTML = list.length ? list.slice(0, 30).map(function (it) { return '<div style="margin:4px 0">' + (it.active ? '🟡 ' : '⚪ ') + '<a href="#" data-chat="' + esc(it.code) + '|' + esc(it.sid) + '"><b>' + esc(aliasOf(it.sid)) + '</b></a> 在 ' + esc(it.room) + (it.recent ? '，問 ' + esc(it.recent.who) + '：「' + esc(String(it.recent.text).slice(0, 24)) + '」' : '，還沒訪談') + '</div>'; }).join('') + '<div class="muted" style="font-size:.8em">🟡＝5 分鐘內有提問。點名字看逐字稿。</div>' : '<span class="muted">還沒有人進房。</span>';
+    bindChatLinks($('liveList'));
   }
+  function bindChatLinks(el) { Array.prototype.forEach.call(el.querySelectorAll('[data-chat]'), function (a) { a.onclick = function (e) { e.preventDefault(); var p = a.dataset.chat.split('|'); showChats(p[0], p[1] || undefined); }; }); }
   function renderAnalysis() {
     var qs = [], who = {};
     Object.keys(chats).forEach(function (code) { Object.keys(chats[code]).forEach(function (sid) { Object.keys(chats[code][sid]).forEach(function (rec) { var c = chats[code][sid][rec], pn = c.personaName || personaName(c.personaId); who[pn] = (who[pn] || 0) + 1; Object.keys(c.turns || {}).forEach(function (k) { var t = c.turns[k]; if (t.role === 'u') qs.push({ t: t.t, sid: sid, who: pn, text: String(t.text || '') }); }); }); }); });
     var st = {}, tp = {}; qs.forEach(function (q) { classify(q.text, STYLE_RULES, true).forEach(function (k) { st[k] = (st[k] || 0) + 1; }); classify(q.text, TOPIC_RULES, true).forEach(function (k) { tp[k] = (tp[k] || 0) + 1; }); });
     $('qStyle').innerHTML = bar(st, qs.length); $('qTopic').innerHTML = bar(tp, qs.length); $('qWho').innerHTML = bar(who, Object.keys(who).reduce(function (a, k) { return a + who[k]; }, 0));
     qs.sort(function (a, b) { return b.t - a.t; });
-    $('qRecent').innerHTML = qs.slice(0, 30).map(function (q) { return '<div>' + esc(aliasOf(q.sid)) + ' → ' + esc(q.who) + '：' + esc(q.text) + ' <span class="muted">' + classify(q.text, STYLE_RULES, false)[0] + '</span></div>'; }).join('') || '<span class="muted">還沒有問題。</span>';
+    $('qRecent').innerHTML = qs.slice(0, 30).map(function (q) { return '<div style="margin:3px 0"><span class="muted">' + hm(q.t) + '</span> ' + esc(aliasOf(q.sid)) + ' → ' + esc(q.who) + '：' + esc(q.text) + ' <span class="pill">' + classify(q.text, STYLE_RULES, false)[0] + '</span></div>'; }).join('') || '<span class="muted">還沒有問題。</span>';
+    $('kQ').textContent = qs.length;
     var tags = {}, concl = {};
     rooms.forEach(function (r) { Object.keys(r.players || {}).forEach(function (sid) { var p = CORE.getPlayer(r, sid); p.interviews.forEach(function (iv) { Object.keys(iv.items || {}).forEach(function (k) { (iv.items[k].tags || []).forEach(function (tg) { tags[tg] = (tags[tg] || 0) + 1; }); }); }); p.conclusions.forEach(function (c) { var d = (c && (c.direction || c.dir || c.title)) || ''; if (d) concl[String(d).slice(0, 30)] = (concl[String(d).slice(0, 30)] || 0) + 1; }); }); });
     $('iTags').innerHTML = bar(tags, Object.keys(tags).reduce(function (a, k) { return a + tags[k]; }, 0)); $('iConcl').innerHTML = bar(concl, Object.keys(concl).reduce(function (a, k) { return a + concl[k]; }, 0));
   }
-  var KINDS = { bug: '有問題', idea: '建議', confused: '看不懂' };
-  fdb.ref('er/_feedback').limitToLast(100).on('value', function (s) {
-    var v = s.val() || {}, keys = Object.keys(v).sort(function (a, b) { return Number(v[b].t) - Number(v[a].t); }), el = $('fbBox'); if (!el) return;
-    el.innerHTML = keys.length ? keys.map(function (k) { var e = v[k], c = e.ctx || {}; return '<div style="border-bottom:1px solid var(--line);padding:4px 0"><span class="pill" style="font-size:11px">' + esc(KINDS[e.kind] || e.kind) + '</span> <b>' + esc(DEID ? aliasOf(String(e.sid)) : (e.sid + (e.name ? '　' + e.name : ''))) + '</b> <span class="muted" style="font-size:.85em">' + new Date(e.t).toLocaleString() + (c.room ? '・房 ' + esc(c.room) : '') + (c.loc ? '・' + esc(c.loc) : '') + (c.simTime ? '・' + esc(c.simTime) : '') + '</span><div>' + esc(e.text) + '</div>' + (c.errors && c.errors.length ? '<div class="muted small" style="font-size:.8em">錯誤：' + esc(c.errors.join(' ｜ ')) + '</div>' : '') + '</div>'; }).join('') : '<span class="muted">還沒有回報。</span>';
-  });
-  function attachChats(root) { root.child('chat').on('value', function (s) { chats = s.val() || {}; schedule(); }); root.child('analysis/summary').on('value', function (s) { var v = s.val(); $('sumBox').textContent = v ? v.text : ''; $('sumStat').textContent = v ? ('上次摘要：' + new Date(v.t).toLocaleTimeString() + '，' + v.n + ' 個問題') : ''; }); }
-  $('sumBtn').onclick = function () { $('sumStat').textContent = '已送出，等代理程式…'; fdb.ref('er/_cmd').push({ kind: 'summarize', sess: SESS, t: Date.now() }); };
+  /* ───── 回報 ───── */
+  var KINDS = { bug: '有問題', idea: '建議', confused: '看不懂' }, KCLS = { bug: 'bad', idea: 'info', confused: '' }, fbData = {}, fbKind = '';
+  function renderFb() {
+    var v = fbData, keys = Object.keys(v).sort(function (a, b) { return Number(v[b].t) - Number(v[a].t); }), cnt = {}; keys.forEach(function (k) { var kd = v[k].kind || ''; cnt[kd] = (cnt[kd] || 0) + 1; });
+    var nb = $('nFb'); nb.textContent = keys.length; nb.classList.toggle('alert', !!cnt.bug); nb.title = cnt.bug ? (cnt.bug + ' 則「有問題」') : '';
+    $('fbFilter').innerHTML = [['', '全部', keys.length]].concat(Object.keys(KINDS).map(function (k) { return [k, KINDS[k], cnt[k] || 0]; })).map(function (f) { return '<button class="sm' + (fbKind === f[0] ? ' on' : '') + '" data-k="' + f[0] + '">' + esc(f[1]) + ' ' + f[2] + '</button>'; }).join('');
+    Array.prototype.forEach.call($('fbFilter').querySelectorAll('[data-k]'), function (b) { b.onclick = function () { fbKind = b.dataset.k; renderFb(); }; });
+    var show = keys.filter(function (k) { return !fbKind || v[k].kind === fbKind; });
+    $('fbBox').innerHTML = show.length ? show.map(function (k) { var e = v[k], c = e.ctx || {}; return '<div class="fb"><span class="pill ' + (KCLS[e.kind] || '') + '">' + esc(KINDS[e.kind] || e.kind) + '</span> <b>' + esc(DEID ? aliasOf(String(e.sid)) : (e.sid + (e.name ? '　' + e.name : ''))) + '</b> <span class="muted" style="font-size:.85em">' + new Date(e.t).toLocaleString('zh-TW', { hour12: false }) + (c.room ? '・房 ' + esc(c.room) : '') + (c.loc ? '・' + esc(c.loc) : '') + (c.simTime ? '・' + esc(c.simTime) : '') + '</span><div>' + esc(e.text) + '</div>' + (c.errors && c.errors.length ? '<div class="muted small" style="font-size:.8em">錯誤：' + esc(c.errors.join(' ｜ ')) + '</div>' : '') + '</div>'; }).join('') : '<span class="muted">' + (keys.length ? '這一類沒有回報。' : '還沒有回報。') + '</span>';
+  }
+  $('sumBtn').onclick = function () { var b = $('sumBtn'); b.disabled = true; $('sumStat').textContent = '送出中…'; fdb.ref('er/_cmd').push({ kind: 'summarize', sess: SESS, t: Date.now() }).then(function () { $('sumStat').textContent = '已送出，等代理程式（約半分鐘）…'; }, function (e) { $('sumStat').textContent = '沒有送出：' + ((e && e.code) || e); }).then(function () { setTimeout(function () { b.disabled = false; }, 8000); }); };
   function markersByRoom(rs) { var out = {}; rs.forEach(function (r) { try { out[r.code] = CORE.mcardEls(r).concat(DB.getScene(r.code).filter(function (e) { return !e.isDeleted && e.customData && e.customData.marker; })).map(function (e) { var m = e.customData.marker; return { id: m.id, type: m.type, author: m.author, refs: m.refs }; }); } catch (e) { out[r.code] = []; } }); return out; }
+
+  /* ───── 學生表（可篩班級、排序、找人） ───── */
+  var stuRows = [];
+  function renderStudents() {
+    var cls = $('fCls').value, sort = $('fSort').value, onl = $('fOnline').checked, q = $('fQ').value.trim().toLowerCase();
+    var rows = stuRows.filter(function (r) { return (!cls || r.cls === cls) && (!onl || r.online) && (!q || (r.sid + ' ' + r.name).toLowerCase().indexOf(q) >= 0); });
+    var cmp = { sid: function (a, b) { return a.sid < b.sid ? -1 : 1; }, lit: function (a, b) { return a.lit - b.lit || (a.sid < b.sid ? -1 : 1); }, iv: function (a, b) { return b.iv - a.iv; }, q: function (a, b) { return b.q - a.q; }, idle: function (a, b) { return a.lastT - b.lastT; } }[sort];
+    rows.sort(cmp);
+    $('stuCount').textContent = rows.length === stuRows.length ? ('共 ' + rows.length + ' 人') : ('顯示 ' + rows.length + ' / ' + stuRows.length + ' 人');
+    $('students').innerHTML = rows.length ? '<table><thead><tr><th>學生</th><th>檢核點</th><th class="num">訪談</th><th class="num">提問</th><th>最後提問</th><th>房間・逐字稿</th><th class="small">裝置</th></tr></thead><tbody>' + rows.map(function (r) {
+      return '<tr><td>' + (r.online ? '<span title="在線" style="color:var(--ok)">●</span> ' : '<span class="muted" title="不在線">○</span> ') + '<b>' + esc(DEID ? aliasOf(r.sid) : (r.sid + (r.name ? '　' + r.name : ''))) + '</b>' + (DEID ? '' : '<div class="muted small" style="font-size:.8em">' + esc(r.cls) + ' ' + esc(r.email) + '</div>') + '</td><td class="dots">' + r.dots + (r.lit >= 0 ? ' <span class="muted">' + r.lit + '/6</span>' : '') + '</td><td class="num">' + r.iv + '</td><td class="num">' + r.q + '</td><td>' + (r.lastT ? '<span class="muted">' + hm(r.lastT) + '</span> ' + esc(r.lastWho) : '<span class="muted">—</span>') + '</td><td>' + (r.rooms.map(function (c) { return '<a href="#" data-chat="' + esc(c.code) + '|' + esc(r.sid) + '">' + esc(c.code) + (c.host ? '(主)' : '') + '</a>'; }).join(' ') || '<span class="muted">還沒進房</span>') + '</td><td class="small muted">' + esc(r.ua) + '</td></tr>';
+    }).join('') + '</tbody></table>' : '<span class="muted">' + (stuRows.length ? '沒有符合條件的學生。' : '這個場次還沒有人。') + '</span>';
+    bindChatLinks($('students'));
+  }
   function render() {
     if (!DB) return;
     rooms = DB.listRooms(SESS).map(function (r) { return DB.getRoom(r.code); });
     var sids = {}; rooms.forEach(function (r) { Object.keys(r.members || {}).forEach(function (s) { sids[s] = true; }); }); Object.keys(profiles).forEach(function (s) { sids[s] = true; });
     var all = Object.keys(sids).sort(); buildAlias(all);
-    var mb = markersByRoom(rooms), ivTotal = 0, litAll = 0;
-    var rowsHtml = all.map(function (sid) {
+    var mb = markersByRoom(rooms), ivTotal = 0, litAll = 0, ask = askStats(), clsSet = {}, online = 0;
+    stuRows = all.map(function (sid) {
       var prof = profiles[sid] || {}, st, ev;
       try { st = CORE.checkpointState(DB, SESS, sid, { cls: prof.cls || '' }, mb, { directions: [] }); ev = CP.evaluate(st); } catch (e) { ev = null; }
       if (ev && ev.passed) litAll += 1;
-      var dots = ev ? ev.list.map(function (x) { return '<i class="' + (x.ok ? 'lit' : '') + '" title="' + esc(x.label) + '"></i>'; }).join('') : '';
-      var mine = rooms.filter(function (r) { return r.members && r.members[sid]; }).map(function (r) { return r.code + (String(r.host) === sid ? '(主)' : ''); }).join(' ');
       var iv = 0; rooms.forEach(function (r) { var p = CORE.getPlayer(r, sid); if (p) iv += p.interviews.length; }); ivTotal += iv;
-      var who = DEID ? aliasOf(sid) : (sid + (prof.name ? '　' + prof.name : ''));
-      return '<tr><td><b>' + esc(who) + '</b>' + (DEID ? '' : '<div class="muted small" style="font-size:.8em">' + esc(prof.cls || '') + ' ' + esc(prof.email || '') + '</div>') + '</td><td class="dots">' + dots + (ev ? ' <span class="muted">' + ev.lit + '/6</span>' : '') + '</td><td>' + esc(mine) + '</td><td>' + iv + '</td><td class="small">' + (prof.ua || '') + '</td></tr>';
-    }).join('');
-    $('students').innerHTML = rowsHtml ? '<table><tr><th>學生</th><th>檢核點</th><th>房間</th><th>訪談數</th><th class="small">裝置</th></tr>' + rowsHtml + '</table>' : '<span class="muted">這個場次還沒有人。</span>';
-    $('kStudents').textContent = all.length; $('kRooms').textContent = rooms.length; $('kIv').textContent = ivTotal; $('kLit').textContent = litAll;
+      var a = ask[sid] || { n: 0, last: null }, on = isOnline(sid); if (on) online += 1; if (prof.cls) clsSet[prof.cls] = true;
+      return { sid: sid, name: prof.name || '', cls: prof.cls || '', email: prof.email || '', ua: prof.ua || '', online: on, lit: ev ? ev.lit : -1,
+        dots: ev ? ev.list.map(function (x) { return '<i class="' + (x.ok ? 'lit' : '') + '" title="' + esc(x.label) + '"></i>'; }).join('') : '',
+        iv: iv, q: a.n, lastT: a.last ? a.last.t : 0, lastWho: a.last ? a.last.who : '',
+        rooms: rooms.filter(function (r) { return r.members && r.members[sid]; }).map(function (r) { return { code: r.code, host: String(r.host) === sid }; }) };
+    });
+    var sel = $('fCls'), cur = sel.value, opts = Object.keys(clsSet).sort();
+    if (sel.dataset.opts !== opts.join('|')) { sel.dataset.opts = opts.join('|'); sel.innerHTML = '<option value="">全部班級</option>' + opts.map(function (c) { return '<option' + (c === cur ? ' selected' : '') + '>' + esc(c) + '</option>'; }).join(''); }
+    renderStudents();
+    $('kOnline').textContent = online; $('kStudents').textContent = all.length; $('kRooms').textContent = rooms.length; $('kIv').textContent = ivTotal; $('kLit').textContent = litAll;
+    $('nStu').textContent = all.length; $('nRoom').textContent = rooms.length;
     renderBoard();
-    $('rooms').innerHTML = rooms.length ? '<table><tr><th>代碼</th><th>案例・班別</th><th>主持</th><th>成員</th><th class="small">即時訪談</th></tr>' + rooms.map(function (r) {
-      return '<tr><td><b>' + esc(r.code) + '</b></td><td>' + esc(r.case || 'sms') + '・' + (r.shift === 'night' ? '夜班' : '日班') + '</td><td>' + esc(aliasOf(String(r.host))) + '</td><td>' + Object.keys(r.members || {}).map(aliasOf).join(', ') + '</td><td class="small"><a href="#" data-chatroom="' + esc(r.code) + '">看逐字稿</a></td></tr>';
-    }).join('') + '</table>' : '<span class="muted">還沒有房間。</span>';
-    Array.prototype.forEach.call($('rooms').querySelectorAll('[data-chatroom]'), function (a) { a.onclick = function (e) { e.preventDefault(); showChats(a.dataset.chatroom); }; });
-    try { renderLive(); renderAnalysis(); } catch (e) { console.error(e); }
+    $('rooms').innerHTML = rooms.length ? '<table><thead><tr><th>代碼</th><th>案例・班別</th><th>主持</th><th>成員</th><th>即時訪談</th></tr></thead><tbody>' + rooms.map(function (r) {
+      var n = 0; Object.keys(chats[r.code] || {}).forEach(function (sid) { n += (ask[sid] && chats[r.code][sid]) ? Object.keys(chats[r.code][sid]).length : 0; });
+      return '<tr><td><b>' + esc(r.code) + '</b></td><td>' + esc(r.case || 'sms') + '・' + (r.shift === 'night' ? '夜班' : '日班') + '</td><td>' + esc(aliasOf(String(r.host))) + '</td><td>' + Object.keys(r.members || {}).map(function (s) { return esc(aliasOf(s)); }).join('、') + '</td><td>' + (n ? '<a href="#" data-chat="' + esc(r.code) + '|">看逐字稿（' + n + ' 段）</a>' : '<span class="muted">還沒有</span>') + '</td></tr>';
+    }).join('') + '</tbody></table>' : '<span class="muted">還沒有房間。</span>';
+    bindChatLinks($('rooms'));
+    try { renderLive(ask); renderAnalysis(); } catch (e) { console.error(e); }
+    $('updated').textContent = '畫面更新 ' + new Date().toLocaleTimeString('zh-TW', { hour12: false });
   }
+  var usage = {};
   function renderUsage(u) {
     var tot = u._total || {}, rows = Object.keys(u).filter(function (k) { return k !== '_total'; }).sort(function (a, b) { return (u[b].turns || 0) - (u[a].turns || 0); });
-    $('usageSum').textContent = '今天即時訪談：' + (tot.turns || 0) + ' 題、tokens 入 ' + (tot.tokIn || 0) + ' / 出 ' + (tot.tokOut || 0);
-    $('usage').innerHTML = rows.length ? '<table><tr><th>學生</th><th>題數</th><th>tokens（入/出）</th><th>最後</th></tr>' + rows.map(function (k) { return '<tr><td>' + esc(aliasOf(k)) + '</td><td>' + (u[k].turns || 0) + (u[k].turns >= 60 ? ' <span class="bad">（已達上限）</span>' : '') + '</td><td>' + (u[k].tokIn || 0) + ' / ' + (u[k].tokOut || 0) + '</td><td class="muted">' + (u[k].last ? new Date(u[k].last).toLocaleTimeString() : '') + '</td></tr>'; }).join('') + '</table>' : '<span class="muted">今天還沒有人用即時訪談。</span>';
+    var capped = rows.filter(function (k) { return (u[k].turns || 0) >= 60; }).length;
+    $('usageSum').innerHTML = (tot.turns || 0) + ' 題・' + rows.length + ' 人' + (capped ? ' <span class="pill bad">' + capped + ' 人到上限</span>' : '');
+    $('usage').innerHTML = rows.length ? '<table><thead><tr><th>學生</th><th class="num">題數</th><th class="num">tokens（入/出）</th><th>最後</th></tr></thead><tbody>' + rows.map(function (k) { return '<tr><td>' + esc(aliasOf(k)) + '</td><td class="num">' + (u[k].turns || 0) + (u[k].turns >= 60 ? ' <span class="pill bad">已達上限</span>' : '') + '</td><td class="num">' + (u[k].tokIn || 0) + ' / ' + (u[k].tokOut || 0) + '</td><td class="muted">' + (u[k].last ? hm(u[k].last) : '') + '</td></tr>'; }).join('') + '</tbody></table><div class="muted" style="font-size:.85em;margin-top:6px">全班 tokens 入 ' + (tot.tokIn || 0) + ' / 出 ' + (tot.tokOut || 0) + '</div>' : '<span class="muted">今天還沒有人用即時訪談。</span>';
   }
   function showChats(code, sid, rec) {
+    setTab('room');
     var box = $('chatView'); box.hidden = false; box.innerHTML = '讀取中…';
     fdb.ref('er/' + SESS + '/chat/' + code + (sid ? '/' + sid + (rec ? '/' + rec : '') : '')).once('value', function (s) {
-      var v = s.val() || {}, html = '<div class="row"><b style="flex:1">逐字稿 ' + esc(code) + (sid ? ' ' + esc(aliasOf(sid)) : '') + '</b><button id="chatClose">關閉</button></div>';
+      var v = s.val() || {}, html = '<div class="row"><b style="flex:1">逐字稿　房 ' + esc(code) + (sid ? '　' + esc(aliasOf(sid)) : '　全部成員') + '</b><button id="chatClose">關閉</button></div>';
       function one(sid0, rec0, c) {
         var turns = Object.keys(c.turns || {}).map(function (k) { return c.turns[k]; }).sort(function (a, b) { return a.t - b.t; });
-        return '<div class="card"><b>' + esc(aliasOf(sid0)) + '</b> 訪談 ' + esc(DEID ? '' : rec0) + '　受訪：' + esc(c.personaName || c.personaId || '') + '　<span class="muted">' + turns.filter(function (t) { return t.role === 'u'; }).length + ' 題</span>' +
+        return '<div class="card"><b>' + esc(aliasOf(sid0)) + '</b>　受訪：' + esc(c.personaName || c.personaId || '') + '　<span class="muted">' + turns.filter(function (t) { return t.role === 'u'; }).length + ' 題' + (turns.length ? '・' + hm(turns[0].t) + ' 起' : '') + '</span>' +
           turns.map(function (t) { return '<div class="turn"><div class="bub ' + (t.role === 'u' ? 'u' : 'a') + '">' + esc(t.text) + '</div></div>'; }).join('') + '</div>';
       }
       if (sid && rec) html += one(sid, rec, v); else if (sid) Object.keys(v).forEach(function (r) { html += one(sid, r, v[r]); }); else Object.keys(v).forEach(function (s0) { Object.keys(v[s0]).forEach(function (r) { html += one(s0, r, v[s0][r]); }); });
-      if (!Object.keys(v).length) html += '<p class="muted">這間房還沒有即時訪談。</p>';
-      box.innerHTML = html; $('chatClose').onclick = function () { box.hidden = true; location.hash = ''; }; box.scrollIntoView();
-    });
+      if (!Object.keys(v).length) html += '<p class="muted">' + (sid ? '這位學生在這間房還沒有即時訪談。' : '這間房還沒有即時訪談。') + '</p>';
+      box.innerHTML = html; $('chatClose').onclick = function () { box.hidden = true; if (location.hash) history.replaceState(null, '', location.pathname + location.search); }; box.scrollIntoView({ block: 'start' });
+    }, denied(box, '逐字稿'));
   }
 })();
 </script>
