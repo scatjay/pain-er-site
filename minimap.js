@@ -117,12 +117,16 @@
     });
     if (meDot) {
       var mx = num(meDot.x), my = num(meDot.y), lab = esc(meDot.label || '你在這裡'), fs2 = 28 * (compact ? 2.1 : F), k = fs2 / 28, bw = fs2 * (meDot.label ? Math.max(2, meDot.label.length) : 5) + 56 * k;
-      out.push('<g data-me="1"><circle class="ermm-pulse" cx="' + mx + '" cy="' + my + '" r="' + num(22 * k) + '" fill="none" stroke="#ff6b4a" stroke-width="' + num(6 * k) + '"/>' +
+      /* 10-13：標示牌原本一律畫在圓點上方，人在房間上緣時會蓋住左上角的房名 → 圓點離房間上緣太近就改畫在下方 */
+      var flip = false;
+      if (!compact) rooms.forEach(function (r) { if (mx >= r.x && mx <= r.x + r.w && my >= r.y && my <= r.y + r.h && my - 98 * k < r.y + 8 * F + 30 * F + 14) flip = true; });
+      var s = flip ? -1 : 1;   /* s=-1：整個標示牌對圓點上下翻轉 */
+      out.push('<g data-me="1"' + (flip ? ' data-flip="1"' : '') + '><circle class="ermm-pulse" cx="' + mx + '" cy="' + my + '" r="' + num(22 * k) + '" fill="none" stroke="#ff6b4a" stroke-width="' + num(6 * k) + '"/>' +
         '<circle cx="' + mx + '" cy="' + my + '" r="' + num(15 * k) + '" fill="#ff6b4a" stroke="#1e1e1e" stroke-width="' + num(4 * k) + '"/>' +
-        '<rect x="' + num(mx - bw / 2) + '" y="' + num(my - 98 * k) + '" width="' + num(bw) + '" height="' + num(46 * k) + '" rx="' + num(23 * k) + '" fill="#ff6b4a" stroke="#1e1e1e" stroke-width="' + num(4 * k) + '"/>' +
-        '<path d="M' + num(mx - 12 * k) + ' ' + num(my - 54 * k) + ' L' + mx + ' ' + num(my - 24 * k) + ' L' + num(mx + 12 * k) + ' ' + num(my - 54 * k) + ' Z" fill="#ff6b4a" stroke="#1e1e1e" stroke-width="' + num(4 * k) + '" stroke-linejoin="round"/>' +
-        '<rect x="' + num(mx - 11 * k) + '" y="' + num(my - 56 * k) + '" width="' + num(22 * k) + '" height="' + num(6 * k) + '" fill="#ff6b4a"/>' +
-        '<text x="' + mx + '" y="' + num(my - 66 * k) + '" font-size="' + num(fs2) + '" font-weight="900" text-anchor="middle" fill="#fff" stroke="#1e1e1e" stroke-width="' + num(1.2 * k) + '">📍 ' + lab + '</text></g>');
+        '<rect x="' + num(mx - bw / 2) + '" y="' + num(flip ? my + 52 * k : my - 98 * k) + '" width="' + num(bw) + '" height="' + num(46 * k) + '" rx="' + num(23 * k) + '" fill="#ff6b4a" stroke="#1e1e1e" stroke-width="' + num(4 * k) + '"/>' +
+        '<path d="M' + num(mx - 12 * k) + ' ' + num(my - s * 54 * k) + ' L' + mx + ' ' + num(my - s * 24 * k) + ' L' + num(mx + 12 * k) + ' ' + num(my - s * 54 * k) + ' Z" fill="#ff6b4a" stroke="#1e1e1e" stroke-width="' + num(4 * k) + '" stroke-linejoin="round"/>' +
+        '<rect x="' + num(mx - 11 * k) + '" y="' + num(flip ? my + 50 * k : my - 56 * k) + '" width="' + num(22 * k) + '" height="' + num(6 * k) + '" fill="#ff6b4a"/>' +
+        '<text x="' + mx + '" y="' + num(flip ? my + 84 * k : my - 66 * k) + '" font-size="' + num(fs2) + '" font-weight="900" text-anchor="middle" fill="#fff" stroke="#1e1e1e" stroke-width="' + num(1.2 * k) + '">📍 ' + lab + '</text></g>');
     }
     out.push('</svg>');
     return out.join('');
