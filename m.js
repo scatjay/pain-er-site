@@ -150,7 +150,7 @@
   }
   function nearestNode(p,room){var ids=Object.keys(cur.world.graph.nodes),best=null,bd=Infinity;ids.forEach(function(id){var n=cur.world.graph.nodes[id];if(room&&n.room!==room)return;var d=Math.hypot(n.x-p.x,n.y-p.y);if(d<bd){bd=d;best=id;}});return best;}
   function goRemote(id){cur.walk=null;setLoc(id);toTop&&toTop();toast(id==='home'?'搭公車到了病患的家。這裡有他手機收到的簡訊，家人也在。':'隔天，到了回診門診。');}   /* 10-13：這兩間不在地圖上，原本沒有入口 */
-  function startTravel(id){var rm=LAYOUT.room(id);if(rm&&rm.type==='remote'&&(id==='home'||id==='clinic')){goRemote(id);return true;}if(!rm||rm.type!=='room')return false;var a=cur.me,b=spotIn(id),from=nearestNode(a),to=nearestNode(b,id)||nearestNode(b),route=from&&to?window.ERG_NPC.shortestPath(cur.world.graph,from,to):null;if(!route){toast('找不到可走的路線，請從附近房間前往。');return false;}var pts=[{x:a.x,y:a.y}];route.ids.forEach(function(nid){var n=cur.world.graph.nodes[nid];if(Math.hypot(n.x-pts[pts.length-1].x,n.y-pts[pts.length-1].y)>1)pts.push({x:n.x,y:n.y});});if(Math.hypot(b.x-pts[pts.length-1].x,b.y-pts[pts.length-1].y)>1)pts.push(b);cur.walk={points:pts,index:1,target:id};$('locLabel').textContent='前往：'+rm.name;return true;}
+  function startTravel(id){var rm=LAYOUT.room(id);if(rm&&rm.type==='remote'&&(id==='home'||id==='clinic')){goRemote(id);return true;}if(!rm||rm.type!=='room')return false;var a=(cur.player.loc==='home'||cur.player.loc==='clinic')?spotIn('street'):cur.me,b=spotIn(id),from=nearestNode(a),to=nearestNode(b,id)||nearestNode(b),route=from&&to?window.ERG_NPC.shortestPath(cur.world.graph,from,to):null;if(!route){toast('找不到可走的路線，請從附近房間前往。');return false;}var pts=[{x:a.x,y:a.y}];route.ids.forEach(function(nid){var n=cur.world.graph.nodes[nid];if(Math.hypot(n.x-pts[pts.length-1].x,n.y-pts[pts.length-1].y)>1)pts.push({x:n.x,y:n.y});});if(Math.hypot(b.x-pts[pts.length-1].x,b.y-pts[pts.length-1].y)>1)pts.push(b);cur.walk={points:pts,index:1,target:id};$('locLabel').textContent='前往：'+rm.name;return true;}
   function advanceWalk(dt){if(!cur.walk||cur.clock.paused)return;var w=cur.walk,remain=70*cur.world.data.SIM.SECONDS_PER_SIM_MIN/cur.clock.secPerMin*dt;while(remain>0&&w.index<w.points.length){var a=cur.me,b=w.points[w.index],d=Math.hypot(b.x-a.x,b.y-a.y);if(d<=remain){cur.me={x:b.x,y:b.y};remain-=d;w.index++;}else{cur.me={x:a.x+(b.x-a.x)*remain/d,y:a.y+(b.y-a.y)*remain/d};remain=0;}}var rm=LAYOUT.roomAt(cur.me.x,cur.me.y);if(rm&&rm!==cur.player.loc){cur.player.loc=rm;cur.watchRoom=rm;renderScene();renderNav();soundForRoom(rm);if(window.ERG_PANELS)window.ERG_PANELS.onMove();}if(w.index>=w.points.length){var dest=w.target;cur.walk=null;setLoc(dest,true);DB.appendEvent(cur.code,{kind:'move',env:APP.me.sid,to:dest});persist(true);}}
   S.travel = startTravel;
   S.teleport=function(id){cur.walk=null;setLoc(id);}; S.setWatchRoom=function(id){if(!LAYOUT.room(id)||LAYOUT.room(id).type!=='room')return;cur.watchRoom=id;var scene=document.getElementById('sceneBox');if(scene){scene.style.transition='opacity .18s';scene.style.opacity='.55';setTimeout(function(){scene.style.opacity='1';},30);}renderScene();renderTokens();};
@@ -242,7 +242,13 @@
   function showPop(rx, ry, html) {   /* rx, ry：房間內相對座標 */
     hidePop(); var p = document.createElement('div'); p.id = 'popCard'; p.className = 'popCard'; p.innerHTML = html + '<button class="popClose" aria-label="關閉">×</button>';
     p.style.left = pct(rx, 'x'); p.style.top = pct(ry, 'y'); ($('sceneBox') || $('overlay')).appendChild(p);   /* 10-13：線索牌的層級拉到人物上面之後，小卡要再往上一層 */
-    p.querySelector('.popClose').onclick = hidePop; p.onclick = function (e) { e.stopPropagation(); }; return p;
+    p.querySelector('.popClose').onclick = hidePop; p.onclick = function (e) { e.stopPropagation(); };
+    /* 10-13：點在房間邊緣的人，小卡會被場景框切掉一半（測試員：入口大廳點老陳，名字少一個字）→ 量完夾回框內；上緣放不下就改放到點的下方 */
+    (function () { var host = $('sceneBox') || $('overlay'), hb = host.getBoundingClientRect(), r = p.getBoundingClientRect();
+      if (r.top < hb.top + 2) { p.style.transform = 'translate(-50%,10px)'; r = p.getBoundingClientRect(); }
+      var dx = 0; if (r.left < hb.left + 4) dx = hb.left + 4 - r.left; else if (r.right > hb.right - 4) dx = hb.right - 4 - r.right;
+      if (dx) p.style.marginLeft = Math.round(dx) + 'px'; })();
+    return p;
   }
   /* 點到人物時：同一個點底下疊了好幾個人，就優先選「可以訪談的真人物」，其次才是模擬同學（模擬同學常站在警衛或護理師身上，會把點擊攔走，變成點不到要訪談的人）。 */
   function pickTokenAt(e, id) {

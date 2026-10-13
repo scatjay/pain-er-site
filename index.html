@@ -6,6 +6,7 @@
 <title>痛點急診室</title>
 <script>if(/Mobi|Android|iPhone/i.test(navigator.userAgent)&&location.search.indexOf("desktop")<0)location.replace("m.html"+location.search);</script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap">
+<style>#socialBox:empty{display:none}</style>
 <style>
 /* 漫畫風：粗黑框、平塗色、網點背景；顏色全用變數，亮暗兩套 */
 :root{--bg:#eaf4fb;--dot:#cfe3f1;--panel:#fff;--fg:#1e1e1e;--muted:#59656d;--ink:#1e1e1e;--pop:#ff6b4a;--yellow:#ffd43b;--mint:#b2f2bb;--sky:#a5d8ff;--bad:#c92a2a;--ok:#2b8a3e;--code:#f1f5f7;--line:#cfd8de}
@@ -86,7 +87,7 @@ th{font-size:12px;color:var(--muted)}
 #roomNow{position:absolute;left:12px;top:8px;right:118px;z-index:10;background:#fff9db;color:#1e1e1e;border:2px solid #1e1e1e;border-radius:8px;padding:2px 9px;box-shadow:2px 2px 0 #1e1e1e;font-size:12px;line-height:1.5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
 #board .layer-ui__wrapper,#board .welcome-screen-center{display:none!important}
 .tok{position:absolute;transform:translate(-50%,-92%);text-align:center;pointer-events:auto;cursor:pointer;}
-.popCard{position:absolute;transform:translate(-50%,-100%);min-width:200px;max-width:280px;background:var(--panel);color:var(--fg);border:3px solid var(--ink);border-radius:12px;padding:8px 26px 8px 10px;box-shadow:4px 4px 0 var(--ink);pointer-events:auto;font-size:13px;text-wrap:balance;text-align:left}
+.popCard{position:absolute;z-index:40;transform:translate(-50%,-100%);min-width:200px;max-width:280px;background:var(--panel);color:var(--fg);border:3px solid var(--ink);border-radius:12px;padding:8px 26px 8px 10px;box-shadow:4px 4px 0 var(--ink);pointer-events:auto;font-size:13px;text-wrap:balance;text-align:left}
 .popCard .popLine{margin-top:4px}.popCard .popBtns{margin-top:8px;gap:6px}.popCard .popBtns button{padding:4px 10px;font-size:13px}
 .popCard .popClose{position:absolute;right:4px;top:2px;border:0;background:transparent;font-size:18px;font-weight:900;cursor:pointer;color:var(--fg);padding:0 4px}
 .popCard::after{content:'';position:absolute;left:50%;bottom:-12px;margin-left:-8px;border:8px solid transparent;border-top-color:var(--ink)}
@@ -140,7 +141,7 @@ th{font-size:12px;color:var(--muted)}
 pre.prompt{white-space:pre-wrap;background:var(--code);border:2px solid var(--ink);border-radius:6px;padding:8px;font-size:12px;max-height:200px;overflow:auto}
 .ck{display:flex;gap:10px;align-items:flex-start;border:3px solid var(--ink);border-radius:10px;padding:8px 10px;margin:8px 0;background:var(--code)}
 .ck.done{background:#e6fcf0;color:#1e1e1e}
-.ck .box{width:34px;height:34px;flex:none;border:3px solid var(--ink);border-radius:8px;background:var(--panel);color:#1e1e1e;font-weight:900;font-size:20px;padding:0;box-shadow:none}
+.ck .box{width:34px;height:34px;flex:none;border:3px solid var(--ink);border-radius:8px;background:#fff;color:#1e1e1e;font-weight:900;font-size:20px;padding:0;box-shadow:none}   /* 10-13：字固定深色，底不能跟著深色主題變暗（測試員回報深色看不到數字） */
 .ck.done .box{background:#b2f2bb}
 .pill{display:inline-block;border:2px solid var(--ink);border-radius:99px;padding:0 10px;font-size:12px;font-weight:700;margin:2px 3px 2px 0;background:var(--panel);color:var(--fg);box-shadow:none;cursor:pointer}
 .pill.on{background:var(--yellow);color:#1e1e1e}
@@ -271,9 +272,9 @@ footer.note{font-size:10px;padding:1px 8px;white-space:nowrap;overflow:hidden;te
 <script crossorigin src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
 <script>window.EXCALIDRAW_ASSET_PATH="https://unpkg.com/@excalidraw/excalidraw@0.17.6/dist/";</script>
 <script crossorigin src="https://unpkg.com/@excalidraw/excalidraw@0.17.6/dist/excalidraw.production.min.js"></script>
-<script src="content.js?v=202610131701"></script>
-<script src="logic.js?v=202610131701"></script>
-<script src="local_db.js?v=202610131701"></script>
+<script src="content.js?v=202610131924"></script>
+<script src="logic.js?v=202610131924"></script>
+<script src="local_db.js?v=202610131924"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <script>/* 登入頁的手機入口 QR（白底黑碼固定，不跟主題）；函式庫沒載到就只顯示網址 */
 (function(){var U='https://scatjay.github.io/pain-er-site/',b=document.getElementById('loginQrBox'),u=document.getElementById('loginQrUrl');if(!b||!u)return;u.textContent=U.replace(/^https:\/\//,'');
@@ -281,46 +282,46 @@ try{var q=window.qrcode(0,'M');q.addData(U+'?openExternalBrowser=1');q.make();b.
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-<script src="er_firebase.js?v=202610131701"></script>
-<script src="remote_db.js?v=202610131701"></script>
+<script src="er_firebase.js?v=202610131924"></script>
+<script src="remote_db.js?v=202610131924"></script>
 
-<script src="layout.js?v=202610131701"></script>
-<script src="labels.js?v=202610131701"></script>
-<script src="er_data.js?v=202610131701"></script>
-<script src="personas_inclusive.js?v=202610131701"></script>
-<script src="npc_voice.js?v=202610131701"></script><script src="personas.js?v=202610131701"></script>
-<script src="comic.js?v=202610131701"></script>
-<script src="npc_sim.js?v=202610131701"></script>
-<script src="er_sim.js?v=202610131701"></script>
-<script src="case_wait.js?v=202610131701"></script>
-<script src="case_way.js?v=202610131701"></script><script src="rotation.js?v=202610131701"></script>
-<script src="case_forms.js?v=202610131701"></script>
-<script src="case_pay.js?v=202610131701"></script>
-<script src="case_peds.js?v=202610131701"></script>
-<script src="cases.js?v=202610131701"></script><script src="event_guide.js?v=202610131701"></script>
-<script src="cards.js?v=202610131701"></script>
-<script src="calendar.js?v=202610131701"></script>
-<script src="density.js?v=202610131701"></script>
-<script src="depth.js?v=202610131701"></script>
-<script src="daylight.js?v=202610131701"></script>
-<script src="fatigue.js?v=202610131701"></script>
-<script src="bgm.js?v=202610131701"></script>
-<script src="world.js?v=202610131701"></script>
-<script src="floorplan.js?v=202610131701"></script>
-<script src="minimap.js?v=202610131701"></script>
-<script src="spread.js?v=202610131701"></script>
-<script src="chars.js?v=202610131701"></script>
-<script src="avatar.js?v=202610131701"></script>
-<script src="clock.js?v=202610131701"></script>
-<script src="checklist.js?v=202610131701"></script>
-<script src="checkpoints.js?v=202610131701"></script>
-<script src="report.js?v=202610131701"></script>
-<script src="ambience.js?v=202610131701"></script>
-<script src="feedback.js?v=202610131701"></script>
-<script src="app_core.js?v=202610131701"></script>
-<script src="game.js?v=202610131701"></script>
+<script src="layout.js?v=202610131924"></script>
+<script src="labels.js?v=202610131924"></script>
+<script src="er_data.js?v=202610131924"></script>
+<script src="personas_inclusive.js?v=202610131924"></script>
+<script src="npc_voice.js?v=202610131924"></script><script src="personas.js?v=202610131924"></script>
+<script src="comic.js?v=202610131924"></script>
+<script src="npc_sim.js?v=202610131924"></script>
+<script src="er_sim.js?v=202610131924"></script>
+<script src="case_wait.js?v=202610131924"></script>
+<script src="case_way.js?v=202610131924"></script><script src="rotation.js?v=202610131924"></script>
+<script src="case_forms.js?v=202610131924"></script>
+<script src="case_pay.js?v=202610131924"></script>
+<script src="case_peds.js?v=202610131924"></script>
+<script src="cases.js?v=202610131924"></script><script src="event_guide.js?v=202610131924"></script>
+<script src="cards.js?v=202610131924"></script>
+<script src="calendar.js?v=202610131924"></script>
+<script src="density.js?v=202610131924"></script>
+<script src="depth.js?v=202610131924"></script>
+<script src="daylight.js?v=202610131924"></script>
+<script src="fatigue.js?v=202610131924"></script>
+<script src="bgm.js?v=202610131924"></script>
+<script src="world.js?v=202610131924"></script>
+<script src="floorplan.js?v=202610131924"></script>
+<script src="minimap.js?v=202610131924"></script>
+<script src="spread.js?v=202610131924"></script>
+<script src="chars.js?v=202610131924"></script>
+<script src="avatar.js?v=202610131924"></script>
+<script src="clock.js?v=202610131924"></script>
+<script src="checklist.js?v=202610131924"></script>
+<script src="checkpoints.js?v=202610131924"></script>
+<script src="report.js?v=202610131924"></script>
+<script src="ambience.js?v=202610131924"></script>
+<script src="feedback.js?v=202610131924"></script>
+<script src="app_core.js?v=202610131924"></script>
+<script src="game.js?v=202610131924"></script>
 <script>window.ERG_FEEDBACK.install(window, window.ERG_APP);</script>
-<script src="room.js?v=202610131701"></script>
-<script src="achievements.js?v=202610131701"></script><script src="panels.js?v=202610131701"></script><script src="social.js?v=202610131701"></script><script src="event_runtime.js?v=202610131701"></script><script src="event_ui.js?v=202610131701"></script><script src="rotation_ui.js?v=202610131701"></script>
+<script src="room.js?v=202610131924"></script>
+<script src="achievements.js?v=202610131924"></script><script src="panels.js?v=202610131924"></script><script src="social.js?v=202610131924"></script><script src="event_runtime.js?v=202610131924"></script><script src="event_ui.js?v=202610131924"></script><script src="rotation_ui.js?v=202610131924"></script>
 <style>#eventPlay{position:absolute;z-index:35;left:10px;right:10px;top:10px;pointer-events:none}.eventNarration,.eventBubble{display:table;max-width:90%;margin:5px auto;background:#fff8c5;color:#1e1e1e;border:3px solid #1e1e1e;border-radius:12px;padding:8px 12px;box-shadow:4px 4px 0 #1e1e1e;animation:eventFade .35s}.eventBubble{background:#fff;font-size:14px}.eventSkip{pointer-events:auto;display:block;margin:4px auto}.eventEntry{border:2px solid #222;border-radius:8px;padding:8px;margin:6px 0;background:var(--panel)}.eventEntry summary{cursor:pointer}.eventAnswers{padding:6px}.replayStage{position:relative;min-height:300px;border:3px solid #222;margin:8px 0;background:#fff}.replayMap svg{width:100%;height:auto;max-height:52vh}.replayCaption{position:absolute;left:4%;right:4%;bottom:6px;background:#fff8c5;border:3px solid #222;padding:8px;box-shadow:3px 3px #222}.replaySfx{font-size:28px;font-weight:900;color:#e03131}@keyframes eventFade{from{opacity:0}to{opacity:1}}@media(prefers-reduced-motion:reduce){.eventNarration,.eventBubble{animation:none;transition:opacity .12s}#stage,#sceneBox{transition:opacity .12s!important}}#eventPlay.mobileComic .eventNarration,#eventPlay.mobileComic .eventBubble{width:86%;max-width:86%;border:4px solid #1e1e1e;background-color:#fff;background-image:radial-gradient(#dedede 1px,transparent 1px);background-size:10px 10px}#eventPlay.mobileComic .eventNarration{background:#fff3a6;font-weight:900}#eventPlay.mobileComic .eventBubble{margin-left:8%;transform:rotate(-1deg)}</style><style>#rotationBtn{position:absolute;z-index:45;right:8px;top:8px}#rotationBtn.on{background:#b2f2bb;color:#1e1e1e}#rotationBadge{display:none;position:absolute;z-index:45;right:8px;bottom:8px;padding:4px 8px;border:2px solid #222;border-radius:99px;background:#fff8c5;color:#222;font-size:12px;pointer-events:none}</style></body>
 </html>

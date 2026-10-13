@@ -323,7 +323,7 @@
     var target = LAYOUT.room(roomId); if (!target) return false;
     if (target.type === 'remote') { if (roomId === 'home' || roomId === 'clinic') { goRemote(roomId); return true; } return false; }
     if (cur.walk) cur.walk = null;
-    var start = cur.me || spotIn(cur.player.loc), dest = spotIn(roomId), from = nearestNode(start), to = nearestNode(dest, roomId) || nearestNode(dest);
+    var start = (cur.player.loc === 'home' || cur.player.loc === 'clinic') ? spotIn('street') : (cur.me || spotIn(cur.player.loc)), dest = spotIn(roomId), from = nearestNode(start), to = nearestNode(dest, roomId) || nearestNode(dest);
     if (!from || !to) { toast('找不到可走的路線，請從附近房間前往。'); return false; }
     var route = cur.world.graph.nodes[from].x === cur.world.graph.nodes[to].x && cur.world.graph.nodes[from].y === cur.world.graph.nodes[to].y ? { ids:[from] } : window.ERG_NPC.shortestPath(cur.world.graph, from, to);
     if (!route) { toast('找不到可走的路線，請從附近房間前往。'); return false; }
