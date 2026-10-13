@@ -90,7 +90,16 @@
       else sessions.push({ code: r.code, role: 'visit', finished: !!(p.visit && p.finished), others: others });
     });
     var visitRoom = mine.filter(function (r) { var p = getPlayer(r, sid); return String(r.host) !== String(sid) && p && p.visit; });
-    var vr = visitRoom.length ? visitRoom[visitRoom.length - 1] : null, vp = vr ? getPlayer(vr, sid) : null;
+    /* 10-13：進過好幾間同學的房間時，原本只看最早進的那一間 ⇒ 在第二間完成討論、對方也按了確認，檢核點 5 還是不亮（二丙上課實際發生）。
+       改成挑做得最完整的那一間：對方已確認 > 四項都勾 > 按了完成；一樣完整就取最早進的那間（跟原本一致）。 */
+    function visitScore(r) {
+      var p = getPlayer(r, sid), d = (p && p.discussion) || {}, ch = d.checks || {};
+      var conf = (d.partners || []).some(function (id) { var o = getPlayer(r, id); return !!(o && o.confirms && o.confirms[sid]); });
+      var all = ['read', 'diff', 'complement', 'outcome'].every(function (k) { return !!ch[k]; });
+      return (conf ? 4 : 0) + (all ? 2 : 0) + (p && p.finished ? 1 : 0);
+    }
+    var vr = null, vbest = -1; visitRoom.forEach(function (r) { var sc = visitScore(r); if (sc >= vbest) { vbest = sc; vr = r; } });
+    var vp = vr ? getPlayer(vr, sid) : null;
     var disc = vp ? vp.discussion : { partners: [], checks: {} };
     var partners = (disc.partners || []).map(function (id) {
       var other = vr ? getPlayer(vr, id) : null;

@@ -170,7 +170,7 @@
   function explainAuth(e) {
     var c = (e && e.code) || '';
     authMsg(c === 'auth/operation-not-allowed' ? 'Google 登入還沒開通，請告訴老師。' :
-      (c === 'auth/popup-blocked' || c === 'auth/popup-closed-by-user' || c === 'auth/cancelled-popup-request') ? '登入視窗被擋或被關掉了，再按一次會改用整頁跳轉登入。' :
+      (c === 'auth/popup-blocked' || c === 'auth/popup-closed-by-user' || c === 'auth/cancelled-popup-request') ? (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ? '登入視窗被擋或被關掉了。請再按一次「用 Google 登入」，等視窗跳出來選帳號。' : '登入視窗被擋或被關掉了，再按一次會改用整頁跳轉登入。') :
       c === 'auth/unauthorized-domain' ? '這個網址還沒加進授權網域，請告訴老師。' :
       c === 'auth/network-request-failed' ? '網路連不上，請檢查連線後再試。' : ('登入失敗：' + (e && e.message ? e.message : e)));
     console.warn('auth', e);
@@ -184,13 +184,17 @@
     var triedPopup = false, INAPP = /Line\/|FBAN|FBAV|FB_IAB|Instagram|MicroMessenger|; wv\)/i.test(navigator.userAgent);
     var inappMsg = '這是 App 內建的瀏覽器（例如 LINE、FB），Google 不允許在這裡登入。請點右上角選單「用預設瀏覽器開啟」，或把網址貼到 Chrome／Safari。';
     function goRedirect() { try { sessionStorage.setItem('erg_redir', '1'); } catch (e) {} AUTH.signInWithRedirect(provider()).catch(explainAuth); }
+    var PHONE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    var popupHelp = '瀏覽器擋住了 Google 的登入視窗。請再按一次「用 Google 登入」。還是沒有跳出來：iPhone 到「設定 → Safari」把「阻擋彈出式視窗」關掉再回來按，或改用 Chrome 開這個網址。';
     if (INAPP) authMsg(inappMsg);
     $('googleBtn').onclick = function () {
       if (INAPP) { authMsg(inappMsg); return; }
       authMsg('登入中…（會跳出 Google 的視窗）');
-      if (triedPopup) { goRedirect(); return; }
+      /* 10-13 上課中 iPhone 實際發生：第二次按登入會改走整頁跳轉，iPhone 跳到 Google 的錯誤頁「Unable to process request due to missing initial state」就卡住。
+         手機一律不走整頁跳轉（本站跨網域，跳轉在手機上本來就不會成功）；視窗被擋就說明怎麼打開，讓他再按一次。電腦才保留跳轉當備援。 */
+      if (triedPopup && !PHONE) { goRedirect(); return; }
       triedPopup = true;
-      AUTH.signInWithPopup(provider()).catch(function (e) { var c = (e && e.code) || ''; if (c === 'auth/popup-blocked' || c === 'auth/operation-not-supported-in-this-environment') goRedirect(); else explainAuth(e); });
+      AUTH.signInWithPopup(provider()).catch(function (e) { var c = (e && e.code) || ''; if (c === 'auth/popup-blocked' || c === 'auth/operation-not-supported-in-this-environment') { if (PHONE) authMsg(popupHelp); else goRedirect(); } else explainAuth(e); });
     };
     var redirBack = false; try { redirBack = sessionStorage.getItem('erg_redir') === '1'; sessionStorage.removeItem('erg_redir'); } catch (e) {}
     AUTH.getRedirectResult().then(function (r) { if (redirBack && !(r && r.user) && !AUTH.currentUser) { redirFail = true; authMsg('跳轉登入在這個瀏覽器沒有成功（瀏覽器擋了跨網站的登入資料）。請再按一次登入並允許彈出視窗；還是不行就改用 Chrome 或 Safari 開這個網址。'); } }).catch(explainAuth);

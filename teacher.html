@@ -27,7 +27,7 @@ button.sm{padding:3px 8px;font-size:.88em}
 a{color:var(--info)}
 .pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:.8em;font-weight:700;background:var(--panel2);border:1px solid var(--line);white-space:nowrap}
 .pill.ok{background:var(--okbg);color:var(--ok);border-color:var(--ok)}.pill.bad{background:var(--badbg);color:var(--bad);border-color:var(--bad)}.pill.info{background:var(--infobg);color:var(--info);border-color:var(--info)}
-.bub{max-width:80%;padding:6px 10px;border:2px solid var(--ink);border-radius:12px;margin:4px 0}.u{background:var(--yellow);color:var(--onyellow);margin-left:auto}.a{background:var(--panel)}.turn{display:flex}.bub .who{display:block;font-size:11px;font-weight:900;opacity:.72;margin-bottom:1px}.legend{font-size:12px;margin:6px 0 2px}.legend i{display:inline-block;width:1.6em;height:.9em;border:2px solid var(--ink);border-radius:5px;vertical-align:middle;margin:0 4px 0 10px}.legend i.lu{background:var(--yellow)}.legend i.la{background:var(--panel)}
+.bub{max-width:80%;padding:6px 10px;border:2px solid var(--ink);border-radius:12px;margin:4px 0}.u{background:var(--yellow);color:var(--onyellow);margin-left:auto}.a{background:var(--panel)}.turn{display:flex}.barrow[data-k]{cursor:pointer}.barrow[data-k]:hover .k{text-decoration:underline}.barrow.sel .k{font-weight:900;text-decoration:underline}.tips{border:2px solid var(--ink);border-radius:10px;padding:8px 12px;margin-bottom:8px;background:var(--panel2)}.tips b{display:block;margin-bottom:2px}.tips ul{margin:2px 0 0 18px;padding:0}.tips li{margin:3px 0}#qDrill{margin-top:10px;border-top:2px dashed var(--line);padding-top:8px}#qDrill .q{margin:3px 0;font-size:.92em}.bub .who{display:block;font-size:11px;font-weight:900;opacity:.72;margin-bottom:1px}.legend{font-size:12px;margin:6px 0 2px}.legend i{display:inline-block;width:1.6em;height:.9em;border:2px solid var(--ink);border-radius:5px;vertical-align:middle;margin:0 4px 0 10px}.legend i.lu{background:var(--yellow)}.legend i.la{background:var(--panel)}
 /* 頂列與狀態列 */
 .top{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.top h1{flex:1;min-width:10em}
 .status{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:8px;margin-top:8px}
@@ -100,7 +100,7 @@ body.proj{--fs:21px}body.proj .wrap{max-width:none}body.proj .small{display:none
 
 <section class="pane" data-pane="ask">
   <h2>大家怎麼問、在關注什麼</h2>
-  <div class="card"><div class="cols"><div><b>提問方式</b><div id="qStyle"></div></div><div><b>關注主題</b><div id="qTopic"></div></div><div><b>訪談對象</b><div id="qWho"></div></div></div>
+  <div class="card"><div id="qTips" class="tips"></div><div class="muted" style="font-size:.85em;margin:4px 0 6px">點任何一條橫條，下面會列出那一類的原句（一句話可能同時算在好幾類）。</div><div class="cols"><div><b>提問方式</b><div id="qStyle"></div></div><div><b>關注主題</b><div id="qTopic"></div></div><div><b>訪談對象</b><div id="qWho"></div></div></div><div id="qDrill" hidden></div>
   <details style="margin-top:8px"><summary class="muted" style="cursor:pointer">最近 30 個問題</summary><div id="qRecent" style="font-size:.9em"></div></details></div>
   <h2>對「衛教簡訊再設計」的啟示</h2>
   <div class="card"><div class="cols"><div><b>訪談檢核標到的問題</b><div id="iTags"></div></div><div><b>結論裡的方向</b><div id="iConcl"></div></div></div>
@@ -154,16 +154,16 @@ body.proj{--fs:21px}body.proj .wrap{max-width:none}body.proj .small{display:none
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-<script src="er_firebase.js?v=202610130846"></script>
-<script src="checklist.js?v=202610130846"></script>
-<script src="checkpoints.js?v=202610130846"></script>
-<script src="avatar.js?v=202610130846"></script>
-<script src="local_db.js?v=202610130846"></script>
-<script src="app_core.js?v=202610130846"></script>
-<script src="achievements.js?v=202610130846"></script><script src="remote_db.js?v=202610130846"></script>
-<script src="layout.js?v=202610130846"></script>
-<script src="minimap.js?v=202610130846"></script>
-<script src="personas_inclusive.js?v=202610130846"></script><script src="er_data.js?v=202610130846"></script><script src="npc_voice.js?v=202610130846"></script><script src="personas.js?v=202610130846"></script>
+<script src="er_firebase.js?v=202610130937"></script>
+<script src="checklist.js?v=202610130937"></script>
+<script src="checkpoints.js?v=202610130937"></script>
+<script src="avatar.js?v=202610130937"></script>
+<script src="local_db.js?v=202610130937"></script>
+<script src="app_core.js?v=202610130937"></script>
+<script src="achievements.js?v=202610130937"></script><script src="remote_db.js?v=202610130937"></script>
+<script src="layout.js?v=202610130937"></script>
+<script src="minimap.js?v=202610130937"></script>
+<script src="personas_inclusive.js?v=202610130937"></script><script src="er_data.js?v=202610130937"></script><script src="npc_voice.js?v=202610130937"></script><script src="personas.js?v=202610130937"></script>
 <script>
 /* 教師名單：只有這裡的 Google 帳號能進。要加人就加在這裡（改完重新部署；資料庫規則 tools/er_after_google_enabled.py 也要加）。 */
 var TEACHER_EMAILS = ['scatjay@gmail.com'];
@@ -328,20 +328,79 @@ var CLASS_WINDOWS = [].concat(
   /* ───── 即時位置、提問分析、再設計啟示 ───── */
   var chats = {}, LAYOUT = window.ERG_LAYOUT, MM = window.ERG_MINIMAP, PER = window.ERG_PERSONAS;
   function personaName(id) { try { var p = PER.byId(id); return p ? p.name : id; } catch (e) { return id; } }
+  /* 10-13：分類變細。規則可以是正規式，也可以是函式；一句話可以同時算在好幾類。全部不中才是「其他」。 */
+  function bare(q) { return String(q || '').replace(/[\s，,。.！!？?～~、：:；;「」『』（）()*＊\-—…]/g, ''); }
+  function isGreet(q) { var b = bare(q); return b.length <= 9 && /^(你好|妳好|您好|哈囉|嗨+|hi+|hello|hey|早安?|午安|晚安|謝謝|感謝|好的?|ok+|嗯+|喔+|哦+|了解|收到|再見|掰掰|拜拜|不客氣|打擾了|辛苦了|沒事了|先不用)/i.test(b) && !/(什麼|怎麼|為什麼|嗎|哪|誰|多久|幾)/.test(b); }
+  function isPlay(q) { return /[\u3040-\u30ff]/.test(q) || /(.)\1{3,}/.test(q) || /(略略|喵喵|gemini|chatgpt|你是\s*ai|是ai嗎|這遊戲|開直播|微分方程|街舞|闇影|atomic|叫你媽)/i.test(q); }
+  var TEMPLATE_RE = /(他一開始怎麼說|那天發生(了)?什麼|真正需要什麼)/;
   var STYLE_RULES = [
-    ['誘導式', /(是不是|對不對|應該|你會不會覺得)/],
-    ['追問具體事件', /(最近一次|那時|上次|當時|那天|怎麼處理|發生什麼)/],
-    ['追問原因或需求', /(為什麼|為何|如果可以改|希望|最想|最困擾)/],
-    ['用了術語', /(UX|介面|使用者|痛點|流程|優化|體驗|易用|原型)/i],
-    ['開放式', /(怎麼|如何|什麼|可以說說|聊聊|描述|感覺)/],
-    ['是非題', /(嗎|有沒有|會不會|可不可以)[？?]?$/]
+    ['寒暄／收尾', isGreet],
+    ['照念範本三問', TEMPLATE_RE],
+    ['追問具體事件', /(最近一次|上一次|上次|那時|當時|那天|昨天|剛才|剛剛|後來|然後呢|怎麼處理|發生什麼|舉.{0,2}例|具體|印象深刻)/],
+    ['追問原因或需求', /(為什麼|為何|怎麼會|卡在哪|如果可以改|希望|最想|最困擾|最需要)/],
+    ['誘導式', /(是不是|對不對|應該|你會不會覺得|是否覺得|對吧|不會.{0,10}嗎)/],
+    ['先給解法', /(QR|qrcode|APP|LINE|官方帳號|網站|紙本|圖卡|影片)[^？?]{0,14}(比較好|好嗎|可以嗎|會不會|方便嗎|怎麼樣)|會比較好嗎|是不是[^？?]{0,10}比較好/i],
+    ['用了術語', /(UX|介面|使用者|痛點|流程|優化|體驗|易用|原型|電子化|數位化)/i],
+    ['問病情／關心身體', /(哪裡不舒服|你怎麼了|還好嗎|什麼病|生什麼病|嚴重嗎|症狀|受傷|痛不痛|掛什麼科|身體)/],
+    ['一次問好幾件', function (q) { return (String(q).match(/[？?]/g) || []).length >= 2 || /還是/.test(q); }],
+    ['開放式', /(怎麼|如何|什麼|哪些|哪裡|可以說說|聊聊|描述|感覺|多久)/],
+    ['是非題', /(嗎|有沒有|會不會|可不可以|能不能|是否)[？?。！!\s]*$/],
+    ['玩鬧／離題', isPlay],
+    ['只有幾個字', function (q) { return bare(q).length <= 3 && !isGreet(q); }]
   ];
-  var TOPIC_RULES = [['簡訊／連結', /(簡訊|連結|網址|LINE|手機|訊息|通知)/i], ['等候／叫號', /(等|叫號|多久|排隊|號碼)/], ['看不懂內容', /(看不懂|字太小|內容|說明|衛教|意思)/], ['家屬／照顧', /(家人|家屬|照顧|太太|先生|小孩|爸|媽)/], ['費用／流程', /(費用|繳費|掛號|流程|手續|櫃台)/], ['檢查／藥／回診', /(檢查|報告|藥|回診|追蹤|傷口)/], ['醫護工作', /(忙|班|護理|醫師|值班|累)/]];
-  function classify(q, rules, multi) { var hits = []; rules.forEach(function (r) { if (r[1].test(q)) hits.push(r[0]); }); if (!hits.length) hits.push('其他'); return multi ? hits : [hits[0]]; }
-  function bar(counts, total) {
+  var TOPIC_RULES = [['簡訊／連結', /(簡訊|連結|網址|LINE|手機|訊息|通知)/i], ['等候／叫號', /(等|叫號|多久|排隊|號碼)/], ['看不懂內容', /(看不懂|字太小|內容|說明|衛教|意思)/], ['家屬／照顧', /(家人|家屬|照顧|太太|先生|小孩|爸|媽)/], ['費用／流程', /(費用|繳費|掛號|流程|手續|櫃台)/], ['檢查／藥／回診', /(檢查|報告|藥|回診|追蹤|傷口)/], ['醫護工作', /(忙|班|護理|醫師|值班|累)/],
+    ['病情／症狀', /(不舒服|痛|暈|發燒|生病|什麼病|症狀|受傷|嚴重|身體|怎麼了|還好嗎)/], ['這個人的工作或身分', /(你的工作|工作內容|負責|你是誰|你誰|在做什麼|在幹嘛|在幹啥|忙什麼|志工|警衛|門口)/], ['找路／設施', /(廁所|洗手間|輪椅|指示牌|標示|標誌|路線|地圖|入口|螢幕)/], ['解法／工具', /(QR|qrcode|APP|官方帳號|網站|紙本|圖卡)/i],
+    ['事情的經過', /(發生|那天|當時|上次|上一次|最近|剛才|剛剛|一開始|後來|然後呢)/], ['需求／希望改什麼', /(需要|想要|希望|幫忙|協助|改善|建議|好處|怎麼辦|更好)/], ['叫名字／隱私', /(匿名|暱稱|名字|隱私|大聲)/], ['開場說明來意', /(我想問|想請問|想詢問|訪談|訪問|可以問|問你幾個|請教)/], ['泛問「有什麼問題」', /(有什麼問題|什麼問題|有什麼事|什麼困難|其他問題|還有什麼|有問題嗎|有什麼毛病)/],
+    ['寒暄／沒有主題', function (q) { return isGreet(q) || bare(q).length <= 3; }], ['玩鬧／離題', isPlay]];
+  function hit(rule, q) { return rule[1].test ? rule[1].test(q) : !!rule[1](q); }
+  function classify(q, rules, multi) { var hits = []; rules.forEach(function (r) { if (hit(r, q)) hits.push(r[0]); }); if (!hits.length) hits.push('其他'); return multi ? hits : [hits[0]]; }
+  var drill = null, lastQs = [];
+  function bar(counts, total, group) {
     var keys = Object.keys(counts).sort(function (a, b) { return counts[b] - counts[a]; });
     if (!keys.length) return '<span class="muted">還沒有資料。</span>';
-    return keys.map(function (k) { var pct = total ? Math.round(counts[k] / total * 100) : 0; return '<div class="barrow"><span class="k" title="' + esc(k) + '">' + esc(k) + '</span><div class="t"><div style="width:' + pct + '%"></div></div><span class="v">' + counts[k] + '</span></div>'; }).join('');
+    return keys.map(function (k) { var pct = total ? Math.round(counts[k] / total * 100) : 0; return '<div class="barrow' + (drill && drill.g === group && drill.k === k ? ' sel' : '') + '"' + (group ? ' data-g="' + group + '" data-k="' + esc(k) + '" title="' + esc(k) + '：' + counts[k] + ' 題（' + pct + '%）。點一下看原句"' : '') + '><span class="k">' + esc(k) + '</span><div class="t"><div style="width:' + pct + '%"></div></div><span class="v">' + counts[k] + '</span></div>'; }).join('');
+  }
+  function inDrill(q) { if (!drill) return false; if (drill.g === 'who') return q.who === drill.k; return classify(q.text, drill.g === 'style' ? STYLE_RULES : TOPIC_RULES, true).indexOf(drill.k) >= 0; }
+  function renderDrill() {
+    var box = $('qDrill'); if (!drill) { box.hidden = true; box.innerHTML = ''; return; }
+    var list = lastQs.filter(inDrill).sort(function (a, b) { return b.t - a.t; }), GN = { style: '提問方式', topic: '關注主題', who: '訪談對象' }[drill.g], extra = '';
+    if (drill.k === '其他' && list.length) {
+      /* 「其他」的組成：長度分布、最常重複的句子、落在哪些受訪者 */
+      var len = { '4 個字以內': 0, '5–10 個字': 0, '11–20 個字': 0, '21 個字以上': 0 }, rep = {}, byWho = {};
+      list.forEach(function (q) { var n = bare(q.text).length; len[n <= 4 ? '4 個字以內' : n <= 10 ? '5–10 個字' : n <= 20 ? '11–20 個字' : '21 個字以上'] += 1; var b = bare(q.text); rep[b] = (rep[b] || 0) + 1; byWho[q.who] = (byWho[q.who] || 0) + 1; });
+      var top = Object.keys(rep).filter(function (k) { return rep[k] >= 2; }).sort(function (a, b) { return rep[b] - rep[a]; }).slice(0, 6), tw = Object.keys(byWho).sort(function (a, b) { return byWho[b] - byWho[a]; }).slice(0, 5);
+      extra = '<div class="muted" style="font-size:.9em;margin:4px 0 6px">「其他」＝' + (drill.g === 'style' ? '沒有疑問詞、沒有追問字眼、也不是寒暄的句子，多半是陳述句、接話或沒頭沒尾的短句' : '沒有提到任何一個主題字眼的句子') + '。長度：' + Object.keys(len).map(function (k) { return k + ' ' + len[k]; }).join('、') + '。' +
+        (top.length ? '重複出現的：' + top.map(function (k) { return '「' + esc(k.slice(0, 14)) + '」×' + rep[k]; }).join('、') + '。' : '') + '問的對象：' + tw.map(function (k) { return esc(k) + ' ' + byWho[k]; }).join('、') + '。</div>';
+    }
+    box.hidden = false;
+    box.innerHTML = '<div class="row"><b style="flex:1">' + GN + '「' + esc(drill.k) + '」共 ' + list.length + ' 題' + (list.length > 80 ? '（列最新 80 題）' : '') + '</b><button class="sm" id="qDrillClose">收起來</button></div>' + extra +
+      (list.slice(0, 80).map(function (q) { var tags = classify(q.text, STYLE_RULES, true); return '<div class="q"><span class="muted">' + hm(q.t) + '</span> ' + esc(aliasOf(q.sid)) + ' → ' + esc(q.who) + '：' + esc(q.text) + ' ' + tags.map(function (t) { return '<span class="pill">' + esc(t) + '</span>'; }).join(' ') + '</div>'; }).join('') || '<span class="muted">沒有這一類的句子。</span>');
+    $('qDrillClose').onclick = function () { drill = null; renderAnalysis(); };
+  }
+  function bindDrill() {
+    Array.prototype.forEach.call(document.querySelectorAll('.barrow[data-k]'), function (el) { el.onclick = function () { var g = el.dataset.g, k = el.dataset.k; drill = (drill && drill.g === g && drill.k === k) ? null : { g: g, k: k }; renderAnalysis(); if (drill) $('qDrill').scrollIntoView({ block: 'nearest' }); }; });
+  }
+  /* 依目前的比例，產生可以直接提醒全班的話。門檻寫在這裡，數字是當下算的。 */
+  function renderTips(qs, st, convs, byPid) {
+    var n = qs.length, box = $('qTips'); if (n < 20) { box.innerHTML = '<b>可以提醒全班的話</b><span class="muted">題數還少（' + n + ' 題），滿 20 題之後這裡會依比例給建議。</span>'; return; }
+    function c(k) { return st[k] || 0; } function p(x) { return Math.round(x / n * 100); }
+    var tips = [], evReal = qs.filter(function (q) { var t = classify(q.text, STYLE_RULES, true); return t.indexOf('追問具體事件') >= 0 && t.indexOf('照念範本三問') < 0; }).length;
+    if (c('是非題') / n >= 0.2) tips.push('<b>是非題偏多</b>：' + c('是非題') + ' 題（' + p(c('是非題')) + '%）。對方只會回「對啊／還好」。改問「上一次⋯⋯是怎麼發生的？」「當時你怎麼做？」');
+    if (c('開放式') / n >= 0.25 && evReal / n < 0.12) tips.push('<b>開放式問了，但沒有往下追</b>：開放式 ' + c('開放式') + ' 題（' + p(c('開放式')) + '%），接著追問具體事件的只有 ' + evReal + ' 題（' + p(evReal) + '%）。開放題問完再補一句「最近一次是什麼時候？」「後來呢？」，不然只拿到一句感想。');
+    if (c('追問原因或需求') / n < 0.06) tips.push('<b>很少追原因</b>：只有 ' + c('追問原因或需求') + ' 題（' + p(c('追問原因或需求')) + '%）。聽到卡住或抱怨的地方，補一句「為什麼會這樣？」「你當時希望怎樣？」');
+    if (c('寒暄／收尾') / n >= 0.1) tips.push('<b>寒暄佔掉題數</b>：' + c('寒暄／收尾') + ' 題（' + p(c('寒暄／收尾')) + '%）。「你好」不用單獨問一題，第一句就說你是誰、想問哪件事。');
+    if (c('照念範本三問') / n >= 0.05) tips.push('<b>照念範本</b>：' + c('照念範本三問') + ' 題。把「他」「那天」換成具體的人和事，例如「上次有病人回頭問簡訊，他是怎麼問的？」');
+    var lead = c('誘導式') + c('先給解法'); if (lead / n >= 0.06) tips.push('<b>把答案放進問題</b>：誘導式 ' + c('誘導式') + ' 題、先給解法 ' + c('先給解法') + ' 題。人物會順著說「對啊」，那不是調查結果；先問發生過的事，解法留到寫結論。');
+    if (c('問病情／關心身體') / n >= 0.08) tips.push('<b>問成問診</b>：' + c('問病情／關心身體') + ' 題在問病情。你是研究員不是醫護，最多一題就轉回「上次回家後，你怎麼知道要注意什麼？」');
+    if (c('玩鬧／離題') / n >= 0.05) tips.push('<b>玩鬧／離題</b>：' + c('玩鬧／離題') + ' 題（點「提問方式」那一條看是哪些）。');
+    if (convs.length >= 10) { var short = convs.filter(function (x) { return x <= 2; }).length; if (short / convs.length >= 0.15) tips.push('<b>問一兩題就走</b>：' + convs.length + ' 段對話裡有 ' + short + ' 段只問 1–2 題。每一位至少追到「一件具體的事＋一個為什麼」再換人。'); }
+    try {
+      var core = Object.keys(PER.PERSONAS || {}).filter(function (id) { return PER.PERSONAS[id] && PER.PERSONAS[id].core; });
+      var few = core.map(function (id) { return { name: PER.PERSONAS[id].name, n: Object.keys(byPid[id] || {}).length }; }).filter(function (x) { return x.n <= 1; });
+      var totalStu = Object.keys(qs.reduce(function (m, q) { m[q.sid] = 1; return m; }, {})).length;
+      if (few.length && totalStu >= 5) tips.push('<b>關鍵的人很少人去問</b>：' + few.map(function (x) { return esc(x.name) + '（' + x.n + ' 人）'; }).join('、') + '。目前有提問的學生 ' + totalStu + ' 人；看右邊「訪談對象」題數集中在誰。');
+    } catch (e) {}
+    box.innerHTML = '<b>可以提醒全班的話（依目前 ' + n + ' 題自動算，每 30 秒更新）</b>' + (tips.length ? '<ul>' + tips.map(function (t) { return '<li>' + t + '</li>'; }).join('') + '</ul>' : '<span class="muted">目前各類比例都在合理範圍，沒有特別要提醒的。</span>');
   }
   /* 每位學生的提問統計：{ n, last:{t,who,text} } */
   function askStats() {
@@ -367,10 +426,10 @@ var CLASS_WINDOWS = [].concat(
   }
   function bindChatLinks(el) { Array.prototype.forEach.call(el.querySelectorAll('[data-chat]'), function (a) { a.onclick = function (e) { e.preventDefault(); var p = a.dataset.chat.split('|'); showChats(p[0], p[1] || undefined); }; }); }
   function renderAnalysis() {
-    var qs = [], who = {};
-    Object.keys(chats).forEach(function (code) { Object.keys(chats[code]).forEach(function (sid) { Object.keys(chats[code][sid]).forEach(function (rec) { var c = chats[code][sid][rec], pn = c.personaName || personaName(c.personaId); who[pn] = (who[pn] || 0) + 1; Object.keys(c.turns || {}).forEach(function (k) { var t = c.turns[k]; if (t.role === 'u') qs.push({ t: t.t, sid: sid, who: pn, text: String(t.text || '') }); }); }); }); });
+    var qs = [], who = {}, convs = [], byPid = {};
+    Object.keys(chats).forEach(function (code) { Object.keys(chats[code]).forEach(function (sid) { Object.keys(chats[code][sid]).forEach(function (rec) { var c = chats[code][sid][rec], pn = c.personaName || personaName(c.personaId), nq = 0; Object.keys(c.turns || {}).forEach(function (k) { var t = c.turns[k]; if (t.role === 'u') { nq += 1; qs.push({ t: t.t, sid: sid, who: pn, pid: c.personaId || '', text: String(t.text || '') }); } }); if (nq) { who[pn] = (who[pn] || 0) + nq; convs.push(nq); (byPid[c.personaId || pn] = byPid[c.personaId || pn] || {})[sid] = 1; } }); }); });
     var st = {}, tp = {}; qs.forEach(function (q) { classify(q.text, STYLE_RULES, true).forEach(function (k) { st[k] = (st[k] || 0) + 1; }); classify(q.text, TOPIC_RULES, true).forEach(function (k) { tp[k] = (tp[k] || 0) + 1; }); });
-    $('qStyle').innerHTML = bar(st, qs.length); $('qTopic').innerHTML = bar(tp, qs.length); $('qWho').innerHTML = bar(who, Object.keys(who).reduce(function (a, k) { return a + who[k]; }, 0));
+    lastQs = qs; $('qStyle').innerHTML = bar(st, qs.length, 'style'); $('qTopic').innerHTML = bar(tp, qs.length, 'topic'); $('qWho').innerHTML = bar(who, qs.length, 'who'); bindDrill(); renderDrill(); renderTips(qs, st, convs, byPid);
     qs.sort(function (a, b) { return b.t - a.t; });
     $('qRecent').innerHTML = qs.slice(0, 30).map(function (q) { return '<div style="margin:3px 0"><span class="muted">' + hm(q.t) + '</span> ' + esc(aliasOf(q.sid)) + ' → ' + esc(q.who) + '：' + esc(q.text) + ' <span class="pill">' + classify(q.text, STYLE_RULES, false)[0] + '</span></div>'; }).join('') || '<span class="muted">還沒有問題。</span>';
     $('kQ').textContent = qs.length;
