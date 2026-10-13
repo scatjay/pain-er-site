@@ -230,10 +230,14 @@ var CLASS_WINDOWS = [].concat(
   })();
 
   /* ───── 去識別化與投影 ───── */
-  var DEID = false, PROJ = false, alias = {};
+  /* 10-13 楊老師：「後台上面的學號也去識別化」⇒ 預設就是開（投影時不會先露出學號姓名）；要看真實學號再按一下關掉，這台瀏覽器會記住選擇。 */
+  var DEID = true, PROJ = false, alias = {};
+  try { if (localStorage.getItem('erg_t_deid') === '0') DEID = false; } catch (e) {}
+  function syncDeid() { $('deidBtn').textContent = '去識別化：' + (DEID ? '開' : '關'); $('deidBtn').classList.toggle('on', DEID); }
+  syncDeid();
   function aliasOf(sid) { if (!DEID) return sid; if (!alias[sid]) { var n = Object.keys(alias).length + 1; alias[sid] = '學生' + (n < 10 ? '0' : '') + n; } return alias[sid]; }
   function buildAlias(sids) { alias = {}; sids.slice().sort().forEach(function (s) { aliasOf(s); }); }
-  $('deidBtn').onclick = function () { DEID = !DEID; $('deidBtn').textContent = '去識別化：' + (DEID ? '開' : '關'); $('deidBtn').classList.toggle('on', DEID); render(); renderFb(); renderUsageAll(); };
+  $('deidBtn').onclick = function () { DEID = !DEID; try { localStorage.setItem('erg_t_deid', DEID ? '1' : '0'); } catch (e) {} syncDeid(); $('chatView').hidden = true; render(); renderFb(); renderUsageAll(); };
   $('projBtn').onclick = function () { PROJ = !PROJ; $('projBtn').textContent = '投影模式：' + (PROJ ? '開' : '關'); $('projBtn').classList.toggle('on', PROJ); document.body.classList.toggle('proj', PROJ); };
 
   /* 10-13：這個單元三個班、三週共用同一個場次（與 game.js 的 UNIT_SESS 同一個值，要一起改） */
@@ -492,7 +496,7 @@ var CLASS_WINDOWS = [].concat(
         var turns = Object.keys(c.turns || {}).map(function (k) { return c.turns[k]; }).sort(function (a, b) { return a.t - b.t; });
         var stu = aliasOf(sid0), pn = c.personaName || personaName(c.personaId) || c.personaId || '人物';
         return '<div class="card"><b>' + esc(stu) + '</b>　受訪：' + esc(pn) + '　<span class="muted">' + turns.filter(function (t) { return t.role === 'u'; }).length + ' 題' + (turns.length ? '・' + hm(turns[0].t) + ' 起' : '') + '</span>' +
-          turns.map(function (t) { var u = t.role === 'u'; return '<div class="turn"><div class="bub ' + (u ? 'u' : 'a') + '"><span class="who">' + (u ? '學生 ' + esc(stu) + ' 問' : '受訪者 ' + esc(pn) + ' 答') + '</span>' + esc(t.text) + '</div></div>'; }).join('') + '</div>';
+          turns.map(function (t) { var u = t.role === 'u'; return '<div class="turn"><div class="bub ' + (u ? 'u' : 'a') + '"><span class="who">' + (u ? (DEID ? '' : '學生 ') + esc(stu) + ' 問' : '受訪者 ' + esc(pn) + ' 答') + '</span>' + esc(t.text) + '</div></div>'; }).join('') + '</div>';
       }
       if (sid && rec) html += one(sid, rec, v); else if (sid) Object.keys(v).forEach(function (r) { html += one(sid, r, v[r]); }); else Object.keys(v).forEach(function (s0) { Object.keys(v[s0]).forEach(function (r) { html += one(s0, r, v[s0][r]); }); });
       if (!Object.keys(v).length) html += '<p class="muted">' + (sid ? '這位學生在這間房還沒有即時訪談。' : '這間房還沒有即時訪談。') + '</p>';
