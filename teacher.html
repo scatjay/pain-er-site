@@ -27,7 +27,7 @@ button.sm{padding:3px 8px;font-size:.88em}
 a{color:var(--info)}
 .pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:.8em;font-weight:700;background:var(--panel2);border:1px solid var(--line);white-space:nowrap}
 .pill.ok{background:var(--okbg);color:var(--ok);border-color:var(--ok)}.pill.bad{background:var(--badbg);color:var(--bad);border-color:var(--bad)}.pill.info{background:var(--infobg);color:var(--info);border-color:var(--info)}
-.bub{max-width:80%;padding:6px 10px;border:2px solid var(--ink);border-radius:12px;margin:4px 0}.u{background:var(--yellow);color:var(--onyellow);margin-left:auto}.a{background:var(--panel)}.turn{display:flex}
+.bub{max-width:80%;padding:6px 10px;border:2px solid var(--ink);border-radius:12px;margin:4px 0}.u{background:var(--yellow);color:var(--onyellow);margin-left:auto}.a{background:var(--panel)}.turn{display:flex}.bub .who{display:block;font-size:11px;font-weight:900;opacity:.72;margin-bottom:1px}.legend{font-size:12px;margin:6px 0 2px}.legend i{display:inline-block;width:1.6em;height:.9em;border:2px solid var(--ink);border-radius:5px;vertical-align:middle;margin:0 4px 0 10px}.legend i.lu{background:var(--yellow)}.legend i.la{background:var(--panel)}
 /* 頂列與狀態列 */
 .top{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.top h1{flex:1;min-width:10em}
 .status{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:8px;margin-top:8px}
@@ -486,11 +486,13 @@ var CLASS_WINDOWS = [].concat(
     setTab('room');
     var box = $('chatView'); box.hidden = false; box.innerHTML = '讀取中…';
     fdb.ref('er/' + SESS + '/chat/' + code + (sid ? '/' + sid + (rec ? '/' + rec : '') : '')).once('value', function (s) {
-      var v = s.val() || {}, html = '<div class="row"><b style="flex:1">逐字稿　房 ' + esc(code) + (sid ? '　' + esc(aliasOf(sid)) : '　全部成員') + '</b><button id="chatClose">關閉</button></div>';
+      var v = s.val() || {}, html = '<div class="row"><b style="flex:1">逐字稿　房 ' + esc(code) + (sid ? '　' + esc(aliasOf(sid)) : '　全部成員') + '</b><button id="chatClose">關閉</button></div>' +
+        '<div class="legend muted">顏色：<i class="lu"></i>黃色、靠右＝學生問的<i class="la"></i>白色、靠左＝受訪人物回答的</div>';   /* 10-13 楊老師：「黃色是學生的話，還是受訪對象的話？標示一下」 */
       function one(sid0, rec0, c) {
         var turns = Object.keys(c.turns || {}).map(function (k) { return c.turns[k]; }).sort(function (a, b) { return a.t - b.t; });
-        return '<div class="card"><b>' + esc(aliasOf(sid0)) + '</b>　受訪：' + esc(c.personaName || c.personaId || '') + '　<span class="muted">' + turns.filter(function (t) { return t.role === 'u'; }).length + ' 題' + (turns.length ? '・' + hm(turns[0].t) + ' 起' : '') + '</span>' +
-          turns.map(function (t) { return '<div class="turn"><div class="bub ' + (t.role === 'u' ? 'u' : 'a') + '">' + esc(t.text) + '</div></div>'; }).join('') + '</div>';
+        var stu = aliasOf(sid0), pn = c.personaName || personaName(c.personaId) || c.personaId || '人物';
+        return '<div class="card"><b>' + esc(stu) + '</b>　受訪：' + esc(pn) + '　<span class="muted">' + turns.filter(function (t) { return t.role === 'u'; }).length + ' 題' + (turns.length ? '・' + hm(turns[0].t) + ' 起' : '') + '</span>' +
+          turns.map(function (t) { var u = t.role === 'u'; return '<div class="turn"><div class="bub ' + (u ? 'u' : 'a') + '"><span class="who">' + (u ? '學生 ' + esc(stu) + ' 問' : '受訪者 ' + esc(pn) + ' 答') + '</span>' + esc(t.text) + '</div></div>'; }).join('') + '</div>';
       }
       if (sid && rec) html += one(sid, rec, v); else if (sid) Object.keys(v).forEach(function (r) { html += one(sid, r, v[r]); }); else Object.keys(v).forEach(function (s0) { Object.keys(v[s0]).forEach(function (r) { html += one(s0, r, v[s0][r]); }); });
       if (!Object.keys(v).length) html += '<p class="muted">' + (sid ? '這位學生在這間房還沒有即時訪談。' : '這間房還沒有即時訪談。') + '</p>';
