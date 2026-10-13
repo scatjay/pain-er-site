@@ -163,8 +163,9 @@
   function openMap() {
     var t = cur.clock.worldSec, dots = [{ x: cur.me.x, y: cur.me.y, kind: 'me' }];
     cur.world.at(t).forEach(function (it) { if (it.pos.x !== undefined) dots.push({ x: it.pos.x, y: it.pos.y, kind: it.ent.kind === 'bot' ? 'bot' : 'npc' }); });
-    S.openModal('<div class="row"><b style="flex:1">全部房間（點一間走過去；打勾的是去過的）</b><button class="ghost" id="mapClose">關閉</button></div><div style="margin-top:8px">' + MM.svg(LAYOUT, { compact:true,fontScale:1.3,onlyMap:true,width:420, showFurniture: false, you: cur.player.loc, dots: dots, clickable: true, visited: Object.keys(cur.player.roomsSeen || {}) }) + '</div>');
+    S.openModal('<div class="row"><b style="flex:1">全部房間（點一間走過去；打勾的是去過的）</b><button class="ghost" id="mapClose">關閉</button></div><div class="row" style="margin-top:6px;gap:6px"><b>院外：</b><button class="ghost" data-remote="home">🚌 病患的家</button><button class="ghost" data-remote="clinic">🏥 回診門診</button></div><div style="margin-top:8px">' + MM.svg(LAYOUT, { compact:true,fontScale:1.3,onlyMap:true,width:420, showFurniture: false, you: cur.player.loc, dots: dots, clickable: true, visited: Object.keys(cur.player.roomsSeen || {}) }) + '</div>');
     $('mapClose').onclick = S.closeModal;
+    Array.prototype.forEach.call($('modalBox').querySelectorAll('[data-remote]'), function (b) { b.onclick = function () { S.closeModal(); startTravel(b.dataset.remote); }; });
     Array.prototype.forEach.call($('modalBox').querySelectorAll('[data-room]'), function (g) { g.onclick = function () { var id = g.getAttribute('data-room'), r = LAYOUT.room(id); if (r && r.type === 'room') { S.closeModal(); startTravel(id); } }; });
   }
 
@@ -212,18 +213,11 @@
   /* 一間房要顯示哪些家具名稱：同名只留最下面那個；預設放在家具下方，會壓到線索牌或超出房間就改放上方。回傳 [{text,x,y}]（房間內相對座標，x 是中心） */
   function furnLabelsFor(roomId) {
     var rm = LAYOUT.room(roomId); if (!rm) return [];
-    var pins = cur.world.clues.filter(function (c) { return c.pin.room === roomId; }).map(function (c) { return { x: c.pin.rx - 4, y: c.pin.ry - 4, w: 84, h: 42 }; });
-    function hitsPin(x, y, w) { return pins.some(function (p) { return x - w / 2 < p.x + p.w && x + w / 2 > p.x && y < p.y + p.h && y + 18 > p.y; }); }
-    var best = {};
-    (LAYOUT.FURNITURE || []).forEach(function (f) {
-      if (f.room !== roomId || !f.label) return;
-      var fw = f.w || 30, fh = f.h || 20, x = f.rx + fw / 2, w = f.label.length * 13 + 10, below = f.ry + fh + 4, above = f.ry - 20;
-      var y = (below + 18 > rm.h || hitsPin(x, below, w)) ? above : below;
-      if (y < 0 || (y === above && hitsPin(x, above, w))) y = below;
-      var o = { text: f.label, x: x, y: y, alt: (y === below ? above : below), bad: hitsPin(x, y, w) ? 1 : 0 };
-      var b = best[f.label]; if (!b || o.bad < b.bad || (o.bad === b.bad && o.y > b.y)) best[f.label] = o;
-    });
-    return Object.keys(best).map(function (k) { return best[k]; });
+    /* 10-13 A3：與桌面共用 labels.js。名稱大小用 CSS px 換成世界單位：場景框寬 ÷ (房間寬＋16)＝每世界單位幾 px */
+    var sw = ($('roomSvg') && $('roomSvg').clientWidth) || ($('sceneBox') && $('sceneBox').clientWidth) || 340, z = Math.max(0.3, sw / (rm.w + 16));
+    var pins = cur.world.clues.filter(function (c) { return c.pin.room === roomId; }).map(function (c) { return { rx: c.pin.rx, ry: c.pin.ry }; });
+    var res = window.ERG_LABELS.place({ w: rm.w, h: rm.h }, (LAYOUT.FURNITURE || []).filter(function (f) { return f.room === roomId && f.label; }), pins, (LAYOUT.STATIONS || []).filter(function (s) { return s.room === roomId; }), { sizeOf: function (t) { return { w: (t.length * 11 + 10) / z, h: 16 / z }; } });
+    return res.filter(function (r) { return !r.miss; }).map(function (r) { return { text: r.text, x: r.x + r.w / 2, y: r.y, alt: r.y }; });
   }
   function renderScene() {
     var v = RV.view(layoutWithClues(), cur.watchRoom || cur.player.loc); cur.rv = v; $('roomSvg').innerHTML = v.svg;
@@ -317,6 +311,8 @@
     me._room=cur.player.loc;me.style.display=(cur.watchRoom||cur.player.loc)===cur.player.loc?'':'none';me.style.zIndex = String(DEPTH?DEPTH.z(cur.me.y):Math.round(cur.me.y));
     var tag=cur.youTag;if(!tag){tag=cur.youTag=document.createElement('div');tag.className='youTagLayer';tag.textContent='你';$('overlay').appendChild(tag);}tag.style.display=(cur.watchRoom||cur.player.loc)===cur.player.loc?'':'none';tag.style.left=pct(cur.me.x-r.x,'x');tag.style.top='calc('+pct(cur.me.y-r.y,'y')+' - '+(size+12)+'px)';tag.style.zIndex='2147483647';tag.style.opacity=(cur.walk||Date.now()-(cur._locT||0)<6000)?'1':'0';   /* 「你」標籤進房 6 秒後淡出，腳下紅圈還在 */
     var scale=$('roomSvg').getBoundingClientRect().width/(r.w+16);ids.forEach(function(id){var el=cur.tokens[id],rr=LAYOUT.room(el._room);if(!DEPTH||!rr)return;var ww=el.offsetWidth,hh=el.offsetHeight,x=id==='me'?cur.me.x:el._tx,y=id==='me'?cur.me.y:el._ty,cuts=DEPTH.cutouts(LAYOUT.FURNITURE,rr,{x:x,y:y,w:ww/scale,h:hh/scale}),rects=(cuts||[]).map(function(q){return{x:(q.x-x+ww/(2*scale))*scale,y:(q.y-y+hh*.92/scale)*scale,w:q.w*scale,h:q.h*scale};});el.style.clipPath=DEPTH.clipPath(rects,{w:ww,h:hh});});
+    /* 10-13：泡泡與活動標籤畫在人物上方，人在房間最上緣時被場景框切掉一半 → 改畫到人物下方 */
+    (function () { var sb = $('sceneBox').getBoundingClientRect(); ids.forEach(function (id) { var el = cur.tokens[id]; if (!el || id === 'me') return; el.classList.remove('bubDown'); var b = el.querySelector('.bub'), a = el.querySelector('.act'); if (!b && !a) return; var top = Math.min(b ? b.getBoundingClientRect().top : 1e9, a ? a.getBoundingClientRect().top : 1e9); if (top < sb.top + 2) el.classList.add('bubDown'); }); })();
   }
 
   function drawEnvironment(simMin) {
@@ -358,7 +354,11 @@
         goTo ? function () { hidePop(); S.teleport(goTo); toTop(); } : null);
     }
     var bz=cur.busy;$('roomNow').innerHTML=(bz?'<i class="lamp" style="background:'+bz.light.color+'"></i>'+esc(bz.light.text+'・'+bz.phase)+'　':'')+esc(nowTxt);
-    if (here.length) { sfx.style.display = 'block'; sfx.textContent = COMIC.sfxFor(here[0]); } else sfx.style.display = 'none';
+    if (here.length) {   /* 10-13：事件字幕只顯示 5 秒，不一直蓋住房間（真機截圖：半個房間被「呼——（忙翻）」擋住） */
+      var sid = String(here[0].id || here[0].title || '') + '@' + cur.player.loc;
+      if (cur._sfxId !== sid) { cur._sfxId = sid; cur._sfxUntil = Date.now() + 5000; }
+      if (Date.now() < cur._sfxUntil) { sfx.style.display = 'block'; sfx.textContent = COMIC.sfxFor(here[0]); } else sfx.style.display = 'none';
+    } else { sfx.style.display = 'none'; cur._sfxId = ''; }
     here.forEach(function (e) { if (!cur.seenEv[e.id] && !(cur.player.seenEv || {})[e.id]) { cur.seenEv[e.id] = true; var o = {}; o[e.id] = true; cur.player.seenEv = Object.assign({}, cur.player.seenEv, o); window.ERG_EVENT_UI.startLive(cur,e,cur.player.loc);
       /* 10-13：整頁捲到面板區時，演出在畫面上方看不到 ⇒ 提示一句，點了捲回上面 */
       if ($('stage').getBoundingClientRect().bottom < 60) toast('📣 這間房正在發生：' + e.title + '。點這裡回到上面看現場。', toTop); } });

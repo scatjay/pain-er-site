@@ -463,22 +463,15 @@
   /* 一間房要顯示哪些家具名稱：同名只留最下面那個；預設放在家具下方，會壓到線索牌或超出房間就改放上方。回傳 [{text,x,y}]（房間內相對座標，x 是中心） */
   function furnLabelsFor(roomId) {
     var rm = LAYOUT.room(roomId); if (!rm) return [];
-    var pins = cur.world.clues.filter(function (c) { return c.pin.room === roomId; }).map(function (c) { return { x: c.pin.rx - 4, y: c.pin.ry - 4, w: 84, h: 42 }; });
-    function hitsPin(x, y, w) { return pins.some(function (p) { return x - w / 2 < p.x + p.w && x + w / 2 > p.x && y < p.y + p.h && y + 18 > p.y; }); }
-    var best = {};
-    (LAYOUT.FURNITURE || []).forEach(function (f) {
-      if (f.room !== roomId || !f.label) return;
-      var fw = f.w || 30, fh = f.h || 20, x = f.rx + fw / 2, w = f.label.length * 13 + 10, below = f.ry + fh + 4, above = f.ry - 20;
-      var y = (below + 18 > rm.h || hitsPin(x, below, w)) ? above : below;
-      if (y < 0 || (y === above && hitsPin(x, above, w))) y = below;
-      var o = { text: f.label, x: x, y: y, bad: hitsPin(x, y, w) ? 1 : 0 };
-      var b = best[f.label]; if (!b || o.bad < b.bad || (o.bad === b.bad && o.y > b.y)) best[f.label] = o;
-    });
-    return Object.keys(best).map(function (k) { return best[k]; });
+    /* 10-13 A3：候選位置（家具內／下／右／左／上）→ 排除壓線索牌、站位人物、其他名稱、出界 → 成本最低；放不下就不畫（點家具仍看得到名稱）。labels.js 與手機共用。 */
+    var z = Math.max(0.3, liveZoom() || 1);
+    var pins = cur.world.clues.filter(function (c) { return c.pin.room === roomId; }).map(function (c) { return { rx: c.pin.rx, ry: c.pin.ry }; });
+    var res = window.ERG_LABELS.place({ w: rm.w, h: rm.h }, (LAYOUT.FURNITURE || []).filter(function (f) { return f.room === roomId && f.label; }), pins, (LAYOUT.STATIONS || []).filter(function (s) { return s.room === roomId; }), { sizeOf: function (t) { return { w: (t.length * 12 + 12) / z, h: 18 / z }; } });
+    return res.filter(function (r) { return !r.miss; }).map(function (r) { return { text: r.text, x: r.x + r.w / 2, y: r.y }; });
   }
   /* 家具名稱（單房模式）：疊在人物之上的 DOM 標籤，位置由 placeTokens 每幀跟著鏡頭（_wx/_wy）。全地圖模式不畫，改用畫布上的文字。 */
   function syncFurnLabels() {
-    var host = $('overlay'), room = cur.stageMode === 'map' ? null : (cur.watchRoom || cur.player.loc), key = String(room);
+    var host = $('overlay'), room = cur.stageMode === 'map' ? null : (cur.watchRoom || cur.player.loc), key = String(room) + '|' + (Math.round((liveZoom() || 1) * 10) / 10);   /* 鏡頭縮放變了名稱大小（世界單位）就跟著變，要重算 */
     if (cur._flKey === key) return; cur._flKey = key;
     Array.prototype.forEach.call(host.querySelectorAll('.fLabel'), function (e) { e.remove(); });
     var rm = room && LAYOUT.room(room); if (!rm || rm.type !== 'room') return;
