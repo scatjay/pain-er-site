@@ -193,7 +193,9 @@
   function bindChat(sel, ent) {
     var c = cur(), existing = recFor(ent.pid) >= 0 ? player().interviews[recFor(ent.pid)] : null, recId = existing ? existing.id : null;
     if (c.chatOff) { try { c.chatOff(); } catch (e) {} c.chatOff = null; }
+    var lastTurns = [];   /* 成就用：這段對話目前的內容（送出下一題時拿對方上一句來比） */
     function draw(v) {
+      try { lastTurns = Object.keys((v && v.turns) || {}).map(function (k) { return v.turns[k]; }).sort(function (a, b) { return a.t - b.t; }); } catch (e) { lastTurns = []; }
       var logEl = $('chatLog'); if (!logEl) return;
       var turns = v && v.turns ? Object.keys(v.turns).map(function (k) { return v.turns[k]; }).sort(function (a, b) { return Number(a.t) - Number(b.t); }) : [];
       logEl.innerHTML = turns.length ? turns.map(function (t) {
@@ -214,7 +216,9 @@
         var key = ref.child('turns').push({ role: 'u', text: text, t: now }).key;
         window.firebase.database().ref('er/_queue').push({ sess: APP.SESS, code: c.code, sid: me(), rec: safeKey(rec.id), turn: key, t: now });
       });
-      player().chatTurns = (Number(player().chatTurns) || 0) + 1; save();   /* 成就用：即時訪談送出幾題 */
+      player().chatTurns = (Number(player().chatTurns) || 0) + 1;   /* 成就用：即時訪談送出幾題 */
+      try { if (window.ERG_ACH && window.ERG_ACH.noteQuestion) { var us = lastTurns.filter(function (t) { return t.role === 'u'; }), as = lastTurns.filter(function (t) { return t.role !== 'u'; }); window.ERG_ACH.noteQuestion(player(), { text: text, pid: ent.pid, prev: as.length ? as[as.length - 1].text : '', first: us.length === 0, n: us.length + 1 }); } } catch (e) {}
+      save();
       if ($('chatIn')) { $('chatIn').value = ''; $('chatIn').focus(); }
       if (c.role === 'member') DB.appendEvent(c.code, { kind: 'chat', env: me(), rec: rec.id });
     }
