@@ -320,7 +320,8 @@
   }
   function startTravel(roomId) {
     if (!cur) return false;
-    var target = LAYOUT.room(roomId); if (!target || target.type === 'remote') return false;
+    var target = LAYOUT.room(roomId); if (!target) return false;
+    if (target.type === 'remote') { if (roomId === 'home' || roomId === 'clinic') { goRemote(roomId); return true; } return false; }
     if (cur.walk) cur.walk = null;
     var start = cur.me || spotIn(cur.player.loc), dest = spotIn(roomId), from = nearestNode(start), to = nearestNode(dest, roomId) || nearestNode(dest);
     if (!from || !to) { toast('找不到可走的路線，請從附近房間前往。'); return false; }
@@ -352,7 +353,9 @@
     $('stageModeBtn').onclick=function(){cur.stageMode=cur.stageMode==='map'?'room':'map';refreshStageMode();};
     renderTravelChips();
   }
-  function renderTravelChips(){var host=$('visitedChips');if(!host||!cur)return;host.innerHTML='<b>去過的房間：</b>'+((cur.player.visited||[]).map(function(id){var r=LAYOUT.room(id);return r?'<button class="ghost" data-visit="'+esc(id)+'">'+esc(r.name)+'</button>':'';}).join('')||'尚無');Array.prototype.forEach.call(host.querySelectorAll('[data-visit]'),function(b){b.onclick=function(){startTravel(b.dataset.visit);};});}
+  /* 10-13：病患的家、回診門診不在急診室地圖上，原本沒有任何入口（學生回報「回診跟病患家過不去」）。這兩間用按鈕直接過去。 */
+  function goRemote(id){if(!cur)return;var rm=LAYOUT.room(id);if(!rm)return;cur.walk=null;cur.stageMode='room';cur.focus=null;setLoc(id,true);refreshStageMode();DB.appendEvent(cur.code,{kind:'move',env:APP.me.sid,to:id});persist(true);toast(id==='home'?'搭公車到了病患的家。這裡有他手機收到的簡訊，家人也在。':'隔天，到了回診門診。');}
+  function renderTravelChips(){var host=$('visitedChips');if(!host||!cur)return;host.innerHTML='<b>院外：</b><button class="ghost" data-remote="home">🚌 病患的家</button><button class="ghost" data-remote="clinic">🏥 回診門診</button>'+' <b>去過的房間：</b>'+((cur.player.visited||[]).map(function(id){var r=LAYOUT.room(id);return r?'<button class="ghost" data-visit="'+esc(id)+'">'+esc(r.name)+'</button>':'';}).join('')||'尚無');Array.prototype.forEach.call(host.querySelectorAll('[data-visit]'),function(b){b.onclick=function(){startTravel(b.dataset.visit);};});Array.prototype.forEach.call(host.querySelectorAll('[data-remote]'),function(b){b.onclick=function(){goRemote(b.dataset.remote);};});}
   S.travel = startTravel;
   S.teleport = function(id){if(!cur)return;cur.walk=null;setLoc(id);rememberRoom(id);renderTravelChips();refreshStageMode();};   /* 測試用；跟真的走到一樣要重新對準鏡頭 */
 

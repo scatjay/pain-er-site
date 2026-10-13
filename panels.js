@@ -278,7 +278,7 @@
     Array.prototype.forEach.call(p.querySelectorAll('[data-ct]'), function (b) { b.onclick = function () { P.prefill = { type: b.dataset.ct }; renderCards(); }; });
     /* 10-13 楊老師：「按下回到全景沒有反應」。手機沒有畫布，這兩顆本來就是空的 ⇒ 手機不放；
        電腦原本只有先按過「看筆記本」才看得出變化 ⇒ 改成跟頂列「⟲ 全景」同一件事（整張地圖）。 */
-    if ($('seeNb')) $('seeNb').onclick = function () { RM.focusRect(window.ERG_LAYOUT.room('notebook')); };
+    if ($('seeNb')) $('seeNb').onclick = function () { var b = $('fitBtn'); if (b) b.click(); RM.focusRect(window.ERG_LAYOUT.room('notebook')); };   /* 10-13：在房間畫面直接聚焦會一片空白（學生回報「筆記本內容無法查閱」），先切到全景 */
     if ($('seeAll')) $('seeAll').onclick = function () { var b = $('fitBtn'); if (b) b.click(); else RM.focusAll(); };
   }
 
