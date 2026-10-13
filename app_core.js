@@ -81,7 +81,6 @@
     var mine = rooms.filter(function (r) { return r.members && r.members[sid]; });
     var own = mine.filter(function (r) { return String(r.host) === String(sid); });
     var ownRoom = own.length ? own[own.length - 1] : null;
-    var ownPlayer = ownRoom ? getPlayer(ownRoom, sid) : null;
     var sessions = [];
     mine.forEach(function (r) {
       var p = getPlayer(r, sid); if (!p) return;
@@ -105,19 +104,32 @@
       var other = vr ? getPlayer(vr, id) : null;
       return { id: id, confirmed: !!(other && other.confirms && other.confirms[sid]) };
     });
-    var interviews = ownPlayer ? ownPlayer.interviews : [];
-    var links = ownPlayer ? ownPlayer.links || {} : {};
-    var doneIv = interviews.filter(function (r) { return CL.progress(r).complete; });
-    var haveLinks = doneIv.length > 0 && doneIv.every(function (r) { return /^https:\/\//.test(getLink(links, r.id)); });
-    return {
-      student: { id: sid, cls: profile.cls }, case: { directions: (caseInfo && caseInfo.directions) || [] },
-      markers: ownRoom ? (markersByRoom[ownRoom.code] || []) : [], interviews: interviews,
-      conclusions: ownPlayer ? ownPlayer.conclusions : [],
-      sessions: sessions, discussion: { room: vr ? vr.code : '', partners: partners, checks: disc.checks || {} },
-      submitted: { scene: !!(ownPlayer && ownPlayer.submitted), text: !!(ownPlayer && ownPlayer.submitted), links: !!(ownPlayer && ownPlayer.submitted && haveLinks) },
-      linksOk: haveLinks,
-      _ownRoom: ownRoom ? ownRoom.code : null
-    };
+    function build(wr) {
+      var ownPlayer = wr ? getPlayer(wr, sid) : null;
+      var interviews = ownPlayer ? ownPlayer.interviews : [];
+      var links = ownPlayer ? ownPlayer.links || {} : {};
+      var doneIv = interviews.filter(function (r) { return CL.progress(r).complete; });
+      var haveLinks = doneIv.length > 0 && doneIv.every(function (r) { return /^https:\/\//.test(getLink(links, r.id)); });
+      return {
+        student: { id: sid, cls: profile.cls }, case: { directions: (caseInfo && caseInfo.directions) || [] },
+        markers: wr ? (markersByRoom[wr.code] || []) : [], interviews: interviews,
+        conclusions: ownPlayer ? ownPlayer.conclusions : [],
+        sessions: sessions, discussion: { room: vr ? vr.code : '', partners: partners, checks: disc.checks || {} },
+        submitted: { scene: !!(ownPlayer && ownPlayer.submitted), text: !!(ownPlayer && ownPlayer.submitted), links: !!(ownPlayer && ownPlayer.submitted && haveLinks) },
+        linksOk: haveLinks,
+        _ownRoom: ownRoom ? ownRoom.code : null, _workRoom: wr ? wr.code : null
+      };
+    }
+    /* 10-13：做紀錄（卡片、訪談、結論）的那一間不一定是自己當房主的房間（學生直接加入同學的房間做完全部）。
+       自己的房間和其他進過的房間都算一遍，取亮燈最多的；一樣多就取自己的（所以不會比原本更差）。 */
+    var best = build(ownRoom), bestLit = -1;
+    try { bestLit = CP.evaluate(best).lit; } catch (e) { return best; }
+    mine.forEach(function (r) {
+      if (ownRoom && r.code === ownRoom.code) return;
+      var st = build(r), lit = -1; try { lit = CP.evaluate(st).lit; } catch (e) { return; }
+      if (lit > bestLit) { best = st; bestLit = lit; }
+    });
+    return best;
   }
 
   /* 提交資格：第 1–5 點亮，且每個完整訪談都存了 https 連結 */

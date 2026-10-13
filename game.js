@@ -360,7 +360,7 @@
     if (!ONLINE || !window.firebase || !c || !A || !APP.me.sid) return;
     ensureScoreWatch();
     var s = A.summary(c.player, P && P.achCtx ? P.achCtx() : {}); s.name = APP.me.name || APP.me.sid; s.cls = APP.me.cls || ''; s.t = Date.now();
-    var j = JSON.stringify([s.interviewees, s.rooms, s.cards, s.events, s.chatTurns, s.playMin, s.partners, s.conclusions, s.badges]);
+    var j = JSON.stringify([s.interviewees, s.rooms, s.cards, s.events, s.chatTurns, s.playMin, s.partners, s.conclusions, s.badges, s.skAsk, s.skCtx]);
     if (j === lastScoreJson) return; lastScoreJson = j;
     try { window.firebase.database().ref('er/' + APP.SESS + '/score/' + APP.me.sid).set(s); } catch (e) { if (window.console) console.warn('score 寫入失敗', e); }
   }

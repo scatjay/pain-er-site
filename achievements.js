@@ -43,6 +43,67 @@
     return q;
   }
 
+
+  /* ───── 技能等級（10-13 楊老師：就目前學生的探問和情境感知能力，設定技能的等級，分成三級，課後更新）─────
+     等級從學生自己這個房間的訪談逐字稿算（一位學生一次讀自己的一個節點），所以今天上午已經問過的也算。
+     門檻是 10-13 用二丙、二乙兩班 79 人的實際提問試算定的（探問 63／15／1 人，情境感知 65／14／0 人），每堂課後依全班表現重算。 */
+  var SK_ASK = ['開口問', '會追問', '追到底'], SK_CTX = ['到處看', '找對人', '對得起來'];
+  var Q_SMS = /(簡訊|訊息|手機|衛教|連結|通知)/, Q_PASTE = /(問到這三件事|點畫面上的人物開始訪談)/;
+  var KEYKIND = { patient: 'patient', family: 'family', nurse: 'nurse', triage_nurse: 'nurse' };
+  /* chat：{ 記錄鍵: { personaId, turns:{ 鍵: {role,text,t} } } }（er/場次/chat/房間代碼/學號 底下的樣子） */
+  function chatStats(chat) {
+    var st = { n: 0, dup: 0, tmpl: 0, ev: 0, why: 0, echo: 0, yn: 0, deep: 0, sms: 0, whoN: 0, keyKinds: 0, who: {}, key: {} }, seen = {};
+    keys(chat).forEach(function (rk) {
+      var c = chat[rk] || {}, pid = c.personaId || rk, prev = '', nq = 0;
+      keys(c.turns).map(function (k) { return c.turns[k]; }).sort(function (a, b) { return (a.t || 0) - (b.t || 0); }).forEach(function (t) {
+        var x = String((t && t.text) || '');
+        if (!t || t.role !== 'u') { prev = x; return; }
+        var b = bareQ(x);
+        if (seen[b] || Q_PASTE.test(x)) { st.dup++; return; }
+        seen[b] = 1; st.n++; nq++;
+        var tmpl = Q_TEMPLATE.test(x), greet = Q_GREET.test(b) || b.length <= 3;
+        if (tmpl) st.tmpl++;
+        if (Q_EVENT.test(x) && !tmpl) st.ev++;
+        if (Q_WHY.test(x)) st.why++;
+        if (Q_YESNO.test(x)) st.yn++;
+        if (Q_SMS.test(x)) st.sms++;
+        if (!greet && prev && echoes(x, prev)) st.echo++;
+      });
+      if (nq) { st.who[pid] = (st.who[pid] || 0) + nq; if (KEYKIND[pid]) st.key[KEYKIND[pid]] = (st.key[KEYKIND[pid]] || 0) + nq; }
+      if (nq >= 6) st.deep++;
+    });
+    st.whoN = keys(st.who).length;
+    st.keyKinds = keys(st.key).filter(function (k) { return st.key[k] >= 2; }).length;
+    return st;
+  }
+  /* m：{ rooms（去過幾間）, remote（去過病患的家或回診門診）, interviews（有填內容的訪談紀錄份數）, conclusions } */
+  function skills(st, m) {
+    st = st || chatStats({}); m = m || {};
+    var n = st.n || 0, ynR = n ? st.yn / n : 0, dupR = (st.dup + st.tmpl) / ((n + st.dup) || 1);
+    function item(ok, text) { return { ok: !!ok, text: text }; }
+    var a2 = [item(n >= 8, '不重複的提問 ' + Math.min(n, 8) + '／8 題'), item(st.ev + st.why >= 2, '追問「最近一次／當時」或「為什麼」 ' + Math.min(st.ev + st.why, 2) + '／2 題'), item(st.echo >= 2, '撿起對方剛說的詞往下問 ' + Math.min(st.echo, 2) + '／2 次'), item(st.deep >= 1, '同一位人物問滿 6 題 ' + Math.min(st.deep, 1) + '／1 位')];
+    var a3 = a2.concat([item(n >= 12, '不重複的提問 ' + Math.min(n, 12) + '／12 題'), item(st.ev >= 4, '追問「最近一次／當時／後來」 ' + Math.min(st.ev, 4) + '／4 題'), item(st.why >= 2, '追問「為什麼／怎麼知道」 ' + Math.min(st.why, 2) + '／2 題'), item(st.echo >= 4, '撿起對方剛說的詞 ' + Math.min(st.echo, 4) + '／4 次'), item(st.deep >= 2, '兩位人物各問滿 6 題 ' + Math.min(st.deep, 2) + '／2 位'), item(n >= 5 && ynR < 0.35, '是非題（「嗎、有沒有」結尾）要少於 35%，現在 ' + Math.round(ynR * 100) + '%'), item(n >= 5 && dupR < 0.15, '別重複貼同一句、別照念檢核表的三句，這類要少於 15%，現在 ' + Math.round(dupR * 100) + '%')]);
+    var rooms = Number(m.rooms) || 0, iv = Number(m.interviews) || 0, cc = Number(m.conclusions) || 0;
+    var c2 = [item(rooms >= 8, '走過的房間 ' + Math.min(rooms, 8) + '／8 間'), item(st.whoN >= 4, '訪談過的人物 ' + Math.min(st.whoN, 4) + '／4 位'), item(st.keyKinds >= 1, '病人本人、家人、護理師，至少一種問過 2 題 ' + Math.min(st.keyKinds, 1) + '／1 種'), item(st.sms >= 3, '問到簡訊或手機的題數 ' + Math.min(st.sms, 3) + '／3 題')];
+    var c3 = c2.concat([item(st.keyKinds >= 2, '病人本人、家人、護理師，兩種以上各問過 2 題 ' + Math.min(st.keyKinds, 2) + '／2 種'), item(st.whoN >= 5, '訪談過的人物 ' + Math.min(st.whoN, 5) + '／5 位'), item(st.sms >= 8, '問到簡訊或手機的題數 ' + Math.min(st.sms, 8) + '／8 題'), item(iv >= 4, '存下來的訪談紀錄 ' + Math.min(iv, 4) + '／4 份'), item(cc >= 1, '寫下第一條結論 ' + Math.min(cc, 1) + '／1 條'), item(!!m.remote, '去過病患的家或回診門診（用下方「院外」按鈕）')]);
+    function lv(l2, l3) { return l3.every(function (i) { return i.ok; }) ? 3 : (l2.every(function (i) { return i.ok; }) ? 2 : 1); }
+    function pack(names, l2, l3) {
+      var L = lv(l2, l3), nxt = L >= 3 ? null : { lv: L + 1, name: names[L], items: L === 1 ? l2 : l3 };
+      return { lv: L, name: names[L - 1], next: nxt };
+    }
+    return { ask: pack(SK_ASK, a2, a3), ctx: pack(SK_CTX, c2, c3) };
+  }
+  function skillsHtml(sk, esc, fresh) {
+    esc = esc || function (s) { return String(s); };
+    function card(title, s, desc) {
+      var stars = '★'.repeat(s.lv) + '☆'.repeat(3 - s.lv), todo = s.next ? s.next.items.filter(function (i) { return !i.ok; }) : [];
+      return '<div class="skCard"><div class="skHead"><b>' + esc(title) + '</b><span class="skStars" aria-label="第 ' + s.lv + ' 級">' + stars + '</span></div>' +
+        '<div class="skLv">Lv.' + s.lv + '「' + esc(s.name) + '」' + (fresh && fresh[title] ? ' <span class="skNew">🎉 剛升級</span>' : '') + '</div><div class="muted" style="font-size:12px">' + esc(desc) + '</div>' +
+        (s.next ? '<div style="margin-top:6px;font-size:13px"><b>升到 Lv.' + s.next.lv + '「' + esc(s.next.name) + '」還差：</b><ul class="skTodo">' + (todo.length ? todo.map(function (i) { return '<li>' + esc(i.text) + '</li>'; }).join('') : '<li>都達到了，再問一題就會升級</li>') + '</ul></div>' : '<div style="margin-top:6px;font-size:13px">🏆 已經是最高級。</div>') + '</div>';
+    }
+    return '<div class="skRow">' + card('探問', sk.ask, '怎麼問，才問得出對方遇到的事和真正的需要') + card('情境感知', sk.ctx, '找對人、看對地方，把不同人說的話對起來') + '</div>';
+  }
+
   /* ctx：{ now, cpAllOk（六個檢核點全亮）, shift（'day'|'night'） } */
   function metrics(player, ctx) {
     ctx = ctx || {}; player = player || {};
@@ -100,7 +161,7 @@
   /* 給班級排行的小物件（不含名字；名字由呼叫端補） */
   function summary(player, ctx) {
     var m = metrics(player, ctx);
-    return { interviewees: m.interviewees, rooms: m.rooms, cards: m.cards, events: m.events, chatTurns: m.chatTurns, playMin: m.playMin, partners: m.partners, conclusions: m.conclusions, badges: earned(m).length, badgeIds: earned(m).map(function (b) { return b.id; }) };
+    return { interviewees: m.interviewees, rooms: m.rooms, cards: m.cards, events: m.events, chatTurns: m.chatTurns, playMin: m.playMin, partners: m.partners, conclusions: m.conclusions, badges: earned(m).length, skAsk: Number(((player || {}).skillLv || {}).ask) || 1, skCtx: Number(((player || {}).skillLv || {}).ctx) || 1, badgeIds: earned(m).map(function (b) { return b.id; }) };
   }
   /* 排行：scores = { sid: { name, ...summary } } → 每個項目的前三名 */
   var BOARD = [['interviewees', '訪談最多人', '人'], ['playMin', '待最久', '分鐘'], ['rooms', '走最多房間', '間'], ['chatTurns', '問最多題', '題'], ['cards', '便利貼最多', '張'], ['events', '遇到最多事件', '件'], ['badges', '徽章最多', '枚']];
@@ -119,5 +180,5 @@
     var grid = '<div class="achGrid">' + bs.map(function (b) { return '<div class="ach ' + (b.ok ? 'on' : '') + '" title="' + esc(b.desc) + '"><div class="achIcon">' + b.icon + '</div><div class="achName">' + esc(b.name) + '</div><div class="achDesc">' + esc(b.desc) + '</div></div>'; }).join('') + '</div>';
     return '<p class="muted" style="font-size:12px;margin:4px 0">徽章 ' + got + ' / ' + bs.length + '。這不是分數，只是記錄你在急診室裡做過的事。</p>' + stat + grid;
   }
-  return { DEFS: DEFS, BOARD: BOARD, CORE_IDS: CORE_IDS, SPECIAL: SPECIAL, metrics: metrics, noteQuestion: noteQuestion, badges: badges, earned: earned, summary: summary, leaderboard: leaderboard, html: html };
+  return { DEFS: DEFS, BOARD: BOARD, CORE_IDS: CORE_IDS, SPECIAL: SPECIAL, metrics: metrics, noteQuestion: noteQuestion, chatStats: chatStats, skills: skills, skillsHtml: skillsHtml, badges: badges, earned: earned, summary: summary, leaderboard: leaderboard, html: html };
 });

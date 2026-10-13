@@ -100,7 +100,7 @@ body.proj{--fs:21px}body.proj .wrap{max-width:none}body.proj .small{display:none
 
 <section class="pane" data-pane="ask">
   <h2>大家怎麼問、在關注什麼</h2>
-  <div class="card"><div style="margin-bottom:6px">只看：<select id="qCls"><option value="">全部班級</option></select> <span id="qClsNote" class="muted" style="font-size:.85em"></span></div><div id="qTips" class="tips"></div><div class="muted" style="font-size:.85em;margin:4px 0 6px">點任何一條橫條，下面會列出那一類的原句（一句話可能同時算在好幾類）。</div><div class="cols"><div><b>提問方式</b><div id="qStyle"></div></div><div><b>關注主題</b><div id="qTopic"></div></div><div><b>訪談對象</b><div id="qWho"></div></div></div><div id="qDrill" hidden></div>
+  <div class="card"><div style="margin-bottom:6px">只看：<select id="qCls"><option value="">全部班級</option></select> <span id="qClsNote" class="muted" style="font-size:.85em"></span></div><div id="skillDist" style="margin:4px 0 10px"></div><div id="qTips" class="tips"></div><div class="muted" style="font-size:.85em;margin:4px 0 6px">點任何一條橫條，下面會列出那一類的原句（一句話可能同時算在好幾類）。</div><div class="cols"><div><b>提問方式</b><div id="qStyle"></div></div><div><b>關注主題</b><div id="qTopic"></div></div><div><b>訪談對象</b><div id="qWho"></div></div></div><div id="qDrill" hidden></div>
   <details style="margin-top:8px"><summary class="muted" style="cursor:pointer">最近 30 個問題</summary><div id="qRecent" style="font-size:.9em"></div></details></div>
   <h2>對「衛教簡訊再設計」的啟示</h2>
   <div class="card"><div class="cols"><div><b>訪談檢核標到的問題</b><div id="iTags"></div></div><div><b>結論裡的方向</b><div id="iConcl"></div></div></div>
@@ -156,16 +156,16 @@ body.proj{--fs:21px}body.proj .wrap{max-width:none}body.proj .small{display:none
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-<script src="er_firebase.js?v=202610131505"></script>
-<script src="checklist.js?v=202610131505"></script>
-<script src="checkpoints.js?v=202610131505"></script>
-<script src="avatar.js?v=202610131505"></script>
-<script src="local_db.js?v=202610131505"></script>
-<script src="app_core.js?v=202610131505"></script>
-<script src="achievements.js?v=202610131505"></script><script src="remote_db.js?v=202610131505"></script>
-<script src="layout.js?v=202610131505"></script>
-<script src="minimap.js?v=202610131505"></script>
-<script src="personas_inclusive.js?v=202610131505"></script><script src="er_data.js?v=202610131505"></script><script src="npc_voice.js?v=202610131505"></script><script src="personas.js?v=202610131505"></script>
+<script src="er_firebase.js?v=202610131555"></script>
+<script src="checklist.js?v=202610131555"></script>
+<script src="checkpoints.js?v=202610131555"></script>
+<script src="avatar.js?v=202610131555"></script>
+<script src="local_db.js?v=202610131555"></script>
+<script src="app_core.js?v=202610131555"></script>
+<script src="achievements.js?v=202610131555"></script><script src="remote_db.js?v=202610131555"></script>
+<script src="layout.js?v=202610131555"></script>
+<script src="minimap.js?v=202610131555"></script>
+<script src="personas_inclusive.js?v=202610131555"></script><script src="er_data.js?v=202610131555"></script><script src="npc_voice.js?v=202610131555"></script><script src="personas.js?v=202610131555"></script>
 <script>
 /* 教師名單：只有這裡的 Google 帳號能進。要加人就加在這裡（改完重新部署；資料庫規則 tools/er_after_google_enabled.py 也要加）。 */
 var TEACHER_EMAILS = ['scatjay@gmail.com'];
@@ -258,6 +258,18 @@ var CLASS_WINDOWS = [].concat(
   }
   function fmtWin(w) { var d = new Date(w.a); return (d.getMonth() + 1) + '/' + d.getDate() + '（' + '日一二三四五六'.charAt(d.getDay()) + '）' + hm(w.a) + '–' + hm(w.b); }
   var MP = { 'gemini-2.5-flash-lite': '0.10／0.40', 'gemini-2.5-flash': '0.30／2.50', 'gemini-3-flash-preview': '0.50／3.00', 'gemini-3.1-flash-lite': '0.25／1.50', 'gemini-3.5-flash-lite': '0.30／2.50' };   /* 與 tools/er_chat_daemon.py 的 PRICE_USD_PER_M 同一份 */
+  /* 技能等級分布（10-13 楊老師：技能三級）：學生的等級跟著分數一起發布到 er/場次/score/學號（skAsk、skCtx），只有進過新版遊戲的學生才有 */
+  var SK_NAMES = { ask: ['開口問', '會追問', '追到底'], ctx: ['到處看', '找對人', '對得起來'] };
+  function renderSkillDist() {
+    var box = $('skillDist'); if (!box) return;
+    var cls = $('qCls') ? $('qCls').value : '', rows = Object.keys(scores || {}).map(function (k) { return scores[k] || {}; }).filter(function (x) { return x.skAsk && (!cls || x.cls === cls); });
+    if (!rows.length) { box.innerHTML = '<b>技能等級分布</b> <span class="muted">還沒有學生用新版（學生打開成就分頁或繼續玩就會出現）。</span>'; return; }
+    function col(key, f, title) {
+      var c = [0, 0, 0]; rows.forEach(function (x) { c[Math.min(3, Math.max(1, Number(x[f]) || 1)) - 1] += 1; });
+      return '<div style="flex:1;min-width:230px"><b>' + title + '</b>' + c.map(function (n, i) { return '<div style="display:flex;align-items:center;gap:6px;margin:3px 0"><span style="width:118px;font-size:.9em">Lv.' + (i + 1) + ' ' + SK_NAMES[key][i] + '</span><span style="flex:1;background:#e9ecef;border-radius:6px;height:14px;overflow:hidden"><span style="display:block;height:14px;width:' + Math.round(n / rows.length * 100) + '%;background:#f08c00"></span></span><span style="width:60px;text-align:right">' + n + ' 人</span></div>'; }).join('') + '</div>';
+    }
+    box.innerHTML = '<b>技能等級分布</b> <span class="muted" style="font-size:.85em">（' + (cls || '全部班級') + '，' + rows.length + ' 位用過新版的學生；門檻每堂課後依全班表現重算）</span><div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:4px">' + col('ask', 'skAsk', '探問') + col('ctx', 'skCtx', '情境感知') + '</div>';
+  }
   function renderModelStats(d) {
     var ms = d.modelStats || {}, days = Object.keys(ms).sort(), box = $('modelStats'); if (!box) return;
     if (!days.length) { box.innerHTML = '<span class="muted">還沒有資料。</span>'; return; }
@@ -325,7 +337,7 @@ var CLASS_WINDOWS = [].concat(
     on(root.child('chat'), function (s) { chats = s.val() || {}; schedule(); });
     on(root.child('analysis/summary'), function (s) { var v = s.val(); $('sumBox').textContent = v ? v.text : ''; $('sumStat').textContent = v ? ('上次摘要：' + hm(v.t) + '，' + v.n + ' 個問題') : ''; });
     renderUsageAll();
-    on(root.child('score'), function (s) { scores = s.val() || {}; renderBoard(); });
+    on(root.child('score'), function (s) { scores = s.val() || {}; renderBoard(); try { renderSkillDist(); } catch (e) {} });
     schedule();
   }
   setInterval(function () { if (DB) schedule(); }, 30000);   /* 在線人數會隨時間過期，定時重算 */
@@ -449,6 +461,7 @@ var CLASS_WINDOWS = [].concat(
     var want = Object.keys(clsSeen).sort().join('|'); if (qsel.dataset.opts !== want) { qsel.dataset.opts = want; qsel.innerHTML = '<option value="">全部班級</option>' + Object.keys(clsSeen).sort().map(function (c) { return '<option>' + esc(c) + '</option>'; }).join(''); qsel.value = qcls; qsel.onchange = function () { drill = null; renderAnalysis(); }; }
     Object.keys(chats).forEach(function (code) { Object.keys(chats[code]).forEach(function (sid) { if (qcls && ((profiles[sid] || {}).cls || '') !== qcls) return; Object.keys(chats[code][sid]).forEach(function (rec) { var c = chats[code][sid][rec], pn = c.personaName || personaName(c.personaId), nq = 0; Object.keys(c.turns || {}).forEach(function (k) { var t = c.turns[k]; if (t.role === 'u') { nq += 1; qs.push({ t: t.t, sid: sid, who: pn, pid: c.personaId || '', text: String(t.text || '') }); } }); if (nq) { who[pn] = (who[pn] || 0) + nq; convs.push(nq); (byPid[c.personaId || pn] = byPid[c.personaId || pn] || {})[sid] = 1; } }); }); });
     var st = {}, tp = {}; qs.forEach(function (q) { classify(q.text, STYLE_RULES, true).forEach(function (k) { st[k] = (st[k] || 0) + 1; }); classify(q.text, TOPIC_RULES, true).forEach(function (k) { tp[k] = (tp[k] || 0) + 1; }); });
+    try { renderSkillDist(); } catch (e) {}
     lastQs = qs; $('qStyle').innerHTML = bar(st, qs.length, 'style'); $('qTopic').innerHTML = bar(tp, qs.length, 'topic'); $('qWho').innerHTML = bar(who, qs.length, 'who'); bindDrill(); renderDrill(); renderTips(qs, st, convs, byPid, tp);
     $('qClsNote').textContent = (qcls ? qcls + '：' : '') + qs.length + ' 題、' + Object.keys(qs.reduce(function (m, q) { m[q.sid] = 1; return m; }, {})).length + ' 人有提問';
     qs.sort(function (a, b) { return b.t - a.t; });

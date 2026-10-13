@@ -17,12 +17,42 @@
   /* 成就分頁：自己的指標與徽章＋班級「誰最多」（線上模式讀 er/{sess}/score；本機版只有自己） */
   function achCtx() { var c = cur(); var cp = (window.ERG_CORE && window.ERG_CP && c) ? (function () { try { var st = window.ERG_CORE.checkpointState(c, me()); return window.ERG_CP.evaluate(st).every(function (x) { return x.ok; }); } catch (e) { return false; } })() : false; return { cpAllOk: cp, shift: c && c.world && c.world.shift }; }
   P.achCtx = achCtx;
+  /* 10-13 技能等級：從自己這個房間的訪談逐字稿算（一次讀自己的一個節點，90 秒內不重讀；送出提問後立刻作廢） */
+  var skCache = { t: 0, st: null, busy: false, code: '' };
+  P.skInvalidate = function () { skCache.t = 0; };
+  function skillStats() {
+    var c = cur(), A = window.ERG_ACH; if (!c || !A) return A ? A.chatStats({}) : null;
+    var fresh = skCache.st && skCache.code === c.code && Date.now() - skCache.t < 90000;
+    if (!fresh && !skCache.busy && window.firebase && c.code && me()) {
+      skCache.busy = true;
+      var code = c.code;
+      try {
+        window.firebase.database().ref('er/' + APP.SESS + '/chat/' + code + '/' + me()).once('value', function (s) {
+          skCache.busy = false; skCache.t = Date.now(); skCache.code = code; skCache.st = A.chatStats(s.val() || {});
+          if (cur() && cur().tab === 'ach') renderAch();
+        }, function () { skCache.busy = false; });
+      } catch (e) { skCache.busy = false; }
+    }
+    return skCache.st || A.chatStats({});
+  }
+  function skillBlock(A, pl) {
+    var c = cur(), roomsSeen = Object.keys(pl.roomsSeen || {}).length || (pl.visited || []).length;
+    var iv = (pl.interviews || []).filter(function (r) { return r && r.items && Object.keys(r.items).some(function (k) { var x = r.items[k]; return x && ((x.note && String(x.note).trim()) || x.done); }); }).length;
+    var concl = (pl.conclusions || []).filter(function (x) { return x && String(x.text || '').trim(); }).length;
+    var sk = A.skills(skillStats(), { rooms: roomsSeen, interviews: iv, conclusions: concl, remote: !!((pl.roomsSeen || {}).home || (pl.roomsSeen || {}).clinic) });
+    var prev = pl.skillLv || {}, up = {};
+    if (prev.ask && sk.ask.lv > prev.ask) up['探問'] = true;
+    if (prev.ctx && sk.ctx.lv > prev.ctx) up['情境感知'] = true;
+    if (!prev.ask || !prev.ctx || sk.ask.lv !== prev.ask || sk.ctx.lv !== prev.ctx) { pl.skillLv = { ask: sk.ask.lv, ctx: sk.ctx.lv }; save(); }
+    if (up['探問'] || up['情境感知']) P._lvUp = Object.assign(P._lvUp || {}, up);
+    return A.skillsHtml(sk, esc, P._lvUp);
+  }
   function renderAch() {
     var p = $('p-ach'), A = window.ERG_ACH; if (!p || !A || !cur()) return;
     var m = A.metrics(player(), achCtx());
     var board = window.ERG_SCORES ? A.leaderboard(window.ERG_SCORES, 3) : null;
     var bh = board ? '<h2>班上誰最多</h2><div class="board">' + board.map(function (b) { return '<div class="b"><b>' + esc(b.label) + '</b>' + (b.rows.length ? '<ol style="margin:4px 0 0 18px;padding:0;font-size:13px">' + b.rows.map(function (r) { return '<li>' + esc(r.name) + '　' + r.v + ' ' + esc(b.unit) + '</li>'; }).join('') + '</ol>' : '<div class="muted" style="font-size:12px">還沒有人</div>') + '</div>'; }).join('') + '</div>' : '<p class="muted" style="font-size:12px">本機版沒有班級排行；線上版會列出班上誰最多。</p>';
-    p.innerHTML = '<h2>我的成就</h2>' + A.html(m, esc) + bh;
+    p.innerHTML = '<h2>我的技能</h2>' + skillBlock(A, player()) + '<h2>我的成就</h2>' + A.html(m, esc) + bh;
     if (window.ERG_PUBLISH_SCORE) window.ERG_PUBLISH_SCORE();
   }
   P.renderAch = renderAch;
@@ -217,6 +247,7 @@
         window.firebase.database().ref('er/_queue').push({ sess: APP.SESS, code: c.code, sid: me(), rec: safeKey(rec.id), turn: key, t: now });
       });
       player().chatTurns = (Number(player().chatTurns) || 0) + 1;   /* 成就用：即時訪談送出幾題 */
+      P.skInvalidate();
       try { if (window.ERG_ACH && window.ERG_ACH.noteQuestion) { var us = lastTurns.filter(function (t) { return t.role === 'u'; }), as = lastTurns.filter(function (t) { return t.role !== 'u'; }); window.ERG_ACH.noteQuestion(player(), { text: text, pid: ent.pid, prev: as.length ? as[as.length - 1].text : '', first: us.length === 0, n: us.length + 1 }); } } catch (e) {}
       save();
       if ($('chatIn')) { $('chatIn').value = ''; $('chatIn').focus(); }
@@ -348,7 +379,10 @@
       (e.ev.next ? '<div id="cpNext" class="card" style="margin:6px 0;padding:8px 12px;box-shadow:3px 3px 0 var(--ink);background:var(--yellow);color:#1e1e1e"><b>下一步</b>　' + esc(e.ev.next.text) + '</div>' : '') +
       CP.listHtml(e.ev);
     var gate = CORE.submitGate(e.state), sub = !!(player().submitted);
-    if (!sub) html += '<button id="submitBtn" ' + (gate.ok && isHost() ? '' : 'disabled') + '>提交</button> <span class="muted" style="font-size:12px">' + (isHost() ? (gate.ok ? '前面都完成了，可以提交。' : '還不能提交，先把上面打叉的補完。') : '提交要回到自己開的房間做。') + '</span>';
+    /* 10-13：提交要在「檢核點算的那一間房」按（紀錄最完整的那間）。二乙有同學在 8 間空房按了提交，真正做完的房間卻沒提交，檢核點 6 永遠不亮。 */
+    var wr = e.state._workRoom, inWork = !wr || wr === cur().code, canSub = gate.ok && inWork && (isHost() || !!wr);
+    var subMsg = !inWork ? '你的紀錄（卡片、訪談、結論）在房間 ' + esc(wr) + '，提交要回到那間房按。' : (isHost() || wr ? (gate.ok ? '前面都完成了，可以提交。' : '還不能提交，先把上面打叉的補完。') : '提交要回到自己開的房間做。');
+    if (!sub || !inWork) html += '<button id="submitBtn" ' + (canSub ? '' : 'disabled') + '>提交</button> <span class="muted" style="font-size:12px">' + subMsg + '</span>';
     else if (e.ev.passed) html += passedBlock(e);
     else html += '<div class="card" style="border-color:var(--bad)"><b>已經按過提交，但還有打叉的項目</b><div class="muted" style="font-size:13px">把上面打叉的補完，這裡就會變成綠色的「已通過」。</div></div>';
     p.innerHTML = html;
@@ -357,7 +391,7 @@
   }
   function doSubmit() {
     var e = APP.evaluate(), gate = CORE.submitGate(e.state);
-    if (!gate.ok) { renderCp(); return; }
+    if (!gate.ok || (e.state._workRoom && e.state._workRoom !== cur().code)) { renderCp(); return; }
     DB.saveSnapshot(cur().code, 5, RM.allEls().filter(function (x) { return !(x.customData && x.customData.base); }));
     player().submitted = true; player().submittedAt = Date.now(); save(); DB.appendEvent(cur().code, { kind: 'submit', env: me() });
     renderCp();

@@ -32,7 +32,8 @@
   function cpSurvey(s) {
     var n = count(mine(s.markers || [], s.student.id), function (m) { return RULES.surveyTypes.indexOf(m.type) >= 0; }), items = [];
     for (var i = 1; i <= RULES.surveyMin; i += 1) items.push({ text: '記第 ' + i + ' 張卡', ok: n >= i, todo: '走進急診室的房間，找黃色的小牌子（上面寫著「線索」），點它來讀，再按「記一張勘查卡」記下第 ' + i + ' 張' });
-    return { ok: allOk(items), detail: n + ' / ' + RULES.surveyMin + ' 張', items: items };
+    var other = count(mine(s.markers || [], s.student.id), function (m) { return RULES.surveyTypes.indexOf(m.type) < 0; });   /* 10-13：學生記了便利貼、想法、矛盾，以為算在這一項 */
+    return { ok: allOk(items), detail: n + ' / ' + RULES.surveyMin + ' 張' + (other && n < RULES.surveyMin ? '（另外 ' + other + ' 張便利貼、想法、矛盾等卡片不算在這一項，這裡要的是勘查卡、問號或重要卡）' : ''), items: items };
   }
   function cpInterview(s) {
     var done = CHECKLIST.completedPersonas(s.interviews || [], s.student.id), items = [];
@@ -53,8 +54,13 @@
     var list = s.conclusions || [], errs = [];
     var dirs = (s.case && s.case.directions) || [];
     var f = { any: list.length >= 1, text: list.length >= 1, refs: list.length >= 1, tradeoff: list.length >= 1, direction: list.length >= 1 };
-    if (list.length < 1) errs.push('至少一條結論');
+    if (!list.some(function (c) { return !(!c || !(String(c.text || '').trim() || String(c.tradeoff || '').trim() || (Array.isArray(c.refs) && c.refs.length) || String(c.direction || '').trim())); })) errs.push('至少一條結論');
+    /* 10-13：結論表單會多出一行空白（沒有任何內容），它不是一條結論，不能卡住檢核點（二乙兩位同學實際遇到） */
+    function blankC(c) { return !c || !(String(c.text || '').trim() || String(c.tradeoff || '').trim() || (Array.isArray(c.refs) && c.refs.length) || String(c.direction || '').trim()); }
+    var realN = list.filter(function (c) { return !blankC(c); }).length;
+    f.any = realN >= 1; if (realN < 1) { f.text = false; f.refs = false; f.tradeoff = false; f.direction = false; }
     list.forEach(function (c, i) {
+      if (blankC(c) && realN >= 1) return;
       if (!c || !String(c.text || '').trim()) { errs.push('第' + (i + 1) + '條沒有內容'); f.text = false; }
       if (!Array.isArray(c.refs) || !c.refs.length) { errs.push('第' + (i + 1) + '條沒有根據編號'); f.refs = false; }
       else c.refs.forEach(function (r) { if (ids.indexOf(r) < 0) { errs.push('第' + (i + 1) + '條的 ' + r + ' 找不到'); f.refs = false; } });
@@ -68,7 +74,7 @@
       { text: '每條都寫了「取捨」', ok: f.tradeoff, todo: '到「結論」寫「取捨」：在什麼前提下這樣選、放棄了什麼' },
       { text: '每條都選了「再設計方向」', ok: f.direction, todo: '到「結論」選一個「再設計方向」' }
     ];
-    return { ok: errs.length === 0, detail: errs.length ? errs.join('；') : list.length + ' 條結論都有根據', errors: errs, items: items };
+    return { ok: errs.length === 0, detail: errs.length ? errs.join('；') : realN + ' 條結論都有根據', errors: errs, items: items };
   }
   function cpSessions(s) {
     var ss = s.sessions || [];
