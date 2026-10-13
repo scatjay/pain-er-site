@@ -135,6 +135,8 @@ body.proj{--fs:21px}body.proj .wrap{max-width:none}body.proj .small{display:none
 </section>
 
 <section class="pane" data-pane="use">
+  <h2>各型號試用比較</h2>
+  <div class="card"><div id="modelStats" class="scroll"><span class="muted">還沒有資料。</span></div><div class="muted" style="font-size:.85em;margin-top:6px">每段對話（一位學生問一位人物）固定分到一個型號。「出錯」＝被限流或 10 秒沒回，那一題會自動改用基本型號重問，學生不會看到忙碌。價錢依官方牌價計算。</div></div>
   <h2>本遊戲的累積用量與花費（代理程式逐題記錄）</h2>
   <div class="card scroll" id="useDays">讀取中…</div>
   <h2>Vertex 專案計量（來自 LLM 後台：Cloud Monitoring）</h2>
@@ -255,11 +257,22 @@ var CLASS_WINDOWS = [].concat(
     return best;
   }
   function fmtWin(w) { var d = new Date(w.a); return (d.getMonth() + 1) + '/' + d.getDate() + '（' + '日一二三四五六'.charAt(d.getDay()) + '）' + hm(w.a) + '–' + hm(w.b); }
+  function renderModelStats(d) {
+    var ms = d.modelStats || {}, days = Object.keys(ms).sort(), box = $('modelStats'); if (!box) return;
+    if (!days.length) { box.innerHTML = '<span class="muted">還沒有資料。</span>'; return; }
+    var day = days[days.length - 1], m = ms[day] || {}, base = String(d.model || '').split('＋')[0].replace(/\./g, '_');
+    var keys = Object.keys(m).sort(function (a, b) { return (m[b].turns || 0) - (m[a].turns || 0); }), all = keys.reduce(function (n, k) { return n + (m[k].turns || 0); }, 0);
+    box.innerHTML = '<table><thead><tr><th>型號</th><th>題數</th><th>佔比</th><th>平均每題秒數</th><th>出錯次數</th><th>平均回答 tokens</th><th>花費（美元）</th><th>每千題（美元）</th></tr></thead><tbody>' + keys.map(function (k) {
+      var v = m[k], n = v.turns || 0, usd = (v.nusd || 0) / 1e9;
+      return '<tr><td><b>' + esc(k.replace(/_/g, '.').replace('gemini-', '')) + '</b>' + (k === base ? ' <span class="pill">基本</span>' : '') + '</td><td>' + n + '</td><td>' + (all ? Math.round(n / all * 100) : 0) + '%</td><td>' + (n ? ((v.ms || 0) / n / 1000).toFixed(1) : '—') + '</td><td>' + (v.fell ? '<span class="bad">' + v.fell + '</span>' : 0) + '</td><td>' + (n ? Math.round((v.tokOut || 0) / n) : '—') + '</td><td>' + usd.toFixed(4) + '</td><td>' + (n ? (usd / n * 1000).toFixed(2) : '—') + '</td></tr>';
+    }).join('') + '</tbody></table><div class="muted" style="font-size:.85em">' + esc(day) + '，共 ' + all + ' 題（從開始分組試用起算）。秒數含排隊後的處理時間。</div>';
+  }
   function renderDaemon() {
     var d = daemon, age = d.heartbeat ? Date.now() - d.heartbeat : Infinity, fresh = age < 60000;
     $('daemon').innerHTML = fresh ? '<span class="ok">連線中</span>' : '<span class="bad">離線</span>';
     $('daemonSub').textContent = fresh ? ('模型 ' + (d.model || '') + '・心跳 ' + Math.round(age / 1000) + ' 秒前') : (d.heartbeat ? '最後心跳 ' + hm(d.heartbeat) + '。請跟助教說「急診室代理程式離線」。' : '還沒有心跳。');
     $('stDaemon').className = 'stat ' + (fresh ? 'isok' : 'isbad');
+    try { renderModelStats(d); } catch (e) { console.error(e); }
     var lv = d.live || {}, manual = (lv.mode === 'open' || lv.mode === 'closed') && Number(lv.until || 0) > Date.now(), open = !!d.liveNow && fresh;
     $('liveState').innerHTML = (open ? '<span class="ok">開放中</span>' : '<span class="bad">暫停</span>') + ' <span class="pill">' + (manual ? ('手動' + (lv.mode === 'open' ? '開放' : '關閉') + '到 ' + hm(lv.until)) : '照課表') + '</span>';
     $('stLive').className = 'stat ' + (open ? 'isok' : '');
