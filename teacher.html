@@ -257,14 +257,15 @@ var CLASS_WINDOWS = [].concat(
     return best;
   }
   function fmtWin(w) { var d = new Date(w.a); return (d.getMonth() + 1) + '/' + d.getDate() + '（' + '日一二三四五六'.charAt(d.getDay()) + '）' + hm(w.a) + '–' + hm(w.b); }
+  var MP = { 'gemini-2.5-flash-lite': '0.10／0.40', 'gemini-2.5-flash': '0.30／2.50', 'gemini-3-flash-preview': '0.50／3.00', 'gemini-3.1-flash-lite': '0.25／1.50', 'gemini-3.5-flash-lite': '0.30／2.50' };   /* 與 tools/er_chat_daemon.py 的 PRICE_USD_PER_M 同一份 */
   function renderModelStats(d) {
     var ms = d.modelStats || {}, days = Object.keys(ms).sort(), box = $('modelStats'); if (!box) return;
     if (!days.length) { box.innerHTML = '<span class="muted">還沒有資料。</span>'; return; }
     var day = days[days.length - 1], m = ms[day] || {}, base = String(d.model || '').split('＋')[0].replace(/\./g, '_');
     var keys = Object.keys(m).sort(function (a, b) { return (m[b].turns || 0) - (m[a].turns || 0); }), all = keys.reduce(function (n, k) { return n + (m[k].turns || 0); }, 0);
-    box.innerHTML = '<table><thead><tr><th>型號</th><th>題數</th><th>佔比</th><th>平均每題秒數</th><th>出錯次數</th><th>平均回答 tokens</th><th>花費（美元）</th><th>每千題（美元）</th></tr></thead><tbody>' + keys.map(function (k) {
+    box.innerHTML = '<table><thead><tr><th>型號</th><th>牌價（輸入／輸出）</th><th>題數</th><th>佔比</th><th>平均每題秒數</th><th>出錯次數</th><th>平均回答 tokens</th><th>花費（美元）</th><th>每千題（美元）</th></tr></thead><tbody>' + keys.map(function (k) {
       var v = m[k], n = v.turns || 0, usd = (v.nusd || 0) / 1e9;
-      return '<tr><td><b>' + esc(k.replace(/_/g, '.').replace('gemini-', '')) + '</b>' + (k === base ? ' <span class="pill">基本</span>' : '') + '</td><td>' + n + '</td><td>' + (all ? Math.round(n / all * 100) : 0) + '%</td><td>' + (n ? ((v.ms || 0) / n / 1000).toFixed(1) : '—') + '</td><td>' + (v.fell ? '<span class="bad">' + v.fell + '</span>' : 0) + '</td><td>' + (n ? Math.round((v.tokOut || 0) / n) : '—') + '</td><td>' + usd.toFixed(4) + '</td><td>' + (n ? (usd / n * 1000).toFixed(2) : '—') + '</td></tr>';
+      return '<tr><td><b>' + esc(k.replace(/_/g, '.').replace('gemini-', '')) + '</b>' + (k === base ? ' <span class="pill">基本</span>' : '') + '</td><td>' + (MP[k.replace(/_/g, '.')] || '—') + '</td><td>' + n + '</td><td>' + (all ? Math.round(n / all * 100) : 0) + '%</td><td>' + (n ? ((v.ms || 0) / n / 1000).toFixed(1) : '—') + '</td><td>' + (v.fell ? '<span class="bad">' + v.fell + '</span>' : 0) + '</td><td>' + (n ? Math.round((v.tokOut || 0) / n) : '—') + '</td><td>' + usd.toFixed(4) + '</td><td>' + (n ? (usd / n * 1000).toFixed(2) : '—') + '</td></tr>';
     }).join('') + '</tbody></table><div class="muted" style="font-size:.85em">' + esc(day) + '，共 ' + all + ' 題（從開始分組試用起算）。秒數含排隊後的處理時間。</div>';
   }
   function renderDaemon() {
@@ -546,11 +547,11 @@ var CLASS_WINDOWS = [].concat(
       if (!m) return '';
       if (m.err) return '<div><b>' + title + '</b>　<span class="bad">讀不到</span> <span class="muted">' + esc(m.err) + '</span></div>';
       var rs = (m.rows || []).slice().sort(function (a, b) { return (b.game ? 1 : 0) - (a.game ? 1 : 0) || b['in'] - a['in']; });
-      return '<div style="margin:6px 0 2px"><b>' + title + '</b></div>' + (rs.length ? '<table><thead><tr><th>型號</th><th class="num">輸入 tokens</th><th class="num">輸出 tokens</th><th class="num">牌價金額</th><th>說明</th></tr></thead><tbody>' + rs.map(function (r) {
-        return '<tr' + (r.game ? ' style="font-weight:900"' : '') + '><td>' + esc(r.model) + '</td><td class="num">' + num(r['in']) + '</td><td class="num">' + num(r.out) + '</td><td class="num">' + (r.usd == null ? '<span class="muted">沒查牌價</span>' : fUsd(r.usd) + '（約 ' + fNtd(r.usd) + '）') + '</td><td>' + (r.game ? '<span class="pill ok">本遊戲的即時訪談</span>' : '<span class="muted">別的工作也在用，不能算在本遊戲</span>') + '</td></tr>'; }).join('') + '</tbody></table>' : '<div class="muted">這段時間沒有用量。</div>');
+      return '<div style="margin:6px 0 2px"><b>' + title + '</b></div>' + (rs.length ? '<table><thead><tr><th>型號</th><th class="num">輸入 tokens</th><th class="num">輸出 tokens</th><th class="num">牌價（輸入／輸出，每百萬）</th><th class="num">牌價金額</th><th>說明</th></tr></thead><tbody>' + rs.map(function (r) {
+        return '<tr' + (r.game ? ' style="font-weight:900"' : '') + '><td>' + esc(r.model) + '</td><td class="num">' + num(r['in']) + '</td><td class="num">' + num(r.out) + '</td><td class="num">' + (r.pin == null ? '—' : r.pin + '／' + r.pout + (r.est ? ' <span class="muted">估</span>' : '')) + '</td><td class="num">' + (r.usd == null ? '<span class="muted">沒查牌價</span>' : fUsd(r.usd) + '（約 ' + fNtd(r.usd) + '）') + '</td><td>' + (r.game ? '<span class="pill ok">本遊戲的即時訪談</span>' : '<span class="muted">別的工作也在用，不能算在本遊戲</span>') + '</td></tr>'; }).join('') + '</tbody></table>' : '<div class="muted">這段時間沒有用量。</div>');
     }
     $('useVertex').innerHTML = meter(v.h24, '近 24 小時') + meter(v.since, '累積（自 ' + ((v.since && v.since.start) ? dayLabel(v.since.start) : '') + ' 起）') +
-      '<div class="muted" style="font-size:.85em;margin-top:6px">這是整個 GCP 專案的權威計量（不管哪個程式打的都算得到）。' + esc(v.gameModel || '') + ' 目前只有本遊戲在用，所以那一列可以拿來跟上面的「本遊戲累積」對帳。更新於 ' + ago(v.t) + '。</div>';
+      '<div class="muted" style="font-size:.85em;margin-top:6px">這是整個 GCP 專案的權威計量（不管哪個程式打的都算得到）。牌價是 Google 官方定價頁的標準價（美元）；標「估」的型號官方頁沒列，數字來自第三方比價網站。' + esc(v.gameModel || '') + ' 目前只有本遊戲在用，所以那一列可以拿來跟上面的「本遊戲累積」對帳。更新於 ' + ago(v.t) + '。</div>';
     var c = v.credits || {};
     if (!c.ok) { $('useCredit').innerHTML = '<span class="bad">讀不到抵免額</span> <span class="muted">' + esc(c.why || '') + '</span>'; return; }
     function delta(x, since) { return x == null ? '<span class="muted">—</span>' : ((x < 0 ? '<span class="bad">−' : '<span>' + (x > 0 ? '+' : '')) + twd(Math.abs(x)) + '</span>' + (since ? '<div class="muted" style="font-size:.8em">自 ' + esc(String(since).slice(5, 16).replace('T', ' ')) + '</div>' : '')); }
