@@ -107,8 +107,13 @@
     o.innerHTML = '<div class="card" style="max-width:440px;width:100%;margin:0">' + html + '</div>'; o.style.display = 'flex'; return o;
   }
   function hideOverlay() { var o = $('sysOverlay'); if (o) o.style.display = 'none'; }
+  /* 10-13 楊老師：「我的帳號讓我可以多個地方登入」（上課時投影、手機、另一台電腦同時開）。
+     只認登入的 Google 信箱，不認學號——學生把學號打成 TEACHER 也沒用。這些帳號不登記 active：不會把別台踢掉，也不會被踢。
+     代價：兩台同時在同一間房操作時，後存的會蓋掉先存的（位置、筆記）。 */
+  var MULTI_LOGIN = ['scatjay@gmail.com'];
+  function multiLoginOk() { try { var u = firebase.auth().currentUser; return !!(u && u.email && MULTI_LOGIN.indexOf(String(u.email).toLowerCase()) >= 0); } catch (e) { return false; } }
   function claimDevice(sid, proceed) {
-    if (!ONLINE) { proceed(); return; }
+    if (!ONLINE || multiLoginOk()) { proceed(); return; }
     var fdb = firebase.database(); activeRef = fdb.ref('er/' + APP.SESS + '/active/' + sid);
     function mine() { return { dev: DEV, ua: isMobile ? 'mobile' : 'desktop', t: firebase.database.ServerValue.TIMESTAMP }; }
     function take() {
