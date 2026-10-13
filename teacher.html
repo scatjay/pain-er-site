@@ -306,7 +306,7 @@ var CLASS_WINDOWS = [].concat(
     var root = fdb.ref('er/' + SESS);
     function on(ref, fn, err) { ref.on('value', fn, err); offs.push(function () { ref.off('value', fn); }); }
     DB = window.ERG_REMOTE.makeRemoteDb({ root: root, sess: SESS, watchAll: true, notify: function (t) { if (/^(room:|lobby|scene:)/.test(t)) schedule(); } });
-    on(root.child('profiles'), function (s) { profiles = s.val() || {}; schedule(); });
+    on(root.child('profiles'), function (s) { profiles = s.val() || {}; schedule(); renderUsageAll(); });
     on(root.child('presence'), function (s) { presence = s.val() || {}; schedule(); });
     on(root.child('chat'), function (s) { chats = s.val() || {}; schedule(); });
     on(root.child('analysis/summary'), function (s) { var v = s.val(); $('sumBox').textContent = v ? v.text : ''; $('sumStat').textContent = v ? ('上次摘要：' + hm(v.t) + '，' + v.n + ' 個問題') : ''; });
@@ -481,11 +481,15 @@ var CLASS_WINDOWS = [].concat(
       '<div class="muted" style="font-size:.85em;margin-top:4px">抵免額是整個帳戶的實際餘額（新台幣），變化量包含所有用到這個帳戶的工作，不只本遊戲。它要透過「LLM 平台」那顆瀏覽器讀 GCP 帳務頁' + (c.browser9270 ? '，目前瀏覽器開著，會自動更新。' : '；那顆瀏覽器現在沒開，所以不會更新。開起來之後十分鐘內這裡會跟著更新。') + '</div>';
   }
   function renderUsage(u) {
-    var tot = u._total || {}, rows = Object.keys(u).filter(function (k) { return k.charAt(0) !== '_'; }).sort(function (a, b) { return (u[b].turns || 0) - (u[a].turns || 0); });
+    /* 10-13：只列這個場次綁定過的學生。測試帳號（例如壓力測試的 LOAD01 問滿 60 題）原本也列在表裡，楊老師以為有學生到上限。 */
+    var known = {}; Object.keys(profiles || {}).forEach(function (k) { known[String(k).toLowerCase()] = true; });
+    var allKeys = Object.keys(u).filter(function (k) { return k.charAt(0) !== '_'; }), hasProf = Object.keys(known).length > 0;
+    var others = hasProf ? allKeys.filter(function (k) { return !known[String(k).toLowerCase()]; }) : [], otherTurns = others.reduce(function (a, k) { return a + (u[k].turns || 0); }, 0);
+    var tot = u._total || {}, rows = allKeys.filter(function (k) { return others.indexOf(k) < 0; }).sort(function (a, b) { return (u[b].turns || 0) - (u[a].turns || 0); });
     var CAP = Number((daemon || {}).maxSid) || 150; if ($('capSid')) $('capSid').textContent = CAP;   /* 上限由代理程式回報（10-13 由 60 放寬到 150） */
     var capped = rows.filter(function (k) { return (u[k].turns || 0) >= CAP; }).length;
     $('usageSum').innerHTML = num(tot.turns) + ' 題・' + rows.length + ' 人' + (capped ? ' <span class="pill bad">' + capped + ' 人到上限</span>' : '');
-    $('usage').innerHTML = rows.length ? '<table><thead><tr><th>學生</th><th class="num">題數</th><th class="num">tokens（入/出）</th><th class="num">花費</th><th>最後</th></tr></thead><tbody>' + rows.map(function (k) { return '<tr><td>' + esc(aliasOf(k)) + '</td><td class="num">' + (u[k].turns || 0) + (u[k].turns >= CAP ? ' <span class="pill bad">已達上限</span>' : '') + '</td><td class="num">' + num(u[k].tokIn) + ' / ' + num(u[k].tokOut) + '</td><td class="num">' + fUsd(costUsd(u[k])) + '</td><td class="muted">' + (u[k].last ? hm(u[k].last) : '') + '</td></tr>'; }).join('') + '</tbody></table>' : '<span class="muted">這個場次還沒有人用即時訪談。</span>';
+    $('usage').innerHTML = rows.length ? '<table><thead><tr><th>學生</th><th class="num">題數</th><th class="num">tokens（入/出）</th><th class="num">花費</th><th>最後</th></tr></thead><tbody>' + rows.map(function (k) { return '<tr><td>' + esc(aliasOf(k)) + '</td><td class="num">' + (u[k].turns || 0) + (u[k].turns >= CAP ? ' <span class="pill bad">已達上限</span>' : '') + '</td><td class="num">' + num(u[k].tokIn) + ' / ' + num(u[k].tokOut) + '</td><td class="num">' + fUsd(costUsd(u[k])) + '</td><td class="muted">' + (u[k].last ? hm(u[k].last) : '') + '</td></tr>'; }).join('') + '</tbody></table>' + (others.length ? '<div class="muted" style="font-size:.85em;margin-top:6px">另有 ' + others.length + ' 個不是這個場次學生的帳號（系統測試用）共 ' + otherTurns + ' 題，沒有列在表裡。</div>' : '') : '<span class="muted">這個場次還沒有人用即時訪談。</span>';
   }
   function showChats(code, sid, rec) {
     setTab('room');
