@@ -100,7 +100,7 @@ body.proj{--fs:21px}body.proj .wrap{max-width:none}body.proj .small{display:none
 
 <section class="pane" data-pane="ask">
   <h2>大家怎麼問、在關注什麼</h2>
-  <div class="card"><div id="qTips" class="tips"></div><div class="muted" style="font-size:.85em;margin:4px 0 6px">點任何一條橫條，下面會列出那一類的原句（一句話可能同時算在好幾類）。</div><div class="cols"><div><b>提問方式</b><div id="qStyle"></div></div><div><b>關注主題</b><div id="qTopic"></div></div><div><b>訪談對象</b><div id="qWho"></div></div></div><div id="qDrill" hidden></div>
+  <div class="card"><div style="margin-bottom:6px">只看：<select id="qCls"><option value="">全部班級</option></select> <span id="qClsNote" class="muted" style="font-size:.85em"></span></div><div id="qTips" class="tips"></div><div class="muted" style="font-size:.85em;margin:4px 0 6px">點任何一條橫條，下面會列出那一類的原句（一句話可能同時算在好幾類）。</div><div class="cols"><div><b>提問方式</b><div id="qStyle"></div></div><div><b>關注主題</b><div id="qTopic"></div></div><div><b>訪談對象</b><div id="qWho"></div></div></div><div id="qDrill" hidden></div>
   <details style="margin-top:8px"><summary class="muted" style="cursor:pointer">最近 30 個問題</summary><div id="qRecent" style="font-size:.9em"></div></details></div>
   <h2>對「衛教簡訊再設計」的啟示</h2>
   <div class="card"><div class="cols"><div><b>訪談檢核標到的問題</b><div id="iTags"></div></div><div><b>結論裡的方向</b><div id="iConcl"></div></div></div>
@@ -381,10 +381,14 @@ var CLASS_WINDOWS = [].concat(
     Array.prototype.forEach.call(document.querySelectorAll('.barrow[data-k]'), function (el) { el.onclick = function () { var g = el.dataset.g, k = el.dataset.k; drill = (drill && drill.g === g && drill.k === k) ? null : { g: g, k: k }; renderAnalysis(); if (drill) $('qDrill').scrollIntoView({ block: 'nearest' }); }; });
   }
   /* 依目前的比例，產生可以直接提醒全班的話。門檻寫在這裡，數字是當下算的。 */
-  function renderTips(qs, st, convs, byPid) {
+  function renderTips(qs, st, convs, byPid, tp) {
     var n = qs.length, box = $('qTips'); if (n < 20) { box.innerHTML = '<b>可以提醒全班的話</b><span class="muted">題數還少（' + n + ' 題），滿 20 題之後這裡會依比例給建議。</span>'; return; }
     function c(k) { return st[k] || 0; } function p(x) { return Math.round(x / n * 100); }
     var tips = [], evReal = qs.filter(function (q) { var t = classify(q.text, STYLE_RULES, true); return t.indexOf('追問具體事件') >= 0 && t.indexOf('照念範本三問') < 0; }).length;
+    var sms = (tp || {})['簡訊／連結'] || 0, smsStu = Object.keys(qs.reduce(function (m, q) { if (classify(q.text, TOPIC_RULES, true).indexOf('簡訊／連結') >= 0) m[q.sid] = 1; return m; }, {})).length, allStu = Object.keys(qs.reduce(function (m, q) { m[q.sid] = 1; return m; }, {})).length;
+    if (sms / n < 0.15) tips.push('<b>很少問到簡訊</b>：提到簡訊、手機、訊息的只有 ' + sms + ' 題（' + p(sms) + '%），' + allStu + ' 位提問的學生裡只有 ' + smsStu + ' 位問過。提醒全班：這次調查的是離院後的衛教簡訊，問「上次看完病回家，醫院有傳訊息到你手機嗎？你什麼時候看的？」');
+    var tiny = qs.filter(function (q) { return q.text.replace(/[\s？?。，,！!]/g, '').length <= 6; }).length;
+    if (tiny / n >= 0.35) tips.push('<b>問得太短</b>：' + tiny + ' 題（' + p(tiny) + '%）在 6 個字以內。問句裡要有「誰、哪一次、哪件事」，人物才有東西可以回答。');
     if (c('是非題') / n >= 0.2) tips.push('<b>是非題偏多</b>：' + c('是非題') + ' 題（' + p(c('是非題')) + '%）。對方只會回「對啊／還好」。改問「上一次⋯⋯是怎麼發生的？」「當時你怎麼做？」');
     if (c('開放式') / n >= 0.25 && evReal / n < 0.12) tips.push('<b>開放式問了，但沒有往下追</b>：開放式 ' + c('開放式') + ' 題（' + p(c('開放式')) + '%），接著追問具體事件的只有 ' + evReal + ' 題（' + p(evReal) + '%）。開放題問完再補一句「最近一次是什麼時候？」「後來呢？」，不然只拿到一句感想。');
     if (c('追問原因或需求') / n < 0.06) tips.push('<b>很少追原因</b>：只有 ' + c('追問原因或需求') + ' 題（' + p(c('追問原因或需求')) + '%）。聽到卡住或抱怨的地方，補一句「為什麼會這樣？」「你當時希望怎樣？」');
@@ -426,10 +430,13 @@ var CLASS_WINDOWS = [].concat(
   }
   function bindChatLinks(el) { Array.prototype.forEach.call(el.querySelectorAll('[data-chat]'), function (a) { a.onclick = function (e) { e.preventDefault(); var p = a.dataset.chat.split('|'); showChats(p[0], p[1] || undefined); }; }); }
   function renderAnalysis() {
-    var qs = [], who = {}, convs = [], byPid = {};
-    Object.keys(chats).forEach(function (code) { Object.keys(chats[code]).forEach(function (sid) { Object.keys(chats[code][sid]).forEach(function (rec) { var c = chats[code][sid][rec], pn = c.personaName || personaName(c.personaId), nq = 0; Object.keys(c.turns || {}).forEach(function (k) { var t = c.turns[k]; if (t.role === 'u') { nq += 1; qs.push({ t: t.t, sid: sid, who: pn, pid: c.personaId || '', text: String(t.text || '') }); } }); if (nq) { who[pn] = (who[pn] || 0) + nq; convs.push(nq); (byPid[c.personaId || pn] = byPid[c.personaId || pn] || {})[sid] = 1; } }); }); });
+    var qs = [], who = {}, convs = [], byPid = {}, qsel = $('qCls'), qcls = qsel.value, clsSeen = {};
+    Object.keys(profiles || {}).forEach(function (sid) { var c = (profiles[sid] || {}).cls; if (c) clsSeen[c] = true; });
+    var want = Object.keys(clsSeen).sort().join('|'); if (qsel.dataset.opts !== want) { qsel.dataset.opts = want; qsel.innerHTML = '<option value="">全部班級</option>' + Object.keys(clsSeen).sort().map(function (c) { return '<option>' + esc(c) + '</option>'; }).join(''); qsel.value = qcls; qsel.onchange = function () { drill = null; renderAnalysis(); }; }
+    Object.keys(chats).forEach(function (code) { Object.keys(chats[code]).forEach(function (sid) { if (qcls && ((profiles[sid] || {}).cls || '') !== qcls) return; Object.keys(chats[code][sid]).forEach(function (rec) { var c = chats[code][sid][rec], pn = c.personaName || personaName(c.personaId), nq = 0; Object.keys(c.turns || {}).forEach(function (k) { var t = c.turns[k]; if (t.role === 'u') { nq += 1; qs.push({ t: t.t, sid: sid, who: pn, pid: c.personaId || '', text: String(t.text || '') }); } }); if (nq) { who[pn] = (who[pn] || 0) + nq; convs.push(nq); (byPid[c.personaId || pn] = byPid[c.personaId || pn] || {})[sid] = 1; } }); }); });
     var st = {}, tp = {}; qs.forEach(function (q) { classify(q.text, STYLE_RULES, true).forEach(function (k) { st[k] = (st[k] || 0) + 1; }); classify(q.text, TOPIC_RULES, true).forEach(function (k) { tp[k] = (tp[k] || 0) + 1; }); });
-    lastQs = qs; $('qStyle').innerHTML = bar(st, qs.length, 'style'); $('qTopic').innerHTML = bar(tp, qs.length, 'topic'); $('qWho').innerHTML = bar(who, qs.length, 'who'); bindDrill(); renderDrill(); renderTips(qs, st, convs, byPid);
+    lastQs = qs; $('qStyle').innerHTML = bar(st, qs.length, 'style'); $('qTopic').innerHTML = bar(tp, qs.length, 'topic'); $('qWho').innerHTML = bar(who, qs.length, 'who'); bindDrill(); renderDrill(); renderTips(qs, st, convs, byPid, tp);
+    $('qClsNote').textContent = (qcls ? qcls + '：' : '') + qs.length + ' 題、' + Object.keys(qs.reduce(function (m, q) { m[q.sid] = 1; return m; }, {})).length + ' 人有提問';
     qs.sort(function (a, b) { return b.t - a.t; });
     $('qRecent').innerHTML = qs.slice(0, 30).map(function (q) { return '<div style="margin:3px 0"><span class="muted">' + hm(q.t) + '</span> ' + esc(aliasOf(q.sid)) + ' → ' + esc(q.who) + '：' + esc(q.text) + ' <span class="pill">' + classify(q.text, STYLE_RULES, false)[0] + '</span></div>'; }).join('') || '<span class="muted">還沒有問題。</span>';
     $('kQ').textContent = qs.length;
