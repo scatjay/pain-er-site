@@ -359,6 +359,7 @@
     var R = window.ERG_ROOM, c = R && R.cur, A = window.ERG_ACH, P = window.ERG_PANELS;
     if (!ONLINE || !window.firebase || !c || !A || !APP.me.sid) return;
     ensureScoreWatch();
+    if (!window.ERG_SCORES_READY) return;   /* 10-15：還沒讀到自己之前發布的成就就先不寫，不然會把別間房拿到的蓋成較少 */
     var s = A.summary(c.player, P && P.achCtx ? P.achCtx() : {}); s.name = APP.me.name || APP.me.sid; s.cls = APP.me.cls || ''; s.t = Date.now();
     var j = JSON.stringify([s.interviewees, s.rooms, s.cards, s.events, s.chatTurns, s.playMin, s.partners, s.conclusions, s.badges, s.skAsk, s.skCtx]);
     if (j === lastScoreJson) return; lastScoreJson = j;
@@ -373,7 +374,7 @@
   function ensureScoreWatch() {
     if (scoreRef || !ONLINE || !window.firebase || !APP.me.sid) return;
     scoreRef = window.firebase.database().ref('er/' + APP.SESS + '/score');
-    scoreRef.on('value', function (snap) { window.ERG_SCORES = snap.val() || {}; var R = window.ERG_ROOM; if (R && R.cur && R.cur.tab === 'ach' && window.ERG_PANELS) window.ERG_PANELS.renderAch(); });
+    scoreRef.on('value', function (snap) { window.ERG_SCORES = snap.val() || {}; window.ERG_SCORES_READY = true; var R = window.ERG_ROOM; if (R && R.cur && R.cur.tab === 'ach' && window.ERG_PANELS) window.ERG_PANELS.renderAch(); });
   }
   window.ERG_ENSURE_SCORE_WATCH = ensureScoreWatch;
 

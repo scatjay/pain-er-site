@@ -186,7 +186,7 @@
   }
   S.fit = fitView;
   S.focusRect = function (rect) { cur.focus = rect; fitView(true); };
-  S.focusAll = function () { cur.focus = null; fitView(true); }; S.setWatchRoom=function(id){if(!LAYOUT.room(id)||LAYOUT.room(id).type!=='room')return;cur.watchRoom=id;var scene=document.getElementById(cur.mobile?'sceneBox':'stage');if(scene){scene.style.transition='opacity .18s';scene.style.opacity='.55';setTimeout(function(){scene.style.opacity='1';},30);}if(cur.mobile){renderScene();renderTokens();}else{S.focusRect(LAYOUT.room(id));renderOverlay();}};
+  S.focusAll = function () { cur.focus = null; fitView(true); }; S.setWatchRoom=function(id){if(!LAYOUT.room(id)||LAYOUT.room(id).type!=='room')return;cur.watchRoom=id;if(window.ERG_PANELS&&window.ERG_PANELS.onWatch)window.ERG_PANELS.onWatch(id);var scene=document.getElementById(cur.mobile?'sceneBox':'stage');if(scene){scene.style.transition='opacity .18s';scene.style.opacity='.55';setTimeout(function(){scene.style.opacity='1';},30);}if(cur.mobile){renderScene();renderTokens();}else{S.focusRect(LAYOUT.room(id));renderOverlay();}};
   function stageRect() {
     var r = LAYOUT.room(cur.watchRoom || cur.player.loc);
     if (!r || r.type === 'hall' || r.type === 'outside') { var p = cur.me || { x: 850, y: 500 }; return { x: p.x - 280, y: p.y - 190, w: 560, h: 380 }; }

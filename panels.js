@@ -15,7 +15,11 @@
   P.renderAll = function () { ['clue', 'intv', 'cards', 'concl', 'disc', 'cp', 'events'].forEach(P.render); };
   P.render = function (t) { ({ clue: renderClue, intv: renderIntv, cards: renderCards, concl: renderConcl, disc: renderDisc, cp: renderCp, events: renderEvents, ach: renderAch })[t](); };
   /* 成就分頁：自己的指標與徽章＋班級「誰最多」（線上模式讀 er/{sess}/score；本機版只有自己） */
-  function achCtx() { var c = cur(); var cp = (window.ERG_CORE && window.ERG_CP && c) ? (function () { try { var st = window.ERG_CORE.checkpointState(c, me()); return window.ERG_CP.evaluate(st).every(function (x) { return x.ok; }); } catch (e) { return false; } })() : false; return { cpAllOk: cp, shift: c && c.world && c.world.shift }; }
+  function achCtx() { var c = cur(); var cp = (window.ERG_CORE && window.ERG_CP && c) ? (function () { try { var st = window.ERG_CORE.checkpointState(c, me()); return window.ERG_CP.evaluate(st).every(function (x) { return x.ok; }); } catch (e) { return false; } })() : false; return { cpAllOk: cp, shift: c && c.world && c.world.shift, cases: casesTried(), keep: keptBadges() }; }
+  /* 10-15：成就是照『現在這間房』的紀錄算的，換案例開新房間會歸零；把之前已發布的成就帶回來，已拿到的不收回 */
+  function keptBadges() { try { var s = (window.ERG_SCORES || {})[String(me())]; return (s && s.badgeIds) ? s.badgeIds.slice() : []; } catch (e) { return []; } }
+  /* 10-15：自己進過幾種不同案例的房間（從大廳索引算：成員有我的房間，不同的 case 數） */
+  function casesTried() { try { var sid = String(me()), seen = {}; DB.listRooms(APP.SESS).forEach(function (r) { var x = (r && r.members !== undefined) ? r : (DB.getRoom(r.code) || {}); if (x.members && x.members[sid]) seen[x.case || 'sms'] = 1; }); return Object.keys(seen).length; } catch (e) { return 0; } }
   P.achCtx = achCtx;
   /* 10-13 技能等級：從自己這個房間的訪談逐字稿算（一次讀自己的一個節點，90 秒內不重讀；送出提問後立刻作廢） */
   var skCache = { t: 0, st: null, busy: false, code: '' };
@@ -59,6 +63,7 @@
   P.onRoomChanged = function () { if (!typing()) P.render(cur().tab); };
   P.onSceneChanged = function () { if (!typing()) { if (cur().tab === 'cards') renderCards(); if (cur().tab === 'concl') renderConcl(); } };
   P.onMove = function () { renderClue(); renderIntv(); };
+  P.onWatch = function () { try { if (cur() && cur().tab === 'clue') renderClue(); } catch (e) {} };   /* 輪播換看的房間時，右側線索跟著更新（10-15） */
   /* 每秒看一次：正在看的人物如果離開這間房，訪談分頁改成顯示他的紀錄（檢核表還在） */
   setInterval(function () {
     var c = cur(); if (!c || c.tab !== 'intv' || !c.selNpc || typing()) return;
@@ -75,6 +80,12 @@
     var c = cur().selClue ? clueById(cur().selClue) : null, p = $('p-clue'), loc = player().loc;
     var here = cur().world.clues.filter(function (x) { return x.pin.room === loc; }).length;
     var head = '<div class="card" style="margin-top:0"><b>' + esc(cur().world.meta.name) + '</b><div class="muted" style="font-size:13px">' + esc(cur().world.meta.brief) + '</div></div>';
+    /* 10-15 楊老師：輪播（自動換看別間房）時，右側的線索要跟著更新成『正在看的那間房』的線索 */
+    var cc = cur(), watch = cc.watchRoom, rotOn = !!(cc.rotation && cc.rotation.on);
+    if (!c && rotOn && watch && watch !== loc && window.ERG_LAYOUT && window.ERG_LAYOUT.room(watch) && window.ERG_LAYOUT.room(watch).type === 'room') {
+      var wcl = cc.world.clues.filter(function (x) { return x.pin.room === watch; }), wcap = ''; try { wcap = cc.world.captionFor(watch) || ''; } catch (e) {}
+      p.innerHTML = head + '<p>👀 輪播正在看「<b>' + esc(roomNameOf(watch)) + '</b>」，這間房有 <b>' + wcl.length + '</b> 個線索：</p>' + (wcl.length ? '<ul style="margin:4px 0 8px 18px;padding:0">' + wcl.map(function (x) { return '<li><b>' + esc(x.id) + '</b>　' + esc(x.title) + '</li>'; }).join('') + '</ul>' : '') + (wcap ? '<p class="muted" style="border-left:4px solid var(--yellow);padding-left:8px">' + esc(wcap) + '</p>' : '') + '<p class="muted">你自己還在「' + esc(roomNameOf(loc)) + '」；要讀線索得走到那間房，一操作輪播就會暫停。</p>'; return;
+    }
     if (!c) { p.innerHTML = head + '<p>你在「' + esc(roomNameOf(loc)) + '」，這間房有 <b>' + here + '</b> 個線索（黃色小牌）。點牌子就能讀。</p>' + (function () { var cp = ''; try { cp = cur().world.captionFor(loc) || ''; } catch (e) {} return cp ? '<p class="muted" style="border-left:4px solid var(--yellow);padding-left:8px">' + esc(cp) + '</p>' : ''; })() + '<p class="muted">' + (document.getElementById('nav') ? '要換房間：點下面「附近」的房間，或按「全部」看整張地圖。' : '要換房間：點地圖上的房間，或點右下角小地圖。') + '</p>'; return; }
     if (c.pin.room !== loc) { p.innerHTML = head + '<p>線索 <b>' + esc(c.id) + '</b> 在「' + esc(roomNameOf(c.pin.room)) + '」，你現在在「' + esc(roomNameOf(loc)) + '」，要走過去才讀得到。</p><button id="goClue">走到「' + esc(roomNameOf(c.pin.room)) + '」</button>'; $('goClue').onclick = function () { RM.travel(c.pin.room); }; return; }
     p.innerHTML = head + '<h2 style="margin-top:0">' + esc(c.id) + '　' + esc(c.title) + '</h2><span class="tag ' + (c.material === '模擬' ? 'warn' : '') + '">素材：' + esc(c.material || '模擬') + '</span><p>' + esc(c.body) + '</p><button id="mkClue">記一張勘查卡</button>';
@@ -113,7 +124,7 @@
     var html = '<div class="muted" style="font-size:13px">這間房裡的人（只有在同一房間才問得到）：</div><div class="row" style="margin:6px 0">' +
       (here.length ? here.map(function (h) { return '<button class="pill ' + (sel && sel.ent.id === h.ent.id ? 'on' : '') + '" data-npc="' + esc(h.ent.id) + '">' + esc(h.ent.name) + '・' + ({ free: '可聊', short: '簡短', blocked: '正忙' })[h.av.level] + '</button>'; }).join('') : '<span class="muted">現在這間房沒有人。</span>') + '</div>';
     /* 其他房間的人：灰色、不能選，後面標在哪間房（10-12 楊老師）。要訪談就先走過去——用地圖或下方的房間按鈕。 */
-    html += '<div class="muted" style="font-size:13px;margin-top:8px">其他房間的人（要先走到那間房才問得到）：</div><div id="allNpc" style="font-size:13px;margin:4px 0 6px">' + allNpcHtml() + '</div>';
+    html += '<div class="muted" style="font-size:13px;margin-top:8px">其他房間的人（點一下，直接過去找他）：</div><div id="allNpc" style="font-size:13px;margin:4px 0 6px">' + allNpcHtml() + '</div>';
     if (recs.length) html += '<div class="muted" style="font-size:13px;margin-top:8px">我問過的人（人不在也可以回來打勾）：</div><div class="row" id="myRecs" style="margin:4px 0 6px">' + recs.map(function (r) { var pr = CL.progress(r); return '<button class="pill ' + (recPid === r.personaId ? 'on' : '') + '" data-rec="' + esc(r.personaId) + '">' + esc(nameOf(r.personaId)) + '　' + pr.done + '/' + pr.total + (pr.complete ? ' ✔' : '') + '</button>'; }).join('') + '</div>';
     if (!sel && !recPid) { p.innerHTML = html + '<p class="muted">點上面的人，或直接點畫面上的角色。</p>'; bindNpc(p); bindAllNpc(p); return; }
     var ent = sel ? sel.ent : null, pid = recPid, ix = recFor(pid), rec = ix >= 0 ? recs[ix] : null;
@@ -181,13 +192,13 @@
     });
     var rooms = Object.keys(byRoom).filter(function (rid) { return rid !== mine; }).sort(function (a, b) { return LAY.room(a).name.localeCompare(LAY.room(b).name); });
     if (!rooms.length) return '<span class="muted">現在其他房間沒有可以訪談的人。</span>';
-    return rooms.map(function (rid) { return byRoom[rid].map(function (h) { return '<span class="pill" aria-disabled="true" title="要先走到' + esc(roomNameOf(rid)) + '" style="font-size:12px;padding:1px 7px;margin:2px;opacity:.5;border-style:dashed;cursor:not-allowed">' + esc(h.ent.name) + '　<span style="font-weight:400">在' + esc(roomNameOf(rid)) + '</span></span>'; }).join(''); }).join('');
+    return rooms.map(function (rid) { return byRoom[rid].map(function (h) { return '<button type="button" class="pill" data-goto="' + esc(h.ent.id) + '" data-room="' + esc(rid) + '" data-name="' + esc(h.ent.name) + '" title="點一下，直接過去' + esc(roomNameOf(rid)) + '找他" style="font-size:12px;min-height:32px;padding:2px 9px;margin:2px;border-style:dashed;cursor:pointer">' + esc(h.ent.name) + '　<span style="font-weight:400">在' + esc(roomNameOf(rid)) + '</span></button>'; }).join(''); }).join('');   /* 10-15 楊老師：不在這間房的人，點一下就直接傳送過去（不用走路），到了自動選他 */
   }
   function bindAllNpc(p) {
     Array.prototype.forEach.call(p.querySelectorAll('[data-goto]'), function (b) { b.onclick = function () {
       var id = b.dataset.goto, rid = b.dataset.room, c = cur();
       if (rid === player().loc) { c.selNpc = id; renderIntv(); return; }
-      c.pendingNpc = id; RM.toast('走去' + roomNameOf(rid) + '找 ' + (b.textContent.split('・')[0]) + '…'); RM.travel(rid);
+      c.pendingNpc = id; RM.toast('到了' + roomNameOf(rid) + '，找 ' + (b.dataset.name || '他') + '…'); if (RM.teleport) RM.teleport(rid); else RM.travel(rid);
     }; });
   }
   /* 走到目的房間後，自動選取剛才點的人 */

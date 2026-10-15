@@ -18,6 +18,7 @@ th{font-size:.85em;color:var(--muted);white-space:nowrap}tbody tr:hover{backgrou
 td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .muted{color:var(--muted)}.ok{color:var(--ok);font-weight:900}.bad{color:var(--bad);font-weight:900}
 .dots{white-space:nowrap}.dots i{display:inline-block;width:1em;height:1em;border-radius:50%;border:2px solid var(--ink);margin-right:2px;background:transparent;vertical-align:middle}.dots i.lit{background:var(--yellow)}
+.achEv{padding:3px 8px;border-radius:6px;margin:2px 0}.achEv.new{background:var(--yellow);color:#1e1e1e;animation:achflash 1.6s ease-out}@keyframes achflash{0%{transform:scale(1.03);box-shadow:0 0 0 4px rgba(255,107,74,.6)}100%{transform:none;box-shadow:none}}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.row>*{min-width:0}
 input,select,button{font:inherit;padding:6px 10px;border:2px solid var(--ink);border-radius:8px;background:var(--panel);color:var(--ink)}
 input[type=checkbox]{padding:0;width:1.1em;height:1.1em;vertical-align:middle}
@@ -95,6 +96,7 @@ body.proj{--fs:21px}body.proj .wrap{max-width:none}body.proj .small{display:none
 
 <section class="pane" data-pane="live">
   <h2>現在在哪裡、在訪談誰</h2>
+  <div class="card" id="achFeedCard"><b>🏅 成就即時通知</b> <span class="muted" style="font-size:.85em">學生一解開成就就會出現在這裡（只留這次打開頁面之後的）</span><div id="achFeed" style="font-size:.95em;margin-top:4px"><span class="muted">等學生解開成就…</span></div></div>
   <div class="card livegrid"><div id="liveMap" class="scroll"></div><div id="liveList" style="font-size:.95em"></div></div>
 </section>
 
@@ -156,16 +158,16 @@ body.proj{--fs:21px}body.proj .wrap{max-width:none}body.proj .small{display:none
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-<script src="er_firebase.js?v=202610132233"></script>
-<script src="checklist.js?v=202610132233"></script>
-<script src="checkpoints.js?v=202610132233"></script>
-<script src="avatar.js?v=202610132233"></script>
-<script src="local_db.js?v=202610132233"></script>
-<script src="app_core.js?v=202610132233"></script>
-<script src="achievements.js?v=202610132233"></script><script src="remote_db.js?v=202610132233"></script>
-<script src="layout.js?v=202610132233"></script>
-<script src="minimap.js?v=202610132233"></script>
-<script src="personas_inclusive.js?v=202610132233"></script><script src="er_data.js?v=202610132233"></script><script src="npc_voice.js?v=202610132233"></script><script src="personas.js?v=202610132233"></script>
+<script src="er_firebase.js?v=202610151500"></script>
+<script src="checklist.js?v=202610151500"></script>
+<script src="checkpoints.js?v=202610151500"></script>
+<script src="avatar.js?v=202610151500"></script>
+<script src="local_db.js?v=202610151500"></script>
+<script src="app_core.js?v=202610151500"></script>
+<script src="achievements.js?v=202610151500"></script><script src="remote_db.js?v=202610151500"></script>
+<script src="layout.js?v=202610151500"></script>
+<script src="minimap.js?v=202610151500"></script>
+<script src="personas_inclusive.js?v=202610151500"></script><script src="er_data.js?v=202610151500"></script><script src="npc_voice.js?v=202610151500"></script><script src="personas.js?v=202610151500"></script>
 <script>
 /* 教師名單：只有這裡的 Google 帳號能進。要加人就加在這裡（改完重新部署；資料庫規則 tools/er_after_google_enabled.py 也要加）。 */
 var TEACHER_EMAILS = ['scatjay@gmail.com'];
@@ -337,13 +339,29 @@ var CLASS_WINDOWS = [].concat(
     on(root.child('chat'), function (s) { chats = s.val() || {}; schedule(); });
     on(root.child('analysis/summary'), function (s) { var v = s.val(); $('sumBox').textContent = v ? v.text : ''; $('sumStat').textContent = v ? ('上次摘要：' + hm(v.t) + '，' + v.n + ' 個問題') : ''; });
     renderUsageAll();
-    on(root.child('score'), function (s) { scores = s.val() || {}; renderBoard(); try { renderSkillDist(); } catch (e) {} });
+    on(root.child('score'), function (s) { var prev = scores; var first = !achSeen; scores = s.val() || {}; achSeen = true; renderBoard(); try { renderSkillDist(); } catch (e) {} try { if (!first) achNotify(prev || {}, scores); } catch (e) {} });
     schedule();
   }
   setInterval(function () { if (DB) schedule(); }, 30000);   /* 在線人數會隨時間過期，定時重算 */
 
   /* 成就排行：學生端每分鐘把自己的指標摘要寫到 er/{sess}/score/{sid}（achievements.js 的 summary） */
   var scores = {};
+  /* 10-15 楊老師：後台看得到學生解開成就的即時通知（含他在哪間房）。學生端每次解開成就都會把 badgeIds 寫進 score/{學號}，這裡比對前後兩份、多出來的就是剛解開的。第一次載入只當基準、不通知。 */
+  var achSeen = false, achEvents = [];
+  function badgeInfo(id) { var D = (window.ERG_ACH && window.ERG_ACH.DEFS) || []; for (var i = 0; i < D.length; i++) if (D[i].id === id) return D[i]; return { icon: '🏅', name: id }; }
+  function roomOfStudent(sid) { var best = null; (rooms || []).forEach(function (r) { var p = r.players && r.players[sid]; if (p && (!best || (r.createdAt || 0) > (best.r.createdAt || 0))) best = { r: r, p: p }; }); if (!best) return { code: '', name: '' }; var lr = window.ERG_LAYOUT || (typeof LAYOUT !== 'undefined' ? LAYOUT : null), rm = lr && best.p.loc ? lr.room(best.p.loc) : null; return { code: best.r.code, name: rm ? rm.name : '' }; }
+  function achNotify(prev, cur) {
+    var now = Date.now(), got = 0;
+    Object.keys(cur || {}).forEach(function (sid) {
+      var a = (prev[sid] || {}).badgeIds || [], b = (cur[sid] || {}).badgeIds || [];
+      b.filter(function (id) { return a.indexOf(id) < 0; }).forEach(function (id) { achEvents.unshift({ t: now, sid: sid, cls: (cur[sid] || {}).cls || ((typeof profiles !== 'undefined' && profiles[sid]) || {}).cls || '', id: id, room: roomOfStudent(sid) }); got += 1; });
+    });
+    if (got) { achEvents = achEvents.slice(0, 40); renderAchFeed(); setTimeout(renderAchFeed, 12000); }
+  }
+  function renderAchFeed() {
+    var box = $('achFeed'); if (!box) return; var now = Date.now();
+    box.innerHTML = achEvents.length ? achEvents.map(function (e) { var d = new Date(e.t), bi = badgeInfo(e.id), who = (typeof aliasOf === 'function' ? aliasOf(e.sid) : e.sid); return '<div class="achEv' + (now - e.t < 10000 ? ' new' : '') + '">' + ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2) + '　🏅 <b>' + esc(who) + '</b>' + (e.cls ? '（' + esc(e.cls) + '）' : '') + (e.room.name ? ' 在「' + esc(e.room.name) + '」' : '') + (e.room.code ? '<span class="muted">（房間 ' + esc(e.room.code) + '）</span>' : '') + ' 解開了 ' + esc(bi.icon || '') + ' <b>' + esc(bi.name) + '</b></div>'; }).join('') : '<span class="muted">等學生解開成就…</span>';
+  }
   function renderBoard() {
     var A = window.ERG_ACH, el = $('board'); if (!A || !el) return;
     var named = {}; Object.keys(scores).forEach(function (sid) { var s = scores[sid] || {}; named[sid] = Object.assign({}, s, { name: DEID ? aliasOf(sid) : (s.name || sid) }); });
@@ -439,19 +457,22 @@ var CLASS_WINDOWS = [].concat(
     return out;
   }
   function isOnline(sid) { var p = presence[sid]; return !!(p && Date.now() - Number(p.t || 0) < 200000); }
+  /* 10-15 楊老師：活躍人數地圖用訪談技能等級區分。點的顏色與中間的數字＝探問、情境感知兩項裡較高的那一級（還沒有等級資料的學生算 1 級）；橘色外圈＝最近 5 分鐘有訪談 */
+  var LV_COLOR = { 1: '#a5d8ff', 2: '#8ce99a', 3: '#ffa94d' };
+  function lvOf(sid) { var s = (scores || {})[sid] || {}; return Math.min(3, Math.max(1, Number(s.skAsk) || 1, Number(s.skCtx) || 1)); }
   function renderLive(ask) {
     var dots = [], list = [], now = Date.now();
     rooms.forEach(function (r) {
       Object.keys(r.players || {}).forEach(function (sid) {
         var p = r.players[sid], rm = LAYOUT.room(p.loc || 'entrance'); if (!rm) return;
         var recent = (ask[sid] || {}).last, active = !!(recent && now - recent.t < 5 * 60000);
-        dots.push({ x: rm.x + rm.w * (0.3 + 0.4 * ((sid.charCodeAt(sid.length - 1) % 7) / 7)), y: rm.y + rm.h * (0.35 + 0.4 * ((sid.charCodeAt(Math.max(0, sid.length - 2)) % 5) / 5)), kind: active ? 'me' : 'npc', label: aliasOf(sid).slice(-2) });
+        dots.push({ x: rm.x + rm.w * (0.3 + 0.4 * ((sid.charCodeAt(sid.length - 1) % 7) / 7)), y: rm.y + rm.h * (0.35 + 0.4 * ((sid.charCodeAt(Math.max(0, sid.length - 2)) % 5) / 5)), kind: 'npc', color: LV_COLOR[lvOf(sid)], glyph: String(lvOf(sid)), ring: active, label: aliasOf(sid).slice(-2) });
         list.push({ sid: sid, room: rm.name, code: r.code, recent: recent, active: active });
       });
     });
-    $('liveMap').innerHTML = MM.svg(LAYOUT, { compact: true, fontScale: 1.2, onlyMap: true, width: 560, showFurniture: false, dots: dots, clickable: false });
+    $('liveMap').innerHTML = MM.svg(LAYOUT, { compact: true, fontScale: 1.2, onlyMap: true, width: 560, showFurniture: false, dots: dots, clickable: false }) + '<div class="muted" style="font-size:.85em;margin-top:4px">點的顏色與數字＝訪談技能等級（<span style="background:#a5d8ff;padding:0 6px;border-radius:8px">1 級</span> <span style="background:#8ce99a;padding:0 6px;border-radius:8px">2 級</span> <span style="background:#ffa94d;padding:0 6px;border-radius:8px">3 級</span>，取探問與情境感知較高的一項）；橘色外圈＝最近 5 分鐘有訪談。</div>';
     list.sort(function (a, b) { return (b.recent ? b.recent.t : 0) - (a.recent ? a.recent.t : 0); });
-    $('liveList').innerHTML = list.length ? list.slice(0, 30).map(function (it) { return '<div style="margin:4px 0">' + (it.active ? '🟡 ' : '⚪ ') + '<a href="#" data-chat="' + esc(it.code) + '|' + esc(it.sid) + '"><b>' + esc(aliasOf(it.sid)) + '</b></a> 在 ' + esc(it.room) + (it.recent ? '，問 ' + esc(it.recent.who) + '：「' + esc(String(it.recent.text).slice(0, 24)) + '」' : '，還沒訪談') + '</div>'; }).join('') + '<div class="muted" style="font-size:.8em">🟡＝5 分鐘內有提問。點名字看逐字稿。</div>' : '<span class="muted">還沒有人進房。</span>';
+    $('liveList').innerHTML = list.length ? list.slice(0, 30).map(function (it) { return '<div style="margin:4px 0">' + (it.active ? '🟡 ' : '⚪ ') + '<a href="#" data-chat="' + esc(it.code) + '|' + esc(it.sid) + '"><b>' + esc(aliasOf(it.sid)) + '</b></a> <span class="muted" title="訪談技能等級（探問、情境感知取較高）">Lv' + lvOf(it.sid) + '</span> 在 ' + esc(it.room) + (it.recent ? '，問 ' + esc(it.recent.who) + '：「' + esc(String(it.recent.text).slice(0, 24)) + '」' : '，還沒訪談') + '</div>'; }).join('') + '<div class="muted" style="font-size:.8em">🟡＝5 分鐘內有提問。點名字看逐字稿。</div>' : '<span class="muted">還沒有人進房。</span>';
     bindChatLinks($('liveList'));
   }
   function bindChatLinks(el) { Array.prototype.forEach.call(el.querySelectorAll('[data-chat]'), function (a) { a.onclick = function (e) { e.preventDefault(); var p = a.dataset.chat.split('|'); showChats(p[0], p[1] || undefined); }; }); }

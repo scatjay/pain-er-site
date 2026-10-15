@@ -111,7 +111,8 @@
     (opts.dots || []).forEach(function (d) {
       if (d.kind === 'me') return;
       var s = DOT[d.kind] || DOT.npc;
-      out.push('<g><circle cx="' + num(d.x) + '" cy="' + num(d.y) + '" r="' + num((d.kind === 'me' ? 13 : 9) * (compact ? 1.7 : F)) + '" fill="' + s[0] + '" stroke="#1e1e1e" stroke-width="' + (d.kind === 'bot' ? 2 : 3) + '"' + (d.kind === 'bot' ? ' stroke-dasharray="4 3"' : '') + '/>' +
+      if (d.color) s = [d.color, d.glyph == null ? s[1] : d.glyph];   /* 10-15：後台活躍人數地圖用顏色與數字表示訪談技能等級；d.ring＝最近 5 分鐘有訪談的外圈 */
+      out.push('<g><circle cx="' + num(d.x) + '" cy="' + num(d.y) + '" r="' + num((d.kind === 'me' ? 13 : 9) * (compact ? 1.7 : F)) + '" fill="' + s[0] + '" stroke="' + (d.ring ? '#e8590c' : '#1e1e1e') + '" stroke-width="' + (d.ring ? 6 : (d.kind === 'bot' ? 2 : 3)) + '"' + (d.kind === 'bot' ? ' stroke-dasharray="4 3"' : '') + '/>' +
         (s[1] ? '<text x="' + num(d.x) + '" y="' + num(d.y + 5) + '" font-size="' + num((d.kind === 'me' ? 12 : 9) * (compact ? 1.7 : F)) + '" font-weight="900" text-anchor="middle" fill="#1e1e1e">' + s[1] + '</text>' : '') +
         (d.label ? '<text x="' + num(d.x + 16) + '" y="' + num(d.y - 10) + '" font-size="' + num(15 * (compact ? 1.6 : F)) + '" font-weight="700" fill="#1e1e1e" stroke="#fff" stroke-width="3" paint-order="stroke">' + esc(d.label) + '</text>' : '') + '</g>');
     });

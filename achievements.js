@@ -114,6 +114,8 @@
       interviewees: ids.length, interviewIds: ids, interviewsDeep: complete, maxItems: maxItems,
       coreDone: CORE_IDS.filter(function (id) { return who[id]; }).length, coreTotal: CORE_IDS.length,
       rooms: arr(player.visited).length, cards: arr(player.cards).length, events: keys(player.seenEv).length,
+      keep: arr(ctx.keep),   /* 10-15：之前在別間房已經解開的成就（從 score/{學號} 讀回來）；換案例開新房間時，已拿到的不會不見 */
+      cases: Number(ctx.cases) || 0,   /* 10-15：進過幾種不同案例的房間（大廳『開一間』的案例選單；由 panels.js 的 achCtx 從大廳索引算） */
       replays: arr(player.replays).length, partners: arr(player.discussion && player.discussion.partners).length,
       conclusions: arr(player.conclusions).length, chatTurns: Number(player.chatTurns || 0), playMin: Number(player.playMin || 0),
       night: !!(player.nightSeen || ctx.shift === 'night'), cpAllOk: !!ctx.cpAllOk,
@@ -127,6 +129,10 @@
   var DEFS = [
     { id: 'first_talk', icon: '🗣️', name: '破冰', desc: '第一次訪談（記下至少一格）', test: function (m) { return m.interviewees >= 1; } },
     { id: 'five_talks', icon: '🤝', name: '人脈王', desc: '訪談過 5 個不同的人', test: function (m) { return m.interviewees >= 5; } },
+    /* 10-15 楊老師：大家都只開第一個案例，沒發現還有其他五種 → 加三枚『換案例』成就（案例共 6 種） */
+    { id: 'case_two', icon: '🚪', name: '換一間試試', desc: '玩過 2 種不同案例的房間（開房時，「案例」可以選別的）', test: function (m) { return m.cases >= 2; } },
+    { id: 'case_four', icon: '🗺️', name: '四種案例', desc: '玩過 4 種不同案例的房間', test: function (m) { return m.cases >= 4; } },
+    { id: 'case_all', icon: '🏆', name: '房間全解', desc: '6 種案例的房間都進去玩過', test: function (m) { return m.cases >= 6; } },
     { id: 'ten_talks', icon: '🏥', name: '急診百曉生', desc: '訪談過 10 個不同的人', test: function (m) { return m.interviewees >= 10; } },
     { id: 'all_core', icon: '🧩', name: '關係人全訪', desc: '案子的 10 位重要關係人都訪過', test: function (m) { return m.coreDone >= m.coreTotal; } },
     { id: 'deep_dig', icon: '⛏️', name: '追問到底', desc: '同一個人的紀錄填滿 4 格以上', test: function (m) { return m.interviewsDeep >= 1; } },
@@ -155,7 +161,7 @@
     { id: 'inclusive', icon: '🌈', name: '每個人都算數', desc: '訪談過小薇、恩哥、賴阿嬤、山哥其中三位', test: function (m) { return ['trans_woman', 'gay_partner', 'lonely_elder', 'street_man'].filter(function (id) { return m.interviewIds.indexOf(id) >= 0; }).length >= 3; } },
     { id: 'all_cp', icon: '🏁', name: '六燈全亮', desc: '六個檢核點全部通過', test: function (m) { return m.cpAllOk; } }
   ];
-  function badges(m) { return DEFS.map(function (d) { return { id: d.id, icon: d.icon, name: d.name, desc: d.desc, ok: !!d.test(m) }; }); }
+  function badges(m) { return DEFS.map(function (d) { return { id: d.id, icon: d.icon, name: d.name, desc: d.desc, ok: !!d.test(m) || (m.keep || []).indexOf(d.id) >= 0 }; }); }
   function earned(m) { return badges(m).filter(function (b) { return b.ok; }); }
 
   /* 給班級排行的小物件（不含名字；名字由呼叫端補） */
