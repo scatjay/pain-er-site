@@ -293,6 +293,10 @@
     show('lobby'); $('whoami').textContent = (APP.me.name ? APP.me.name + '・' : '') + APP.me.sid + '　' + APP.me.cls; $('sessLabel').textContent = APP.SESS;
     if (!$('dowSel').children.length) { var td = window.ERG_CALENDAR.fromDate(new Date()); $('dowSel').innerHTML = window.ERG_CALENDAR.NAMES.map(function (n, i) { return '<option value="' + i + '"' + (i === td ? ' selected' : '') + '>' + n + (i >= 5 ? '（週末休息）' : '') + '</option>'; }).join(''); }
     if (!$('caseSel').children.length) $('caseSel').innerHTML = CASELIST.map(function (c, i) { return '<option value="' + esc(c.meta.id) + '" title="' + esc(c.meta.name) + '">' + (i + 1) + '. ' + esc(c.meta.short) + '</option>'; }).join('');   /* 10-12：選單用「編號. 短名」，長名稱在手機會被切掉 */
+    /* 10-16：案例共 N 種，每次進大廳隨機先選一種（避免大家都只進第一種），旁邊寫明共幾種、可以自己換 */
+    (function () { var sel = $('caseSel'), n = CASELIST.length; if (!sel || !n) return; sel.selectedIndex = Math.floor(Math.random() * n);
+      var h = $('caseHint'); if (!h) { h = document.createElement('div'); h.id = 'caseHint'; h.className = 'muted'; h.style.cssText = 'font-size:13px;margin:2px 0 4px'; sel.parentNode.parentNode.insertBefore(h, sel.parentNode.nextSibling); }
+      h.textContent = '案例共 ' + n + ' 種（每次進來先隨機選一種，可以自己換），每一種的人物、線索和結論都不一樣。'; })();
     renderLobby();
   }
   function renderLobby() {
@@ -313,7 +317,7 @@
     mineRows.concat(others.slice(0, CAP)).forEach(function (x) {
       var r = x.r, full = x.full, mine = x.mine;
       var tr = document.createElement('tr');
-      tr.innerHTML = '<td><b>' + esc(r.code) + '</b>' + (mine ? ' <span class="tag">我在裡面</span>' : (x.online ? ' <span class="tag ok">在線</span>' : '')) + '</td><td>' + esc(caseMeta(full.case || 'sms').short || caseMeta(full.case || 'sms').name) + '・' + (full.shift === 'night' ? '夜班' : '日班') + '</td><td>' + esc(full.hostName || r.host) + (full.cls ? ' <span class="muted" style="font-size:12px">' + esc(full.cls) + '</span>' : '') + '</td><td>' + r.count + '/4</td><td></td>';
+      tr.innerHTML = '<td><b>' + esc(r.code) + '</b>' + (mine ? ' <span class="tag">我在裡面</span>' : (x.online ? ' <span class="tag ok">在線</span>' : '')) + '</td><td>' + esc(caseMeta(full.case || 'sms').short || caseMeta(full.case || 'sms').name) + '・' + (full.shift === 'night' ? '夜班' : '日班') + '</td><td>' + esc(full.hostName || r.host) + (full.cls ? ' <span class="muted" style="font-size:12px">' + esc(full.cls) + '</span>' : '') + '</td><td title="這間房到現在一共有幾位進來過（滿 4 位之後新來的只能旁觀）">' + r.count + ' 人' + (r.count >= 4 ? '（滿）' : '') + '</td><td></td>';
       var b = document.createElement('button'); b.className = 'ghost'; b.textContent = mine ? '回去' : (r.count >= 4 ? '旁觀' : '加入');
       b.onclick = function () { joinCode(r.code); }; tr.lastChild.appendChild(b); tb.appendChild(tr);
     });

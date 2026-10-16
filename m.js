@@ -88,13 +88,16 @@
   /* 速度：一顆鈕輪流切 慢→標準→快→暫停 */
   var SPEEDS = ['慢', '標準', '快', '暫停'];
   function speedKey() { return cur.clock.paused ? '暫停' : cur.clock.speed; }
-  function updateSpeedBtn() { var k = speedKey(); $('speedBtn').textContent = (k === '暫停' ? '⏸ 時間 ' : '⏱ 時間 ') + k; }
-  $('speedBtn').onclick = function () {
-    var i = (SPEEDS.indexOf(speedKey()) + 1) % SPEEDS.length, k = SPEEDS[i];
+  function updateSpeedBtn() { var k = speedKey(); $('speedBtn').textContent = (k === '暫停' ? '⏸ 時間 ' : '⏱ 時間 ') + (k === '快' ? '快轉' : k); }
+  function applySpeed(k) {
     if (k === '暫停') cur.clock = CLK.setPaused(cur.clock, true); else { cur.clock = CLK.setPaused(CLK.setSpeed(cur.clock, k), false); APP.me.profile.speed = k; CORE.saveProfile(APP.storage, APP.me.sid, APP.me.profile); }
     updateSpeedBtn(); persist(true);
-    toast(k === '暫停' ? '急診室的時間暫停了。再點一下「時間」會繼續（慢）。' : '急診室的時間速度：' + k + '。再點一下換成「' + SPEEDS[(i + 1) % SPEEDS.length] + '」。');
-  };
+    toast(k === '暫停' ? '急診室的時間暫停了。再點「時間」選別的速度就會繼續。' : '急診室的時間速度：' + (k === '快' ? '快轉' : k) + '。');
+  }
+  function markSpeedSheet() { var k = speedKey(); Array.prototype.forEach.call($('speedSheet').children, function (b) { b.classList.toggle('cur', b.dataset.s === k); }); }
+  $('speedBtn').onclick = function (e) { e.stopPropagation(); var sh = $('speedSheet'); markSpeedSheet(); sh.classList.toggle('on'); };
+  Array.prototype.forEach.call($('speedSheet').children, function (b) { b.onclick = function (e) { e.stopPropagation(); $('speedSheet').classList.remove('on'); applySpeed(b.dataset.s); }; });
+  document.addEventListener('click', function () { $('speedSheet').classList.remove('on'); });
 
   /* 卡片：沒有 Excalidraw，存在 room.mcards，電腦版也看得到 */
   S.allEls = function () { return DB.getScene(cur.code); };
