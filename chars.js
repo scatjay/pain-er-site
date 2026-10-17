@@ -61,6 +61,11 @@
     if (B.shape === 'ellipse') out.push(shape(wobblyEllipse(cx + lean, top + bh / 2, bw / 2, bh / 2 + 1, r, 4), outfit));
     else if (B.shape === 'pear') out.push(shape(closedSmooth([[cx + lean - 10, top], [cx + lean + 10, top], [cx + lean + bw / 2, top + bh * .55], [cx + lean + bw / 2 + 1, top + bh], [cx + lean - bw / 2 - 1, top + bh], [cx + lean - bw / 2, top + bh * .55]]), outfit));
     else out.push(shape(wobblyRect(cx - bw / 2 + lean, top, bw, bh, r, 4), outfit));
+    /* 10-18 衣服花紋 */
+    var pat = look.pattern;
+    if (pat === 'stripes') { out.push('<g opacity="0.4">' + line(cx - bw / 2 + 4 + lean, top + bh * 0.3, cx + bw / 2 - 4 + lean, top + bh * 0.3, 2.5) + line(cx - bw / 2 + 3 + lean, top + bh * 0.55, cx + bw / 2 - 3 + lean, top + bh * 0.55, 2.5) + line(cx - bw / 2 + 4 + lean, top + bh * 0.8, cx + bw / 2 - 4 + lean, top + bh * 0.8, 2.5) + '</g>'); }
+    else if (pat === 'pocket') out.push('<rect x="' + f(cx + lean + bw / 6) + '" y="' + f(top + bh * 0.5) + '" width="10" height="9" rx="2" fill="none" stroke="' + INK + '" stroke-width="2" opacity="0.6"/>');
+    else if (pat === 'dots') { out.push('<g opacity="0.35" fill="' + INK + '">' + [[-7, 0.3], [5, 0.4], [-2, 0.62], [9, 0.72], [-9, 0.8]].map(function (d) { return '<circle cx="' + f(cx + lean + d[0] * k) + '" cy="' + f(top + bh * d[1]) + '" r="2"/>'; }).join('') + '</g>'); }
     /* 手腳：粗短的線 */
     out.push(line(cx - (bw / 2 - 1) + lean, top + 8, cx - 24 * k, top + 22 + (r() - 0.5) * 4, 4));
     out.push(line(cx + (bw / 2 - 1) + lean, top + 8, cx + 25 * k, top + 20 + (r() - 0.5) * 4, 4));
@@ -82,6 +87,12 @@
       out.push(shape(wobblyRect(hx - 33, hy - 12, 11, 36, r, 3), sc));
       out.push(shape(wobblyRect(hx + 22, hy - 12, 11, 36, r, 3), sc));
     }
+    var hc = look.hairColor || '#4a3b32', hcap = shape(closedSmooth([[hx - 26, hy - 8], [hx - 20, hy - 26], [hx, hy - 31], [hx + 20, hy - 26], [hx + 26, hy - 8], [hx + 15, hy - 18], [hx, hy - 21], [hx - 15, hy - 18]]), hc);
+    if (hair === 'bun') { out.push(circ(hx, hy - 34, 9, hc, 2.5)); out.push(hcap); }
+    else if (hair === 'pony') { out.push(hcap); out.push(shape(closedSmooth([[hx + 22, hy - 16], [hx + 36, hy - 8], [hx + 35, hy + 14], [hx + 28, hy + 4]]), hc)); }
+    else if (hair === 'long') { out.push(hcap); out.push(shape(wobblyRect(hx - 31, hy - 12, 10, 42, r, 3), hc)); out.push(shape(wobblyRect(hx + 21, hy - 12, 10, 42, r, 3), hc)); }
+    else if (hair === 'spiky') out.push(shape('M' + f(hx - 26) + ' ' + f(hy - 10) + ' L' + f(hx - 22) + ' ' + f(hy - 34) + ' L' + f(hx - 12) + ' ' + f(hy - 24) + ' L' + f(hx - 6) + ' ' + f(hy - 40) + ' L' + f(hx + 2) + ' ' + f(hy - 26) + ' L' + f(hx + 10) + ' ' + f(hy - 40) + ' L' + f(hx + 14) + ' ' + f(hy - 25) + ' L' + f(hx + 24) + ' ' + f(hy - 34) + ' L' + f(hx + 26) + ' ' + f(hy - 10) + ' L' + f(hx + 14) + ' ' + f(hy - 20) + ' L' + f(hx) + ' ' + f(hy - 23) + ' L' + f(hx - 14) + ' ' + f(hy - 20) + 'Z', hc));
+    else if (hair === 'beanie') { out.push(shape(closedSmooth([[hx - 27, hy - 12], [hx - 22, hy - 30], [hx, hy - 35], [hx + 22, hy - 30], [hx + 27, hy - 12], [hx, hy - 18]]), look.capColor || '#339af0')); out.push(circ(hx, hy - 38, 6, '#ffffff', 2.5)); }
     /* 眼睛：小、不對稱 */
     var ey = hy - 4, eyes = look.eyes || 'dots';
     var lx = hx - 10, rx2 = hx + 10 + (r() - 0.5) * 2;
@@ -91,12 +102,23 @@
     } else if (eyes === 'droopy') {
       out.push(circ(lx, ey, 3, INK, 0)); out.push(circ(rx2, ey, 3.4, INK, 0));
       out.push(line(lx - 7, ey - 2, lx + 6, ey - 6, 3)); out.push(line(rx2 - 6, ey - 6, rx2 + 7, ey - 2, 3));   /* 八字眉：內側高、外側低，看起來無奈 */
+    } else if (eyes === 'sparkle') {
+      out.push(circ(lx, ey, 5, INK, 0)); out.push(circ(rx2, ey, 5, INK, 0)); out.push(circ(lx - 1.6, ey - 1.8, 1.7, '#ffffff', 0)); out.push(circ(rx2 - 1.6, ey - 1.8, 1.7, '#ffffff', 0));
+    } else if (eyes === 'tired') {
+      out.push(circ(lx, ey, 3, INK, 0)); out.push(circ(rx2, ey, 3, INK, 0));
+      out.push('<path d="M' + f(lx - 6) + ' ' + f(ey + 6) + ' q6 4 12 0" stroke="' + INK + '" stroke-width="1.8" fill="none" stroke-linecap="round"/>'); out.push('<path d="M' + f(rx2 - 6) + ' ' + f(ey + 6) + ' q6 4 12 0" stroke="' + INK + '" stroke-width="1.8" fill="none" stroke-linecap="round"/>');
+    } else if (eyes === 'happy') {
+      out.push('<path d="M' + f(lx - 6) + ' ' + f(ey + 2) + ' q6 -8 12 0" stroke="' + INK + '" stroke-width="3" fill="none" stroke-linecap="round"/>'); out.push('<path d="M' + f(rx2 - 6) + ' ' + f(ey + 2) + ' q6 -8 12 0" stroke="' + INK + '" stroke-width="3" fill="none" stroke-linecap="round"/>');
     } else { out.push(circ(lx, ey, 3.2, INK, 0)); out.push(circ(rx2, ey + 1, 2.6, INK, 0)); }
+    if (look.cheek === 'blush') { out.push('<ellipse cx="' + f(hx - 17) + '" cy="' + f(ey + 9) + '" rx="5" ry="3" fill="#ff8787" opacity="0.55"/>'); out.push('<ellipse cx="' + f(hx + 17) + '" cy="' + f(ey + 9) + '" rx="5" ry="3" fill="#ff8787" opacity="0.55"/>'); }
     /* 嘴 */
     var my = hy + 14, mouth = look.mouth || 'flat';
     if (mouth === 'frown') out.push('<path d="M' + f(hx - 8) + ' ' + f(my + 3) + ' Q' + f(hx) + ' ' + f(my - 4) + ' ' + f(hx + 8) + ' ' + f(my + 3) + '" stroke="' + INK + '" stroke-width="3" fill="none" stroke-linecap="round"/>');
     else if (mouth === 'open') out.push('<ellipse cx="' + f(hx) + '" cy="' + f(my) + '" rx="7" ry="6" fill="#5c2b2b" stroke="' + INK + '" stroke-width="2.5"/>');
     else if (mouth === 'teeth') out.push('<path d="M' + f(hx - 9) + ' ' + f(my - 2) + ' L' + f(hx - 5) + ' ' + f(my + 3) + ' L' + f(hx - 1) + ' ' + f(my - 2) + ' L' + f(hx + 3) + ' ' + f(my + 3) + ' L' + f(hx + 7) + ' ' + f(my - 2) + ' L' + f(hx + 10) + ' ' + f(my + 2) + '" stroke="' + INK + '" stroke-width="2.5" fill="#fff" stroke-linejoin="round"/>');
+    else if (mouth === 'smile') out.push('<path d="M' + f(hx - 8) + ' ' + f(my - 1) + ' Q' + f(hx) + ' ' + f(my + 9) + ' ' + f(hx + 8) + ' ' + f(my - 1) + '" stroke="' + INK + '" stroke-width="3" fill="none" stroke-linecap="round"/>');
+    else if (mouth === 'o') out.push('<ellipse cx="' + f(hx) + '" cy="' + f(my + 1) + '" rx="3.5" ry="4" fill="#5c2b2b" stroke="' + INK + '" stroke-width="2.2"/>');
+    else if (mouth === 'tongue') { out.push('<path d="M' + f(hx - 3) + ' ' + f(my + 5) + ' q3 9 7 0z" fill="#ff8787" stroke="' + INK + '" stroke-width="2"/>'); out.push('<path d="M' + f(hx - 8) + ' ' + f(my - 1) + ' Q' + f(hx) + ' ' + f(my + 7) + ' ' + f(hx + 8) + ' ' + f(my - 1) + '" stroke="' + INK + '" stroke-width="3" fill="none" stroke-linecap="round"/>'); }
     else out.push(line(hx - 7, my, hx + 7, my + (r() - 0.5) * 3, 3));
     /* 道具 */
     var prop = look.prop;
@@ -110,6 +132,10 @@
     else if (prop === 'clipboard') out.push('<rect x="' + f(cx - 38) + '" y="72" width="16" height="20" rx="2" fill="#f8f9fa" stroke="' + INK + '" stroke-width="2"/>');
     else if (prop === 'bottle') out.push('<rect x="' + f(cx + 22) + '" y="68" width="8" height="20" rx="3" fill="#a5601f" stroke="' + INK + '" stroke-width="2"/>');
     else if (prop === 'crutch') out.push(line(cx + 26, 70, cx + 30, 100, 4));
+    else if (prop === 'glasses') { out.push('<circle cx="' + f(lx) + '" cy="' + f(ey) + '" r="8" fill="rgba(255,255,255,0.35)" stroke="' + INK + '" stroke-width="2.5"/><circle cx="' + f(rx2) + '" cy="' + f(ey) + '" r="8" fill="rgba(255,255,255,0.35)" stroke="' + INK + '" stroke-width="2.5"/>'); out.push(line(lx + 8, ey, rx2 - 8, ey, 2.5)); }
+    else if (prop === 'headphones') { out.push('<path d="M' + f(hx - 27) + ' ' + f(hy - 2) + ' Q' + f(hx) + ' ' + f(hy - 54) + ' ' + f(hx + 27) + ' ' + f(hy - 2) + '" stroke="' + INK + '" stroke-width="4" fill="none" stroke-linecap="round"/>'); out.push('<rect x="' + f(hx - 33) + '" y="' + f(hy - 9) + '" width="9" height="16" rx="4" fill="#fa5252" stroke="' + INK + '" stroke-width="2"/><rect x="' + f(hx + 24) + '" y="' + f(hy - 9) + '" width="9" height="16" rx="4" fill="#fa5252" stroke="' + INK + '" stroke-width="2"/>'); }
+    else if (prop === 'coffee') { out.push('<rect x="' + f(cx + 21) + '" y="74" width="11" height="13" rx="2" fill="#f8f9fa" stroke="' + INK + '" stroke-width="2"/><path d="M' + f(cx + 32) + ' 78 q5 0 0 6" stroke="' + INK + '" stroke-width="2" fill="none"/><path d="M' + f(cx + 24) + ' 70 q-2 -4 1 -6 M' + f(cx + 29) + ' 70 q-2 -4 1 -6" stroke="#868e96" stroke-width="1.6" fill="none"/>'); }
+    else if (prop === 'umbrella') { out.push(line(cx + 28, 62, cx + 28, 96, 2.5)); out.push(shape('M' + f(cx + 15) + ' 62 Q' + f(cx + 28) + ' 44 ' + f(cx + 40) + ' 62 Z', '#fa5252', 2.5)); }
     else if (prop === 'balloon') { out.push(line(cx + 24, 78, cx + 30, 30, 2)); out.push(circ(cx + 30, 24, 9, '#ff8787', 2.5)); }
     /* 情緒記號 */
     var mood = opts.mood || 'idle';

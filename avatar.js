@@ -10,29 +10,34 @@
   var OPT = {
     head:  ['egg', 'pear', 'square'],
     body:  ['normal', 'slim', 'round', 'broad', 'short', 'pear', 'tall'],
-    hair:  ['bald', 'tuft', 'curl', 'cap'],
-    eyes:  ['dots', 'droopy', 'spiral'],
-    mouth: ['flat', 'frown', 'open', 'teeth'],
-    prop:  ['', 'phone', 'clipboard', 'mask', 'bandage', 'balloon'],
+    hair:  ['bald', 'tuft', 'curl', 'cap', 'bun', 'pony', 'long', 'spiky', 'beanie'],
+    eyes:  ['dots', 'droopy', 'spiral', 'sparkle', 'tired', 'happy'],
+    mouth: ['flat', 'frown', 'open', 'teeth', 'smile', 'o', 'tongue'],
+    prop:  ['', 'phone', 'clipboard', 'mask', 'bandage', 'balloon', 'glasses', 'headphones', 'coffee', 'umbrella'],
     skin:  ['#f9dcc4', '#f1d6b8', '#e8c7a1', '#d9b38c', '#c08e63', '#8d5a3b'],
     outfit: ['#a5d8ff', '#ffd43b', '#ff8787', '#b2f2bb', '#d0bfff', '#ffa94d', '#99e9f2', '#868e96'],
-    capColor: ['#ffffff', '#ff6b4a', '#339af0', '#ffd43b']
+    capColor: ['#ffffff', '#ff6b4a', '#339af0', '#ffd43b'],
+    hairColor: ['#4a3b32', '#2b2b2b', '#a5601f', '#e8b04a', '#868e96', '#c2255c', '#1c7ed6'],
+    pattern: ['none', 'stripes', 'pocket', 'dots'],
+    cheek: ['none', 'blush']
   };
-  var LABEL = { head: '臉型', body: '身形', hair: '頭髮', eyes: '眼睛', mouth: '嘴巴', prop: '手邊的東西', skin: '膚色', outfit: '衣服顏色', capColor: '帽子顏色' };
+  var LABEL = { head: '臉型', body: '身形', hair: '頭髮', eyes: '眼睛', mouth: '嘴巴', prop: '手邊的東西', skin: '膚色', outfit: '衣服顏色', capColor: '帽子顏色', hairColor: '髮色', pattern: '衣服花紋', cheek: '臉頰' };
   var NAME = { normal: '標準', slim: '瘦長', round: '圓滾滾', broad: '寬肩', short: '矮胖', tall: '高挑', egg: '蛋', pear: '梨', square: '方', bald: '光頭', tuft: '三根毛', curl: '捲', cap: '帽子',
     dots: '小點', droopy: '垂眼', spiral: '蚊香', flat: '一字', frown: '倒彎', open: '張嘴', teeth: '露牙', '': '空手',
-    phone: '手機', clipboard: '板夾', mask: '口罩', bandage: '貼布', balloon: '氣球' };
+    phone: '手機', clipboard: '板夾', mask: '口罩', bandage: '貼布', balloon: '氣球',
+    bun: '包子頭', pony: '馬尾', long: '長髮', spiky: '刺蝟頭', beanie: '毛帽', sparkle: '閃亮', tired: '黑眼圈', happy: '彎彎笑', smile: '微笑', o: '小圓', tongue: '吐舌',
+    glasses: '眼鏡', headphones: '耳機', coffee: '咖啡', umbrella: '雨傘', none: '無', stripes: '條紋', pocket: '口袋', dots: '圓點', blush: '腮紅' };
 
   /* 起始角色：每位都有一點無奈的個性 */
   var PRESETS = [
-    { id: 'dazed',    name: '發呆派', look: { head: 'egg', body: 'normal',    hair: 'tuft',  eyes: 'dots',   mouth: 'flat',  prop: 'phone',     skin: '#f1d6b8', outfit: '#a5d8ff', capColor: '#ffffff' } },
-    { id: 'sleepy',   name: '想睡派', look: { head: 'pear', body: 'round',   hair: 'bald',  eyes: 'droopy', mouth: 'flat',  prop: '',          skin: '#e8c7a1', outfit: '#d0bfff', capColor: '#ffffff' } },
-    { id: 'worried',  name: '擔心派', look: { head: 'square', body: 'slim', hair: 'curl',  eyes: 'droopy', mouth: 'frown', prop: 'clipboard', skin: '#f9dcc4', outfit: '#ffd43b', capColor: '#ffffff' } },
-    { id: 'chatty',   name: '話多派', look: { head: 'egg', body: 'broad',    hair: 'curl',  eyes: 'dots',   mouth: 'open',  prop: 'phone',     skin: '#d9b38c', outfit: '#ff8787', capColor: '#ffffff' } },
-    { id: 'dizzy',    name: '暈頭派', look: { head: 'pear', body: 'short',   hair: 'tuft',  eyes: 'spiral', mouth: 'open',  prop: '',          skin: '#f1d6b8', outfit: '#b2f2bb', capColor: '#ffffff' } },
-    { id: 'grin',     name: '硬笑派', look: { head: 'square', body: 'pear', hair: 'bald',  eyes: 'dots',   mouth: 'flat',  prop: 'mask',      skin: '#c08e63', outfit: '#ffa94d', capColor: '#ffffff' } },
-    { id: 'cool',     name: '裝酷派', look: { head: 'egg', body: 'tall',    hair: 'tuft',  eyes: 'droopy', mouth: 'flat',  prop: 'phone',     skin: '#8d5a3b', outfit: '#868e96', capColor: '#ffffff' } },
-    { id: 'tired',    name: '累癱派', look: { head: 'pear', body: 'round',   hair: 'curl',  eyes: 'spiral', mouth: 'frown', prop: '',          skin: '#e8c7a1', outfit: '#ffa94d', capColor: '#ffffff' } }
+    { id: 'dazed',    name: '發呆派', look: { head: 'egg', body: 'normal',    hair: 'tuft',  eyes: 'dots',   mouth: 'flat',  prop: 'phone',     skin: '#f1d6b8', outfit: '#a5d8ff', capColor: '#ffffff', hairColor: '#4a3b32', pattern: 'none', cheek: 'none' } },
+    { id: 'sleepy',   name: '想睡派', look: { head: 'pear', body: 'round',   hair: 'bald',  eyes: 'droopy', mouth: 'flat',  prop: '',          skin: '#e8c7a1', outfit: '#d0bfff', capColor: '#ffffff', hairColor: '#4a3b32', pattern: 'none', cheek: 'none' } },
+    { id: 'worried',  name: '擔心派', look: { head: 'square', body: 'slim', hair: 'curl',  eyes: 'droopy', mouth: 'frown', prop: 'clipboard', skin: '#f9dcc4', outfit: '#ffd43b', capColor: '#ffffff', hairColor: '#4a3b32', pattern: 'none', cheek: 'none' } },
+    { id: 'chatty',   name: '話多派', look: { head: 'egg', body: 'broad',    hair: 'curl',  eyes: 'dots',   mouth: 'open',  prop: 'phone',     skin: '#d9b38c', outfit: '#ff8787', capColor: '#ffffff', hairColor: '#4a3b32', pattern: 'none', cheek: 'none' } },
+    { id: 'dizzy',    name: '暈頭派', look: { head: 'pear', body: 'short',   hair: 'tuft',  eyes: 'spiral', mouth: 'open',  prop: '',          skin: '#f1d6b8', outfit: '#b2f2bb', capColor: '#ffffff', hairColor: '#4a3b32', pattern: 'none', cheek: 'none' } },
+    { id: 'grin',     name: '硬笑派', look: { head: 'square', body: 'pear', hair: 'bald',  eyes: 'dots',   mouth: 'flat',  prop: 'mask',      skin: '#c08e63', outfit: '#ffa94d', capColor: '#ffffff', hairColor: '#4a3b32', pattern: 'none', cheek: 'none' } },
+    { id: 'cool',     name: '裝酷派', look: { head: 'egg', body: 'tall',    hair: 'tuft',  eyes: 'droopy', mouth: 'flat',  prop: 'phone',     skin: '#8d5a3b', outfit: '#868e96', capColor: '#ffffff', hairColor: '#4a3b32', pattern: 'none', cheek: 'none' } },
+    { id: 'tired',    name: '累癱派', look: { head: 'pear', body: 'round',   hair: 'curl',  eyes: 'spiral', mouth: 'frown', prop: '',          skin: '#e8c7a1', outfit: '#ffa94d', capColor: '#ffffff', hairColor: '#4a3b32', pattern: 'none', cheek: 'none' } }
   ];
 
   /* 解鎖：點亮的檢核點數量達到門檻，就多出一些選項（只影響外觀） */

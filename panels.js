@@ -39,11 +39,14 @@
     }
     return skCache.st || A.chatStats({});
   }
-  function skillBlock(A, pl) {
-    var c = cur(), roomsSeen = Object.keys(pl.roomsSeen || {}).length || (pl.visited || []).length;
+  function computeSk(A, pl) {
+    var roomsSeen = Object.keys(pl.roomsSeen || {}).length || (pl.visited || []).length;
     var iv = (pl.interviews || []).filter(function (r) { return r && r.items && Object.keys(r.items).some(function (k) { var x = r.items[k]; return x && ((x.note && String(x.note).trim()) || x.done); }); }).length;
     var concl = (pl.conclusions || []).filter(function (x) { return x && String(x.text || '').trim(); }).length;
-    var sk = A.skills(skillStats(), { rooms: roomsSeen, interviews: iv, conclusions: concl, remote: !!((pl.roomsSeen || {}).home || (pl.roomsSeen || {}).clinic) });
+    return A.skills(skillStats(), { rooms: roomsSeen, interviews: iv, conclusions: concl, remote: !!((pl.roomsSeen || {}).home || (pl.roomsSeen || {}).clinic) });
+  }
+  function skillBlock(A, pl) {
+    var sk = computeSk(A, pl);
     var prev = pl.skillLv || {}, up = {};
     if (prev.ask && sk.ask.lv > prev.ask) up['探問'] = true;
     if (prev.ctx && sk.ctx.lv > prev.ctx) up['情境感知'] = true;
@@ -53,12 +56,42 @@
   }
   function renderAch() {
     var p = $('p-ach'), A = window.ERG_ACH; if (!p || !A || !cur()) return;
+    P.setAchDot(false);
     var m = A.metrics(player(), achCtx());
     var board = window.ERG_SCORES ? A.leaderboard(window.ERG_SCORES, 3) : null;
     var bh = board ? '<h2>班上誰最多</h2><div class="board">' + board.map(function (b) { return '<div class="b"><b>' + esc(b.label) + '</b>' + (b.rows.length ? '<ol style="margin:4px 0 0 18px;padding:0;font-size:13px">' + b.rows.map(function (r) { return '<li>' + esc(r.name) + '　' + r.v + ' ' + esc(b.unit) + '</li>'; }).join('') + '</ol>' : '<div class="muted" style="font-size:12px">還沒有人</div>') + '</div>'; }).join('') + '</div>' : '<p class="muted" style="font-size:12px">本機版沒有班級排行；線上版會列出班上誰最多。</p>';
     p.innerHTML = '<h2>我的技能</h2>' + skillBlock(A, player()) + '<h2>我的成就</h2>' + A.html(m, esc) + bh;
     if (window.ERG_PUBLISH_SCORE) window.ERG_PUBLISH_SCORE();
   }
+  /* 10-18：成就／升級通知、「成就」分頁紅點、頂列固定顯示技能等級（訪談技能三級不用打開成就分頁也看得到） */
+  P.setAchDot = function (on) { var b = document.querySelector('#tabs [data-t="ach"]'); if (b) b.classList.toggle('dot', !!on); };
+  P.notifyProgress = function () {
+    var c = cur(), A = window.ERG_ACH; if (!c || !c.player || !A || !me()) return;
+    var pl = player(), m, all; try { m = A.metrics(pl, achCtx()); all = A.badges(m); } catch (e) { return; }
+    var okIds = all.filter(function (b) { return b.ok; }).map(function (b) { return b.id; });
+    var msgs = [], changed = false;
+    if (!pl.seenBadges) { pl.seenBadges = okIds; changed = true; }
+    else {
+      var news = all.filter(function (b) { return b.ok && pl.seenBadges.indexOf(b.id) < 0; });
+      if (news.length) { pl.seenBadges = pl.seenBadges.concat(news.map(function (b) { return b.id; })); changed = true; msgs.push('🏅 新成就：' + news.slice(0, 2).map(function (b) { return b.icon + b.name; }).join('、') + (news.length > 2 ? '…等 ' + news.length + ' 個' : '')); }
+    }
+    var fresh = skCache.st && skCache.code === c.code;
+    if (fresh) {
+      var sk = computeSk(A, pl), seen = pl.lvSeen;
+      if (!seen) { pl.lvSeen = { ask: sk.ask.lv, ctx: sk.ctx.lv }; changed = true; }
+      else {
+        if (sk.ask.lv > seen.ask) msgs.push('⬆️ 探問升到 Lv.' + sk.ask.lv);
+        if (sk.ctx.lv > seen.ctx) msgs.push('⬆️ 情境感知升到 Lv.' + sk.ctx.lv);
+        if (sk.ask.lv !== seen.ask || sk.ctx.lv !== seen.ctx) { pl.lvSeen = { ask: sk.ask.lv, ctx: sk.ctx.lv }; changed = true; }
+      }
+      var sb = $('skBtn'); if (sb) { sb.innerHTML = '<span class="sk-full">技能 探問' + sk.ask.lv + '・情境' + sk.ctx.lv + '</span><span class="sk-cmp">探' + sk.ask.lv + '・境' + sk.ctx.lv + '</span>'; sb.title = '訪談技能等級：探問 Lv.' + sk.ask.lv + '、情境感知 Lv.' + sk.ctx.lv + '（點一下看成就與技能）'; }
+    }
+    if (changed) save();
+    if (msgs.length) { RM.toast(msgs.join('　')); if (cur().tab !== 'ach') P.setAchDot(true); else if (window.ERG_PANELS) renderAch(); }
+  };
+  setInterval(function () { try { if (cur()) { if (!skCache.st || skCache.code !== cur().code) skillStats(); P.notifyProgress(); } } catch (e) {} }, 12000);
+  var skClick = function () { if (RM.switchTab) RM.switchTab('ach'); };
+  document.addEventListener('click', function (e) { var t = e.target; if (t && t.id === 'skBtn') skClick(); });
   P.renderAch = renderAch;
   P.onRoomChanged = function () { if (!typing()) P.render(cur().tab); };
   P.onSceneChanged = function () { if (!typing()) { if (cur().tab === 'cards') renderCards(); if (cur().tab === 'concl') renderConcl(); } };

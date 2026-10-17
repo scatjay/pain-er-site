@@ -127,6 +127,18 @@
       out.push(rect('floor-' + r.id, r.x, r.y, r.w, r.h, r.color, 'transparent', 0, 0,
         { room:r.id }, { strokeWidth:0 }));
     });
+    /* 10-18 美化：地板磁磚線、牆邊踢腳板（只是畫面，不影響任何邏輯；id 不含家具／線索的標記） */
+    rooms.forEach(function (r) {
+      if (r.type !== 'room' && r.type !== 'remote') return;
+      if (r.type === 'room') {
+        var step = 60, tint = '#adb5bd', c = 0;
+        for (var tx = r.x + step; tx < r.x + r.w - 1; tx += step) { c += 1; out.push(line('tile-' + r.id + '-v' + c, tx, r.y + 14, tx, r.y + r.h, tint, 1, 0, { deco:true }, { opacity:30 })); }
+        c = 0;
+        for (var ty = r.y + 14 + step; ty < r.y + r.h - 1; ty += step) { c += 1; out.push(line('tile-' + r.id + '-h' + c, r.x, ty, r.x + r.w, ty, tint, 1, 0, { deco:true }, { opacity:30 })); }
+        out.push(rect('skirt-' + r.id, r.x, r.y, r.w, 14, shade(shade(r.color)), 'transparent', 0, 0, { deco:true }));
+        out.push(line('skirt-line-' + r.id, r.x, r.y + 14, r.x + r.w, r.y + 14, '#868e96', 2, 0, { deco:true }, { opacity:60 }));
+      }
+    });
     rooms.forEach(function (r) { if (r.type === 'room') roomWalls(r, out); });
 
     layout.FURNITURE.forEach(function (f, n) {
@@ -167,6 +179,56 @@
         var frontH = Math.min(10, h * .25);
         out.push(rect('ffront-' + n, x, bodyBottom - frontH, w, frontH, shade(color), 'transparent', 0, 0, custom));
       }
+      /* 10-18 美化：家具上的小細節（顯示器、鍵盤、枕頭被子、椅背、X 光片…）；位置都在家具範圍內 */
+      (function () {
+        var d = function (suffix) { return 'fdeco-' + n + '-' + suffix; };
+        if (w < 30 || h < 14) return;
+        if (f.type === 'desk') {
+          var mw = Math.min(30, w * .3), mh = Math.min(18, h * .45);
+          out.push(rect(d('mon'), x + w * .1, y + 4, mw, mh, '#495057', INK, 2, 1, custom));
+          out.push(rect(d('scr'), x + w * .1 + 3, y + 7, mw - 6, mh - 6, '#a5d8ff', 'transparent', 0, 0, custom));
+          out.push(rect(d('kb'), x + w * .1, y + 6 + mh, mw, 4, '#ced4da', INK, 1, 0, custom));
+          out.push(rect(d('paper'), x + w * .62, y + 5, 16, 11, '#ffffff', INK, 1, 1, custom));
+        } else if (f.type === 'counter') {
+          out.push(ellipse(d('bell'), x + w * .5 - 6, y + 4, 12, 9, '#ffd43b', INK, 2, 1, custom));
+          out.push(rect(d('tray'), x + w * .15, y + 5, 22, 8, '#ffffff', INK, 1, 1, custom));
+        } else if (f.type === 'bed') {
+          out.push(rect(d('blanket'), x + w * .34, y + 3, w * .64 - 3, h - 11, '#74c0fc', INK, 1.5, 1, custom, { opacity:80 }));
+          out.push(line(d('fold'), x + w * .34, y + h * .35, x + w * .98 - 3, y + h * .35, INK, 1, 1, custom));
+        } else if (f.type === 'seats') {
+          var cnt = Math.max(1, Math.floor(w / 40)), sW = 36, gp = (w - cnt * sW) / (cnt + 1);
+          for (var bi = 0; bi < cnt; bi++) {
+            var bx = x + gp * (bi + 1) + sW * bi;
+            if (y - 5 >= room.y) out.push(rect(d('back-' + bi), bx + 3, y - 5, sW - 6, 6, shade(shade(color)), INK, 2, 1, custom));
+          }
+        } else if (f.type === 'sofa') {
+          out.push(line(d('cu1'), x + w / 3, y + 4, x + w / 3, y + h - 12, INK, 1.5, 1, custom));
+          out.push(line(d('cu2'), x + 2 * w / 3, y + 4, x + 2 * w / 3, y + h - 12, INK, 1.5, 1, custom));
+        } else if (f.type === 'lightbox') {
+          out.push(rect(d('film'), x + 6, y + 6, w - 12, h - 12, '#f1f3f5', INK, 1, 0, custom));
+          out.push(line(d('spine'), x + w / 2, y + 9, x + w / 2, y + h - 9, '#868e96', 2, 1, custom));
+          for (var ri = 0; ri < 3; ri++) out.push(ellipse(d('rib-' + ri), x + w / 2 - 30, y + 12 + ri * 16, 60, 12, 'transparent', '#868e96', 1.5, 1, custom));
+        } else if (f.type === 'rack') {
+          out.push(line(d('sh1'), x + 3, y + h * .38, x + w - 3, y + h * .38, INK, 2, 1, custom));
+          out.push(line(d('sh2'), x + 3, y + h * .7, x + w - 3, y + h * .7, INK, 2, 1, custom));
+          out.push(rect(d('b1'), x + 6, y + 6, 10, h * .3, '#fa5252', INK, 1, 1, custom));
+          out.push(rect(d('b2'), x + w - 18, y + 6, 10, h * .3, '#4dabf7', INK, 1, 1, custom));
+        } else if (f.type === 'screen') {
+          var wy = y + h * .5;
+          out.push(line(d('w1'), x + 6, wy, x + w * .3, wy - h * .22, '#69db7c', 2, 0, custom));
+          out.push(line(d('w2'), x + w * .3, wy - h * .22, x + w * .5, wy + h * .2, '#69db7c', 2, 0, custom));
+          out.push(line(d('w3'), x + w * .5, wy + h * .2, x + w * .75, wy - h * .18, '#69db7c', 2, 0, custom));
+        } else if (f.type === 'board') {
+          out.push(line(d('t1'), x + 8, y + h * .3, x + w - 14, y + h * .3, '#adb5bd', 2, 0, custom));
+          out.push(line(d('t2'), x + 8, y + h * .5, x + w - 26, y + h * .5, '#adb5bd', 2, 0, custom));
+          out.push(ellipse(d('mag'), x + w - 12, y + 4, 7, 7, '#fa5252', INK, 1, 0, custom));
+        } else if (f.type === 'device') {
+          out.push(ellipse(d('l1'), x + 5, y + 4, 6, 6, '#fa5252', INK, 1, 0, custom));
+          out.push(ellipse(d('l2'), x + 15, y + 4, 6, 6, '#51cf66', INK, 1, 0, custom));
+        } else if (f.type === 'stall') {
+          out.push(ellipse(d('knob'), x + w - 12, y + h * .5, 6, 6, '#ffd43b', INK, 1, 0, custom));
+        }
+      })();
       if (f.curtain) {
         assertInside(room, x, y - 12, w, 0, '第 ' + (n + 1) + ' 件家具簾子');
         out.push(line('curtain-' + n, x, y - 12, x + w, y - 12, INK, 2, 2, custom, { strokeStyle:'dashed' }));
