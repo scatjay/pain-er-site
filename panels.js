@@ -12,7 +12,7 @@
   function roomNameOf(id) { var r = window.ERG_LAYOUT.room(id); return r ? r.name : id; }
   function isHost() { return String(cur().room.host) === String(me()); }
 
-  P.renderAll = function () { ['clue', 'intv', 'cards', 'concl', 'disc', 'cp', 'events'].forEach(P.render); };
+  P.renderAll = function () { ['clue', 'intv', 'cards', 'concl', 'disc', 'cp', 'events'].forEach(P.render); refreshSkillChip(); };
   P.render = function (t) { ({ clue: renderClue, intv: renderIntv, cards: renderCards, concl: renderConcl, disc: renderDisc, cp: renderCp, events: renderEvents, ach: renderAch })[t](); };
   /* 成就分頁：自己的指標與徽章＋班級「誰最多」（線上模式讀 er/{sess}/score；本機版只有自己） */
   function achCtx() { var c = cur(); var cp = (window.ERG_CORE && window.ERG_CP && c) ? (function () { try { var st = window.ERG_CORE.checkpointState(c, me()); return window.ERG_CP.evaluate(st).every(function (x) { return x.ok; }); } catch (e) { return false; } })() : false; return { cpAllOk: cp, shift: c && c.world && c.world.shift, cases: casesTried(), keep: keptBadges() }; }
@@ -24,39 +24,56 @@
   /* 10-13 技能等級：從自己這個房間的訪談逐字稿算（一次讀自己的一個節點，90 秒內不重讀；送出提問後立刻作廢） */
   var skCache = { t: 0, st: null, busy: false, code: '' };
   P.skInvalidate = function () { skCache.t = 0; };
-  function skillStats() {
+  /* lazy（頂列的技能小牌用）：只在換房間或送出提問作廢之後才重讀，不照時間重讀，省雲端流量 */
+  function skillStats(lazy) {
     var c = cur(), A = window.ERG_ACH; if (!c || !A) return A ? A.chatStats({}) : null;
-    var fresh = skCache.st && skCache.code === c.code && Date.now() - skCache.t < 90000;
+    var fresh = skCache.st && skCache.code === c.code && (lazy ? skCache.t > 0 : Date.now() - skCache.t < 90000);
     if (!fresh && !skCache.busy && window.firebase && c.code && me()) {
       skCache.busy = true;
       var code = c.code;
       try {
         window.firebase.database().ref('er/' + APP.SESS + '/chat/' + code + '/' + me()).once('value', function (s) {
           skCache.busy = false; skCache.t = Date.now(); skCache.code = code; skCache.st = A.chatStats(s.val() || {});
-          if (cur() && cur().tab === 'ach') renderAch();
+          if (cur() && cur().tab === 'ach') renderAch(); else refreshSkillChip();
         }, function () { skCache.busy = false; });
       } catch (e) { skCache.busy = false; }
     }
     return skCache.st || A.chatStats({});
   }
-  function skillBlock(A, pl) {
-    var c = cur(), roomsSeen = Object.keys(pl.roomsSeen || {}).length || (pl.visited || []).length;
+  function computeSkills(A, pl, lazy) {
+    var roomsSeen = Object.keys(pl.roomsSeen || {}).length || (pl.visited || []).length;
     var iv = (pl.interviews || []).filter(function (r) { return r && r.items && Object.keys(r.items).some(function (k) { var x = r.items[k]; return x && ((x.note && String(x.note).trim()) || x.done); }); }).length;
     var concl = (pl.conclusions || []).filter(function (x) { return x && String(x.text || '').trim(); }).length;
-    var sk = A.skills(skillStats(), { rooms: roomsSeen, interviews: iv, conclusions: concl, remote: !!((pl.roomsSeen || {}).home || (pl.roomsSeen || {}).clinic) });
+    var sk = A.skills(skillStats(lazy), { rooms: roomsSeen, interviews: iv, conclusions: concl, remote: !!((pl.roomsSeen || {}).home || (pl.roomsSeen || {}).clinic) });
     var prev = pl.skillLv || {}, up = {};
     if (prev.ask && sk.ask.lv > prev.ask) up['探問'] = true;
     if (prev.ctx && sk.ctx.lv > prev.ctx) up['情境感知'] = true;
     if (!prev.ask || !prev.ctx || sk.ask.lv !== prev.ask || sk.ctx.lv !== prev.ctx) { pl.skillLv = { ask: sk.ask.lv, ctx: sk.ctx.lv }; save(); }
-    if (up['探問'] || up['情境感知']) P._lvUp = Object.assign(P._lvUp || {}, up);
-    return A.skillsHtml(sk, esc, P._lvUp);
+    if (up['探問'] || up['情境感知']) { P._lvUp = Object.assign(P._lvUp || {}, up); P._lvUpAt = Date.now(); }
+    return sk;
   }
+  function skillBlock(A, pl) { return A.skillsHtml(computeSkills(A, pl, false), esc, P._lvUp); }
+  /* 10-17 技能等級常駐顯示：頂列一直看得到自己兩項技能的等級，點一下打開成就分頁看還差什麼。
+     剛升級的 1 分鐘內小牌會亮起來並加 🎉。 */
+  function refreshSkillChip() {
+    var el = $('skChip'), A = window.ERG_ACH; if (!el || !A || !cur() || !player()) return;
+    if (!el._bound) { el._bound = true; el.onclick = function () { RM.switchTab('ach'); }; }
+    var sk; try { sk = computeSkills(A, player(), true); } catch (e) { return; }
+    var hot = P._lvUpAt && Date.now() - P._lvUpAt < 60000;
+    el.innerHTML = (hot ? '🎉 ' : '') + '<span class="skLong">探問 <b>Lv.' + sk.ask.lv + '</b>｜情境 <b>Lv.' + sk.ctx.lv + '</b></span><span class="skShort"><b>探' + sk.ask.lv + '・情' + sk.ctx.lv + '</b></span>';   /* 手機窄螢幕只顯示短的，頂列不多佔一行 */
+    el.classList.toggle('skHot', !!hot);
+    el.title = '我的技能：探問 Lv.' + sk.ask.lv + '「' + sk.ask.name + '」、情境感知 Lv.' + sk.ctx.lv + '「' + sk.ctx.name + '」。點一下看升級還差什麼';
+    el.setAttribute('aria-label', el.title);
+  }
+  P.refreshSkillChip = refreshSkillChip;
+  setInterval(function () { if (!document.hidden) refreshSkillChip(); }, 20000);
   function renderAch() {
     var p = $('p-ach'), A = window.ERG_ACH; if (!p || !A || !cur()) return;
     var m = A.metrics(player(), achCtx());
     var board = window.ERG_SCORES ? A.leaderboard(window.ERG_SCORES, 3) : null;
     var bh = board ? '<h2>班上誰最多</h2><div class="board">' + board.map(function (b) { return '<div class="b"><b>' + esc(b.label) + '</b>' + (b.rows.length ? '<ol style="margin:4px 0 0 18px;padding:0;font-size:13px">' + b.rows.map(function (r) { return '<li>' + esc(r.name) + '　' + r.v + ' ' + esc(b.unit) + '</li>'; }).join('') + '</ol>' : '<div class="muted" style="font-size:12px">還沒有人</div>') + '</div>'; }).join('') + '</div>' : '<p class="muted" style="font-size:12px">本機版沒有班級排行；線上版會列出班上誰最多。</p>';
     p.innerHTML = '<h2>我的技能</h2>' + skillBlock(A, player()) + '<h2>我的成就</h2>' + A.html(m, esc) + bh;
+    refreshSkillChip();
     if (window.ERG_PUBLISH_SCORE) window.ERG_PUBLISH_SCORE();
   }
   P.renderAch = renderAch;
