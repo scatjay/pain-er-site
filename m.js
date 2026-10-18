@@ -129,7 +129,7 @@
     /* 10-13：只看「離得遠」不夠，身體還是常壓在牌子上。把自己的身體連同頭上的「你」標籤當成一塊（寬 60、高 98，腳底在站的位置），
        碰到線索牌（84×42）或告示、白板、螢幕、燈箱就大扣分；候選點 9×5，順序固定，所以同一間房每次站同一處。 */
     var blocks = [];
-    if (cur && cur.world) cur.world.clues.forEach(function (c) { if (c.pin.room === roomId) { var q = LAYOUT.abs(roomId, c.pin.rx, c.pin.ry); blocks.push({ x: q.x - 6, y: q.y - 6, w: 88, h: 46 }); } });
+    if (cur && cur.world) cur.world.clues.forEach(function (c) { if (c.pin.room === roomId) { var q = LAYOUT.abs(roomId, c.pin.rx, c.pin.ry); blocks.push({ x: q.x - 6, y: q.y - 6, w: 94, h: 46 }); } });
     (LAYOUT.FURNITURE || []).forEach(function (f) { if (f.room === roomId && /^(sign|board|screen|lightbox)$/.test(f.type || '')) blocks.push({ x: rm.x + f.rx - 2, y: rm.y + f.ry - 2, w: (f.w || 30) + 4, h: (f.h || 20) + 4 }); });
     function hits(x, y) { var n = 0, bx = x - 30, by = y - 98; blocks.forEach(function (b) { if (bx < b.x + b.w && bx + 60 > b.x && by < b.y + b.h && by + 98 > b.y) n += 1; }); return n; }
     var best = null;
@@ -219,7 +219,7 @@
     /* 10-13 A3：與桌面共用 labels.js。名稱大小用 CSS px 換成世界單位：場景框寬 ÷ (房間寬＋16)＝每世界單位幾 px */
     var sw = ($('roomSvg') && $('roomSvg').clientWidth) || ($('sceneBox') && $('sceneBox').clientWidth) || 340, z = Math.max(0.3, sw / (rm.w + 16));
     var pins = cur.world.clues.filter(function (c) { return c.pin.room === roomId; }).map(function (c) { return { rx: c.pin.rx, ry: c.pin.ry }; });
-    var res = window.ERG_LABELS.place({ w: rm.w, h: rm.h }, (LAYOUT.FURNITURE || []).filter(function (f) { return f.room === roomId && f.label; }), pins, (LAYOUT.STATIONS || []).filter(function (s) { return s.room === roomId; }), { sizeOf: function (t) { return { w: (t.length * 11 + 10) / z, h: 16 / z }; } });
+    var res = window.ERG_LABELS.place({ w: rm.w, h: rm.h }, (LAYOUT.FURNITURE || []).filter(function (f) { return f.room === roomId && f.label; }), pins, (LAYOUT.STATIONS || []).filter(function (s) { return s.room === roomId; }), { sizeOf: function (t) { return { w: (t.length * 12 + 10) / z, h: 17 / z }; } });
     return res.filter(function (r) { return !r.miss; }).map(function (r) { return { text: r.text, x: r.x + r.w / 2, y: r.y, alt: r.y }; });
   }
   function renderScene() {

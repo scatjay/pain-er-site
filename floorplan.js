@@ -95,10 +95,17 @@
         wall(cursor, d.a);
         var ca = horizontal ? d.a : fixed, cb = horizontal ? d.b : fixed;
         var ya = horizontal ? fixed : d.a, yb = horizontal ? fixed : d.b;
+        /* 10-18 美術（KB #12）：門柱與門口的地墊用這間房的區域色，從走道看就知道是哪一區；沒有區域色的房間仍用橘色 */
+        var pc = room.accent || '#d9480f';
         out.push(ellipse('post-' + room.id + '-' + side + '-' + i + '-a', ca - 5, ya - 5, 10, 10,
-          '#e8590c', INK, 1, 2, { room:room.id, doorPost:true }));
+          pc, INK, 2, 2, { room:room.id, doorPost:true }));
         out.push(ellipse('post-' + room.id + '-' + side + '-' + i + '-b', cb - 5, yb - 5, 10, 10,
-          '#e8590c', INK, 1, 2, { room:room.id, doorPost:true }));
+          pc, INK, 2, 2, { room:room.id, doorPost:true }));
+        if (room.accent) {
+          var mx = horizontal ? d.a : (side === 'W' ? fixed + 4 : fixed - 12), my = horizontal ? (side === 'N' ? fixed + 4 : fixed - 12) : d.a;
+          out.push(rect('doormat-' + room.id + '-' + side + '-' + i, mx, my, horizontal ? d.b - d.a : 8, horizontal ? 8 : d.b - d.a,
+            room.accent, INK, 1, 0, { room:room.id, deco:true }, { opacity:85 }));
+        }
         cursor = Math.max(cursor, d.b);
       });
       wall(cursor, end);
@@ -137,27 +144,32 @@
         for (var ty = r.y + 14 + step; ty < r.y + r.h - 1; ty += step) { c += 1; out.push(line('tile-' + r.id + '-h' + c, r.x, ty, r.x + r.w, ty, tint, 1, 0, { deco:true }, { opacity:30 })); }
         out.push(rect('skirt-' + r.id, r.x, r.y, r.w, 14, shade(shade(r.color)), 'transparent', 0, 0, { deco:true }));
         out.push(line('skirt-line-' + r.id, r.x, r.y + 14, r.x + r.w, r.y + 14, '#868e96', 2, 0, { deco:true }, { opacity:60 }));
+        /* 10-18 美術（KB #11）：牆邊一條區域色，一眼分出是哪一區（同一區同一色；顏色之外還有房名、圖示、錨點家具） */
+        if (r.accent) out.push(rect('zone-bar-' + r.id, r.x, r.y, r.w, 8, r.accent, INK, 2, 0, { deco:true }));
       }
     });
     /* 10-18 美化：每間房放一盆植物、一個牆上時鐘、一塊地墊（只放在空位；位置固定，不用亂數） */
     (function () {
-      var occ = {};
-      function box(roomId, x, y, w, h) { (occ[roomId] = occ[roomId] || []).push({ x:x, y:y, w:w, h:h }); }
-      layout.FURNITURE.forEach(function (f) { var q = layout.abs(f.room, f.rx, f.ry); box(f.room, q.x - 4, q.y - 6, f.w + 12, f.h + 30); });
+      var STORY = { entrance:'puddle', triage:'trash', waiting:'chair', nurse:'lunch', resus:'papers', bays:'notes', consultA:'lunch', consultB:'chair', ct:'notes',
+        discharge:'papers', restroom:'trash', admin:'papers', ped:'notes', obs:'chair', pharmacy:'notes', family:'lunch', lobby:'trash', staff:'trash', service:'chair' };
+      var occ = {}, occS = {}, occT = {};   /* occS＝不含地墊的佔位（小道具可以放在地墊上） */
+      function box(roomId, x, y, w, h, isRug, tight) { (occ[roomId] = occ[roomId] || []).push({ x:x, y:y, w:w, h:h }); if (!isRug) { (occS[roomId] = occS[roomId] || []).push({ x:x, y:y, w:w, h:h }); if (!tight) (occT[roomId] = occT[roomId] || []).push({ x:x, y:y, w:w, h:h }); } if (tight) (occT[roomId] = occT[roomId] || []).push(tight); }
+      layout.FURNITURE.forEach(function (f) { var q = layout.abs(f.room, f.rx, f.ry); box(f.room, q.x - 4, q.y - 6, f.w + 12, f.h + 30, false, { x:q.x - 2, y:q.y - 2, w:f.w + 6, h:f.h + 20 }); });
       layout.PINS.forEach(function (pin) { var rm = byRoom[pin.room], q = layout.abs(pin.room, pin.rx, pin.ry); if (!rm) return; var px = Math.max(rm.x, Math.min(rm.x + rm.w - 76, q.x)), py = Math.max(rm.y + 5, Math.min(rm.y + rm.h - 34, q.y)); box(pin.room, px - 8, py - 12, 92, 52); });
       rooms.forEach(function (r) { if (r.type === 'room') { box(r.id, r.x, r.y, r.name.length * 24 + 24, 40); box(r.id, r.x + r.w - 54, r.y, 54, 54); } });
-      function free(r, x, y, w, h) {
-        if (x < r.x + 28 || y < r.y + 30 || x + w > r.x + r.w - 28 || y + h > r.y + r.h - 28) return false;
-        return !(occ[r.id] || []).some(function (b) { return x < b.x + b.w && x + w > b.x && y < b.y + b.h && y + h > b.y; });
+      function free(r, x, y, w, h, loose) {
+        var m = loose ? 14 : 28;
+        if (x < r.x + m || y < r.y + (loose ? 24 : 30) || x + w > r.x + r.w - m || y + h > r.y + r.h - m) return false;
+        return !((loose === 2 ? occT : loose ? occS : occ)[r.id] || []).some(function (b) { return x < b.x + b.w && x + w > b.x && y < b.y + b.h && y + h > b.y; });
       }
-      function grid(r, w, h, key) { var c = []; for (var gx = r.x + 28; gx + w <= r.x + r.w - 28; gx += 12) for (var gy = r.y + 30; gy + h <= r.y + r.h - 28; gy += 12) c.push([gx, gy]); return c.sort(function (a, b) { return key(a) - key(b); }); }
-      function find(r, w, h, cands) { for (var i = 0; i < cands.length; i++) { if (free(r, cands[i][0], cands[i][1], w, h)) return cands[i]; } return null; }
+      function grid(r, w, h, key, m) { m = m || 28; var c = []; for (var gx = r.x + m; gx + w <= r.x + r.w - m; gx += 12) for (var gy = r.y + (m < 28 ? 24 : 30); gy + h <= r.y + r.h - m; gy += 12) c.push([gx, gy]); return c.sort(function (a, b) { return key(a) - key(b); }); }
+      function find(r, w, h, cands, loose) { for (var i = 0; i < cands.length; i++) { if (free(r, cands[i][0], cands[i][1], w, h, loose)) return cands[i]; } return null; }
       rooms.forEach(function (r) {
         if (r.type !== 'room') return;
         var cx = { deco:true };
         /* 地墊：找一塊 110×60 的空地（由中央往外排幾個候選位置） */
         var rugAt = find(r, 110, 60, grid(r, 110, 60, function (a) { return Math.abs(a[0] + 55 - (r.x + r.w / 2)) + Math.abs(a[1] + 30 - (r.y + r.h * .55)); }));
-        if (rugAt) { out.push(rect('rug-' + r.id, rugAt[0], rugAt[1], 110, 60, '#ffc9c9', INK, 1, 1, cx, { opacity:55, roundness:{ type:3 } })); out.push(rect('rug-in-' + r.id, rugAt[0] + 8, rugAt[1] + 8, 94, 44, 'transparent', '#e03131', 1, 0, cx, { opacity:55, strokeStyle:'dashed', roundness:{ type:3 } })); box(r.id, rugAt[0], rugAt[1], 110, 60); }
+        if (rugAt) { var rc = r.accent || '#e03131'; out.push(rect('rug-' + r.id, rugAt[0], rugAt[1], 110, 60, r.accent || '#ffc9c9', INK, 1, 1, cx, { opacity:r.accent ? 38 : 55, roundness:{ type:3 } })); out.push(rect('rug-in-' + r.id, rugAt[0] + 8, rugAt[1] + 8, 94, 44, 'transparent', rc, 2, 0, cx, { opacity:80, strokeStyle:'dashed', roundness:{ type:3 } })); box(r.id, rugAt[0], rugAt[1], 110, 60, true); }
         /* 盆栽：優先放右下、左下的角落 */
         var plantAt = find(r, 30, 44, grid(r, 30, 44, function (a) { var dx = Math.min(a[0] - r.x, r.x + r.w - a[0] - 30), dy = Math.min(a[1] - r.y, r.y + r.h - a[1] - 44); return dx + dy; }));
         if (plantAt) { var px = plantAt[0], py = plantAt[1];
@@ -169,7 +181,52 @@
         if (clk) { var qx = clk[0], qy = clk[1];
           out.push(ellipse('clock-' + r.id, qx, qy, 22, 22, '#ffffff', INK, 2, 1, cx));
           out.push(line('clock-h-' + r.id, qx + 11, qy + 11, qx + 11, qy + 5, INK, 1.5, 0, cx));
-          out.push(line('clock-m-' + r.id, qx + 11, qy + 11, qx + 16, qy + 13, INK, 1.5, 0, cx)); }
+          out.push(line('clock-m-' + r.id, qx + 11, qy + 11, qx + 16, qy + 13, INK, 1.5, 0, cx)); box(r.id, qx - 4, qy - 4, 30, 30); }
+        /* 10-18 美術（KB #13、#14）：每間房一件「有故事的小道具」，只畫事情發生後的結果、不畫人、病人、傷口或病歷。
+           位置每間不同（用房間 id 決定偏哪個角落），放在玩家第一眼不一定看到的地方，錯過也不影響玩。 */
+        var placed = false;
+        [STORY[r.id], 'notes'].forEach(function (kind, attempt) {   /* 地上放不下的擁擠房間，退一步改掛牆上的便條紙 */
+        if (kind && !(attempt && placed)) {
+          var corner = 0; for (var ci = 0; ci < r.id.length; ci++) corner += r.id.charCodeAt(ci);
+          var wallProp = kind === 'notes', sw = wallProp ? 34 : 36, sh = wallProp ? 22 : 30, cand;
+          if (wallProp) { cand = []; for (var nx = r.x + 30; nx + sw <= r.x + r.w - 60; nx += 14) cand.push([nx, r.y + 18]); if (corner % 2) cand.reverse(); }
+          else {
+            var cxr = (corner & 1) ? r.x + r.w : r.x, cyr = (corner & 2) ? r.y + r.h : r.y + 40;
+            cand = grid(r, sw, sh, function (a) { return Math.abs(a[0] + sw / 2 - cxr) + Math.abs(a[1] + sh / 2 - cyr); }, 14);
+          }
+          var fr = wallProp ? { id:r.id, x:r.x - 28, y:r.y - 30, w:r.w + 56, h:r.h + 56 } : r, sp = find(fr, sw, sh, cand, 1) || find(fr, sw, sh, cand, 2);
+          if (sp) { placed = true; var sx = sp[0], sy = sp[1], sid = 'story-' + kind + '-' + r.id;
+            if (kind === 'puddle') {
+              out.push(ellipse(sid, sx, sy + 8, 34, 16, '#a5d8ff', '#1971c2', 1.5, 1, cx, { opacity:80 }));
+              out.push(ellipse(sid + '-f1', sx + 4, sy, 6, 10, '#868e96', INK, 1, 1, cx, { opacity:70 }));
+              out.push(ellipse(sid + '-f2', sx + 18, sy + 2, 6, 10, '#868e96', INK, 1, 1, cx, { opacity:70 }));
+            } else if (kind === 'trash') {
+              out.push(rect(sid, sx, sy + 8, 20, 22, '#adb5bd', INK, 2, 1, cx));
+              out.push(ellipse(sid + '-p1', sx - 3, sy + 1, 11, 10, '#ffffff', INK, 1.5, 1, cx));
+              out.push(ellipse(sid + '-p2', sx + 8, sy - 2, 11, 10, '#ffffff', INK, 1.5, 1, cx));
+              out.push(ellipse(sid + '-p3', sx + 24, sy + 22, 9, 8, '#ffffff', INK, 1.5, 1, cx));
+            } else if (kind === 'chair') {
+              out.push(rect(sid, sx + 4, sy + 4, 22, 22, '#fcc2d7', INK, 2, 1, cx, { angle:.6, roundness:{ type:3 } }));
+              out.push(line(sid + '-back', sx + 2, sy + 26, sx + 24, sy + 30, INK, 3, 1, cx));
+            } else if (kind === 'lunch') {
+              out.push(rect(sid, sx, sy + 8, 26, 16, '#ffd8a8', INK, 2, 1, cx));
+              out.push(rect(sid + '-lid', sx + 30, sy + 10, 20, 14, '#e9ecef', INK, 1.5, 1, cx, { angle:.25 }));
+              out.push(line(sid + '-c1', sx + 8, sy - 2, sx + 24, sy + 14, INK, 1.5, 0, cx));
+              out.push(line(sid + '-c2', sx + 10, sy + 14, sx + 28, sy + 2, INK, 1.5, 0, cx));
+            } else if (kind === 'papers') {
+              out.push(rect(sid, sx, sy + 4, 22, 26, '#ffffff', INK, 1.5, 1, cx, { angle:.15 }));
+              out.push(rect(sid + '-b', sx + 14, sy, 22, 26, '#ffffff', INK, 1.5, 1, cx, { angle:-.2 }));
+              out.push(line(sid + '-x', sx + 17, sy + 8, sx + 33, sy + 20, '#d9480f', 2, 0, cx));
+              out.push(line(sid + '-x2', sx + 33, sy + 8, sx + 17, sy + 20, '#d9480f', 2, 0, cx));
+            } else if (kind === 'notes') {
+              out.push(rect(sid, sx, sy, 14, 14, '#ffec99', INK, 1.5, 1, cx, { angle:-.1 }));
+              out.push(rect(sid + '-b', sx + 17, sy + 4, 14, 14, '#ffc9c9', INK, 1.5, 1, cx, { angle:.12 }));
+              out.push(line(sid + '-l1', sx + 3, sy + 5, sx + 11, sy + 5, INK, 1, 0, cx));
+              out.push(line(sid + '-l2', sx + 20, sy + 10, sx + 28, sy + 10, INK, 1, 0, cx));
+            }
+            box(r.id, sx - 4, sy - 4, sw + 14, sh + 8); }
+        }
+        });
       });
     })();
     rooms.forEach(function (r) { if (r.type === 'room') roomWalls(r, out); });
@@ -183,6 +240,11 @@
       var x = p.x, y = p.y, w = f.w, h = f.h, custom = { room:f.room, furniture:true, furnitureIndex:n };
       var bodyBottom = y + h;
       assertInside(room, x, y, w + 6, h + 6, '第 ' + (n + 1) + ' 件家具陰影');
+      /* 10-18 美術（KB #9）：錨點家具外圍加一圈區域色，是這間房最醒目的地標（夾在房間範圍內） */
+      if (f.anchor && room.accent) {
+        var ax0 = Math.max(room.x, x - 6), ay0 = Math.max(room.y, y - 6), ax1 = Math.min(room.x + room.w, x + w + 12), ay1 = Math.min(room.y + room.h, y + h + 12);
+        out.push(rect('anchor-' + n, ax0, ay0, ax1 - ax0, ay1 - ay0, room.accent, room.accent, 3, 2, custom, { opacity:45, roundness:{ type:3 } }));
+      }
       out.push(rect('fshadow-' + n, x + 6, y + 6, w, h, '#868e9644', 'transparent', 0, 0, custom));
 
       if (f.type === 'seats') {
@@ -252,8 +314,8 @@
           out.push(line(d('w2'), x + w * .3, wy - h * .22, x + w * .5, wy + h * .2, '#69db7c', 2, 0, custom));
           out.push(line(d('w3'), x + w * .5, wy + h * .2, x + w * .75, wy - h * .18, '#69db7c', 2, 0, custom));
         } else if (f.type === 'board') {
-          out.push(line(d('t1'), x + 8, y + h * .3, x + w - 14, y + h * .3, '#adb5bd', 2, 0, custom));
-          out.push(line(d('t2'), x + 8, y + h * .5, x + w - 26, y + h * .5, '#adb5bd', 2, 0, custom));
+          out.push(line(d('t1'), x + 8, y + h * .3, x + w - 14, y + h * .3, '#868e96', 2, 0, custom));
+          out.push(line(d('t2'), x + 8, y + h * .5, x + w - 26, y + h * .5, '#868e96', 2, 0, custom));
           out.push(ellipse(d('mag'), x + w - 12, y + 4, 7, 7, '#fa5252', INK, 1, 0, custom));
         } else if (f.type === 'device') {
           out.push(ellipse(d('l1'), x + 5, y + 4, 6, 6, '#fa5252', INK, 1, 0, custom));
@@ -303,7 +365,7 @@
       pinBoxes.push({ id:pin.clue, x:x, y:y, w:w, h:h });
       out.push(rect('pin-' + pin.clue, x, y, w, h, '#ffd43b', INK, 3, 2,
         { clueId:pin.clue, pin:true, room:pin.room }, { roundness:{ type:3 }, label:{ text:'線索 ' + pin.clue, fontSize:13 } }));   /* 10-12：牌面寫「線索 C-04」，只寫編號看不懂 */
-      out.push(ellipse('pinhead-' + pin.clue, x + w / 2 - 5, y - 5, 10, 10, '#fa5252', INK, 1, 2,
+      out.push(ellipse('pinhead-' + pin.clue, x + w / 2 - 5, y - 5, 10, 10, '#fa5252', INK, 2, 2,
         { clueId:pin.clue, room:pin.room, pinHead:true }));
     });
 

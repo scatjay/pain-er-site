@@ -16,9 +16,13 @@
     var out = [], w = r.w, h = r.h;
     out.push('<svg xmlns="http://www.w3.org/2000/svg" viewBox="-8 -8 ' + (w + 16) + ' ' + (h + 16) + '" width="100%" role="img" aria-label="' + esc(r.name) + '平面圖" font-family="\'Noto Sans TC\',sans-serif">');
     out.push('<rect x="0" y="0" width="' + w + '" height="' + h + '" rx="12" fill="' + esc(r.color || '#eee') + '" stroke="#1e1e1e" stroke-width="6"' + (r.type === 'outside' || r.type === 'hall' ? ' stroke-dasharray="14 8"' : '') + '/>');
+    /* 10-18 美術（KB #11）：房間上緣一條區域色 */
+    if (r.accent) out.push('<rect x="10" y="6" width="' + (w - 20) + '" height="9" rx="4" fill="' + esc(r.accent) + '" stroke="#1e1e1e" stroke-width="2"/>');
     var furn = (layout.FURNITURE || []).filter(function (f) { return f.room === roomId; });
     furn.forEach(function (f, fi) {
       var col = COLORS[f.type] || '#e9ecef', fw = f.w || 30, fh = f.h || 20;
+      /* 10-18 美術（KB #9）：錨點家具外圈一圈區域色（畫在家具下面，不擋點擊） */
+      if (f.anchor && r.accent) out.push('<rect x="' + (f.rx - 6) + '" y="' + (f.ry - 6) + '" width="' + (fw + 12) + '" height="' + (fh + 12) + '" rx="10" fill="' + esc(r.accent) + '" fill-opacity=".45" stroke="' + esc(r.accent) + '" stroke-width="3" pointer-events="none"/>');
       /* data-f：家具在這間房的序號，手機版用來接點擊 */
       out.push('<rect data-f="' + fi + '" x="' + f.rx + '" y="' + f.ry + '" width="' + fw + '" height="' + fh + '" rx="6" fill="' + col + '" stroke="#1e1e1e" stroke-width="3" style="cursor:pointer"/>');
       if (fw >= 26 && fh >= 22) out.push('<text x="' + num(f.rx + fw / 2) + '" y="' + num(f.ry + fh / 2 + 7) + '" font-size="' + Math.min(22, fh * .6) + '" text-anchor="middle" opacity=".85">' + MM.furnitureIcon(f) + '</text>');
@@ -30,7 +34,7 @@
     if(roomId==='triage') out.push('<text x="230" y="30" font-size="13" font-weight="900" text-anchor="middle" fill="#fff">A018</text>');
     (r.doors || []).forEach(function (d) {
       var cx = d.side === 'W' ? 0 : d.side === 'E' ? w : w * d.at, cy = d.side === 'N' ? 0 : d.side === 'S' ? h : h * d.at, horiz = d.side === 'N' || d.side === 'S';
-      out.push('<rect x="' + num(cx - (horiz ? d.w / 2 : 7)) + '" y="' + num(cy - (horiz ? 7 : d.w / 2)) + '" width="' + (horiz ? d.w : 14) + '" height="' + (horiz ? 14 : d.w) + '" rx="3" fill="#fff" stroke="#e8590c" stroke-width="3"/>');
+      out.push('<rect x="' + num(cx - (horiz ? d.w / 2 : 7)) + '" y="' + num(cy - (horiz ? 7 : d.w / 2)) + '" width="' + (horiz ? d.w : 14) + '" height="' + (horiz ? 14 : d.w) + '" rx="3" fill="#fff" stroke="' + (r.accent || '#d9480f') + '" stroke-width="4"/>');
       out.push('<text x="' + num(cx) + '" y="' + num(cy + (d.side === 'N' ? 28 : d.side === 'S' ? -14 : 5)) + '" font-size="14" text-anchor="middle">🚪</text>');
     });
     out.push('</svg>');

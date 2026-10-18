@@ -245,6 +245,25 @@
     { id:'clinic-desk',   room:'clinic',   rx:100, ry:150 }
   ];
 
+  /* 10-18 美術（art/ART_KB.md 第 9、11、12 條）：
+     ① 區域辨識色：依「做什麼事」分六區（Lynch 的 district＝同一區有共同特徵），顏色取自 Okabe-Ito 色盲友善調色盤；每間房再靠自己的圖示與錨點家具區分，不只靠顏色。
+     ② 錨點家具：每間房一件最有代表性的家具（label 對得上的第一件），畫面上加一圈區域色，遠看就知道這間房在做什麼。 */
+  var ZONES = [
+    { id:'clinic',  name:'診療',     color:'#0072B2', rooms:['consultA','consultB','ped','obs'] },
+    { id:'acute',   name:'急重症',   color:'#D55E00', rooms:['bays','resus','ct'] },
+    { id:'front',   name:'入口與櫃台', color:'#E69F00', rooms:['entrance','triage','lobby','service'] },
+    { id:'waiting', name:'等候',     color:'#CC79A7', rooms:['waiting','family','restroom'] },
+    { id:'staff',   name:'護理與後勤', color:'#009E73', rooms:['nurse','staff','admin'] },
+    { id:'leave',   name:'離院與領藥', color:'#56B4E9', rooms:['discharge','pharmacy'] }
+  ];
+  var ANCHOR = { entrance:'警衛櫃台', triage:'檢傷櫃台', waiting:'候診椅', nurse:'護理站', resus:'急救床', bays:'3 床', consultA:'診察桌', consultB:'診察桌',
+    ct:'斷層掃描儀', discharge:'離院／批價櫃台', restroom:'洗手台', admin:'主任辦公桌', ped:'玩具箱', obs:'觀察1', pharmacy:'領藥窗口', family:'家屬等候椅',
+    lobby:'掛號機', staff:'咖啡機', service:'服務台' };
+  ZONES.forEach(function (z) { z.rooms.forEach(function (id) { for (var i = 0; i < ROOMS.length; i++) if (ROOMS[i].id === id) { ROOMS[i].accent = z.color; ROOMS[i].zone = z.id; } }); });
+  Object.keys(ANCHOR).forEach(function (id) {
+    for (var i = 0; i < FURNITURE.length; i++) if (FURNITURE[i].room === id && FURNITURE[i].label === ANCHOR[id]) { FURNITURE[i].anchor = true; return; }
+  });
+
   function room(id) { for (var i = 0; i < ROOMS.length; i++) if (ROOMS[i].id === id) return ROOMS[i]; return null; }
   function abs(roomId, rx, ry) { var r = room(roomId); return { x: r.x + rx, y: r.y + ry }; }
   function roomAt(x, y) {
@@ -364,6 +383,6 @@
     return { nodes: nodes, edges: edges };
   }
 
-  return { WALL: WALL, ROOMS: ROOMS, LINKS: LINKS, FURNITURE: FURNITURE, PINS: PINS, STATIONS: STATIONS,
+  return { WALL: WALL, ZONES: ZONES, ANCHOR: ANCHOR, ROOMS: ROOMS, LINKS: LINKS, FURNITURE: FURNITURE, PINS: PINS, STATIONS: STATIONS,
            room: room, abs: abs, roomAt: roomAt, doorPoint: doorPoint, nav: nav, hallFor: hallFor, neighbors: neighbors, route: route };
 });

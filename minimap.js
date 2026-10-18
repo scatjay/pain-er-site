@@ -51,11 +51,13 @@
       out.push('<g data-room="' + esc(r.id) + '"' + (opts.clickable ? ' style="cursor:pointer"' : '') + '>');
       out.push('<rect x="' + r.x + '" y="' + r.y + '" width="' + r.w + '" height="' + r.h + '" rx="10" fill="' + esc(r.color || '#eee') + '" stroke="' + (event[r.id] ? '#fa5252' : (hl ? '#ff6b4a' : '#1e1e1e')) + '" stroke-width="' + (event[r.id] || hl ? 9 : 4) + '"' + (r.type === 'remote' ? ' stroke-dasharray="14 8"' : '') + '/>');
       var icon = ROOM_ICON[r.id] || '❔';
+      /* 10-18 美術（KB #11）：房間上緣一條區域色（同一區同一色，顏色之外還有圖示與房名） */
+      if (r.accent && !isHall) out.push('<rect data-zone="' + esc(r.zone || '') + '" x="' + (r.x + 8) + '" y="' + (r.y + 5) + '" width="' + (r.w - 16) + '" height="' + (compact ? 18 : 9) + '" rx="4" fill="' + esc(r.accent) + '" stroke="#1e1e1e" stroke-width="2"/>');
       if (isHall) {
         var hs = Math.min(compact ? 30 : 18 * F, r.h * .6);
-        out.push('<text x="' + (r.x + 24) + '" y="' + num(r.y + r.h / 2 + hs * .35) + '" font-size="' + hs + '" opacity=".4">' + icon + '</text>');
+        out.push('<text x="' + (r.x + 24) + '" y="' + num(r.y + r.h / 2 + hs * .35) + '" font-size="' + hs + '" opacity=".7">' + icon + '</text>');
         out.push('<text x="' + (r.x + r.w / 2) + '" y="' + num(r.y + r.h / 2 + hs * .4) + '" font-size="' + num(Math.min(compact ? 34 : 20 * F, r.h * .66)) + '" font-weight="800" text-anchor="middle" fill="#3b4a52" letter-spacing="2">' + esc(compact ? (SHORT[r.id] || r.name) : r.name) + '</text>');
-        out.push('<text x="' + (r.x + r.w - 24) + '" y="' + num(r.y + r.h / 2 + hs * .35) + '" font-size="' + hs + '" opacity=".4" text-anchor="end">' + icon + '</text>');
+        out.push('<text x="' + (r.x + r.w - 24) + '" y="' + num(r.y + r.h / 2 + hs * .35) + '" font-size="' + hs + '" opacity=".7" text-anchor="end">' + icon + '</text>');
       } else {
         if (compact) {
           /* 小地圖：大圖示＋短名稱，遠看也認得 */
@@ -89,7 +91,7 @@
       (r.doors || []).forEach(function (d) {
         var cx = d.side === 'W' ? r.x : d.side === 'E' ? r.x + r.w : r.x + r.w * d.at;
         var cy = d.side === 'N' ? r.y : d.side === 'S' ? r.y + r.h : r.y + r.h * d.at;
-        out.push('<rect x="' + num(cx - (d.side === 'N' || d.side === 'S' ? d.w / 2 : 5)) + '" y="' + num(cy - (d.side === 'W' || d.side === 'E' ? d.w / 2 : 5)) + '" width="' + (d.side === 'N' || d.side === 'S' ? d.w : 10) + '" height="' + (d.side === 'W' || d.side === 'E' ? d.w : 10) + '" fill="#fff" stroke="#e8590c" stroke-width="2"/>');
+        out.push('<rect x="' + num(cx - (d.side === 'N' || d.side === 'S' ? d.w / 2 : 5)) + '" y="' + num(cy - (d.side === 'W' || d.side === 'E' ? d.w / 2 : 5)) + '" width="' + (d.side === 'N' || d.side === 'S' ? d.w : 10) + '" height="' + (d.side === 'W' || d.side === 'E' ? d.w : 10) + '" fill="#fff" stroke="' + (r.accent || '#d9480f') + '" stroke-width="3"/>');
       });
     });
     if (opts.showPins) {
