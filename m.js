@@ -152,24 +152,68 @@
     if (window.ERG_PANELS) window.ERG_PANELS.onMove();
   }
   function nearestNode(p,room){var ids=Object.keys(cur.world.graph.nodes),best=null,bd=Infinity;ids.forEach(function(id){var n=cur.world.graph.nodes[id];if(room&&n.room!==room)return;var d=Math.hypot(n.x-p.x,n.y-p.y);if(d<bd){bd=d;best=id;}});return best;}
-  function goRemote(id){cur.walk=null;setLoc(id);toTop&&toTop();toast(id==='home'?'搭公車到了病患的家。這裡有他手機收到的簡訊，家人也在。':'隔天，到了回診門診。');}   /* 10-13：這兩間不在地圖上，原本沒有入口 */
-  function startTravel(id){var rm=LAYOUT.room(id);if(rm&&rm.type==='remote'&&(id==='home'||id==='clinic')){goRemote(id);return true;}if(!rm||rm.type!=='room')return false;var a=(cur.player.loc==='home'||cur.player.loc==='clinic')?spotIn('street'):cur.me,b=spotIn(id),from=nearestNode(a),to=nearestNode(b,id)||nearestNode(b),route=from&&to?window.ERG_NPC.shortestPath(cur.world.graph,from,to):null;if(!route){toast('找不到可走的路線，請從附近房間前往。');return false;}var pts=[{x:a.x,y:a.y}];route.ids.forEach(function(nid){var n=cur.world.graph.nodes[nid];if(Math.hypot(n.x-pts[pts.length-1].x,n.y-pts[pts.length-1].y)>1)pts.push({x:n.x,y:n.y});});if(Math.hypot(b.x-pts[pts.length-1].x,b.y-pts[pts.length-1].y)>1)pts.push(b);cur.walk={points:pts,index:1,target:id};$('locLabel').textContent='前往：'+rm.name;return true;}
+  function goRemote(id){cur.walk=null;clearTimeout(cur._jumpT);setLoc(id);toTop&&toTop();toast(id==='home'?'搭公車到了病患的家。這裡有他手機收到的簡訊，家人也在。':'隔天，到了回診門診。');}   /* 10-13：這兩間不在地圖上，原本沒有入口 */
+  function startTravel(id){var rm=LAYOUT.room(id);if(rm&&rm.type==='remote'&&(id==='home'||id==='clinic')){goRemote(id);return true;}if(!rm||rm.type!=='room')return false;var a=(cur.player.loc==='home'||cur.player.loc==='clinic')?spotIn('street'):cur.me,b=spotIn(id),from=nearestNode(a),to=nearestNode(b,id)||nearestNode(b),route=from&&to?window.ERG_NPC.shortestPath(cur.world.graph,from,to):null;if(!route){toast('找不到可走的路線，請從附近房間前往。');return false;}var pts=[{x:a.x,y:a.y}];route.ids.forEach(function(nid){var n=cur.world.graph.nodes[nid];if(Math.hypot(n.x-pts[pts.length-1].x,n.y-pts[pts.length-1].y)>1)pts.push({x:n.x,y:n.y});});if(Math.hypot(b.x-pts[pts.length-1].x,b.y-pts[pts.length-1].y)>1)pts.push(b);clearTimeout(cur._jumpT);cur.walk={points:pts,index:1,target:id};$('locLabel').textContent='前往：'+rm.name;return true;}
   function advanceWalk(dt){if(!cur.walk||cur.clock.paused)return;var w=cur.walk,remain=70*cur.world.data.SIM.SECONDS_PER_SIM_MIN/cur.clock.secPerMin*dt;while(remain>0&&w.index<w.points.length){var a=cur.me,b=w.points[w.index],d=Math.hypot(b.x-a.x,b.y-a.y);if(d<=remain){cur.me={x:b.x,y:b.y};remain-=d;w.index++;}else{cur.me={x:a.x+(b.x-a.x)*remain/d,y:a.y+(b.y-a.y)*remain/d};remain=0;}}var rm=LAYOUT.roomAt(cur.me.x,cur.me.y);if(rm&&rm!==cur.player.loc){cur.player.loc=rm;cur.watchRoom=rm;renderScene();renderNav();soundForRoom(rm);if(window.ERG_PANELS)window.ERG_PANELS.onMove();}if(w.index>=w.points.length){var dest=w.target;cur.walk=null;setLoc(dest,true);DB.appendEvent(cur.code,{kind:'move',env:APP.me.sid,to:dest});persist(true);}}
   S.travel = startTravel;
-  S.teleport=function(id){cur.walk=null;setLoc(id);}; S.setWatchRoom=function(id){if(!LAYOUT.room(id)||LAYOUT.room(id).type!=='room')return;cur.watchRoom=id;if(window.ERG_PANELS&&window.ERG_PANELS.onWatch)window.ERG_PANELS.onWatch(id);var scene=document.getElementById('sceneBox');if(scene){scene.style.transition='opacity .18s';scene.style.opacity='.55';setTimeout(function(){scene.style.opacity='1';},30);}renderScene();renderTokens();};
+  S.teleport=function(id){cur.walk=null;clearTimeout(cur._jumpT);setLoc(id);}; S.setWatchRoom=function(id){if(!LAYOUT.room(id)||LAYOUT.room(id).type!=='room')return;cur.watchRoom=id;if(window.ERG_PANELS&&window.ERG_PANELS.onWatch)window.ERG_PANELS.onWatch(id);var scene=document.getElementById('sceneBox');if(scene){scene.style.transition='opacity .18s';scene.style.opacity='.55';setTimeout(function(){scene.style.opacity='1';},30);}renderScene();renderTokens();};
   function renderNav() {
-    var list = nearby(cur.player.loc);
-    $('nav').innerHTML = '<button class="ghost" id="mapBtn">🗺️ 全部</button><b>附近：</b>' + list.map(function (r) { return '<button class="ghost chip" data-go="' + esc(r.id) + '">' + (MM.ROOM_ICON[r.id] || '') + ' ' + esc(r.name) + '</button>'; }).join('')+'<b>院外：</b><button class="ghost chip" data-go="home">🚌 病患的家</button><button class="ghost chip" data-go="clinic">🏥 回診門診</button><b>去過：</b>'+(cur.player.visited||[]).map(function(id){var r=LAYOUT.room(id);return r?'<button class="ghost chip" data-visit="'+esc(id)+'">'+esc(r.name)+'</button>':'';}).join('');
+    /* 10-18 UI 方案 8：「🗺️ 全部」釘在最左邊；「附近」最多 6 間（離得最近的，其餘從「全部」找）；「去過」扣掉附近已有的、最多 4 間；列尾有「›」提示還能往右滑 */
+    var here = LAYOUT.room(cur.player.loc), hc = here ? { x: here.x + here.w / 2, y: here.y + here.h / 2 } : { x: 0, y: 0 };
+    var all = nearby(cur.player.loc), list = all.slice().sort(function (a, b) { return Math.hypot(a.x + a.w / 2 - hc.x, a.y + a.h / 2 - hc.y) - Math.hypot(b.x + b.w / 2 - hc.x, b.y + b.h / 2 - hc.y); }).slice(0, 6).sort(function (a, b) { return a.y - b.y || a.x - b.x; });
+    var inNear = {}; list.forEach(function (r) { inNear[r.id] = true; }); inNear[cur.player.loc] = true;
+    var rec = (cur.player.visited || []).filter(function (id) { return !inNear[id] && LAYOUT.room(id); }).slice(0, 4);
+    $('nav').innerHTML = '<button class="ghost" id="mapBtn" title="看整張地圖，點房間直接到">🗺️ 全部</button><b>附近：</b>' + list.map(function (r) { return '<button class="ghost chip" data-go="' + esc(r.id) + '">' + (MM.ROOM_ICON[r.id] || '') + ' ' + esc(r.name) + '</button>'; }).join('') + '<b>院外：</b><button class="ghost chip" data-go="home">🚌 病患的家</button><button class="ghost chip" data-go="clinic">🏥 回診門診</button>' + (rec.length ? '<b>去過：</b>' + rec.map(function (id) { return '<button class="ghost chip" data-visit="' + esc(id) + '">' + esc(LAYOUT.room(id).name) + '</button>'; }).join('') : '') + '<span id="navMore" aria-hidden="true">›</span>';
     Array.prototype.forEach.call($('nav').querySelectorAll('[data-go],[data-visit]'), function (b) { b.onclick = function () { startTravel(b.dataset.go||b.dataset.visit); }; });
     $('mapBtn').onclick = openMap;
+    var nv = $('nav'), more = $('navMore'); function hint() { more.style.display = nv.scrollLeft + nv.clientWidth >= nv.scrollWidth - 4 ? 'none' : 'flex'; } nv.onscroll = hint; hint();
   }
+  /* 10-18 D3：點地圖上的房間＝直接傳送（快速旅行），淡出淡入＋「到了○○」；附近房間列、左右滑仍是走路。 */
+  function jumpTo(id) {
+    var rm = LAYOUT.room(id); if (!rm) return false;
+    if (rm.type === 'remote') return startTravel(id);
+    if (rm.type !== 'room') return false;
+    if (id === cur.player.loc && !cur.walk) { toast('你已經在' + rm.name + '了'); return true; }
+    cur.walk = null;
+    var st = $('stage'), v = $('teleVeil'); if (!v && st) { v = document.createElement('div'); v.id = 'teleVeil'; st.appendChild(v); }
+    var reduce = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion:reduce)').matches);
+    function go() { if (!cur) return; cur.walk = null; setLoc(id); toTop(); toast('到了' + rm.name); }
+    if (v && !reduce) { v.classList.remove('go'); void v.offsetWidth; v.classList.add('go'); cur._jumpT = setTimeout(go, 140); } else go();
+    return true;
+  }
+  S.jump = jumpTo;
+  /* 10-18 UI 方案 3：與桌面版同用 MM.optsFrom，圖層一致（去過勾、事件、線索徽章、同房間的同學） */
+  function mapSrc() {
+    var t = cur.clock.worldSec, npc = [], players = [], room = DB.getRoom(cur.code);
+    cur.world.at(t).forEach(function (it) { if (it.pos.x !== undefined) npc.push({ x: it.pos.x, y: it.pos.y, kind: it.ent.kind === 'bot' ? 'bot' : 'npc' }); });
+    Object.keys(room.players || {}).forEach(function (sid) { if (sid === APP.me.sid) return; var p = room.players[sid], sp = spotIn(p.loc || 'entrance'); players.push({ x: sp.x, y: sp.y, label: sid.slice(-4) }); });
+    var active = cur.world.sim.activeEvents(CLK.simMin(cur.clock)).reduce(function (a, e) { return a.concat(e.rooms || []); }, []), seen = cur.player.roomsSeen || {};
+    return { loc: cur.player.loc, me: cur.me, roomsSeen: seen, npcDots: npc, players: players, activeEventRooms: active, walkTarget: cur.walk && cur.walk.target,
+      clues: MM.clueStatus(cur.world.clues, L.listMarkers(S.markerEls()), seen, APP.me.sid) };
+  }
+  /* 10-18 D4：「全部」地圖放大（寬約容器 1.9 倍）、自動對準「你」、可左右上下拖；「全院」鈕切回整張縮小 */
   function openMap() {
-    var t = cur.clock.worldSec, dots = [{ x: cur.me.x, y: cur.me.y, kind: 'me' }];
-    cur.world.at(t).forEach(function (it) { if (it.pos.x !== undefined) dots.push({ x: it.pos.x, y: it.pos.y, kind: it.ent.kind === 'bot' ? 'bot' : 'npc' }); });
-    S.openModal('<div class="row"><b style="flex:1">全部房間（點一間走過去；打勾的是去過的）</b><button class="ghost" id="mapClose">關閉</button></div><div class="row" style="margin-top:6px;gap:6px"><b>院外：</b><button class="ghost" data-remote="home">🚌 病患的家</button><button class="ghost" data-remote="clinic">🏥 回診門診</button></div><div style="margin-top:8px">' + MM.svg(LAYOUT, { compact:true,fontScale:1.3,onlyMap:true,width:420, showFurniture: false, you: cur.player.loc, dots: dots, clickable: true, visited: Object.keys(cur.player.roomsSeen || {}) }) + '</div>');
+    var out = cur.player.loc === 'home' || cur.player.loc === 'clinic';
+    S.openModal('<div class="row" style="gap:6px"><b style="flex:1">全部房間</b><button class="ghost" id="mapZoomIn" aria-pressed="true">放大</button><button class="ghost" id="mapZoomAll" aria-pressed="false">全院</button><button class="ghost" id="mapClose">關閉</button></div>' +
+      '<div class="row" style="margin-top:6px;gap:6px"><b>院外：</b><button class="ghost" data-remote="home">🚌 病患的家</button><button class="ghost" data-remote="clinic">🏥 回診門診</button></div>' +
+      '<div class="muted" style="font-size:12px;margin-top:4px">點一間房直接到</div>' +
+      '<div id="mapPan" class="mapPan zoomed" style="margin-top:8px">' + MM.svg(LAYOUT, Object.assign(MM.optsFrom(mapSrc()), { fontScale: 1.3, width: 420, clueText: true })) + '</div>' + MM.legendHtml(true));
+    var pan = $('mapPan'), svg = pan.querySelector('svg');
+    function centerOnMe() {
+      var vb = svg.getAttribute('viewBox').split(' ').map(Number), R = svg.getBoundingClientRect(), k = R.width / vb[2];
+      pan.scrollLeft = Math.max(0, (cur.me.x - vb[0]) * k - pan.clientWidth / 2); pan.scrollTop = Math.max(0, (cur.me.y - vb[1]) * k - pan.clientHeight / 2);
+    }
+    function setZoom(zoomed) {
+      pan.classList.toggle('zoomed', zoomed); pan.classList.toggle('all', !zoomed);
+      $('mapZoomIn').setAttribute('aria-pressed', zoomed ? 'true' : 'false'); $('mapZoomAll').setAttribute('aria-pressed', zoomed ? 'false' : 'true');
+      $('mapZoomIn').classList.toggle('on', zoomed); $('mapZoomAll').classList.toggle('on', !zoomed);
+      if (zoomed) centerOnMe(); else { pan.scrollLeft = 0; pan.scrollTop = 0; }
+    }
+    $('mapZoomIn').onclick = function () { setZoom(true); }; $('mapZoomAll').onclick = function () { setZoom(false); };
+    setZoom(!out);   /* 人在院外時地圖上沒有「你」，直接看全院 */
     $('mapClose').onclick = S.closeModal;
     Array.prototype.forEach.call($('modalBox').querySelectorAll('[data-remote]'), function (b) { b.onclick = function () { S.closeModal(); startTravel(b.dataset.remote); }; });
-    Array.prototype.forEach.call($('modalBox').querySelectorAll('[data-room]'), function (g) { g.onclick = function () { var id = g.getAttribute('data-room'), r = LAYOUT.room(id); if (r && r.type === 'room') { S.closeModal(); startTravel(id); } }; });
+    Array.prototype.forEach.call($('modalBox').querySelectorAll('g.ermm-click'), function (g) { g.onclick = function () { S.closeModal(); jumpTo(g.getAttribute('data-room')); }; });
   }
 
   /* 左右滑換房 */

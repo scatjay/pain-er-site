@@ -7,16 +7,16 @@
   'use strict';
 
   var ROOM_ICON = {
-    consultA: '🩺', consultB: '🩺', bays: '🛏️', ct: '🩻', corridor: '↔️', waiting: '🪑', nurse: '💉', resus: '🚑', staff: '☕', hall2: '↔️', hall3: '↔️',
+    consultA: '🩺', consultB: '🩺', bays: '🛏️', ct: '🔬', corridor: '↔️', waiting: '🪑', nurse: '💉', resus: '🚑', staff: '☕', hall2: '↔️', hall3: '↔️',
     entrance: '🚪', triage: '📋', discharge: '🧾', restroom: '🚻', admin: '🏢', ped: '🧸', obs: '💧', pharmacy: '💊', family: '👨‍👩‍👧', lobby: '🎫',
     service: 'ℹ️', street: '🚕', ambulance: '🚑', notebook: '📓', home: '🏠', clinic: '🏥'
   };
-  var TYPE_ICON = { desk: '🗄️', sign: '🪧', chair: '♿', door: '🚪', counter: '🗃️', device: '🔧', screen: '📺', seats: '🪑', board: '📌', bed: '🛏️',
-    sofa: '🛋️', scanner: '🩻', glass: '🪟', rack: '📚', stall: '🚽', phone: '📱', lightbox: '💡' };
+  var TYPE_ICON = { desk: '🗄️', sign: '📢', chair: '♿', door: '🚪', counter: '🗃️', device: '🔧', screen: '📺', seats: '🪑', board: '📌', bed: '🛏️',
+    sofa: '🛋️', scanner: '🔬', glass: '🖼️', rack: '📚', stall: '🚽', phone: '📱', lightbox: '💡' };
   var LABEL_ICON = { '血壓計': '🩸', '警民連線鈴': '🚨', '飲水機': '🚰', '電腦': '💻', '咖啡機': '☕', '輪椅': '♿', '公車站牌': '🚌', '計程車招呼站': '🚕',
     '叫號螢幕': '🔢', '電視': '📺', '領藥叫號': '🔢', '病人動態看板': '📊', '簡訊說明海報': '💬', '藥袋說明': '💊', '請尊重醫護': '🙏',
     '看診／探病 分流': '↔️', '自動門': '🚪', '白板': '🗒️', '探視規定': '📜', '探病登記': '📝', '衛教單架': '📄', '導覽地圖架': '🗺️', '診察桌': '🩺',
-    '警衛櫃台': '🛡️', '檢傷櫃台': '📋', '護理站': '💉', '領藥窗口': '💊', '服務台': 'ℹ️', '病患的手機': '📱', '片燈箱（斷層片）': '🩻', '斷層掃描儀': '🩻',
+    '警衛櫃台': '🛡️', '檢傷櫃台': '📋', '護理站': '💉', '領藥窗口': '💊', '服務台': 'ℹ️', '病患的手機': '📱', '片燈箱（斷層片）': '💡', '斷層掃描儀': '🔬',
     '急救床': '🚑', '主任辦公桌': '🏢', '資訊桌': '💻' };
   var DOT = { me: ['#ff6b4a', '我'], player: ['#339af0', '同'], bot: ['#adb5bd', '模'], npc: ['#ffd43b', ''], event: ['#fa5252', '!'] };
 
@@ -31,6 +31,50 @@
   var SHORT = { consultA: '診察一', consultB: '診察二', ct: '斷層', staff: '休息室', admin: '行政', ped: '兒科', service: '服務台', lobby: '掛號批價', discharge: '離院批價',
     pharmacy: '領藥', family: '家屬區', waiting: '候診區', triage: '檢傷', entrance: '入口', nurse: '護理站', resus: '急救', bays: '治療區', obs: '觀察室',
     restroom: '廁所', corridor: '主要走道', hall2: '中央走道', hall3: '前廳走道', ambulance: '救護車道', street: '街道', notebook: '筆記本', home: '病患的家', clinic: '回診門診' };
+
+
+  /* 10-18 D2：線索徽章（房間右下角）。沒去過＝黃底「?」；去過＝黃底「剩 N 條」（地圖小時只放數字）；清完＝淡綠底「✔」。
+     info＝{ total, left, seen }；形狀是圓角方塊，與「去過」的綠色圓形勾分得開。 */
+  function clueBadgeBox(r, info, compact, F, withText) {
+    var seen = info.seen, h = compact ? 56 : 30 * F, fs = compact ? 40 : 18 * F, left = info.left, done = seen && left <= 0;
+    var label = !seen ? '?' : (done ? '✔' : (withText ? '剩 ' + left + ' 條' : String(left)));
+    var w = label.length > 2 ? fs * (label.length * .62 + .9) : h;
+    return { label: label, w: w, h: h, fs: fs, done: done, x: r.x + r.w - 8 - w, y: r.y + r.h - 8 - h };
+  }
+  function clueBadge(r, info, compact, F, withText) {
+    var bx = clueBadgeBox(r, info, compact, F, withText), seen = info.seen, left = info.left, done = bx.done, label = bx.label, w = bx.w, h = bx.h, fs = bx.fs, x = bx.x, y = bx.y;
+    var fill = !seen ? '#ffd43b' : (done ? '#b2f2bb' : '#ffd43b');
+    return '<g data-clue-badge="' + esc(r.id) + '" data-state="' + (!seen ? 'unseen' : (done ? 'done' : 'left')) + '"><title>' + esc(!seen ? '還沒去過：這裡有線索' : (done ? '這間的線索都記下了' : '還剩 ' + left + ' 條線索沒記')) + '</title>' +
+      '<rect x="' + num(x) + '" y="' + num(y) + '" width="' + num(w) + '" height="' + num(h) + '" rx="' + num(h * .3) + '" fill="' + fill + '" stroke="#1e1e1e" stroke-width="' + num(compact ? 4 : 2) + '"/>' +
+      '<text x="' + num(x + w / 2) + '" y="' + num(y + h / 2 + fs * .36) + '" font-size="' + num(fs) + '" font-weight="900" text-anchor="middle" fill="#1e1e1e">' + esc(label) + '</text></g>';
+  }
+  /* 每間房的線索狀態。clues：[{id,pin:{room}}]；markers：listMarkers 的結果（勘查卡有 clueId）；me：自己的代號（只算自己記的）。
+     回傳 { 房間id: { total, left, seen } }；「剩」＝這間房的線索裡，自己還沒記成勘查卡的。 */
+  function clueStatus(clues, markers, roomsSeen, me) {
+    var done = {}; (markers || []).forEach(function (m) { if (m && m.clueId && (me === undefined || m.author === undefined || String(m.author) === String(me))) done[m.clueId] = true; });
+    var out = {};
+    (clues || []).forEach(function (c) {
+      var id = c.pin && c.pin.room; if (!id) return;
+      var o = out[id] || (out[id] = { total: 0, left: 0, seen: !!(roomsSeen && roomsSeen[id]) });
+      o.total += 1; if (!done[c.id]) o.left += 1;
+    });
+    return out;
+  }
+  /* 10-18 圖例：一行，放大視窗與手機「全部」用（小地圖空間不夠不放） */
+  function legendHtml(collapsed) {
+    var chip = function (bg, fg, t) { return '<b style="display:inline-block;min-width:1.4em;text-align:center;background:' + bg + ';color:' + fg + ';border:2px solid #1e1e1e;border-radius:6px;padding:0 4px;margin-right:2px">' + t + '</b>'; };
+    return '<details class="ermm-legend" ' + (collapsed ? '' : 'open ') + 'style="font-size:13px;line-height:1.9;margin-top:6px"><summary data-legend-toggle="1" style="cursor:pointer;font-weight:900;min-height:32px;display:flex;align-items:center">圖例（記號是什麼意思）' + (collapsed ? '・放大時可拖曳' : '') + '</summary>📍 你在這裡　' + chip('#2f9e44', '#fff', '✓') + '去過　' + chip('#fff', '#1e1e1e', '⚠️') + '事件　' + chip('#495057', '#fff', '3') + '人數（藍＝有同學）　' + chip('#ffd43b', '#1e1e1e', '?') + '沒去過、有線索　' + chip('#ffd43b', '#1e1e1e', '剩 N 條') + '線索還沒記　' + chip('#b2f2bb', '#1e1e1e', '✔') + '線索都記了</details>';
+  }
+  /* 三處地圖（桌面小地圖、桌面放大、手機全部）共用：把遊戲狀態變成 svg() 的 opts，呼叫端只補 width／fontScale。
+     src：{ loc, me:{x,y}, roomsSeen, npcDots:[{x,y,kind}], players:[{x,y,label}], activeEventRooms:[id], clues, walkTarget } */
+  function optsFrom(src) {
+    src = src || {};
+    var dots = (src.npcDots || []).map(function (d) { return { x: d.x, y: d.y, kind: d.kind === 'bot' ? 'bot' : 'npc' }; });
+    (src.players || []).forEach(function (p) { dots.push({ x: p.x, y: p.y, kind: 'player', label: p.label }); });
+    if (src.me) dots.push({ x: src.me.x, y: src.me.y, kind: 'me' });
+    return { compact: true, onlyMap: true, showFurniture: false, showPins: false, clickable: true, peopleBadges: true, you: src.loc, dots: dots, eventRooms: src.activeEventRooms || [],
+      visited: Object.keys(src.roomsSeen || {}), clues: src.clues || null, walkTarget: src.walkTarget || null };
+  }
 
   function svg(layout, opts) {
     opts = opts || {};
@@ -48,11 +92,13 @@
     rooms.forEach(function (r) {
       var isHall = r.type === 'hall' || r.type === 'outside';
       var hl = opts.highlight === r.id || opts.you === r.id;
-      out.push('<g data-room="' + esc(r.id) + '"' + (opts.clickable ? ' style="cursor:pointer"' : '') + '>');
-      out.push('<rect x="' + r.x + '" y="' + r.y + '" width="' + r.w + '" height="' + r.h + '" rx="10" fill="' + esc(r.color || '#eee') + '" stroke="' + (event[r.id] ? '#fa5252' : (hl ? '#ff6b4a' : '#1e1e1e')) + '" stroke-width="' + (event[r.id] || hl ? 9 : 4) + '"' + (r.type === 'remote' ? ' stroke-dasharray="14 8"' : '') + '/>');
+      /* 10-18 UI 方案 6：走道／街道點了沒反應，就不要假裝可點（pointer-events:none、不是手型）；真的可點的房間加 class，由內嵌樣式做 hover／按下回饋 */
+      var clk = !!opts.clickable && r.type === 'room';
+      out.push('<g data-room="' + esc(r.id) + '"' + (clk ? ' class="ermm-click" style="cursor:pointer"' : (opts.clickable ? ' style="pointer-events:none"' : '')) + '>');
+      out.push('<rect x="' + r.x + '" y="' + r.y + '" width="' + r.w + '" height="' + r.h + '" rx="10" fill="' + esc(r.color || '#eee') + '" stroke="' + (event[r.id] ? '#fa5252' : (opts.walkTarget === r.id ? '#1c7ed6' : (hl ? '#ff6b4a' : '#1e1e1e'))) + '" stroke-width="' + (event[r.id] || hl || opts.walkTarget === r.id ? 9 : 4) + '"' + (r.type === 'remote' || opts.walkTarget === r.id ? ' stroke-dasharray="' + (opts.walkTarget === r.id ? '26 12' : '14 8') + '"' : '') + '/>');
       var icon = ROOM_ICON[r.id] || '❔';
       /* 10-18 美術（KB #11）：房間上緣一條區域色（同一區同一色，顏色之外還有圖示與房名） */
-      if (r.accent && !isHall) out.push('<rect data-zone="' + esc(r.zone || '') + '" x="' + (r.x + 8) + '" y="' + (r.y + 5) + '" width="' + (r.w - 16) + '" height="' + (compact ? 18 : 9) + '" rx="4" fill="' + esc(r.accent) + '" stroke="#1e1e1e" stroke-width="2"/>');
+      if (r.accent && !isHall) out.push('<rect data-zone="' + esc(r.zone || '') + '" x="' + (r.x + 8) + '" y="' + (r.y + 5) + '" width="' + (r.w - 16) + '" height="' + (compact ? 30 : 9) + '" rx="6" fill="' + esc(r.accent) + '" stroke="#1e1e1e" stroke-width="2"/>');
       if (isHall) {
         var hs = Math.min(compact ? 30 : 18 * F, r.h * .6);
         out.push('<text x="' + (r.x + 24) + '" y="' + num(r.y + r.h / 2 + hs * .35) + '" font-size="' + hs + '" opacity=".7">' + icon + '</text>');
@@ -61,9 +107,10 @@
       } else {
         if (compact) {
           /* 小地圖：大圖示＋短名稱，遠看也認得 */
-          var isz = Math.min(r.w * .4, r.h * .46, 92), sh = SHORT[r.id] || r.name;
-          out.push('<text x="' + (r.x + r.w / 2) + '" y="' + num(r.y + r.h * .48) + '" font-size="' + num(isz) + '" text-anchor="middle">' + icon + '</text>');
-          out.push('<text x="' + (r.x + r.w / 2) + '" y="' + num(r.y + r.h * .84) + '" font-size="' + Math.min(58, (r.w - 10) / Math.max(2, sh.length)) + '" font-weight="900" text-anchor="middle" fill="#1e1e1e" stroke="#fff" stroke-width="9" paint-order="stroke">' + esc(sh) + '</text>');
+          /* 10-18 UI 方案 5：房名固定在房間上緣（區域色條下），圖示在中偏下，下緣兩個角留給「去過」與「線索」徽章，「你在這裡」牌就不會蓋住房名 */
+          var isz = Math.min(r.w * .38, r.h * .34, 76), sh = SHORT[r.id] || r.name, nfs = Math.min(58, (r.w - 10) / Math.max(2, sh.length));
+          out.push('<text x="' + (r.x + r.w / 2) + '" y="' + num(r.y + r.h * .62 + isz * .35) + '" font-size="' + num(isz) + '" text-anchor="middle">' + icon + '</text>');
+          out.push('<text data-name="1" x="' + (r.x + r.w / 2) + '" y="' + num(r.y + 42 + nfs * .82) + '" font-size="' + num(nfs) + '" font-weight="900" text-anchor="middle" fill="#1e1e1e" stroke="#fff" stroke-width="9" paint-order="stroke">' + esc(sh) + '</text>');
         } else {
           /* 標題列：小圖示＋名稱靠左上，不佔房間中央，家具與人點才看得清楚 */
           var fs = (r.w < 260 ? 19 : 22) * F, nm = (fs * r.name.length > r.w - 60) ? (SHORT[r.id] || r.name) : r.name, tw = Math.min(r.w - 54, fs * Math.max(2, nm.length) + 10);
@@ -73,10 +120,12 @@
         }
       }
       if (seen[r.id] && !isHall) {
-        var vr = compact ? 30 : 15 * F, vx = compact ? r.x + vr + 12 : r.x + r.w - vr - 10, vy = compact ? r.y + vr + 12 : r.y + r.h - vr - 10;
+        var vr = compact ? 28 : 15 * F, vx = compact ? r.x + vr + 8 : r.x + r.w - vr - 10, vy = compact ? r.y + r.h - vr - 8 : r.y + r.h - vr - 10;
         out.push('<g data-visited="' + esc(r.id) + '"><title>去過了</title><circle cx="' + num(vx) + '" cy="' + num(vy) + '" r="' + num(vr) + '" fill="#2f9e44" stroke="#1e1e1e" stroke-width="' + num(vr * .15) + '"/>' +
           '<path d="M' + num(vx - vr * .48) + ' ' + num(vy + vr * .04) + ' l' + num(vr * .32) + ' ' + num(vr * .36) + ' l' + num(vr * .62) + ' ' + num(-vr * .72) + '" fill="none" stroke="#fff" stroke-width="' + num(vr * .26) + '" stroke-linecap="round" stroke-linejoin="round"/></g>');
       }
+      var ci = opts.clues && opts.clues[r.id];
+      if (ci && ci.total > 0 && !isHall) out.push(clueBadge(r, ci, compact, F, !!opts.clueText));
       out.push('</g>');
     });
     if (opts.showFurniture !== false && !compact) {
@@ -104,36 +153,85 @@
     }
     (opts.eventRooms || []).forEach(function (id) {
       var r = byId[id]; if (!r) return;
-      out.push('<text x="' + (r.x + r.w - 26) + '" y="' + (r.y + 36) + '" font-size="' + (compact ? 44 : 26 * F) + '" text-anchor="end">⚠️</text>');
+      out.push(compact ? '<text data-event="1" x="' + (r.x + r.w - 10) + '" y="' + num(r.y + r.h * .56 + 16) + '" font-size="56" text-anchor="end">⚠️</text>'
+        : '<text x="' + (r.x + r.w - 26) + '" y="' + (r.y + 36) + '" font-size="' + (26 * F) + '" text-anchor="end">⚠️</text>');
     });
     /* 玩家自己：脈動的圈＋圖釘＋「你在這裡」標示，最後畫、壓在其他點上面 */
     var meDot = null;
     (opts.dots || []).forEach(function (d) { if (d.kind === 'me') meDot = d; });
-    out.push('<style>@keyframes ermm{0%{r:16;opacity:.9}100%{r:44;opacity:0}}.ermm-pulse{animation:ermm 1.8s ease-out infinite}@media (prefers-reduced-motion:reduce){.ermm-pulse{animation:none;opacity:.5}}</style>');
+    out.push('<style>@keyframes ermm{0%{r:16;opacity:.9}100%{r:44;opacity:0}}.ermm-pulse{animation:ermm 1.8s ease-out infinite}@media (prefers-reduced-motion:reduce){.ermm-pulse{animation:none;opacity:.5}}' +
+      'g.ermm-click:hover>rect:first-of-type{stroke:#1c7ed6;stroke-width:10}g.ermm-click:active>rect:first-of-type{stroke:#1864ab;stroke-width:14;fill-opacity:.8}</style>');
+    /* 10-18 UI 方案 4：compact 地圖不畫 5px 小人點（互疊、壓房名），改在每間房左側放「人數」圓徽章；灰＝工作人員與病患，藍＝這間有同學。 */
+    if (opts.peopleBadges) {
+      var cnt = {};
+      (opts.dots || []).forEach(function (d) {
+        if (d.kind === 'me') return;
+        var hit = null; rooms.forEach(function (r) { if (d.x >= r.x && d.x <= r.x + r.w && d.y >= r.y && d.y <= r.y + r.h && (!hit || (hit.type === 'hall' || hit.type === 'outside'))) hit = r; });
+        if (!hit) return; var c = cnt[hit.id] || (cnt[hit.id] = { n: 0, mates: 0 }); c.n += 1; if (d.kind === 'player') c.mates += 1;
+      });
+      rooms.forEach(function (r) {
+        var c = cnt[r.id]; if (!c) return; var hall = r.type === 'hall' || r.type === 'outside', rr = hall ? Math.min(24, r.h * .36) : 24, cx = hall ? r.x + 120 : r.x + 8 + rr, cy = hall ? r.y + r.h / 2 : r.y + r.h * .6;
+        out.push('<g data-people="' + esc(r.id) + '" data-n="' + c.n + '"><title>' + esc('這間有 ' + c.n + ' 人' + (c.mates ? '（含 ' + c.mates + ' 位同學）' : '')) + '</title><circle cx="' + num(cx) + '" cy="' + num(cy) + '" r="' + num(rr) + '" fill="' + (c.mates ? '#339af0' : '#495057') + '" stroke="#1e1e1e" stroke-width="4"/>' +
+          '<text x="' + num(cx) + '" y="' + num(cy + rr * .38) + '" font-size="' + num(rr * 1.15) + '" font-weight="900" text-anchor="middle" fill="#fff">' + c.n + '</text></g>');
+      });
+    }
     (opts.dots || []).forEach(function (d) {
       if (d.kind === 'me') return;
+      if (opts.peopleBadges) return;
       var s = DOT[d.kind] || DOT.npc;
       if (d.color) s = [d.color, d.glyph == null ? s[1] : d.glyph];   /* 10-15：後台活躍人數地圖用顏色與數字表示訪談技能等級；d.ring＝最近 5 分鐘有訪談的外圈 */
       out.push('<g><circle cx="' + num(d.x) + '" cy="' + num(d.y) + '" r="' + num((d.kind === 'me' ? 13 : 9) * (compact ? 1.7 : F)) + '" fill="' + s[0] + '" stroke="' + (d.ring ? '#e8590c' : '#1e1e1e') + '" stroke-width="' + (d.ring ? 6 : (d.kind === 'bot' ? 2 : 3)) + '"' + (d.kind === 'bot' ? ' stroke-dasharray="4 3"' : '') + '/>' +
         (s[1] ? '<text x="' + num(d.x) + '" y="' + num(d.y + 5) + '" font-size="' + num((d.kind === 'me' ? 12 : 9) * (compact ? 1.7 : F)) + '" font-weight="900" text-anchor="middle" fill="#1e1e1e">' + s[1] + '</text>' : '') +
         (d.label ? '<text x="' + num(d.x + 16) + '" y="' + num(d.y - 10) + '" font-size="' + num(15 * (compact ? 1.6 : F)) + '" font-weight="700" fill="#1e1e1e" stroke="#fff" stroke-width="3" paint-order="stroke">' + esc(d.label) + '</text>' : '') + '</g>');
     });
+    /* 10-18 UI 方案 5：人在院外（病患的家、回診門診）時，點不在地圖上，改在地圖下緣放一條「你在院外：○○」 */
+    var youOutside = !!(opts.you && !byId[opts.you] && layout.room && layout.room(opts.you));
+    if (youOutside) {
+      var yo = layout.room(opts.you), ys = compact ? 46 : 22 * F, yw = ys * (yo.name.length + 7) + 40;
+      out.push('<g data-outside="1"><rect x="' + num(x0 + (x1 - x0) / 2 - yw / 2) + '" y="' + num(y1 - ys * 1.9) + '" width="' + num(yw) + '" height="' + num(ys * 1.6) + '" rx="' + num(ys * .8) + '" fill="#ff6b4a" stroke="#1e1e1e" stroke-width="5"/>' +
+        '<text x="' + num(x0 + (x1 - x0) / 2) + '" y="' + num(y1 - ys * .85) + '" font-size="' + num(ys) + '" font-weight="900" text-anchor="middle" fill="#fff" stroke="#1e1e1e" stroke-width="1.5">📍 你在院外：' + esc(yo.name) + '</text></g>');
+      meDot = null;
+    }
     if (meDot) {
-      var mx = num(meDot.x), my = num(meDot.y), lab = esc(meDot.label || '你在這裡'), fs2 = 28 * (compact ? 2.1 : F), k = fs2 / 28, bw = fs2 * (meDot.label ? Math.max(2, meDot.label.length) : 5) + 56 * k;
+      var mx = num(meDot.x), my = num(meDot.y), lab = esc(meDot.label || '你在這裡'), fs2 = 28 * (compact ? 1.8 : F), k = fs2 / 28, bw = fs2 * (meDot.label ? Math.max(2, meDot.label.length) : 5) + 56 * k;
       /* 10-13：標示牌原本一律畫在圓點上方，人在房間上緣時會蓋住左上角的房名 → 圓點離房間上緣太近就改畫在下方 */
-      var flip = false;
+      var flip = false, shift = 0;
       if (!compact) rooms.forEach(function (r) { if (mx >= r.x && mx <= r.x + r.w && my >= r.y && my <= r.y + r.h && my - 98 * k < r.y + 8 * F + 30 * F + 14) flip = true; });
-      var s = flip ? -1 : 1;   /* s=-1：整個標示牌對圓點上下翻轉 */
+      else {
+        /* compact：在「上方／下方 × 左右偏移」六種位置裡挑不蓋到任何房名、也不超出地圖的那一個 */
+        var nameBoxes = [];
+        rooms.forEach(function (r) {
+          var hall = r.type === 'hall' || r.type === 'outside', sh2 = SHORT[r.id] || r.name, nf = hall ? Math.min(34, r.h * .66) : Math.min(58, (r.w - 10) / Math.max(2, sh2.length)), tw2 = nf * sh2.length;
+          nameBoxes.push(hall ? { l: r.x + r.w / 2 - tw2 / 2, r: r.x + r.w / 2 + tw2 / 2, t: r.y + r.h / 2 - nf / 2, b: r.y + r.h / 2 + nf / 2 } : { l: r.x + r.w / 2 - tw2 / 2, r: r.x + r.w / 2 + tw2 / 2, t: r.y + 34, b: r.y + 52 + nf });
+          if (hall) return;
+          if (seen[r.id]) nameBoxes.push({ l: r.x + 8, r: r.x + 64, t: r.y + r.h - 64, b: r.y + r.h - 8 });   /* 去過勾 */
+          var ci2 = opts.clues && opts.clues[r.id];
+          if (ci2 && ci2.total > 0) { var cbx = clueBadgeBox(r, ci2, true, F, !!opts.clueText); nameBoxes.push({ l: cbx.x, r: cbx.x + cbx.w, t: cbx.y, b: cbx.y + cbx.h }); }
+          if (typeof cnt !== 'undefined' && cnt && cnt[r.id]) nameBoxes.push({ l: r.x + 8, r: r.x + 56, t: r.y + r.h * .6 - 24, b: r.y + r.h * .6 + 24 });   /* 人數徽章 */
+          if (event[r.id]) nameBoxes.push({ l: r.x + r.w - 60, r: r.x + r.w - 10, t: r.y + r.h * .6 - 30, b: r.y + r.h * .6 + 20 });   /* ⚠ */
+        });
+        var vL = x0 - pad + 6, vR = x0 - pad + W - 6, vT = y0 - pad + 4, vB = y0 - pad + H - 4, best = null;
+        [false, true].forEach(function (fl) { [0, -.3, .3, -.6, .6].forEach(function (f) {
+          var sx = f * bw, bl = mx - bw / 2 + sx, br = bl + bw, bt = fl ? my + 52 * k : my - 98 * k, bb = bt + 46 * k, sc = Math.abs(f) * 40;
+          if (bl < vL) { sx += vL - bl; bl = vL; br = bl + bw; } if (br > vR) { sx -= br - vR; br = vR; bl = br - bw; }
+          if (bt < vT || bb > vB) sc += 1e7;
+          nameBoxes.forEach(function (nb) { var ox = Math.min(br, nb.r) - Math.max(bl, nb.l), oy = Math.min(bb, nb.b) - Math.max(bt, nb.t); if (ox > 0 && oy > 0) sc += ox * oy; });
+          if (!best || sc < best.sc - 1) best = { sc: sc, flip: fl, shift: sx };
+        }); });
+        flip = best.flip; shift = best.shift;
+      }
+      var s = flip ? -1 : 1, ax = Math.max(mx - bw / 2 + shift + 22 * k, Math.min(mx + bw / 2 + shift - 22 * k, mx));   /* s=-1：整個標示牌對圓點上下翻轉；ax＝箭頭根部（標示牌偏移後仍連著圓點） */
       out.push('<g data-me="1"' + (flip ? ' data-flip="1"' : '') + '><circle class="ermm-pulse" cx="' + mx + '" cy="' + my + '" r="' + num(22 * k) + '" fill="none" stroke="#ff6b4a" stroke-width="' + num(6 * k) + '"/>' +
-        '<circle cx="' + mx + '" cy="' + my + '" r="' + num(15 * k) + '" fill="#ff6b4a" stroke="#1e1e1e" stroke-width="' + num(4 * k) + '"/>' +
-        '<rect x="' + num(mx - bw / 2) + '" y="' + num(flip ? my + 52 * k : my - 98 * k) + '" width="' + num(bw) + '" height="' + num(46 * k) + '" rx="' + num(23 * k) + '" fill="#ff6b4a" stroke="#1e1e1e" stroke-width="' + num(4 * k) + '"/>' +
-        '<path d="M' + num(mx - 12 * k) + ' ' + num(my - s * 54 * k) + ' L' + mx + ' ' + num(my - s * 24 * k) + ' L' + num(mx + 12 * k) + ' ' + num(my - s * 54 * k) + ' Z" fill="#ff6b4a" stroke="#1e1e1e" stroke-width="' + num(4 * k) + '" stroke-linejoin="round"/>' +
-        '<rect x="' + num(mx - 11 * k) + '" y="' + num(flip ? my + 50 * k : my - 56 * k) + '" width="' + num(22 * k) + '" height="' + num(6 * k) + '" fill="#ff6b4a"/>' +
-        '<text x="' + mx + '" y="' + num(flip ? my + 84 * k : my - 66 * k) + '" font-size="' + num(fs2) + '" font-weight="900" text-anchor="middle" fill="#fff" stroke="#1e1e1e" stroke-width="' + num(1.2 * k) + '">📍 ' + lab + '</text></g>');
+        '<circle cx="' + mx + '" cy="' + my + '" r="' + num(23 * k) + '" fill="none" stroke="#fff" stroke-width="' + num(7 * k) + '"/>' +
+        '<circle cx="' + mx + '" cy="' + my + '" r="' + num(18 * k) + '" fill="#ff6b4a" stroke="#1e1e1e" stroke-width="' + num(5 * k) + '"/>' +
+        '<rect x="' + num(mx - bw / 2 + shift) + '" y="' + num(flip ? my + 52 * k : my - 98 * k) + '" width="' + num(bw) + '" height="' + num(46 * k) + '" rx="' + num(23 * k) + '" fill="#ff6b4a" stroke="#1e1e1e" stroke-width="' + num(4 * k) + '"/>' +
+        '<path d="M' + num(ax - 12 * k) + ' ' + num(my - s * 54 * k) + ' L' + mx + ' ' + num(my - s * 24 * k) + ' L' + num(ax + 12 * k) + ' ' + num(my - s * 54 * k) + ' Z" fill="#ff6b4a" stroke="#1e1e1e" stroke-width="' + num(4 * k) + '" stroke-linejoin="round"/>' +
+        '<rect x="' + num(ax - 11 * k) + '" y="' + num(flip ? my + 50 * k : my - 56 * k) + '" width="' + num(22 * k) + '" height="' + num(6 * k) + '" fill="#ff6b4a"/>' +
+        '<text x="' + num(mx + shift) + '" y="' + num(flip ? my + 84 * k : my - 66 * k) + '" font-size="' + num(fs2) + '" font-weight="900" text-anchor="middle" fill="#fff" stroke="#1e1e1e" stroke-width="' + num(1.2 * k) + '">📍 ' + lab + '</text></g>');
     }
     out.push('</svg>');
     return out.join('');
   }
 
-  return { SHORT: SHORT, svg: svg, ROOM_ICON: ROOM_ICON, LABEL_ICON: LABEL_ICON, TYPE_ICON: TYPE_ICON, furnitureIcon: furnitureIcon, esc: esc };
+  return { SHORT: SHORT, svg: svg, optsFrom: optsFrom, clueStatus: clueStatus, legendHtml: legendHtml, ROOM_ICON: ROOM_ICON, LABEL_ICON: LABEL_ICON, TYPE_ICON: TYPE_ICON, furnitureIcon: furnitureIcon, esc: esc };
 });

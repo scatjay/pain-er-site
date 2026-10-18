@@ -195,7 +195,7 @@
   /* 畫布上的房間大標題（rtitle-*）：全地圖才顯示。restoreBase 只比對位置、大小、文字與鎖定，改透明度不會被還原；底圖元素也不存進資料庫。 */
   function syncRoomTitles() {
     if (!cur || !cur.api) return;
-    var want = cur.stageMode === 'map' ? 100 : 0, changed = false, found = 0;
+    var want = 0, changed = false, found = 0;   /* 10-18 UI 方案 7：房名改用 DOM 標籤（固定字級，syncMapLabels），畫布上的標題一律不顯示 */
     var out = allEls().map(function (e) {
       var cd = e.customData || {}; if (!(cd.title || (e.type === 'text' && cd.furniture))) return e;   /* 房間大標題＋家具名稱（id 會被 Excalidraw 重新產生，要用 customData 認） */
       found += 1; if (e.opacity === want) return e;
@@ -270,7 +270,7 @@
       hidePop(); return;
     }
     hidePop();
-    if (r && r !== cur.player.loc && !/^hall|corridor|ambulance|street/.test(r)) { setTimeout(function () { startTravel(r); }, 0); }
+    if (r && r !== cur.player.loc && !/^hall|corridor|ambulance|street/.test(r)) { setTimeout(function () { if (cur.stageMode === 'map') jumpTo(r); else startTravel(r); }, 0); }   /* 全地圖模式＝看著地圖點房間，直接到；房間模式維持走過去 */
   }
 
   /* ───── 位置與移動 ───── */
@@ -322,7 +322,7 @@
     if (!cur) return false;
     var target = LAYOUT.room(roomId); if (!target) return false;
     if (target.type === 'remote') { if (roomId === 'home' || roomId === 'clinic') { goRemote(roomId); return true; } return false; }
-    if (cur.walk) cur.walk = null;
+    if (cur.walk) cur.walk = null; clearTimeout(cur._jumpT);   /* 走路與傳送互斥：按了走路就取消還沒執行的傳送 */
     var start = (cur.player.loc === 'home' || cur.player.loc === 'clinic') ? spotIn('street') : (cur.me || spotIn(cur.player.loc)), dest = spotIn(roomId), from = nearestNode(start), to = nearestNode(dest, roomId) || nearestNode(dest);
     if (!from || !to) { toast('找不到可走的路線，請從附近房間前往。'); return false; }
     var route = cur.world.graph.nodes[from].x === cur.world.graph.nodes[to].x && cur.world.graph.nodes[from].y === cur.world.graph.nodes[to].y ? { ids:[from] } : window.ERG_NPC.shortestPath(cur.world.graph, from, to);
@@ -330,7 +330,8 @@
     var pts = [{x:start.x,y:start.y}]; route.ids.forEach(function(id){var n=cur.world.graph.nodes[id]; if(Math.hypot(n.x-pts[pts.length-1].x,n.y-pts[pts.length-1].y)>1)pts.push({x:n.x,y:n.y});});
     if (Math.hypot(dest.x-pts[pts.length-1].x,dest.y-pts[pts.length-1].y)>1) pts.push(dest);
     cur.walk = { points:pts, index:1, target:roomId, lastRoom:cur.player.loc };
-    $('locLabel').textContent = '前往：' + target.name;
+    var wl = 0; for (var wi = 1; wi < pts.length; wi++) wl += Math.hypot(pts[wi].x - pts[wi - 1].x, pts[wi].y - pts[wi - 1].y);
+    $('locLabel').textContent = '前往：' + target.name + '（約 ' + Math.max(1, Math.round(wl / (70 * cur.world.data.SIM.SECONDS_PER_SIM_MIN / cur.clock.secPerMin))) + ' 秒）';
     return true;
   }
   function advanceWalk(realDt) {
@@ -354,10 +355,26 @@
     renderTravelChips();
   }
   /* 10-13：病患的家、回診門診不在急診室地圖上，原本沒有任何入口（學生回報「回診跟病患家過不去」）。這兩間用按鈕直接過去。 */
-  function goRemote(id){if(!cur)return;var rm=LAYOUT.room(id);if(!rm)return;cur.walk=null;cur.stageMode='room';cur.focus=null;setLoc(id,true);refreshStageMode();DB.appendEvent(cur.code,{kind:'move',env:APP.me.sid,to:id});persist(true);toast(id==='home'?'搭公車到了病患的家。這裡有他手機收到的簡訊，家人也在。':'隔天，到了回診門診。');}
+  function goRemote(id){if(!cur)return;var rm=LAYOUT.room(id);if(!rm)return;cur.walk=null;clearTimeout(cur._jumpT);cur.stageMode='room';cur.focus=null;setLoc(id,true);refreshStageMode();DB.appendEvent(cur.code,{kind:'move',env:APP.me.sid,to:id});persist(true);toast(id==='home'?'搭公車到了病患的家。這裡有他手機收到的簡訊，家人也在。':'隔天，到了回診門診。');}
   function renderTravelChips(){var host=$('visitedChips');if(!host||!cur)return;host.innerHTML='<b>院外：</b><button class="ghost" data-remote="home">🚌 病患的家</button><button class="ghost" data-remote="clinic">🏥 回診門診</button>'+' <b>去過的房間：</b>'+((cur.player.visited||[]).map(function(id){var r=LAYOUT.room(id);return r?'<button class="ghost" data-visit="'+esc(id)+'">'+esc(r.name)+'</button>':'';}).join('')||'尚無');Array.prototype.forEach.call(host.querySelectorAll('[data-visit]'),function(b){b.onclick=function(){startTravel(b.dataset.visit);};});Array.prototype.forEach.call(host.querySelectorAll('[data-remote]'),function(b){b.onclick=function(){goRemote(b.dataset.remote);};});}
   S.travel = startTravel;
-  S.teleport = function(id){if(!cur)return;cur.walk=null;setLoc(id);rememberRoom(id);renderTravelChips();refreshStageMode();};   /* 測試用；跟真的走到一樣要重新對準鏡頭 */
+  /* 10-18 D3：點地圖上的房間＝直接傳送（快速旅行）。短暫淡出淡入＋「到了○○」；底部移動列與推薦鈕仍是走路（startTravel）。
+     人在院外（病患的家、回診門診）時，點院內房間一樣直接到。 */
+  function jumpTo(roomId) {
+    if (!cur) return false;
+    var rm = LAYOUT.room(roomId); if (!rm) return false;
+    if (rm.type === 'remote') { if (roomId === 'home' || roomId === 'clinic') { goRemote(roomId); return true; } return false; }
+    if (rm.type !== 'room') return false;
+    if (roomId === cur.player.loc && !cur.walk) { toast('你已經在' + rm.name + '了'); return true; }
+    cur.walk = null; cur.stageMode = 'room'; cur.focus = null;
+    var st = $('stage'), v = $('teleVeil'); if (!v && st) { v = document.createElement('div'); v.id = 'teleVeil'; st.appendChild(v); }
+    var reduce = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion:reduce)').matches);
+    function go() { if (!cur) return; cur.walk = null; setLoc(roomId); refreshStageMode(); toast('到了' + rm.name); }
+    if (v && !reduce) { v.classList.remove('go'); void v.offsetWidth; v.classList.add('go'); cur._jumpT = setTimeout(go, 140); } else go();
+    return true;
+  }
+  S.jump = jumpTo;
+  S.teleport = function(id){if(!cur)return;cur.walk=null;clearTimeout(cur._jumpT);setLoc(id);rememberRoom(id);renderTravelChips();refreshStageMode();};   /* 測試用；跟真的走到一樣要重新對準鏡頭 */
 
   /* ───── 環境音 ───── */
   function soundForRoom(roomId) {
@@ -444,7 +461,7 @@
     syncRoomTitles();   /* 每次重繪都檢查：底圖被還原或場景重新載入後，畫布上的名稱會回來，只藏一次不夠（入口大廳出現重複的字就是這樣） */
     syncRoomProps();
     syncPinHits();
-    syncFurnLabels();
+    syncFurnLabels(); syncMapLabels();
     spreadTokens();
     me.className = 'tok me idle';
   }
@@ -477,6 +494,25 @@
     var rm = room && LAYOUT.room(room); if (!rm || rm.type !== 'room') return;
     furnLabelsFor(room).forEach(function (o) {
       var e = document.createElement('div'); e.className = 'fLabel'; e.textContent = o.text; e._wx = rm.x + o.x; e._wy = rm.y + o.y; host.appendChild(e);
+    });
+    cur._dirty = true;
+  }
+  /* 10-18 UI 方案 7：全地圖模式的房名。畫布文字會隨縮放變小（1366×800 時 9.4px、矮視窗 5.1px），改用 DOM 標籤：固定 13px、房間左上、
+     現在所在的房間橘底加 📍、去過的加 ✓；房間太窄放不下全名時改用短名。位置每幀由 placeTokens 跟著鏡頭（_wx／_wy）。 */
+  function syncMapLabels() {
+    var host = $('overlay'), map = cur.stageMode === 'map', z = liveZoom() || 1, seen = cur.player.roomsSeen || {};
+    var hint = $('mapHint'); if (!hint && $('stage')) { hint = document.createElement('div'); hint.id = 'mapHint'; hint.textContent = '點房間可直接過去'; $('stage').appendChild(hint); }
+    if (hint) hint.style.display = map ? 'block' : 'none';
+    var key = (map ? 'map' : 'off') + '|' + Math.round(z * 100) + '|' + cur.player.loc + '|' + Object.keys(seen).sort().join(',');
+    if (cur._mlKey === key) return; cur._mlKey = key;
+    Array.prototype.forEach.call(host.querySelectorAll('.mLabel'), function (e) { e.remove(); });
+    if (!map) { cur._dirty = true; return; }
+    LAYOUT.ROOMS.forEach(function (r) {
+      if (r.type === 'remote') return;
+      var name = r.name, w13 = function (t) { return t.length * 13 + 16; };
+      if (w13(name) > r.w * z - 6) name = (MM.SHORT && MM.SHORT[r.id]) || name;
+      var e = document.createElement('div'); e.className = 'mLabel' + (r.id === cur.player.loc ? ' here' : (seen[r.id] && r.type === 'room' ? ' seen' : '')); e.setAttribute('data-room-label', r.id); e.textContent = name;
+      e._wx = r.x + 6 / z; e._wy = r.y + ((r.type === 'room') ? 12 : 4) / z; host.appendChild(e);
     });
     cur._dirty = true;
   }
@@ -624,24 +660,30 @@
   S.simTime = function () { return simText(cur.clock); };
 
   /* ───── 小地圖 ───── */
-  function renderMinimap() {
-    if (!cur || !$('minimapBox').classList.contains('open')) return;
-    var t = cur.clock.worldSec, dots = [], simMin = S.simMin();
+  /* 10-18 UI 方案 3：桌面小地圖、放大視窗共用同一份資料（與手機版同用 MM.optsFrom），圖層一致 */
+  function mapSrc() {
+    var t = cur.clock.worldSec, npc = [], players = [], simMin = S.simMin();
     cur.world.at(t).forEach(function (it) {
       if (it.pos.x === undefined || (cur.vis && !cur.vis[it.ent.id])) return;
-      dots.push({ x: it.pos.x, y: it.pos.y, kind: it.ent.kind === 'bot' ? 'bot' : 'npc' });
+      npc.push({ x: it.pos.x, y: it.pos.y, kind: it.ent.kind === 'bot' ? 'bot' : 'npc' });
     });
-    /* 同房間的其他真人 */
-    var room = DB.getRoom(cur.code);
+    var room = DB.getRoom(cur.code);   /* 同房間的其他真人 */
     Object.keys(room.players || {}).forEach(function (sid) {
       if (sid === APP.me.sid) return;
       var p = room.players[sid], sp = spotIn(p.loc || 'entrance');
-      dots.push({ x: sp.x, y: sp.y, kind: 'player', label: sid.slice(-4) });
+      players.push({ x: sp.x, y: sp.y, label: sid.slice(-4) });
     });
-    dots.push({ x: cur.me.x, y: cur.me.y, kind: 'me' });
-    var active = cur.world.sim.activeEvents(simMin).reduce(function (a, e) { return a.concat(e.rooms || []); }, []);
-    $('mm').innerHTML = MM.svg(LAYOUT, { compact:true,onlyMap:true,width:420, showFurniture: false, showPins: false, you: cur.player.loc, dots: dots, eventRooms: active, clickable: true, visited: Object.keys(cur.player.roomsSeen || {}) });
-    Array.prototype.forEach.call($('mm').querySelectorAll('[data-room]'), function (g) { g.onclick = function () { var id = g.getAttribute('data-room'); if (!/^hall|corridor|ambulance|street/.test(id)) startTravel(id); }; });
+    var active = cur.world.sim.activeEvents(simMin).reduce(function (a, e) { return a.concat(e.rooms || []); }, []), seen = cur.player.roomsSeen || {};
+    return { loc: cur.player.loc, me: cur.me, roomsSeen: seen, npcDots: npc, players: players, activeEventRooms: active, walkTarget: cur.walk && cur.walk.target,
+      clues: MM.clueStatus(cur.world.clues, L.listMarkers(S.markerEls()), seen, APP.me.sid) };
+  }
+  function bindMapClicks(root, afterClick) {
+    Array.prototype.forEach.call(root.querySelectorAll('g.ermm-click'), function (g) { g.onclick = function () { var id = g.getAttribute('data-room'); if (afterClick) afterClick(); jumpTo(id); }; });
+  }
+  function renderMinimap() {
+    if (!cur || !$('minimapBox').classList.contains('open')) return;
+    $('mm').innerHTML = MM.svg(LAYOUT, Object.assign(MM.optsFrom(mapSrc()), { width: 420 }));
+    bindMapClicks($('mm'));
   }
   S.minimap = renderMinimap;
   $('fitBtn').onclick = function () { if (cur) { cur.stageMode='map';cur.focus = null;refreshStageMode(); } };
@@ -653,7 +695,11 @@
   document.addEventListener('fullscreenchange', afterLayout);
   S.openSide = function () { if ($('game').classList.contains('sideOff')) { $('game').classList.remove('sideOff'); afterLayout(); } };
   $('mmBtn').onclick = function () { $('minimapBox').classList.toggle('open'); renderMinimap(); };
-  $('mapExpand').onclick=function(){var t=cur.clock.worldSec,dots=[{x:cur.me.x,y:cur.me.y,kind:'me'}];cur.world.at(t).forEach(function(it){if(it.pos.x!==undefined&&cur.vis[it.ent.id])dots.push({x:it.pos.x,y:it.pos.y,kind:it.ent.kind==='bot'?'bot':'npc'});});S.openModal('<div class="row"><b class="grow">急診室全地圖</b><button class="ghost" id="mapClose">關閉</button></div>'+MM.svg(LAYOUT,{compact:true,fontScale:1.3,onlyMap:true,width:900,showFurniture:false,you:cur.player.loc,dots:dots,clickable:true}));$('modalBox').style.maxWidth='96vw';$('mapClose').onclick=function(){S.closeModal();$('modalBox').style.maxWidth='';};Array.prototype.forEach.call($('modalBox').querySelectorAll('[data-room]'),function(g){g.onclick=function(){var id=g.getAttribute('data-room'),r=LAYOUT.room(id);if(r&&r.type==='room'){S.closeModal();$('modalBox').style.maxWidth='';startTravel(id);}};});};
+  $('mapExpand').onclick = function () {
+    S.openModal('<div class="row"><b class="grow">急診室全地圖（點房間直接到）</b><button class="ghost" id="mapClose">關閉</button></div>' + MM.svg(LAYOUT, Object.assign(MM.optsFrom(mapSrc()), { fontScale: 1.3, width: 900, clueText: true })) + MM.legendHtml());
+    $('modalBox').style.maxWidth = '96vw'; $('mapClose').onclick = function () { S.closeModal(); $('modalBox').style.maxWidth = ''; };
+    bindMapClicks($('modalBox'), function () { S.closeModal(); $('modalBox').style.maxWidth = ''; });
+  };
 
   /* ───── 事件（漫畫分鏡）、跑馬燈 ───── */
   function refreshTicker() {

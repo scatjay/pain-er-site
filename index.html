@@ -101,6 +101,8 @@ th{font-size:12px;color:var(--muted)}
 /* 單房模式的固定外框：框外是頁面底色，框內房間以外是白底（#boardMask），每間房都在同一個大小的框裡 */
 #stageFrame{position:absolute;left:12px;right:12px;top:38px;bottom:64px;border:3px solid var(--ink);border-radius:14px;pointer-events:none;z-index:5;box-shadow:0 0 0 3000px var(--bg)}
 .fLabel{position:absolute;transform:translate(-50%,0);z-index:2147481000;pointer-events:none;font-size:12px;font-weight:700;line-height:1.35;color:#1e1e1e;background:rgba(255,255,255,.95);box-shadow:0 0 0 1px rgba(30,30,30,.15);border-radius:6px;padding:1px 6px;white-space:nowrap;clip-path:none!important}
+.mLabel{position:absolute;z-index:2147480900;pointer-events:none;font-size:13px;font-weight:900;line-height:1.35;color:#1e1e1e;background:rgba(255,255,255,.93);border:2px solid #1e1e1e;border-radius:6px;padding:0 5px;white-space:nowrap;clip-path:none!important}.mLabel.seen::before{content:'✓ ';color:#2f9e44}.mLabel.here{background:#ff6b4a;color:#fff}.mLabel.here::before{content:'📍 '}
+#mapHint{display:none;position:absolute;left:14px;bottom:calc(var(--bar-h,41px) + 18px);z-index:30;pointer-events:none;background:#fff8c5;color:#1e1e1e;border:2px solid #1e1e1e;border-radius:8px;padding:2px 10px;font-size:13px;font-weight:700}
 .pinHit{position:absolute;z-index:2147482000;pointer-events:auto;cursor:pointer;background:#ffd43b;color:#1e1e1e;border:3px solid #1e1e1e;border-radius:8px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-weight:900;white-space:nowrap;overflow:hidden;box-shadow:2px 2px 0 #1e1e1e;clip-path:none!important}.pinHit:hover{outline:3px dashed #ff6b4a;outline-offset:2px}
 .tok.off{opacity:0}
 .tok.me{cursor:default;filter:drop-shadow(0 0 5px #ff6b4a) drop-shadow(0 0 2px #fff)}
@@ -132,10 +134,10 @@ th{font-size:12px;color:var(--muted)}
 #roomNow.cap{background:var(--yellow);font-weight:900}.youTagLayer{transition:opacity .6s}
 #caption{z-index:10;position:absolute;left:12px;top:40px;max-width:min(430px,60%);background:var(--yellow);color:#1e1e1e;border:4px solid #1e1e1e;padding:6px 12px;font-weight:700;font-size:14px;line-height:1.45;box-shadow:4px 4px 0 #1e1e1e;pointer-events:none}
 #sfx{z-index:10;position:absolute;right:16px;top:12px;background:var(--pop);color:#fff;border:4px solid #1e1e1e;padding:2px 14px;font-weight:900;font-size:26px;transform:rotate(5deg);box-shadow:4px 4px 0 #1e1e1e;display:none;pointer-events:none}
-#minimapBox{display:none;z-index:10;position:absolute;right:10px;bottom:10px;width:min(300px,36%);background:var(--panel);border:4px solid var(--ink);border-radius:10px;padding:4px;box-shadow:4px 4px 0 var(--ink)}
+#minimapBox{display:none;z-index:10;position:absolute;right:10px;bottom:calc(var(--bar-h,41px) + 18px);width:min(300px,36%);background:var(--panel);border:4px solid var(--ink);border-radius:10px;padding:4px;box-shadow:4px 4px 0 var(--ink)}
 #minimapBox.open{display:block}
 #minimapBox svg{width:100%;height:auto;display:block}
-#minimapBox .mt{font-size:12px;font-weight:900;display:flex;justify-content:space-between;align-items:center}
+#minimapBox .mt{font-size:12px;font-weight:900;display:flex;justify-content:space-between;align-items:center}#minimapBox .mt span,#minimapBox .mt button{white-space:nowrap}
 #ticker{z-index:10;position:absolute;left:12px;bottom:10px;max-width:min(420px,50%);background:var(--panel);border:3px solid var(--ink);border-radius:8px;padding:2px 10px;font-size:13px}
 #stage #ticker{display:none!important}   /* 10-13：電腦版這一格剛好被底部那條蓋住，只露出一條邊。提示訊息已改用 #toastBox；事件在「事件簿」分頁看 */
 #side{width:410px;max-width:48vw;background:var(--panel);display:flex;flex-direction:column;min-height:0}
@@ -174,6 +176,10 @@ footer.note{font-size:10px;padding:1px 8px;white-space:nowrap;overflow:hidden;te
 #travelBar{bottom:6px;padding:3px 5px}
 }
 @media (max-width:860px){#main{flex-direction:column}#side{width:100%;max-width:none;height:48%}#minimapBox{width:46%}}
+@media (max-height:599px){#minimapBox{width:min(240px,34%)}}
+/* 10-18 UI D3：點地圖房間＝直接傳送，短暫淡出淡入 */
+#teleVeil{position:absolute;inset:0;z-index:60;background:var(--paper,#fffdf5);opacity:0;pointer-events:none}#teleVeil.go{animation:teleVeil .42s ease-in-out}
+@keyframes teleVeil{0%{opacity:0}35%{opacity:.95}100%{opacity:0}}@media (prefers-reduced-motion:reduce){#teleVeil.go{animation:none}}
 .skRow{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:6px 0 12px}@media(max-width:560px){.skRow{grid-template-columns:1fr}}.skCard{border:3px solid var(--ink);border-radius:12px;padding:8px 10px;background:#fff9db;color:#1e1e1e}.skCard .muted{color:#555}.skHead{display:flex;justify-content:space-between;align-items:center}.skStars{color:#a85600;letter-spacing:2px;font-size:16px}.skLv{font-weight:900;font-size:15px;margin:2px 0}.skTodo{margin:4px 0 0 18px;padding:0;font-size:12.5px}.skNew{background:#ffd43b;border:2px solid var(--ink);border-radius:8px;padding:0 6px;font-size:12px}.achGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:6px;margin-top:8px}.ach{border:3px solid var(--ink);border-radius:8px;padding:6px 4px;text-align:center;background:var(--panel);color:var(--fg)}.ach .achIcon{filter:grayscale(1);opacity:.5}.ach .achName{opacity:.9}.ach.on{background:var(--yellow);color:#1e1e1e;box-shadow:3px 3px 0 var(--ink)}.ach.on .achIcon{filter:none;opacity:1}.ach.on .achDesc{color:#3b3b3b}.achIcon{font-size:26px;line-height:1.1}.achName{font-weight:bold;font-size:13px}.achDesc{font-size:11px;color:var(--muted);line-height:1.2}.board{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}.board .b{border:3px solid var(--ink);border-radius:8px;padding:6px 8px;background:var(--panel)}</style>
 </head>
 <body>
@@ -245,7 +251,7 @@ footer.note{font-size:10px;padding:1px 8px;white-space:nowrap;overflow:hidden;te
     <button class="ghost" id="fitBtn" title="回到全景">⟲ 全景</button>
     <button class="ghost" id="sideBtn" title="收合／展開右側面板">▤ 面板</button>
     <button class="ghost" id="fsBtn" title="全螢幕">⛶</button>
-    <button class="ghost" id="mmBtn" title="小地圖">🗺️</button>
+    <button class="ghost" id="mmBtn" title="小地圖：看全院、點房間直接到">🗺️ 地圖</button>
       <button class="ghost" id="soundBtn" title="環境音">🔊</button>
       <button class="ghost" id="musicBtn" title="音樂：開">🎵</button>
     <button class="ghost" id="leaveBtn">回大廳</button>
@@ -259,7 +265,7 @@ footer.note{font-size:10px;padding:1px 8px;white-space:nowrap;overflow:hidden;te
       <div id="sfx"></div>
       <div id="ticker"></div>
       <div id="roomNow" aria-live="polite"></div>
-      <div id="minimapBox"><div class="mt"><span>小地圖（點房間走過去）</span><span id="mmHere"></span><button class="ghost" id="mapExpand">放大</button></div><div id="mm"></div></div>
+      <div id="minimapBox"><div class="mt"><span title="點房間直接到">小地圖</span><span id="mmHere"></span><button class="ghost" id="mapExpand">放大</button></div><div id="mm"></div></div>
     </div>
     <div id="side">
       <div id="socialBox" class="card" style="margin:0 0 6px;padding:4px 8px"></div>
@@ -280,9 +286,9 @@ footer.note{font-size:10px;padding:1px 8px;white-space:nowrap;overflow:hidden;te
 <script crossorigin src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
 <script>window.EXCALIDRAW_ASSET_PATH="https://unpkg.com/@excalidraw/excalidraw@0.17.6/dist/";</script>
 <script crossorigin src="https://unpkg.com/@excalidraw/excalidraw@0.17.6/dist/excalidraw.production.min.js"></script>
-<script src="content.js?v=202610181617"></script>
-<script src="logic.js?v=202610181617"></script>
-<script src="local_db.js?v=202610181617"></script>
+<script src="content.js?v=202610181805"></script>
+<script src="logic.js?v=202610181805"></script>
+<script src="local_db.js?v=202610181805"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <script>/* 登入頁的手機入口 QR（白底黑碼固定，不跟主題）；函式庫沒載到就只顯示網址 */
 (function(){var U='https://scatjay.github.io/pain-er-site/',b=document.getElementById('loginQrBox'),u=document.getElementById('loginQrUrl');if(!b||!u)return;u.textContent=U.replace(/^https:\/\//,'');
@@ -290,46 +296,49 @@ try{var q=window.qrcode(0,'M');q.addData(U+'?openExternalBrowser=1');q.make();b.
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-<script src="er_firebase.js?v=202610181617"></script>
-<script src="remote_db.js?v=202610181617"></script>
+<script src="er_firebase.js?v=202610181805"></script>
+<script src="remote_db.js?v=202610181805"></script>
 
-<script src="layout.js?v=202610181617"></script>
-<script src="labels.js?v=202610181617"></script>
-<script src="er_data.js?v=202610181617"></script>
-<script src="personas_inclusive.js?v=202610181617"></script>
-<script src="npc_voice.js?v=202610181617"></script><script src="personas.js?v=202610181617"></script>
-<script src="comic.js?v=202610181617"></script>
-<script src="npc_sim.js?v=202610181617"></script>
-<script src="er_sim.js?v=202610181617"></script>
-<script src="case_wait.js?v=202610181617"></script>
-<script src="case_way.js?v=202610181617"></script><script src="rotation.js?v=202610181617"></script>
-<script src="case_forms.js?v=202610181617"></script>
-<script src="case_pay.js?v=202610181617"></script>
-<script src="case_peds.js?v=202610181617"></script>
-<script src="cases.js?v=202610181617"></script><script src="event_guide.js?v=202610181617"></script>
-<script src="cards.js?v=202610181617"></script>
-<script src="calendar.js?v=202610181617"></script>
-<script src="density.js?v=202610181617"></script>
-<script src="depth.js?v=202610181617"></script>
-<script src="daylight.js?v=202610181617"></script>
-<script src="fatigue.js?v=202610181617"></script>
-<script src="bgm.js?v=202610181617"></script>
-<script src="world.js?v=202610181617"></script>
-<script src="floorplan.js?v=202610181617"></script>
-<script src="minimap.js?v=202610181617"></script>
-<script src="spread.js?v=202610181617"></script>
-<script src="chars.js?v=202610181617"></script>
-<script src="avatar.js?v=202610181617"></script>
-<script src="clock.js?v=202610181617"></script>
-<script src="checklist.js?v=202610181617"></script>
-<script src="checkpoints.js?v=202610181617"></script>
-<script src="report.js?v=202610181617"></script>
-<script src="ambience.js?v=202610181617"></script>
-<script src="feedback.js?v=202610181617"></script>
-<script src="app_core.js?v=202610181617"></script>
-<script src="game.js?v=202610181617"></script>
+<script src="layout.js?v=202610181805"></script>
+<script src="labels.js?v=202610181805"></script>
+<script src="er_data.js?v=202610181805"></script>
+<script src="personas_inclusive.js?v=202610181805"></script>
+<script src="npc_voice.js?v=202610181805"></script><script src="personas.js?v=202610181805"></script>
+<script src="comic.js?v=202610181805"></script>
+<script src="npc_sim.js?v=202610181805"></script>
+<script src="er_sim.js?v=202610181805"></script>
+<script src="case_wait.js?v=202610181805"></script>
+<script src="case_way.js?v=202610181805"></script><script src="rotation.js?v=202610181805"></script>
+<script src="case_forms.js?v=202610181805"></script>
+<script src="case_pay.js?v=202610181805"></script>
+<script src="case_peds.js?v=202610181805"></script>
+<script src="cases.js?v=202610181805"></script><script src="event_guide.js?v=202610181805"></script>
+<script src="cards.js?v=202610181805"></script>
+<script src="calendar.js?v=202610181805"></script>
+<script src="density.js?v=202610181805"></script>
+<script src="depth.js?v=202610181805"></script>
+<script src="daylight.js?v=202610181805"></script>
+<script src="fatigue.js?v=202610181805"></script>
+<script src="bgm.js?v=202610181805"></script>
+<script src="world.js?v=202610181805"></script>
+<script src="floorplan.js?v=202610181805"></script>
+<script src="minimap.js?v=202610181805"></script>
+<script src="spread.js?v=202610181805"></script>
+<script src="chars.js?v=202610181805"></script>
+<script src="avatar.js?v=202610181805"></script>
+<script src="clock.js?v=202610181805"></script>
+<script src="checklist.js?v=202610181805"></script>
+<script src="checkpoints.js?v=202610181805"></script>
+<script src="report.js?v=202610181805"></script>
+<script src="ambience.js?v=202610181805"></script>
+<script src="feedback.js?v=202610181805"></script>
+<script src="app_core.js?v=202610181805"></script>
+<script src="game.js?v=202610181805"></script>
 <script>window.ERG_FEEDBACK.install(window, window.ERG_APP);</script>
-<script src="room.js?v=202610181617"></script>
-<script src="achievements.js?v=202610181617"></script><script src="panels.js?v=202610181617"></script><script src="social.js?v=202610181617"></script><script src="event_runtime.js?v=202610181617"></script><script src="event_ui.js?v=202610181617"></script><script src="rotation_ui.js?v=202610181617"></script>
+<script src="room.js?v=202610181805"></script>
+<script>/* 10-18 UI 方案 1：小地圖永遠在移動列上方（移動列折行變高時跟著升高），不蓋住「去過的房間」 */
+(function(){var ro=null,bar=null;function sync(){var b=document.getElementById("travelBar");if(!b)return;if(b!==bar){bar=b;if(window.ResizeObserver){if(ro)ro.disconnect();ro=new ResizeObserver(sync);ro.observe(b);}}document.documentElement.style.setProperty("--bar-h",b.offsetHeight+"px");}
+sync();setInterval(sync,700);window.addEventListener("resize",sync);})();</script>
+<script src="achievements.js?v=202610181805"></script><script src="panels.js?v=202610181805"></script><script src="social.js?v=202610181805"></script><script src="event_runtime.js?v=202610181805"></script><script src="event_ui.js?v=202610181805"></script><script src="rotation_ui.js?v=202610181805"></script>
 <style>#eventPlay{position:absolute;z-index:35;left:10px;right:10px;top:10px;pointer-events:none}.eventNarration,.eventBubble{display:table;max-width:90%;margin:5px auto;background:#fff8c5;color:#1e1e1e;border:3px solid #1e1e1e;border-radius:12px;padding:8px 12px;box-shadow:4px 4px 0 #1e1e1e;animation:eventFade .35s}.eventBubble{background:#fff;font-size:14px}.eventSkip{pointer-events:auto;display:block;margin:4px auto}.eventEntry{border:2px solid #222;border-radius:8px;padding:8px;margin:6px 0;background:var(--panel)}.eventEntry summary{cursor:pointer}.eventAnswers{padding:6px}.replayStage{position:relative;min-height:300px;border:3px solid #222;margin:8px 0;background:#fff}.replayMap svg{width:100%;height:auto;max-height:52vh}.replayCaption{position:absolute;left:4%;right:4%;bottom:6px;background:#fff8c5;border:3px solid #222;padding:8px;box-shadow:3px 3px #222}.replaySfx{font-size:28px;font-weight:900;color:#e03131}@keyframes eventFade{from{opacity:0}to{opacity:1}}@media(prefers-reduced-motion:reduce){.eventNarration,.eventBubble{animation:none;transition:opacity .12s}#stage,#sceneBox{transition:opacity .12s!important}}#eventPlay.mobileComic .eventNarration,#eventPlay.mobileComic .eventBubble{width:86%;max-width:86%;border:4px solid #1e1e1e;background-color:#fff;background-image:radial-gradient(#dedede 1px,transparent 1px);background-size:10px 10px}#eventPlay.mobileComic .eventNarration{background:#fff3a6;font-weight:900}#eventPlay.mobileComic .eventBubble{margin-left:8%;transform:rotate(-1deg)}</style><style>#rotationBtn{position:absolute;z-index:45;right:8px;top:8px}#rotationBtn.on{background:#b2f2bb;color:#1e1e1e}#rotationBadge{display:none;position:absolute;z-index:45;right:8px;bottom:8px;padding:4px 8px;border:2px solid #222;border-radius:99px;background:#fff8c5;color:#222;font-size:12px;pointer-events:none}</style></body>
 </html>
