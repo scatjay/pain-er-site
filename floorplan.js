@@ -139,6 +139,39 @@
         out.push(line('skirt-line-' + r.id, r.x, r.y + 14, r.x + r.w, r.y + 14, '#868e96', 2, 0, { deco:true }, { opacity:60 }));
       }
     });
+    /* 10-18 美化：每間房放一盆植物、一個牆上時鐘、一塊地墊（只放在空位；位置固定，不用亂數） */
+    (function () {
+      var occ = {};
+      function box(roomId, x, y, w, h) { (occ[roomId] = occ[roomId] || []).push({ x:x, y:y, w:w, h:h }); }
+      layout.FURNITURE.forEach(function (f) { var q = layout.abs(f.room, f.rx, f.ry); box(f.room, q.x - 4, q.y - 6, f.w + 12, f.h + 30); });
+      layout.PINS.forEach(function (pin) { var rm = byRoom[pin.room], q = layout.abs(pin.room, pin.rx, pin.ry); if (!rm) return; var px = Math.max(rm.x, Math.min(rm.x + rm.w - 76, q.x)), py = Math.max(rm.y + 5, Math.min(rm.y + rm.h - 34, q.y)); box(pin.room, px - 8, py - 12, 92, 52); });
+      rooms.forEach(function (r) { if (r.type === 'room') { box(r.id, r.x, r.y, r.name.length * 24 + 24, 40); box(r.id, r.x + r.w - 54, r.y, 54, 54); } });
+      function free(r, x, y, w, h) {
+        if (x < r.x + 28 || y < r.y + 30 || x + w > r.x + r.w - 28 || y + h > r.y + r.h - 28) return false;
+        return !(occ[r.id] || []).some(function (b) { return x < b.x + b.w && x + w > b.x && y < b.y + b.h && y + h > b.y; });
+      }
+      function grid(r, w, h, key) { var c = []; for (var gx = r.x + 28; gx + w <= r.x + r.w - 28; gx += 12) for (var gy = r.y + 30; gy + h <= r.y + r.h - 28; gy += 12) c.push([gx, gy]); return c.sort(function (a, b) { return key(a) - key(b); }); }
+      function find(r, w, h, cands) { for (var i = 0; i < cands.length; i++) { if (free(r, cands[i][0], cands[i][1], w, h)) return cands[i]; } return null; }
+      rooms.forEach(function (r) {
+        if (r.type !== 'room') return;
+        var cx = { deco:true };
+        /* 地墊：找一塊 110×60 的空地（由中央往外排幾個候選位置） */
+        var rugAt = find(r, 110, 60, grid(r, 110, 60, function (a) { return Math.abs(a[0] + 55 - (r.x + r.w / 2)) + Math.abs(a[1] + 30 - (r.y + r.h * .55)); }));
+        if (rugAt) { out.push(rect('rug-' + r.id, rugAt[0], rugAt[1], 110, 60, '#ffc9c9', INK, 1, 1, cx, { opacity:55, roundness:{ type:3 } })); out.push(rect('rug-in-' + r.id, rugAt[0] + 8, rugAt[1] + 8, 94, 44, 'transparent', '#e03131', 1, 0, cx, { opacity:55, strokeStyle:'dashed', roundness:{ type:3 } })); box(r.id, rugAt[0], rugAt[1], 110, 60); }
+        /* 盆栽：優先放右下、左下的角落 */
+        var plantAt = find(r, 30, 44, grid(r, 30, 44, function (a) { var dx = Math.min(a[0] - r.x, r.x + r.w - a[0] - 30), dy = Math.min(a[1] - r.y, r.y + r.h - a[1] - 44); return dx + dy; }));
+        if (plantAt) { var px = plantAt[0], py = plantAt[1];
+          out.push(ellipse('plant-leaf1-' + r.id, px + 1, py, 14, 24, '#69db7c', INK, 1.5, 1, cx));
+          out.push(ellipse('plant-leaf2-' + r.id, px + 14, py + 4, 14, 22, '#40c057', INK, 1.5, 1, cx));
+          out.push(rect('plant-pot-' + r.id, px + 5, py + 26, 20, 16, '#e8590c', INK, 1.5, 1, cx)); box(r.id, px - 6, py - 6, 42, 56); }
+        /* 牆上時鐘：掛在踢腳板上緣，靠右、避開步驟圓章與線索牌 */
+        var clk = find({ id:r.id, x:r.x - 28, y:r.y - 30, w:r.w + 56, h:r.h + 56 }, 22, 22, [[r.x + r.w * .62, r.y + 18], [r.x + r.w * .5, r.y + 18], [r.x + r.w * .74, r.y + 18]]);
+        if (clk) { var qx = clk[0], qy = clk[1];
+          out.push(ellipse('clock-' + r.id, qx, qy, 22, 22, '#ffffff', INK, 2, 1, cx));
+          out.push(line('clock-h-' + r.id, qx + 11, qy + 11, qx + 11, qy + 5, INK, 1.5, 0, cx));
+          out.push(line('clock-m-' + r.id, qx + 11, qy + 11, qx + 16, qy + 13, INK, 1.5, 0, cx)); }
+      });
+    })();
     rooms.forEach(function (r) { if (r.type === 'room') roomWalls(r, out); });
 
     layout.FURNITURE.forEach(function (f, n) {

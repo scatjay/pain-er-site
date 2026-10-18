@@ -40,28 +40,63 @@
     { id: 'tired',    name: '累癱派', look: { head: 'pear', body: 'round',   hair: 'curl',  eyes: 'spiral', mouth: 'frown', prop: '',          skin: '#e8c7a1', outfit: '#ffa94d', capColor: '#ffffff', hairColor: '#4a3b32', pattern: 'none', cheek: 'none' } }
   ];
 
-  /* 解鎖：點亮的檢核點數量達到門檻，就多出一些選項（只影響外觀） */
+  /* 解鎖：三種條件（只影響外觀）。by 不寫＝點亮的檢核點數；'badges'＝拿到的成就數；'ask'／'ctx'＝探問／情境感知的等級；'lv3'＝任一項技能到 Lv.3。
+     progress 可以是數字（只有檢核點，舊呼叫方式）或 { lit, badges, ask, ctx }。 */
   var UNLOCKS = [
     { need: 2, part: 'prop', value: 'bandage', label: '貼布' },
     { need: 3, part: 'prop', value: 'balloon', label: '氣球' },
     { need: 3, part: 'hair', value: 'cap', label: '帽子' },
     { need: 4, part: 'outfit', value: '#99e9f2', label: '冰藍衣服' },
     { need: 5, part: 'capColor', value: '#ffd43b', label: '金色帽子' },
-    { need: 6, part: 'mouth', value: 'teeth', label: '露牙' }
+    { need: 6, part: 'mouth', value: 'teeth', label: '露牙' },
+    { by: 'badges', need: 3, part: 'eyes', value: 'sparkle', label: '閃亮眼睛' },
+    { by: 'badges', need: 3, part: 'prop', value: 'coffee', label: '咖啡' },
+    { by: 'badges', need: 6, part: 'hair', value: 'spiky', label: '刺蝟頭' },
+    { by: 'badges', need: 6, part: 'prop', value: 'headphones', label: '耳機' },
+    { by: 'badges', need: 10, part: 'hair', value: 'beanie', label: '毛帽' },
+    { by: 'badges', need: 10, part: 'pattern', value: 'stripes', label: '條紋衣服' },
+    { by: 'badges', need: 14, part: 'mouth', value: 'tongue', label: '吐舌' },
+    { by: 'badges', need: 14, part: 'prop', value: 'umbrella', label: '雨傘' },
+    { by: 'badges', need: 18, part: 'hairColor', value: '#c2255c', label: '莓紅髮色' },
+    { by: 'badges', need: 18, part: 'hairColor', value: '#1c7ed6', label: '寶藍髮色' },
+    { by: 'ask', need: 2, part: 'prop', value: 'glasses', label: '眼鏡' },
+    { by: 'ask', need: 2, part: 'pattern', value: 'pocket', label: '口袋衣服' },
+    { by: 'ctx', need: 2, part: 'hair', value: 'long', label: '長髮' },
+    { by: 'ctx', need: 2, part: 'pattern', value: 'dots', label: '圓點衣服' },
+    { by: 'lv3', need: 3, part: 'hairColor', value: '#e8b04a', label: '金色髮色' }
   ];
+  function prog(p) {
+    if (p && typeof p === 'object') return { lit: Number(p.lit) || 0, badges: Number(p.badges) || 0, ask: Number(p.ask) || 1, ctx: Number(p.ctx) || 1 };
+    return { lit: Number(p) || 0, badges: 0, ask: 1, ctx: 1 };
+  }
+  function met(u, p) {
+    if (!u.by) return p.lit >= u.need;
+    if (u.by === 'badges') return p.badges >= u.need;
+    if (u.by === 'ask') return p.ask >= u.need;
+    if (u.by === 'ctx') return p.ctx >= u.need;
+    if (u.by === 'lv3') return Math.max(p.ask, p.ctx) >= u.need;
+    return true;
+  }
+  function hint(u) {
+    if (!u.by) return '點亮 ' + u.need + ' 個檢核點才能用';
+    if (u.by === 'badges') return '拿到 ' + u.need + ' 個成就才能用';
+    if (u.by === 'ask') return '探問升到 Lv.' + u.need + ' 才能用';
+    if (u.by === 'ctx') return '情境感知升到 Lv.' + u.need + ' 才能用';
+    return '任一項技能升到 Lv.' + u.need + ' 才能用';
+  }
 
-  function unlockedSet(lit) {
-    var locked = {};
-    UNLOCKS.forEach(function (u) { if (lit < u.need) locked[u.part + '|' + u.value] = u; });
+  function unlockedSet(progress) {
+    var p = prog(progress), locked = {};
+    UNLOCKS.forEach(function (u) { if (!met(u, p)) locked[u.part + '|' + u.value] = u; });
     return locked;
   }
 
-  /* 各部件目前可選的值（lit＝已點亮的檢核點數） */
-  function options(part, lit) {
-    var locked = unlockedSet(lit || 0);
+  /* 各部件目前可選的值（progress＝檢核點數，或 { lit, badges, ask, ctx }） */
+  function options(part, progress) {
+    var locked = unlockedSet(progress);
     return OPT[part].map(function (v) {
       var u = locked[part + '|' + v];
-      return { value: v, name: NAME[v] || v, locked: !!u, unlockAt: u ? u.need : 0 };
+      return { value: v, name: NAME[v] || v, locked: !!u, unlockAt: u ? u.need : 0, hint: u ? hint(u) : '' };
     });
   }
 
@@ -90,7 +125,7 @@
     var errors = [], locked = unlockedSet(lit || 0);
     Object.keys(OPT).forEach(function (k) {
       if (!look || OPT[k].indexOf(look[k]) < 0) errors.push({ part: k, msg: LABEL[k] + '的值無效' });
-      else if (locked[k + '|' + look[k]]) errors.push({ part: k, msg: LABEL[k] + '「' + (NAME[look[k]] || look[k]) + '」要點亮 ' + locked[k + '|' + look[k]].need + ' 個檢核點才能用' });
+      else if (locked[k + '|' + look[k]]) errors.push({ part: k, msg: LABEL[k] + '「' + (NAME[look[k]] || look[k]) + '」' + hint(locked[k + '|' + look[k]]) });
     });
     return { ok: errors.length === 0, errors: errors };
   }
@@ -119,10 +154,11 @@
   function toCharLook(look) { var l = normalize(look); if (l.prop === '') delete l.prop; return l; }
 
   /* 這次點亮檢核點後，新解鎖了什麼 */
-  function newlyUnlocked(litBefore, litAfter) {
-    return UNLOCKS.filter(function (u) { return litBefore < u.need && litAfter >= u.need; });
+  function newlyUnlocked(before, after) {
+    var b = prog(before), c = prog(after);
+    return UNLOCKS.filter(function (u) { return !met(u, b) && met(u, c); });
   }
 
   return { OPT: OPT, LABEL: LABEL, NAME: NAME, PRESETS: PRESETS, UNLOCKS: UNLOCKS, options: options, defaultFor: defaultFor, preset: preset,
-    normalize: normalize, validate: validate, set: set, randomize: randomize, toCharLook: toCharLook, newlyUnlocked: newlyUnlocked };
+    prog: prog, met: met, hint: hint, normalize: normalize, validate: validate, set: set, randomize: randomize, toCharLook: toCharLook, newlyUnlocked: newlyUnlocked };
 });

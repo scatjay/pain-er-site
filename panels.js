@@ -86,6 +86,8 @@
       }
       var sb = $('skBtn'); if (sb) { sb.innerHTML = '<span class="sk-full">技能 探問' + sk.ask.lv + '・情境' + sk.ctx.lv + '</span><span class="sk-cmp">探' + sk.ask.lv + '・境' + sk.ctx.lv + '</span>'; sb.title = '訪談技能等級：探問 Lv.' + sk.ask.lv + '、情境感知 Lv.' + sk.ctx.lv + '（點一下看成就與技能）'; }
     }
+    try { var pf = APP.me.profile, sk2 = fresh ? computeSk(A, pl) : null, np = { badges: okIds.length, ask: sk2 ? sk2.ask.lv : ((pf.progress || {}).ask || 1), ctx: sk2 ? sk2.ctx.lv : ((pf.progress || {}).ctx || 1) }, op = pf.progress || {};
+      if (op.badges !== np.badges || op.ask !== np.ask || op.ctx !== np.ctx) { pf.progress = np; if (window.ERG_CORE && window.ERG_CORE.saveProfile) window.ERG_CORE.saveProfile(APP.storage, APP.me.sid, pf); } } catch (e) {}
     if (changed) save();
     if (msgs.length) { RM.toast(msgs.join('　')); if (cur().tab !== 'ach') P.setAchDot(true); else if (window.ERG_PANELS) renderAch(); }
   };

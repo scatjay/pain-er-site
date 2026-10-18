@@ -248,12 +248,13 @@
   /* ───── 選角色 ───── */
   var avDraft = null, avFirst = false;
   function charSvg(look, i, mood) { return CH.character(AV.toCharLook(look), { seed: i || 3, mood: mood || 'idle', size: 1.25 }); }
+  APP.progress = function () { var pr = (APP.me && APP.me.profile && APP.me.profile.progress) || {}; return { lit: APP.lit || 0, badges: pr.badges || 0, ask: pr.ask || 1, ctx: pr.ctx || 1 }; };
   function openAvatar(first) {
     avFirst = !!first; var ev = evaluateAll(); APP.lit = ev ? ev.ev.lit : 0;
     avDraft = CORE.clone(APP.me.profile.avatar); show('avatar'); renderAvatar();
   }
   function renderAvatar() {
-    var look = avDraft.look, lit = APP.lit;
+    var look = avDraft.look, lit = APP.progress ? APP.progress() : APP.lit, litN = AV.prog(lit).lit;
     $('avPreview').innerHTML = charSvg(look, 7) + '<div style="font-weight:900;margin-top:4px">' + esc(APP.me.sid) + '</div>';
     $('avGrid').innerHTML = AV.PRESETS.map(function (p, i) {
       return '<button class="avCard' + (avDraft.preset === p.id ? ' on' : '') + '" data-preset="' + p.id + '">' + charSvg(p.look, i + 1) + '<div style="font-size:12px;font-weight:900">' + esc(p.name) + '</div></button>';
@@ -262,13 +263,13 @@
       b.onclick = function () { var p = AV.preset(b.getAttribute('data-preset')); avDraft = { preset: p.id, look: CORE.clone(p.look) }; renderAvatar(); };
     });
     var html = '';
-    ['head', 'body', 'hair', 'eyes', 'mouth', 'prop'].forEach(function (part) {
+    ['head', 'body', 'hair', 'eyes', 'mouth', 'prop', 'pattern', 'cheek'].forEach(function (part) {
       html += '<div><div style="font-size:13px;font-weight:900">' + AV.LABEL[part] + '</div><div class="partRow">' +
         AV.options(part, lit).map(function (o) {
-          return '<button class="opt pill' + (look[part] === o.value ? ' on' : '') + (o.locked ? ' lock' : '') + '" data-part="' + part + '" data-val="' + esc(o.value) + '"' + (o.locked ? ' disabled title="點亮 ' + o.unlockAt + ' 個檢核點解鎖"' : '') + '>' + esc(o.name) + (o.locked ? ' 🔒' : '') + '</button>';
+          return '<button class="opt pill' + (look[part] === o.value ? ' on' : '') + (o.locked ? ' lock' : '') + '" data-part="' + part + '" data-val="' + esc(o.value) + '"' + (o.locked ? ' disabled title="' + esc(o.hint) + '"' : '') + '>' + esc(o.name) + (o.locked ? ' 🔒' : '') + '</button>';
         }).join('') + '</div></div>';
     });
-    [['skin', '膚色'], ['outfit', '衣服顏色']].concat(look.hair === 'cap' ? [['capColor', '帽子顏色']] : []).forEach(function (pc) {
+    [['skin', '膚色'], ['outfit', '衣服顏色']].concat(look.hair === 'cap' || look.hair === 'beanie' ? [['capColor', '帽子顏色']] : []).concat(['bun', 'pony', 'long', 'spiky'].indexOf(look.hair) >= 0 ? [['hairColor', '髮色']] : []).forEach(function (pc) {
       html += '<div><div style="font-size:13px;font-weight:900">' + pc[1] + '</div><div class="partRow">' + AV.options(pc[0], lit).map(function (o) {
         return '<button class="sw' + (look[pc[0]] === o.value ? ' on' : '') + '" style="background:' + o.value + (o.locked ? ';opacity:.35' : '') + '" data-part="' + pc[0] + '" data-val="' + esc(o.value) + '"' + (o.locked ? ' disabled' : '') + ' aria-label="' + pc[1] + ' ' + o.value + '"></button>';
       }).join('') + '</div></div>';
@@ -277,12 +278,12 @@
     Array.prototype.forEach.call($('avParts').querySelectorAll('[data-part]'), function (b) {
       b.onclick = function () { try { avDraft.look = AV.set(avDraft.look, b.getAttribute('data-part'), b.getAttribute('data-val'), lit); avDraft.preset = ''; $('avErr').textContent = ''; renderAvatar(); } catch (e) { $('avErr').textContent = e.message; } };
     });
-    var next = AV.UNLOCKS.filter(function (u) { return lit < u.need; })[0];
-    $('avUnlockInfo').textContent = '已點亮 ' + lit + ' 個檢核點' + (next ? '；再點亮到 ' + next.need + ' 個會解鎖「' + next.label + '」' : '；外觀全部解鎖');
+    var P = AV.prog(lit), left = AV.UNLOCKS.filter(function (u) { return !AV.met(u, P); }), next = left[0];
+    $('avUnlockInfo').textContent = '已點亮 ' + P.lit + ' 個檢核點、拿到 ' + P.badges + ' 個成就、探問 Lv.' + P.ask + '、情境感知 Lv.' + P.ctx + (left.length ? '；還有 ' + left.length + ' 個外觀沒解鎖，例如「' + next.label + '」（' + AV.hint(next).replace('才能用', '解鎖') + '）' : '；外觀全部解鎖');
   }
-  $('avRandom').onclick = function () { avDraft = { preset: '', look: AV.randomize(String(Date.now()), APP.lit) }; renderAvatar(); };
+  $('avRandom').onclick = function () { avDraft = { preset: '', look: AV.randomize(String(Date.now()), APP.progress ? APP.progress() : APP.lit) }; renderAvatar(); };
   $('avDone').onclick = function () {
-    var v = AV.validate(avDraft.look, APP.lit); if (!v.ok) { $('avErr').textContent = v.errors[0].msg; return; }
+    var v = AV.validate(avDraft.look, APP.progress ? APP.progress() : APP.lit); if (!v.ok) { $('avErr').textContent = v.errors[0].msg; return; }
     APP.me.profile.avatar = avDraft; APP.me.profile.chosen = true; CORE.saveProfile(APP.storage, APP.me.sid, APP.me.profile); enterLobby();
   };
   $('avatarBtn').onclick = function () { openAvatar(false); };
