@@ -1,13 +1,15 @@
 /* 單一房間的俯視圖（手機版用）：地板、牆、門、家具（色塊＋小圖示＋名稱）。回傳 SVG 字串與線索牌位置。純函式。 */
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory(require('./minimap.js'));
-  else root.ERG_ROOMVIEW = factory(root.ERG_MINIMAP);
-})(typeof self !== 'undefined' ? self : this, function (MM) {
+  if (typeof module === 'object' && module.exports) module.exports = factory(require('./minimap.js'), require('./depth.js'));
+  else root.ERG_ROOMVIEW = factory(root.ERG_MINIMAP, root.ERG_DEPTH);
+})(typeof self !== 'undefined' ? self : this, function (MM, DEP) {
   'use strict';
   var COLORS = { desk: '#ffe8cc', counter: '#ffe8cc', bed: '#d0ebff', seats: '#b2f2bb', screen: '#868e96', board: '#ffffff', device: '#ced4da', sofa: '#eebefa',
     stall: '#e9ecef', rack: '#fff3bf', sign: '#ffec99', lightbox: '#fff9db', chair: '#fcc2d7', door: '#e8590c', glass: '#a5d8ff', scanner: '#ced4da', phone: '#ced4da' };
   function esc(s) { return MM.esc(s); }
   function num(v) { return Math.round(v * 10) / 10; }
+  /* 前緣線的顏色：本體色變暗（跟桌面畫布上 ffront 同一個概念） */
+  function shade(hex) { var m = /^#([0-9a-f]{6})$/i.exec(hex); if (!m) return hex; var n = parseInt(m[1], 16); function c(sh) { return Math.max(0, Math.round(((n >> sh) & 255) * .8)); } return '#' + [16, 8, 0].map(function (sh) { var v = c(sh); return (v < 16 ? '0' : '') + v.toString(16); }).join(''); }
 
   /* 回傳 { svg, w, h, pins:[{clue,x,y}], furniture:[...] }；座標都是房間內的相對座標 */
   function view(layout, roomId, opts) {
@@ -39,7 +41,11 @@
     });
     out.push('</svg>');
     var pins = (layout.PINS || []).filter(function (p) { return p.room === roomId; }).map(function (p) { return { clue: p.clue, x: p.rx, y: p.ry }; });
-    return { svg: out.join(''), w: w, h: h, pins: pins, furniture: furn };
+    /* 10-18 z-order：擋人家具的「前緣線」另外輸出，畫面層用 DOM 疊在人物層，層級是 depth.frontZ(sortY)：站在它後面的人被蓋住、站在前面的人蓋住它。座標是房間內相對座標。 */
+    var fronts = [];
+    if (DEP) furn.forEach(function (f, fi) { if (!(DEP.occOf(f) > 0)) return; var fw = f.w || 30, fh = f.h || 20, lip = Math.min(10, fh * .25);
+      fronts.push({ fi: fi, x: num(f.rx + 1.5), y: num(f.ry + fh - lip - 1.5), w: num(fw - 3), h: num(lip), sortY: DEP.sortYOf(f), color: shade(COLORS[f.type] || '#e9ecef') }); });
+    return { svg: out.join(''), w: w, h: h, pins: pins, furniture: furn, fronts: fronts };
   }
   return { view: view };
 });

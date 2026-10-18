@@ -192,17 +192,17 @@
 
   /* NPC 站位：路網的節點。room 是所在房間，rx, ry 是房間內相對座標。 */
   var STATIONS = [
-    { id:'guard-desk',    room:'entrance', rx:70,  ry:142 },
+    { id:'guard-desk',    room:'entrance', rx:95,  ry:178, behind:'警衛櫃台' },   /* 10-18 z-order：behind＝站在這件家具後面；ry＝家具前緣（ry+h）內側 2 單位，遮擋比例才不隨縮放變（見 depth.js、test_depth.js）；rx 刻意避開家具正中央（點家具中央才點得到家具、不會點到站崗的人）也避開線索牌的範圍；站在 behind 站點上的人在 spreadTokens 裡視為推不動，不然會被線索牌的障礙點推出家具後面 */
     { id:'entrance-mid',  room:'entrance', rx:170, ry:110 },
     { id:'entrance-door', room:'entrance', rx:160, ry:186 },
-    { id:'triage-desk',   room:'triage',   rx:150, ry:66 },
+    { id:'triage-desk',   room:'triage',   rx:110, ry:94, behind:'檢傷櫃台' },
     { id:'triage-chair',  room:'triage',   rx:210, ry:170 },
     { id:'wait-1',        room:'waiting',  rx:80,  ry:92 },
     { id:'wait-2',        room:'waiting',  rx:150, ry:200 },
     { id:'wait-3',        room:'waiting',  rx:340, ry:92 },
     { id:'wait-tv',       room:'waiting',  rx:380, ry:70 },
     { id:'wait-water',    room:'waiting',  rx:410, ry:130 },
-    { id:'nurse-desk',    room:'nurse',    rx:190, ry:90 },
+    { id:'nurse-desk',    room:'nurse',    rx:120, ry:158, behind:'護理站' },
     { id:'nurse-board',   room:'nurse',    rx:100, ry:70 },
     { id:'consultA-desk', room:'consultA', rx:80,  ry:100 },
     { id:'consultA-bed',  room:'consultA', rx:210, ry:176 },
