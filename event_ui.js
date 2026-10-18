@@ -43,9 +43,9 @@
     var ent=line&&entOf(cur,line.who),on=!!ent&&onStage(cur,ent),showLine=!!line&&(mob||!on);
     var body='<b class="evCap">'+esc(beat.caption)+'</b>'+(showLine?'<span class="evLine"><b>'+esc(spk)+(on||/（/.test(spk)?'':'（不在場）')+'</b>：<span class="'+esc(line.kind)+'">'+esc(line.text)+'</span></span>':'');
     var bub=(!mob&&line&&on)?'<div class="evBub" data-ent="'+esc(ent.id)+'"><b>'+esc(spk)+'</b><span class="'+esc(line.kind)+'">'+esc(line.text)+'</span></div>':'';
-    var hostEl=hostOf(cur),narrow=!!(hostEl&&hostEl.clientWidth&&hostEl.clientWidth<640);   /* 視窗窄（例如 1084）：標籤縮成「事件」，省出字的空間 */
-    return {kind:'play',key:'play|'+p.id+'|'+bi+'|'+(p.paused?1:0)+'|'+(on?1:0)+'|'+(narrow?1:0),bubble:bub,
-      html:'<div class="evBar evPlay'+(mob?' evMob':'')+'" role="group" aria-label="事件進行中"><span class="evTag">'+(mob||narrow?'事件':'事件進行中')+'</span><span class="evCtl">'+ctlHtml(p)+'</span><span class="evBody" title="'+esc(beat.caption+(line?'　'+spk+'：'+line.text:''))+'">'+body+'</span></div>'};
+    var hostEl=hostOf(cur),hw=hostEl&&hostEl.clientWidth,narrow=!!(hw&&hw<640),wrap=!mob&&!!(hw&&hw<760);   /* 視窗窄（例如 1084）：標籤縮成「事件」，字獨立一整列（evWrap），不再被擠成 225px 寬 */
+    return {kind:'play',spkEnt:on?ent.id:null,gid:g.id,key:'play|'+p.id+'|'+bi+'|'+(p.paused?1:0)+'|'+(on?1:0)+'|'+(narrow?1:0)+'|'+(wrap?1:0),bubble:bub,
+      html:'<div class="evBar evPlay'+(mob?' evMob':'')+(wrap?' evWrap':'')+'" role="group" aria-label="事件進行中"><span class="evTag">'+(mob||narrow?'事件':'事件進行中')+'</span><span class="evCtl">'+ctlHtml(p)+'</span><span class="evBody" title="'+esc(beat.caption+(line?'　'+spk+'：'+line.text:''))+'">'+body+'</span></div>'};
   }
   function noticeState(cur,list){
     var n=list[0],more=list.length>1?'（還有 '+(list.length-1)+' 件）':'';
@@ -88,13 +88,27 @@
     var pick=keep||res.reduce(function(a,c){return c.s<a.s?c:a;});
     b._pos=pick.i;b.style.left=(pick.x-hr.left)+'px';b.style.top=(pick.y-hr.top)+'px';
   }
+  /* ───── 10-18 P2 聚焦與讓位：說話者加環（data-evf=focus）、與事件無關的人物淡化（data-evf=dim）。
+     只動 data-evf 屬性，不碰 token 的 class／位置／z 層（room.js、m.js 每幀會重設 className，屬性不受影響），演出結束屬性移除、CSS 0.3 秒淡回。 */
+  function castSet(cur,gid){
+    if(cur._evCast&&cur._evCast.id===gid&&cur._evCast.n===cur.world.entities.length)return cur._evCast.set;
+    var g=guide(gid),inC={},set={};if(g){(g.cast||[]).forEach(function(c){inC[c]=1;});g.beats.forEach(function(b){b.lines.forEach(function(l){inC[l.who]=1;});});}
+    cur.world.entities.forEach(function(e){if(inC[e.pid])set[e.id]=1;});cur._evCast={id:gid,n:cur.world.entities.length,set:set};return set;
+  }
+  function applyFocus(cur,st){
+    var play=!!(st&&st.kind==='play'),cs=play?castSet(cur,st.gid):null;
+    Object.keys(cur.tokens).forEach(function(id){var el=cur.tokens[id];if(!el||!el.setAttribute||id==='me')return;
+      var w='';if(play)w=(st.spkEnt===id)?'focus':(cs[id]?'':'dim');
+      var h=el.getAttribute('data-evf')||'';if(h!==w){if(w)el.setAttribute('data-evf',w);else el.removeAttribute('data-evf');}});
+  }
   function paint(cur,S){
     var host=hostOf(cur),bh=document.getElementById('eventPlay');if(!host)return;
     var st=wanted(cur);
-    if(!st){if(host._evKey)release(cur,S,host);if(bh&&bh.innerHTML)bh.innerHTML='';return;}
+    if(!st){if(host._evKey)release(cur,S,host);if(bh&&bh.innerHTML)bh.innerHTML='';applyFocus(cur,null);return;}
     if(!host._evBound){host._evBound=1;host.addEventListener('click',function(ev){var b=ev.target.closest&&ev.target.closest('[data-evact]');if(b)act(b.getAttribute('data-evact'),b);});}
     if(host._evKey!==st.key){host._evKey=st.key;host.innerHTML=st.html;host.classList.add('evOn');host.classList.remove('go','cap');host.onclick=null;host.removeAttribute('role');host.setAttribute('aria-live','polite');if(isMob(cur))host.style.display='block';if(bh)bh.innerHTML=st.bubble||'';}
     if(st.bubble)placeBubble(cur);
+    applyFocus(cur,st);
   }
   function act(name,btn){
     var S=window.ERG_ROOM,cur=S&&S.cur;if(!cur)return;var p=cur.eventPlayback,g=p&&guide(p.id);
