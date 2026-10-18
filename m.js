@@ -392,6 +392,7 @@
   /* ───── 事件 ───── */
   function refreshTicker() {
     if (!cur) return; var min = S.simMin(), tk = cur.world.sim.ticker(min, 1), t = $('ticker');
+    if (window.ERG_EVENT_UI && window.ERG_EVENT_UI.busy(cur)) return;   /* 10-18 事件條正在用這一格 */
     /* 10-13：卡片優先顯示「正在發生」的最新一件；事件不在我這間房時，卡片可以點，點了直接到那間房去看 */
     var act = cur.world.sim.activeEvents(min).slice().sort(function (a, b) { return (b.start || 0) - (a.start || 0); })[0];
     var item = act ? { time: cur.world.sim.formatSim(act.start), title: act.title, text: act.text } : tk[0];
@@ -402,15 +403,18 @@
     t.classList.toggle('go', !!go); if (go) t.setAttribute('role', 'button'); else t.removeAttribute('role');
     t.onclick = go ? function () { hidePop(); S.teleport(go); toTop(); toast('到了' + roomName(go) + '。'); refreshTicker(); } : null;
   }
+  S.refreshTicker = refreshTicker;
   function eventWatch() {
     var act = cur.world.sim.activeEvents(S.simMin()), sfx = $('sfx'), guides=window.ERG_EVENT_GUIDE.build(),inRoom=((LAYOUT.room(cur.player.loc)||{}).type==='room'),here=act.filter(function(e){return (e.rooms||[]).indexOf(cur.player.loc)>=0&&(inRoom||!(e.rooms||[]).some(function(r){var x=LAYOUT.room(r);return x&&x.type==='room';}));}),far=act.filter(function(e){var g=guides.filter(function(x){return x.id===e.id;})[0];return (e.rooms||[]).indexOf(cur.player.loc)<0&&g&&g.importance===3;});
     /* 10-13：原本「重要事件＋去過它的房間」就算在場，結果人在洗手間也顯示「這間房現在：救護車到院」。手機一次只看一間房：在場才演，別處的只提示一句。 */
     var people=cur.world.at(cur.clock.worldSec).filter(function(it){return it.pos.room===cur.player.loc;}),acts=people.map(function(it){return it.ent.name+'：'+(it.pos.act||'正在忙');}).slice(0,2),clues=cur.world.clues.filter(function(c){return c.pin.room===cur.player.loc;}).length,waiters=people.filter(function(it){return it.ent.kind==='patient'&&/候診|等結果|等候/.test(it.pos.act||'');}),waitMax=0;
     waiters.forEach(function(it){(it.ent.timeline.segments||[]).forEach(function(s){if(s.kind==='idle'&&s.act===it.pos.act&&cur.clock.worldSec>=it.ent.timeline.appearAt+s.t0&&cur.clock.worldSec<=it.ent.timeline.appearAt+s.t1)waitMax=Math.max(waitMax,(cur.clock.worldSec-it.ent.timeline.appearAt-s.t0)/cur.world.data.SIM.SECONDS_PER_SIM_MIN);});});
     var tired=people.filter(function(it){var a=cur.world.availability(it.ent,it.pos,S.simMin());return a.fatigue&&a.fatigue.level>=2;})[0];
-    var nowTxt='這間房現在：'+(here.length?here[0].title+'。':'')+(acts.join('；')||'暫時安靜，看看家具與線索。')+' 等候 '+waiters.length+' 人，約 '+Math.floor(waitMax)+' 分；線索 '+clues+' 張。'+(tired?' '+tired.ent.name+'看起來很累。':'')+(far.length?'　📣 別處：'+far[0].title+'（在'+(far[0].rooms||[]).filter(function(r){var x=LAYOUT.room(r);return x&&x.type==='room';}).map(roomName).join('、')+'）':'');
+    var playing=window.ERG_EVENT_UI.busy(cur)==='play',nowTxt='這間房現在：'+(here.length&&!playing?here[0].title+'。':'')+(acts.join('；')||'暫時安靜，看看家具與線索。')+' 等候 '+waiters.length+' 人，約 '+Math.floor(waitMax)+' 分；線索 '+clues+' 張。'+(tired?' '+tired.ent.name+'看起來很累。':'');
+    var freshFar = far.filter(function (e) { return !(cur.farTold && cur.farTold[e.id]) && !(cur.seenEv[e.id] || (cur.player.seenEv || {})[e.id]); });
+    window.ERG_EVENT_UI.notice(cur, act, far);   /* 10-18：事件條上的通知（不切鏡頭，可點「去看」）；下面的浮動提示保留給捲到下方看面板的人 */
     cur.farTold = cur.farTold || {};
-    var fresh = far.filter(function (e) { return !(cur.farTold[e.id] || cur.seenEv[e.id] || (cur.player.seenEv || {})[e.id]); });
+    var fresh = freshFar;
     if (fresh.length) {
       fresh.forEach(function (e) { cur.farTold[e.id] = true; });
       var goRooms = (fresh[0].rooms || []).filter(function (r) { var x = LAYOUT.room(r); return x && x.type === 'room'; }), goTo = goRooms[0];
@@ -418,9 +422,9 @@
         goTo ? function () { hidePop(); S.teleport(goTo); toTop(); } : null);
     }
     var bz=cur.busy;$('roomNow').innerHTML=(bz?'<i class="lamp" style="background:'+bz.light.color+'"></i>'+esc(bz.light.text+'・'+bz.phase)+'　':'')+esc(nowTxt);
-    if (here.length) {   /* 10-13：事件字幕只顯示 5 秒，不一直蓋住房間（真機截圖：半個房間被「呼——（忙翻）」擋住） */
+    if (here.length) {   /* 10-18 改 1.5 秒（10-13：事件字幕只顯示 5 秒，不一直蓋住房間（真機截圖：半個房間被「呼——（忙翻）」擋住） */
       var sid = String(here[0].id || here[0].title || '') + '@' + cur.player.loc;
-      if (cur._sfxId !== sid) { cur._sfxId = sid; cur._sfxUntil = Date.now() + 5000; }
+      if (cur._sfxId !== sid) { cur._sfxId = sid; cur._sfxUntil = Date.now() + 1500; }
       if (Date.now() < cur._sfxUntil) { sfx.style.display = 'block'; sfx.textContent = COMIC.sfxFor(here[0]); } else sfx.style.display = 'none';
     } else { sfx.style.display = 'none'; cur._sfxId = ''; }
     here.forEach(function (e) { if (!cur.seenEv[e.id] && !(cur.player.seenEv || {})[e.id]) { cur.seenEv[e.id] = true; var o = {}; o[e.id] = true; cur.player.seenEv = Object.assign({}, cur.player.seenEv, o); window.ERG_EVENT_UI.startLive(cur,e,cur.player.loc);

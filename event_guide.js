@@ -93,6 +93,13 @@
     'N-E1':[['auntie_lin','地上箭頭被雨水弄得不清楚。','mutter'],['nurse_map','請抬頭找 CT 指標，我陪您確認方向。','speech']],
     'N-E2':[['auntie_lin','吊牌被人群擋住了，接下來往哪走？','speech'],['nurse_map','我們先找下一個可見的指標。','speech']]
   };
+  /* 10-18 事件條一拍一句、最長 36 字（Xbox 字幕指引：短、固定位置）；長版敘述留在事件簿與重播（beat.detail） */
+  function fit(s, n) {
+    s = String(s == null ? '' : s); if (s.length <= n) return s;
+    var cut = s.slice(0, n - 1), m = Math.max(cut.lastIndexOf('。'), cut.lastIndexOf('，'), cut.lastIndexOf('；'), cut.lastIndexOf('、'));
+    if (m >= n * 0.5) return cut.charAt(m) === '。' ? cut.slice(0, m + 1) : cut.slice(0, m) + '…';
+    return cut + '…';
+  }
   function listSources() {
     if (!DATA || !CASES) throw new Error('瀏覽器需先載入 ERG_DATA、ERG_CASES；Node 使用本地案例檔。');
     var sources = DATA.EVENTS.map(function (e) { return { event:e, caseId:'sms', caseName:'急診共同事件', clues:[], people:null }; });
@@ -126,9 +133,9 @@
       var isHigh = ['E02','E03','E04','E09','E10','E12','E13','E14','F-E1','F-E2','P-E1','P-E2','P-E3','K-E1','K-E2','K-E3','W-E1','W-E2','W-E3','N-E1','N-E2'].indexOf(id)>=0;
       return { id:id, caseId:src.caseId, caseName:src.caseName, title:e.title, rooms:e.rooms.slice(), when:when, cast:cast,
         beats:[
-          {at:0,caption:desc[0],lines:[{who:dialogue[0][0],text:dialogue[0][1],kind:dialogue[0][2]}],sfx:id==='E02'?'嗚——':'',emote:[{who:dialogue[0][0],icon:'!'}],camera:'wide'},
-          {at:4,caption:desc[1],lines:[{who:(dialogue[1]||dialogue[0])[0],text:(dialogue[1]||dialogue[0])[1],kind:(dialogue[1]||dialogue[0])[2]}],sfx:id==='E03'?'嗶、嗶…':'',emote:[{who:(dialogue[1]||dialogue[0])[0],icon:id==='E13'||id==='E14'?'💢':'…'}],camera:'push'},
-          {at:8,caption:e.text || e.title,lines:[{who:primary[0]||cast[0],text:primary[1],kind:'speech'}],sfx:'',emote:[],camera:'pan'}
+          {at:0,caption:fit(desc[0],36),lines:[{who:dialogue[0][0],text:fit(dialogue[0][1],36),kind:dialogue[0][2]}],sfx:id==='E02'?'嗚——':'',emote:[{who:dialogue[0][0],icon:'!'}],camera:'wide'},
+          {at:4,caption:fit(desc[1],36),lines:[{who:(dialogue[1]||dialogue[0])[0],text:fit((dialogue[1]||dialogue[0])[1],36),kind:(dialogue[1]||dialogue[0])[2]}],sfx:id==='E03'?'嗶、嗶…':'',emote:[{who:(dialogue[1]||dialogue[0])[0],icon:id==='E13'||id==='E14'?'💢':'…'}],camera:'push'},
+          {at:8,caption:fit(e.text || e.title,36),detail:e.text || e.title,lines:[],sfx:'',emote:[],camera:'pan'}   /* 決定 6：訪談提示不再當 NPC 台詞念出來，改成事件結束後事件條上的「可以問的問題」（interview 資料不變） */
         ], observe:[desc[0],desc[1],e.text || e.title].slice(0,3),
         interview:[{who:primary[0]||cast[0],ask:primary[1],listenFor:primary[2],layer:primary[3]||'events'}],
         usability:(src.caseId==='sms'?'事件如何影響現場資訊、動線與求助的可見性。':'事件暴露了「'+src.caseName+'」流程中辨識、確認或尋求協助的使用性問題。'),

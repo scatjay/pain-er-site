@@ -35,14 +35,25 @@
 
   /* 10-18 D2：線索徽章（房間右下角）。沒去過＝黃底「?」；去過＝黃底「剩 N 條」（地圖小時只放數字）；清完＝淡綠底「✔」。
      info＝{ total, left, seen }；形狀是圓角方塊，與「去過」的綠色圓形勾分得開。 */
-  function clueBadgeBox(r, info, compact, F, withText) {
+  /* dot＝「你在這裡」的圓點 {x,y,k}（k＝縮放）。10-18：圓點與外圈蓋到預設位置（右下角）時，徽章往上或往左挪到不被蓋的地方 */
+  function dotHitsBox(dot, b) { var rad = 23 * dot.k + 6, cx = Math.max(b.x, Math.min(dot.x, b.x + b.w)), cy = Math.max(b.y, Math.min(dot.y, b.y + b.h)); return Math.hypot(dot.x - cx, dot.y - cy) < rad; }
+  function clueBadgeBox(r, info, compact, F, withText, dot) {
     var seen = info.seen, h = compact ? 56 : 30 * F, fs = compact ? 40 : 18 * F, left = info.left, done = seen && left <= 0;
-    var label = !seen ? '?' : (done ? '✔' : (withText ? '剩 ' + left + ' 條' : String(left)));
-    var w = label.length > 2 ? fs * (label.length * .62 + .9) : h;
-    return { label: label, w: w, h: h, fs: fs, done: done, x: r.x + r.w - 8 - w, y: r.y + r.h - 8 - h };
+    function make(label) { var w = label.length > 2 ? fs * (label.length * .62 + .9) : h; return { label: label, w: w, h: h, fs: fs, done: done, x: r.x + r.w - 8 - w, y: r.y + r.h - 8 - h }; }
+    var full = !seen ? '?' : (done ? '✔' : (withText ? '剩 ' + left + ' 條' : String(left))), short = !seen ? '?' : (done ? '✔' : String(left)), box = make(full);
+    if (dot && dotHitsBox(dot, box)) {
+      /* 依序試：原標籤往上／往左挪，再換成只有數字的短標籤往上／往左挪；第一個不被圓點蓋到、又留在房間內的就用 */
+      var top = r.y + (compact ? 60 : 30 * F), left0 = r.x + (compact ? 70 : 8), found = null;
+      [full, short].forEach(function (lb) { if (found) return; var base = make(lb);
+        for (var i = 0; i <= 3 && !found; i++) for (var j = 0; j <= 4 && !found; j++) {
+          var c = { label: base.label, w: base.w, h: base.h, fs: fs, done: done, x: base.x - j * base.w * .5, y: base.y - i * (h + 6) * .6 };
+          if (c.y >= top && c.x >= left0 && !dotHitsBox(dot, c)) { c.moved = true; found = c; } } });
+      if (found) box = found;
+    }
+    return box;
   }
-  function clueBadge(r, info, compact, F, withText) {
-    var bx = clueBadgeBox(r, info, compact, F, withText), seen = info.seen, left = info.left, done = bx.done, label = bx.label, w = bx.w, h = bx.h, fs = bx.fs, x = bx.x, y = bx.y;
+  function clueBadge(r, info, compact, F, withText, dot) {
+    var bx = clueBadgeBox(r, info, compact, F, withText, dot), seen = info.seen, left = info.left, done = bx.done, label = bx.label, w = bx.w, h = bx.h, fs = bx.fs, x = bx.x, y = bx.y;
     var fill = !seen ? '#ffd43b' : (done ? '#b2f2bb' : '#ffd43b');
     return '<g data-clue-badge="' + esc(r.id) + '" data-state="' + (!seen ? 'unseen' : (done ? 'done' : 'left')) + '"><title>' + esc(!seen ? '還沒去過：這裡有線索' : (done ? '這間的線索都記下了' : '還剩 ' + left + ' 條線索沒記')) + '</title>' +
       '<rect x="' + num(x) + '" y="' + num(y) + '" width="' + num(w) + '" height="' + num(h) + '" rx="' + num(h * .3) + '" fill="' + fill + '" stroke="#1e1e1e" stroke-width="' + num(compact ? 4 : 2) + '"/>' +
@@ -79,6 +90,7 @@
   function svg(layout, opts) {
     opts = opts || {};
     var F = opts.fontScale || 1, compact = !!opts.compact;
+    var dotE = null; (opts.dots || []).forEach(function (d) { if (d.kind === 'me' && !(opts.you && layout.room(opts.you) && layout.room(opts.you).type === 'remote')) dotE = { x: Number(d.x), y: Number(d.y), k: (28 * (compact ? 1.8 : F)) / 28 }; });   /* 圓點位置先算好，徽章與標示牌都要避開 */
     var rooms = layout.ROOMS.filter(function (r) { return !(opts.onlyMap && r.type === 'remote'); }).map(function (r) { return r.id === 'notebook' ? Object.assign({}, r, { h: Math.min(r.h, 240) }) : r; }), x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
     rooms.forEach(function (r) { x0 = Math.min(x0, r.x); y0 = Math.min(y0, r.y); x1 = Math.max(x1, r.x + r.w); y1 = Math.max(y1, r.y + r.h); });
     var pad = 30, W = x1 - x0 + pad * 2, H = y1 - y0 + pad * 2, byId = {};
@@ -125,7 +137,7 @@
           '<path d="M' + num(vx - vr * .48) + ' ' + num(vy + vr * .04) + ' l' + num(vr * .32) + ' ' + num(vr * .36) + ' l' + num(vr * .62) + ' ' + num(-vr * .72) + '" fill="none" stroke="#fff" stroke-width="' + num(vr * .26) + '" stroke-linecap="round" stroke-linejoin="round"/></g>');
       }
       var ci = opts.clues && opts.clues[r.id];
-      if (ci && ci.total > 0 && !isHall) out.push(clueBadge(r, ci, compact, F, !!opts.clueText));
+      if (ci && ci.total > 0 && !isHall) out.push(clueBadge(r, ci, compact, F, !!opts.clueText, dotE));
       out.push('</g>');
     });
     if (opts.showFurniture !== false && !compact) {
@@ -197,6 +209,13 @@
       /* 10-13：標示牌原本一律畫在圓點上方，人在房間上緣時會蓋住左上角的房名 → 圓點離房間上緣太近就改畫在下方 */
       var flip = false, shift = 0;
       if (!compact) rooms.forEach(function (r) { if (mx >= r.x && mx <= r.x + r.w && my >= r.y && my <= r.y + r.h && my - 98 * k < r.y + 8 * F + 30 * F + 14) flip = true; });
+      /* 10-18：非 compact（手機「全部」、電腦全地圖）也要避開「剩 N 條」線索徽章：上方的牌若蓋到徽章、下方不會，就翻到下方 */
+      if (!compact && !flip) {
+        var fbl = mx - bw / 2, fbr = fbl + bw, hitBadge = function (bt2) { var hit = false; rooms.forEach(function (r) {
+          var hall = r.type === 'hall' || r.type === 'outside', ci3 = opts.clues && opts.clues[r.id]; if (hall || !ci3 || !(ci3.total > 0)) return;
+          var cb = clueBadgeBox(r, ci3, false, F, !!opts.clueText, dotE), ox = Math.min(fbr, cb.x + cb.w) - Math.max(fbl, cb.x), oy = Math.min(bt2 + 46 * k, cb.y + cb.h) - Math.max(bt2, cb.y); if (ox > 0 && oy > 0) hit = true; }); return hit; };
+        if (hitBadge(my - 98 * k) && !hitBadge(my + 52 * k)) flip = true;
+      }
       else {
         /* compact：在「上方／下方 × 左右偏移」六種位置裡挑不蓋到任何房名、也不超出地圖的那一個 */
         var nameBoxes = [];
@@ -206,7 +225,7 @@
           if (hall) return;
           if (seen[r.id]) nameBoxes.push({ l: r.x + 8, r: r.x + 64, t: r.y + r.h - 64, b: r.y + r.h - 8 });   /* 去過勾 */
           var ci2 = opts.clues && opts.clues[r.id];
-          if (ci2 && ci2.total > 0) { var cbx = clueBadgeBox(r, ci2, true, F, !!opts.clueText); nameBoxes.push({ l: cbx.x, r: cbx.x + cbx.w, t: cbx.y, b: cbx.y + cbx.h }); }
+          if (ci2 && ci2.total > 0) { var cbx = clueBadgeBox(r, ci2, true, F, !!opts.clueText, dotE); nameBoxes.push({ l: cbx.x, r: cbx.x + cbx.w, t: cbx.y, b: cbx.y + cbx.h }); }
           if (typeof cnt !== 'undefined' && cnt && cnt[r.id]) nameBoxes.push({ l: r.x + 8, r: r.x + 56, t: r.y + r.h * .6 - 24, b: r.y + r.h * .6 + 24 });   /* 人數徽章 */
           if (event[r.id]) nameBoxes.push({ l: r.x + r.w - 60, r: r.x + r.w - 10, t: r.y + r.h * .6 - 30, b: r.y + r.h * .6 + 20 });   /* ⚠ */
         });

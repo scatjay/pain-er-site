@@ -711,16 +711,23 @@
   }
   function eventWatch() {
     var simMin = S.simMin(), act = cur.world.sim.activeEvents(simMin), sfx = $('sfx');
-    var known=window.ERG_EVENT_GUIDE.build(), visited=cur.player.visited||[]; var here = act.filter(function(e){var g=known.filter(function(x){return x.id===e.id;})[0];return (e.rooms||[]).indexOf(cur.player.loc)>=0 || (g&&g.importance===3&&(e.rooms||[]).some(function(r){return visited.indexOf(r)>=0;}));});
+    /* 10-18 事件演出 P1（決定 2）：只有「事件就在我這間房」才自動演；別間房的重要事件不再切鏡頭，改由事件條通知「○○發生了事件［去看］」 */
+    var known=window.ERG_EVENT_GUIDE.build(); var here = act.filter(function(e){return (e.rooms||[]).indexOf(cur.player.loc)>=0;});
+    var far = act.filter(function(e){var g=known.filter(function(x){return x.id===e.id;})[0];return (e.rooms||[]).indexOf(cur.player.loc)<0&&g&&g.importance===3;});
+    window.ERG_EVENT_UI.notice(cur, act, far);
     var present=cur.world.at(cur.clock.worldSec).filter(function(it){return it.pos.room===cur.player.loc;}), actions=present.map(function(it){return it.ent.name+'：'+(it.pos.act||'忙著手邊工作');}).slice(0,2),waiters=present.filter(function(it){return it.ent.kind==='patient'&&/候診|等結果|等候/.test(it.pos.act||'');}),waitMax=0;
     waiters.forEach(function(it){(it.ent.timeline.segments||[]).forEach(function(s){if(s.kind==='idle'&&s.act===it.pos.act&&cur.clock.worldSec>=it.ent.timeline.appearAt+s.t0&&cur.clock.worldSec<=it.ent.timeline.appearAt+s.t1)waitMax=Math.max(waitMax,(cur.clock.worldSec-it.ent.timeline.appearAt-s.t0)/cur.world.data.SIM.SECONDS_PER_SIM_MIN);});});
     var clueCount=cur.world.clues.filter(function(c){return c.pin.room===cur.player.loc;}).length;
     var tired = present.filter(function(it){var a=cur.world.availability(it.ent,it.pos,simMin);return a.fatigue&&a.fatigue.level>=2;})[0];
     var nowTxt=(here.length?'這間房現在：'+here[0].title+'。':'這間房現在：')+(actions.join('；')||'暫時安靜，留意桌面與等候區。')+' 等候 '+waiters.length+' 人，約 '+Math.floor(waitMax)+' 分；線索 '+clueCount+' 張。'+(tired?' '+tired.ent.name+'看起來很累。':'');
-    var rn=$('roomNow'),showCap=!!(cur._capText&&Date.now()<(cur._capUntil||0));rn.classList.toggle('cap',showCap);
+    var rn=$('roomNow'),barOn=!!window.ERG_EVENT_UI.busy(cur),fresh=here.some(function(e){return !cur.seenEv[e.id]&&!(cur.player.seenEv||{})[e.id];}),showCap=!barOn&&!fresh&&!!(cur._capText&&Date.now()<(cur._capUntil||0));rn.classList.toggle('cap',showCap);
     if(showCap){rn.textContent=cur._capText;return;}
-    var bz=cur.busy;rn.innerHTML=(bz?'<i class="lamp" style="background:'+bz.light.color+'"></i>'+esc(bz.light.text+'・'+bz.phase)+'　':'')+esc(nowTxt);
-    if (here.length) { sfx.style.display = 'block'; sfx.textContent = COMIC.sfxFor(here[0]); } else sfx.style.display = 'none';
+    var bz=cur.busy;if(!barOn)rn.innerHTML=(bz?'<i class="lamp" style="background:'+bz.light.color+'"></i>'+esc(bz.light.text+'・'+bz.phase)+'　':'')+esc(nowTxt);   /* 事件條在用 #roomNow 時不去改寫它 */
+    if (here.length) {   /* 擬聲字只在事件開始的 1.5 秒出現（原本整段事件都掛著） */
+      var sid = String(here[0].id || here[0].title || '') + '@' + cur.player.loc;
+      if (cur._sfxId !== sid) { cur._sfxId = sid; cur._sfxUntil = Date.now() + 1500; }
+      if (Date.now() < cur._sfxUntil) { sfx.style.display = 'block'; sfx.textContent = COMIC.sfxFor(here[0]); } else sfx.style.display = 'none';
+    } else { sfx.style.display = 'none'; cur._sfxId = ''; }
     here.forEach(function (e) { if (!cur.seenEv[e.id] && !(cur.player.seenEv || {})[e.id]) { cur.seenEv[e.id] = true; cur.player.seenEv = Object.assign({}, cur.player.seenEv, (function () { var o = {}; o[e.id] = true; return o; })()); window.ERG_EVENT_UI.startLive(cur,e,cur.player.loc); } });
   }
   function stripPanels(ev) {

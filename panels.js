@@ -323,12 +323,14 @@
   function renderCards() {
     var p = $('p-cards'), pre = P.prefill || {}; P.prefill = null;
     var mine = L.listMarkers(RM.markerEls());
-    var html = '<div class="card" style="margin-top:0"><b>記一筆</b><div class="row" style="margin-top:6px">' + CARD_TYPES.map(function (t) { return '<button class="pill ' + ((pre.type || '便利貼') === t ? 'on' : '') + '" data-ct="' + t + '">' + t + '</button>'; }).join('') + '</div>' +
+    var html = '<div class="card" style="margin-top:0"><b>記一筆</b><div class="row" style="margin-top:6px">' + CARD_TYPES.map(function (t) { return '<button class="pill ' + ((pre.type || P.cardType || '便利貼') === t ? 'on' : '') + '" data-ct="' + t + '">' + t + '</button>'; }).join('') + '</div>' +
       '<div id="cardForm" style="margin-top:6px"></div></div>' +
       (cur().mobile ? '' : '<div class="row"><button class="ghost" id="seeNb">看筆記本</button><button class="ghost" id="seeAll">回到全景</button></div>') + '<h2>筆記本裡的卡（' + mine.length + '）</h2>';
     mine.forEach(function (m) { html += '<div class="card" style="padding:6px 10px;margin:6px 0;box-shadow:3px 3px 0 var(--ink)"><b>' + esc(m.id) + '</b> <span class="tag">' + esc(m.type) + '</span> <span class="muted" style="font-size:12px">' + (m.author === me() ? '我' : esc(m.author)) + '</span><div style="font-size:13px">' + esc(String(m.text || '').split('\n').slice(1).join(' ')) + '</div></div>'; });
     p.innerHTML = html;
-    var type = pre.type || '便利貼';
+    /* 10-18：場景一變（事件裡人物移動）onSceneChanged 就重畫這一頁；原本選的卡片種類只放在一次性的 prefill，
+       重畫後一律回到「便利貼」⇒ 學生按了「勘查卡」表單會自己跳掉。改成記住目前選的種類。 */
+    var type = pre.type || P.cardType || '便利貼'; P.cardType = type;
     function form() {
       var f = $('cardForm'), t = CARDS.TYPES[type], h = '';
       if (type === '勘查卡') h = '<label>線索<select id="cf-clue">' + cur().world.clues.map(function (c) { return '<option value="' + esc(c.id) + '"' + (pre.clue === c.id || cur().selClue === c.id ? ' selected' : '') + '>' + esc(c.id) + ' ' + esc(c.title) + '</option>'; }).join('') + '</select></label><label>我看到（一句話）<input id="cf-saw" maxlength="60"></label>';
