@@ -25,6 +25,22 @@
 
   function furnitureIcon(f) { return LABEL_ICON[f.label] || TYPE_ICON[f.type] || '▪️'; }
 
+  /* 10-18 圖示（FLAT S1）：「易缺字」的 emoji（Emoji 12 以後的 🩺🪑🩸、ZWJ 合成的 👨‍👩‍👧、要靠變體選擇符才有彩色的 🛏️🛋️🛡️⚠️、♿）換成 Lucide 線條圖示（icons.js）。
+     表只列有對應圖示的；沒載入 icons.js（例如 node 測試）或沒有對應就退回原 emoji 文字，所以資料表（ROOM_ICON 等）仍是 emoji，文字處照舊可用。 */
+  var ICON_OF = { '🩺': 'stethoscope', '🪑': 'armchair', '🛋️': 'armchair', '🩸': 'droplet', '👨‍👩‍👧': 'users', '🛏️': 'bed-double', '🛡️': 'shield-check', '♿': 'accessibility', '⚠️': 'triangle-alert' };
+  function icons() { var g = typeof self !== 'undefined' ? self : (typeof window !== 'undefined' ? window : null); return (g && g.ERG_ICONS) || null; }
+  /* HTML 裡用：回傳 inline SVG 或原 emoji */
+  function iconHtml(emoji) { var I = icons(), n = ICON_OF[emoji]; return (I && n && I[n]) || emoji; }
+  /* SVG 裡用：取代 <text>。x、base＝原本 text 的 x 與基線，size＝原 font-size，anchor＝text-anchor（'' 為靠左） */
+  function glyph(emoji, x, base, size, anchor, extra) {
+    var I = icons(), n = ICON_OF[emoji];
+    if (I && n && I[n]) {
+      var left = anchor === 'middle' ? x - size / 2 : (anchor === 'end' ? x - size : x), top = base - size * .84;
+      return I[n].replace('<svg class="ic" ', '<svg class="ermm-ic" data-icon="' + n + '"' + (extra || '') + ' x="' + num(left) + '" y="' + num(top) + '" width="' + num(size) + '" height="' + num(size) + '" style="color:#1e1e1e" ');
+    }
+    return '<text x="' + num(x) + '" y="' + num(base) + '" font-size="' + num(size) + '"' + (anchor ? ' text-anchor="' + anchor + '"' : '') + (extra || '') + '>' + emoji + '</text>';
+  }
+
   /* opts.visited:[房間id]＝去過的房間，左上角畫一個綠底白勾（10-13）。
      opts：{ width, highlight:房間id, you:房間id, eventRooms:[id], dots:[{x,y,kind,label}], showFurniture, showPins, pins:[clueId], clickable }
      dots 的 x,y 是全圖座標（與 layout 的房間座標同一個系統） */
@@ -74,7 +90,7 @@
   /* 10-18 圖例：一行，放大視窗與手機「全部」用（小地圖空間不夠不放） */
   function legendHtml(collapsed) {
     var chip = function (bg, fg, t) { return '<b style="display:inline-block;min-width:1.4em;text-align:center;background:' + bg + ';color:' + fg + ';border:2px solid #1e1e1e;border-radius:6px;padding:0 4px;margin-right:2px">' + t + '</b>'; };
-    return '<details class="ermm-legend" ' + (collapsed ? '' : 'open ') + 'style="font-size:13px;line-height:1.9;margin-top:6px"><summary data-legend-toggle="1" style="cursor:pointer;font-weight:900;min-height:32px;display:flex;align-items:center">圖例（記號是什麼意思）' + (collapsed ? '・放大時可拖曳' : '') + '</summary>📍 你在這裡　' + chip('#2f9e44', '#fff', '✓') + '去過　' + chip('#fff', '#1e1e1e', '⚠️') + '事件　' + chip('#495057', '#fff', '3') + '人數（藍＝有同學）　' + chip('#ffd43b', '#1e1e1e', '?') + '沒去過、有線索　' + chip('#ffd43b', '#1e1e1e', '剩 N 條') + '線索還沒記　' + chip('#b2f2bb', '#1e1e1e', '✔') + '線索都記了</details>';
+    return '<details class="ermm-legend" ' + (collapsed ? '' : 'open ') + 'style="font-size:13px;line-height:1.9;margin-top:6px"><summary data-legend-toggle="1" style="cursor:pointer;font-weight:900;min-height:32px;display:flex;align-items:center">圖例（記號是什麼意思）' + (collapsed ? '・放大時可拖曳' : '') + '</summary>📍 你在這裡　' + chip('#2f9e44', '#fff', '✓') + '去過　' + chip('#fff', '#1e1e1e', iconHtml('⚠️')) + '事件　' + chip('#495057', '#fff', '3') + '人數（藍＝有同學）　' + chip('#ffd43b', '#1e1e1e', '?') + '沒去過、有線索　' + chip('#ffd43b', '#1e1e1e', '剩 N 條') + '線索還沒記　' + chip('#b2f2bb', '#1e1e1e', '✔') + '線索都記了</details>';
   }
   /* 三處地圖（桌面小地圖、桌面放大、手機全部）共用：把遊戲狀態變成 svg() 的 opts，呼叫端只補 width／fontScale。
      src：{ loc, me:{x,y}, roomsSeen, npcDots:[{x,y,kind}], players:[{x,y,label}], activeEventRooms:[id], clues, walkTarget } */
@@ -113,21 +129,21 @@
       if (r.accent && !isHall) out.push('<rect data-zone="' + esc(r.zone || '') + '" x="' + (r.x + 8) + '" y="' + (r.y + 5) + '" width="' + (r.w - 16) + '" height="' + (compact ? 30 : 9) + '" rx="6" fill="' + esc(r.accent) + '" stroke="#1e1e1e" stroke-width="2"/>');
       if (isHall) {
         var hs = Math.min(compact ? 30 : 18 * F, r.h * .6);
-        out.push('<text x="' + (r.x + 24) + '" y="' + num(r.y + r.h / 2 + hs * .35) + '" font-size="' + hs + '" opacity=".7">' + icon + '</text>');
+        out.push(glyph(icon, r.x + 24, r.y + r.h / 2 + hs * .35, hs, '', ' opacity=".7"'));
         out.push('<text x="' + (r.x + r.w / 2) + '" y="' + num(r.y + r.h / 2 + hs * .4) + '" font-size="' + num(Math.min(compact ? 34 : 20 * F, r.h * .66)) + '" font-weight="800" text-anchor="middle" fill="#3b4a52" letter-spacing="2">' + esc(compact ? (SHORT[r.id] || r.name) : r.name) + '</text>');
-        out.push('<text x="' + (r.x + r.w - 24) + '" y="' + num(r.y + r.h / 2 + hs * .35) + '" font-size="' + hs + '" opacity=".7" text-anchor="end">' + icon + '</text>');
+        out.push(glyph(icon, r.x + r.w - 24, r.y + r.h / 2 + hs * .35, hs, 'end', ' opacity=".7"'));
       } else {
         if (compact) {
           /* 小地圖：大圖示＋短名稱，遠看也認得 */
           /* 10-18 UI 方案 5：房名固定在房間上緣（區域色條下），圖示在中偏下，下緣兩個角留給「去過」與「線索」徽章，「你在這裡」牌就不會蓋住房名 */
           var isz = Math.min(r.w * .38, r.h * .34, 76), sh = SHORT[r.id] || r.name, nfs = Math.min(58, (r.w - 10) / Math.max(2, sh.length));
-          out.push('<text x="' + (r.x + r.w / 2) + '" y="' + num(r.y + r.h * .62 + isz * .35) + '" font-size="' + num(isz) + '" text-anchor="middle">' + icon + '</text>');
+          out.push(glyph(icon, r.x + r.w / 2, r.y + r.h * .62 + isz * .35, isz, 'middle'));
           out.push('<text data-name="1" x="' + (r.x + r.w / 2) + '" y="' + num(r.y + 42 + nfs * .82) + '" font-size="' + num(nfs) + '" font-weight="900" text-anchor="middle" fill="#1e1e1e" stroke="#fff" stroke-width="9" paint-order="stroke">' + esc(sh) + '</text>');
         } else {
           /* 標題列：小圖示＋名稱靠左上，不佔房間中央，家具與人點才看得清楚 */
           var fs = (r.w < 260 ? 19 : 22) * F, nm = (fs * r.name.length > r.w - 60) ? (SHORT[r.id] || r.name) : r.name, tw = Math.min(r.w - 54, fs * Math.max(2, nm.length) + 10);
           out.push('<rect x="' + (r.x + 8) + '" y="' + (r.y + 8) + '" width="' + num(tw + 34 * F) + '" height="' + num(fs + 14) + '" rx="8" fill="#fff" opacity=".86" stroke="#1e1e1e" stroke-width="2"/>');
-          out.push('<text x="' + (r.x + 14) + '" y="' + num(r.y + 8 + fs + 3) + '" font-size="' + num(fs - 2) + '">' + icon + '</text>');
+          out.push(glyph(icon, r.x + 14, r.y + 8 + fs + 3, fs - 2, ''));
           out.push('<text x="' + num(r.x + 14 + fs + 6) + '" y="' + num(r.y + 8 + fs + 3) + '" font-size="' + num(fs) + '" font-weight="900" fill="#1e1e1e">' + esc(nm) + '</text>');
         }
       }
@@ -144,7 +160,7 @@
       (layout.FURNITURE || []).forEach(function (f) {
         var r = byId[f.room]; if (!r) return;
         var cx = r.x + f.rx + (f.w || 0) / 2, cy = r.y + f.ry + (f.h || 0) / 2;
-        out.push('<text x="' + num(cx) + '" y="' + num(cy + 5) + '" font-size="' + num(15 * F) + '" text-anchor="middle" opacity=".78">' + furnitureIcon(f) + '</text>');
+        out.push(glyph(furnitureIcon(f), cx, cy + 5, 15 * F, 'middle', ' opacity=".78"'));
       });
     }
     /* 門：房間邊緣的小門牌 */
@@ -165,8 +181,8 @@
     }
     (opts.eventRooms || []).forEach(function (id) {
       var r = byId[id]; if (!r) return;
-      out.push(compact ? '<text data-event="1" x="' + (r.x + r.w - 10) + '" y="' + num(r.y + r.h * .56 + 16) + '" font-size="56" text-anchor="end">⚠️</text>'
-        : '<text x="' + (r.x + r.w - 26) + '" y="' + (r.y + 36) + '" font-size="' + (26 * F) + '" text-anchor="end">⚠️</text>');
+      out.push(compact ? glyph('⚠️', r.x + r.w - 10, r.y + r.h * .56 + 16, 56, 'end', ' data-event="1"')
+        : glyph('⚠️', r.x + r.w - 26, r.y + 36, 26 * F, 'end'));
     });
     /* 玩家自己：脈動的圈＋圖釘＋「你在這裡」標示，最後畫、壓在其他點上面 */
     var meDot = null;
@@ -252,5 +268,5 @@
     return out.join('');
   }
 
-  return { SHORT: SHORT, svg: svg, optsFrom: optsFrom, clueStatus: clueStatus, legendHtml: legendHtml, ROOM_ICON: ROOM_ICON, LABEL_ICON: LABEL_ICON, TYPE_ICON: TYPE_ICON, furnitureIcon: furnitureIcon, esc: esc };
+  return { SHORT: SHORT, svg: svg, optsFrom: optsFrom, clueStatus: clueStatus, legendHtml: legendHtml, ROOM_ICON: ROOM_ICON, LABEL_ICON: LABEL_ICON, TYPE_ICON: TYPE_ICON, furnitureIcon: furnitureIcon, iconHtml: iconHtml, ICON_OF: ICON_OF, esc: esc };
 });

@@ -26,7 +26,8 @@
   }
   /* ───── 10-18 事件條（北極星計畫 P1）：旁白不再蓋在房間上，改成固定位置的「事件條」 ─────
      電腦＝#roomNow 那一條；手機＝場景下方 #ticker。條內固定有 暫停／下一句／跳過，位置每拍不變。
-     三種狀態（優先序）：進行中 > 別間房事件通知 > 剛結束（可以問的問題）。永不自動切換鏡頭。 */
+     狀態（優先序）：進行中 > 別間房事件通知＋剛結束（可以問的問題，兩者同時存在時並列兩行）> 只有通知 > 只有剛結束。永不自動切換鏡頭。 */
+  function ic(n,fb){var I=window.ERG_ICONS;return (I&&I[n])||fb;}   /* 10-18 圖示：沒載入 icons.js 就退回 emoji */
   function isMob(cur){return !!(cur.mobile||cur.singleRoom);}
   function hostOf(cur){return document.getElementById(isMob(cur)?'ticker':'roomNow');}
   function isRoom(r){var x=window.ERG_LAYOUT&&window.ERG_LAYOUT.room(r);return !!(x&&x.type==='room');}
@@ -37,7 +38,7 @@
   function ov(a,b){var w=Math.min(a.r,b.r)-Math.max(a.l,b.l),h=Math.min(a.b,b.b)-Math.max(a.t,b.t);return (w>0&&h>0)?w*h:0;}
   function onStage(cur,ent){var tok=ent&&cur.tokens[ent.id];if(!visEl(tok))return false;var st=document.getElementById('sceneBox')||document.getElementById('stage'),s=rectOf(st),r=rectOf(tok),cx=(r.l+r.r)/2,cy=(r.t+r.b)/2;return cx>=s.l&&cx<=s.r&&cy>=s.t&&cy<=s.b;}
   function beatIdx(g,t){var bi=0;g.beats.forEach(function(b,i){if(t>=b.at)bi=i;});return bi;}
-  function ctlHtml(p){return '<button type="button" class="evPause" data-evact="pause" aria-label="'+(p.paused?'繼續演出':'暫停演出')+'">'+(p.paused?'▶ 繼續':'⏸ 暫停演出')+'</button><button type="button" class="evNext" data-evact="next" aria-label="下一句">⏭ 下一句</button><button type="button" class="evSkip" data-evact="skip" aria-label="跳過事件演出">跳過</button>';}
+  function ctlHtml(p){return '<button type="button" class="evPause" data-evact="pause" aria-label="'+(p.paused?'繼續演出':'暫停演出')+'">'+(p.paused?ic('play','▶')+' 繼續':ic('pause','⏸')+' 暫停演出')+'</button><button type="button" class="evNext" data-evact="next" aria-label="下一句">'+ic('skip-forward','⏭')+' 下一句</button><button type="button" class="evSkip" data-evact="skip" aria-label="跳過事件演出">跳過</button>';}
   function playState(cur,g,p){
     var bi=beatIdx(g,p.t||0),beat=g.beats[bi],people=names(cur),line=beat.lines[0],mob=isMob(cur),spk=line?(people[line.who]||line.who):'';
     var ent=line&&entOf(cur,line.who),on=!!ent&&onStage(cur,ent),showLine=!!line&&(mob||!on);
@@ -50,18 +51,25 @@
   function noticeState(cur,list){
     var n=list[0],more=list.length>1?'（還有 '+(list.length-1)+' 件）':'';
     return {kind:'notice',key:'notice|'+n.id+'|'+list.length,bubble:'',
-      html:'<div class="evBar evNotice'+(isMob(cur)?' evMob':'')+'" role="group" aria-label="別間房發生事件"><span class="evTag">📣 事件</span><span class="evCtl">'+(n.room?'<button type="button" class="evGo" data-evact="go">去看</button>':'')+'<button type="button" class="evDismiss" data-evact="dismiss">略過</button></span><span class="evBody"><b>'+esc(rname(n.room||n.name))+'</b>發生了事件：'+esc(n.title)+esc(more)+'</span></div>'};
+      html:'<div class="evBar evNotice'+(isMob(cur)?' evMob':'')+'" role="group" aria-label="別間房發生事件"><span class="evTag">'+ic('bell','📣')+' 事件</span><span class="evCtl">'+(n.room?'<button type="button" class="evGo" data-evact="go">去看</button>':'')+'<button type="button" class="evDismiss" data-evact="dismiss">略過</button></span><span class="evBody"><b>'+esc(rname(n.room||n.name))+'</b>發生了事件：'+esc(n.title)+esc(more)+'</span></div>'};
   }
   function afterState(cur,a){
     var g=guide(a.id),asks=g?g.interview:[],people=names(cur),mob=isMob(cur);
     var open=a.open?'<span class="evAskList">'+asks.map(function(x){var nm=people[x.who]||x.who;return '<span class="evAsk">建議問 <b>'+esc(nm)+'</b>：「'+esc(x.ask)+'」<button type="button" class="evFind" data-evact="find" data-who="'+esc(x.who)+'">去找'+esc(nm)+'</button></span>';}).join('')+'</span>':'';
     return {kind:'after',key:'after|'+a.id+'|'+(a.open?1:0),bubble:'',
-      html:'<div class="evBar evAfter'+(mob?' evMob':'')+'" role="group" aria-label="事件剛結束"><span class="evTag evTagDone">剛發生</span><span class="evCtl"><button type="button" class="evAskBtn" data-evact="ask" aria-expanded="'+(a.open?'true':'false')+'">可以問的問題</button><button type="button" class="evClose" data-evact="close" aria-label="關閉">✕</button></span><span class="evBody"><b class="evCap">'+esc(g?g.title:a.id)+'</b>'+open+'</span></div>'};
+      html:'<div class="evBar evAfter'+(mob?' evMob':'')+(a.open?' evOpen':'')+'" role="group" aria-label="事件剛結束"><span class="evTag evTagDone">剛發生</span><span class="evCtl"><button type="button" class="evAskBtn" data-evact="ask" aria-expanded="'+(a.open?'true':'false')+'">可以問的問題</button><button type="button" class="evClose" data-evact="close" aria-label="關閉">'+ic('x','✕')+'</button></span><span class="evBody"><b class="evCap">'+esc(g?g.title:a.id)+'</b>'+open+'</span></div>'};
+  }
+  /* 10-18：別間房的通知與「剛結束的可以問的問題」同時存在時並列（通知一行、可以問的問題一行），不再讓通知把可以問的問題蓋掉 */
+  function bothState(cur,ns,a){
+    var n=noticeState(cur,ns),f=afterState(cur,a);
+    return {kind:'both',key:'both|'+n.key+'|'+f.key,bubble:'',html:'<div class="evStack">'+n.html+f.html+'</div>'};
   }
   function wanted(cur){
     var p=cur.eventPlayback;if(p){var g=guide(p.id);if(g)return playState(cur,g,p);}
-    var ns=cur._evNotices||[];if(ns.length)return noticeState(cur,ns);
-    var a=cur._evAfter;if(a&&Date.now()<a.until)return afterState(cur,a);
+    var ns=cur._evNotices||[],a=cur._evAfter,live=!!(a&&Date.now()<a.until);
+    if(ns.length&&live)return bothState(cur,ns,a);
+    if(ns.length)return noticeState(cur,ns);
+    if(live)return afterState(cur,a);
     return null;
   }
   /* 別人（room.js／m.js 的 eventWatch、refreshTicker）用這個判斷：事件條在用的時候不要去改寫同一格 */

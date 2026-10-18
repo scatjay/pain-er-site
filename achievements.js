@@ -98,8 +98,8 @@
     function card(title, s, desc) {
       var stars = '★'.repeat(s.lv) + '☆'.repeat(3 - s.lv), todo = s.next ? s.next.items.filter(function (i) { return !i.ok; }) : [];
       return '<div class="skCard"><div class="skHead"><b>' + esc(title) + '</b><span class="skStars" aria-label="第 ' + s.lv + ' 級">' + stars + '</span></div>' +
-        '<div class="skLv">Lv.' + s.lv + '「' + esc(s.name) + '」' + (fresh && fresh[title] ? ' <span class="skNew">🎉 剛升級</span>' : '') + '</div><div class="muted" style="font-size:12px">' + esc(desc) + '</div>' +
-        (s.next ? '<div style="margin-top:6px;font-size:13px"><b>升到 Lv.' + s.next.lv + '「' + esc(s.next.name) + '」還差：</b><ul class="skTodo">' + (todo.length ? todo.map(function (i) { return '<li>' + esc(i.text) + '</li>'; }).join('') : '<li>都達到了，再問一題就會升級</li>') + '</ul></div>' : '<div style="margin-top:6px;font-size:13px">🏆 已經是最高級。</div>') + '</div>';
+        '<div class="skLv">Lv.' + s.lv + '「' + esc(s.name) + '」' + (fresh && fresh[title] ? ' <span class="skNew">🎉 剛升級</span>' : '') + '</div><div class="muted" style="font-size:var(--fs-1)">' + esc(desc) + '</div>' +
+        (s.next ? '<div style="margin-top:6px;font-size:var(--fs-2)"><b>升到 Lv.' + s.next.lv + '「' + esc(s.next.name) + '」還差：</b><ul class="skTodo">' + (todo.length ? todo.map(function (i) { return '<li>' + esc(i.text) + '</li>'; }).join('') : '<li>都達到了，再問一題就會升級</li>') + '</ul></div>' : '<div style="margin-top:6px;font-size:var(--fs-2)">🏆 已經是最高級。</div>') + '</div>';
     }
     return '<div class="skRow">' + card('探問', sk.ask, '怎麼問，才問得出對方遇到的事和真正的需要') + card('情境感知', sk.ctx, '找對人、看對地方，把不同人說的話對起來') + '</div>';
   }
@@ -182,9 +182,9 @@
   function html(m, esc) {
     esc = esc || function (s) { return String(s); };
     var bs = badges(m), got = bs.filter(function (b) { return b.ok; }).length;
-    var stat = '<div class="row" style="gap:10px;flex-wrap:wrap;font-size:13px">' + [['訪談過', m.interviewees + ' 人'], ['房間', m.rooms + ' 間'], ['便利貼', m.cards + ' 張'], ['事件', m.events + ' 件'], ['即時提問', m.chatTurns + ' 題'], ['累計', m.playMin + ' 分鐘']].map(function (x) { return '<span><b>' + x[0] + '</b> ' + x[1] + '</span>'; }).join('') + '</div>';
+    var stat = '<div class="row" style="gap:10px;flex-wrap:wrap;font-size:var(--fs-2)">' + [['訪談過', m.interviewees + ' 人'], ['房間', m.rooms + ' 間'], ['便利貼', m.cards + ' 張'], ['事件', m.events + ' 件'], ['即時提問', m.chatTurns + ' 題'], ['累計', m.playMin + ' 分鐘']].map(function (x) { return '<span><b>' + x[0] + '</b> ' + x[1] + '</span>'; }).join('') + '</div>';
     var grid = '<div class="achGrid">' + bs.map(function (b) { return '<div class="ach ' + (b.ok ? 'on' : '') + '" title="' + esc(b.desc) + '"><div class="achIcon">' + b.icon + '</div><div class="achName">' + esc(b.name) + '</div><div class="achDesc">' + esc(b.desc) + '</div></div>'; }).join('') + '</div>';
-    return '<p class="muted" style="font-size:12px;margin:4px 0">徽章 ' + got + ' / ' + bs.length + '。這不是分數，只是記錄你在急診室裡做過的事。</p>' + stat + grid;
+    return '<p class="muted" style="font-size:var(--fs-1);margin:4px 0">徽章 ' + got + ' / ' + bs.length + '。這不是分數，只是記錄你在急診室裡做過的事。</p>' + stat + grid;
   }
   return { DEFS: DEFS, BOARD: BOARD, CORE_IDS: CORE_IDS, SPECIAL: SPECIAL, metrics: metrics, noteQuestion: noteQuestion, chatStats: chatStats, skills: skills, skillsHtml: skillsHtml, badges: badges, earned: earned, summary: summary, leaderboard: leaderboard, html: html };
 });

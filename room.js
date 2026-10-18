@@ -19,7 +19,7 @@
   /* 10-13：提示訊息原本寫在左下角的事件字幕那一格，而那一格被底部「去過的房間」那條蓋住，等於沒顯示。改成浮在那條上方、置中的黃底框，4 秒後消失。 */
   function toast(msg) {
     var t = $('toastBox'), st = $('stage'), tb = $('travelBar');
-    if (!t) { t = document.createElement('div'); t.id = 'toastBox'; t.setAttribute('role', 'status'); t.style.cssText = 'position:absolute;left:50%;transform:translateX(-50%);z-index:2147483200;max-width:min(560px,86%);background:var(--yellow);color:#1e1e1e;border:3px solid #1e1e1e;border-radius:10px;padding:6px 14px;font-size:14px;font-weight:700;line-height:1.45;box-shadow:3px 3px 0 #1e1e1e;pointer-events:none;text-align:center'; (st || document.body).appendChild(t); }
+    if (!t) { t = document.createElement('div'); t.id = 'toastBox'; t.setAttribute('role', 'status'); t.style.cssText = 'position:absolute;left:50%;transform:translateX(-50%);z-index:2147483200;max-width:min(560px,86%);background:var(--yellow);color:var(--ink-fixed);border:var(--bw) solid var(--ink-fixed);border-radius:var(--r-m);padding:6px 14px;font-size:var(--fs-3);font-weight:700;line-height:1.45;box-shadow:var(--sh) var(--sh) 0 var(--ink-fixed);pointer-events:none;text-align:center'; (st || document.body).appendChild(t); }
     t.style.bottom = ((tb ? tb.offsetHeight : 40) + 22) + 'px'; t.textContent = msg; t.style.display = 'block';
     clearTimeout(toast._t); toast._t = setTimeout(function () { t.style.display = 'none'; }, 4000);
   }
@@ -402,7 +402,7 @@
     var now = Date.now(), dt = cur.tickT ? (now - cur.tickT) / 1000 : 0; cur.tickT = now;
     if (clockActive()) cur.clock = CLK.tick(cur.clock, Math.min(dt, 1));
     advanceWalk(Math.min(dt,1));
-    $('clock').textContent = simText(cur.clock); (function(){var D=window.ERG_DAYLIGHT,c=$('clock'),el=$('dayIcon');if(!D||!D.icon||!c)return;if(!el){el=document.createElement('span');el.id='dayIcon';el.style.cssText='font-size:18px;line-height:1';c.parentNode.insertBefore(el,c);}var ic=D.icon(S.simMin());if(el.textContent!==ic){el.textContent=ic;el.setAttribute('aria-label',ic==='🌙'?'現在是晚上':'現在是白天');el.title=ic==='🌙'?'現在是晚上':'現在是白天';}})();
+    $('clock').textContent = simText(cur.clock); (function(){var D=window.ERG_DAYLIGHT,c=$('clock'),el=$('dayIcon');if(!D||!D.icon||!c)return;if(!el){el=document.createElement('span');el.id='dayIcon';el.style.cssText='font-size:var(--fs-4);line-height:1';c.parentNode.insertBefore(el,c);}var ic=D.icon(S.simMin());if(el.textContent!==ic){el.textContent=ic;el.setAttribute('aria-label',ic==='🌙'?'現在是晚上':'現在是白天');el.title=ic==='🌙'?'現在是晚上':'現在是白天';}})();
     if (CLK.isDayOver(cur.clock) && !cur.dayOverShown) { cur.dayOverShown = true; toast('本班急診時段結束（07:00）。去寫結論吧。'); }
     persist(false);
     eventWatch(); if (window.ERG_EVENT_UI) window.ERG_EVENT_UI.tick(cur,S); if(window.ERG_ROTATION_UI)window.ERG_ROTATION_UI.tick(S);
@@ -580,7 +580,7 @@
     var st = cur.api.getAppState(), z = st.zoom.value, sx = st.scrollX, sy = st.scrollY, key = z + '|' + sx + '|' + sy + '|' + (cur._tn || 0);
     var ov = $('overlay'), nodes = ov.children, n = nodes.length, i, el;
     var frame=$('stageFrame'); if(frame){frame.style.display=cur.stageMode==='map'?'none':'block';frame.style.bottom=(($('travelBar')?$('travelBar').offsetHeight:40)+18)+'px';}
-    var mask=$('boardMask'); if(mask){if(cur.stageMode==='map'){mask.style.display='none';}else{var mr=(cur.walk&&cur.focus)?cur.focus:stageRect(),a=screenPos(mr.x,mr.y),b=screenPos(mr.x+mr.w,mr.y+mr.h);mask.style.borderRadius='14px';mask.style.display='block';mask.style.position='absolute';mask.style.left=a.x+'px';mask.style.top=a.y+'px';mask.style.width=Math.max(0,b.x-a.x)+'px';mask.style.height=Math.max(0,b.y-a.y)+'px';mask.style.zIndex='5';mask.style.pointerEvents='none';mask.style.boxShadow='0 0 0 3000px var(--panel)';   /* 10-12：原本是近黑色，楊老師說像黑邊；改成頁面底色 */}}
+    var mask=$('boardMask'); if(mask){if(cur.stageMode==='map'){mask.style.display='none';}else{var mr=(cur.walk&&cur.focus)?cur.focus:stageRect(),a=screenPos(mr.x,mr.y),b=screenPos(mr.x+mr.w,mr.y+mr.h);mask.style.borderRadius='var(--r-m)';mask.style.display='block';mask.style.position='absolute';mask.style.left=a.x+'px';mask.style.top=a.y+'px';mask.style.width=Math.max(0,b.x-a.x)+'px';mask.style.height=Math.max(0,b.y-a.y)+'px';mask.style.zIndex='5';mask.style.pointerEvents='none';mask.style.boxShadow='0 0 0 3000px var(--panel)';   /* 10-12：原本是近黑色，楊老師說像黑邊；改成頁面底色 */}}
     key += '|' + $('board').clientWidth + '|' + $('board').clientHeight;
     if (key === cur._placeKey && n === cur._placeN && !cur._dirty) return; cur._placeKey = key; cur._placeN = n; cur._dirty = false;
     for (i = 0; i < n; i++) { el = nodes[i]; if (el._wx === undefined) continue; el.style.left = ((el._wx + sx) * z) + 'px'; el.style.top = ((el._wy + sy) * z) + 'px'; }
@@ -638,7 +638,7 @@
     return ({ desk: '櫃台上的動線與文件，看誰在排隊、排多久', counter: '櫃台：注意排隊方向與告示', bed: '病床：看誰在旁邊、有沒有人解釋', screen: '螢幕：上面顯示什麼、看得懂嗎', board: '白板：寫了什麼、給誰看', device: '設備：誰在操作、要等多久', sign: '告示：字夠大嗎、位置對嗎', lightbox: '燈箱／指標：從門口看得到嗎', phone: '電話：誰在用、講什麼', scanner: '掃描儀：流程卡在哪', rack: '架子：放了什麼單張', sofa: '沙發：誰坐在這裡等', stall: '隔間：隱私夠嗎', chair: '椅子：誰坐、有沒有人站著', glass: '玻璃窗：隔著窗溝通順不順', door: '門：誰進出、有沒有人卡住' })[f.type] || '可以觀察的物件';
   }
   function onFurnitureClick(f, wx, wy) {
-    var html = '<b>' + MM.furnitureIcon(f) + ' ' + esc(f.label || f.type) + '</b><div class="popLine">' + esc(furnitureState(f)) + '</div><div class="row popBtns"><button data-act="card">記一張勘查卡</button><button class="ghost" data-act="note">記便利貼</button></div>';
+    var html = '<b>' + MM.iconHtml(MM.furnitureIcon(f)) + ' ' + esc(f.label || f.type) + '</b><div class="popLine">' + esc(furnitureState(f)) + '</div><div class="row popBtns"><button data-act="card">記一張勘查卡</button><button class="ghost" data-act="note">記便利貼</button></div>';
     var p = showPop(wx, wy, html);
     Array.prototype.forEach.call(p.querySelectorAll('[data-act]'), function (b) {
       b.onclick = function () {
@@ -752,7 +752,7 @@
   }
   function popGame() {
     var box = $('evGameBox'), n = 0, left = 5;
-    box.innerHTML = '<div style="position:relative;height:200px;border:4px solid var(--ink);border-radius:10px;margin-top:8px;overflow:hidden" id="pg"></div><div id="pgInfo" class="muted">點掉泡泡！剩 5 秒</div>';
+    box.innerHTML = '<div style="position:relative;height:200px;border:var(--bw) solid var(--ink);border-radius:var(--r-m);margin-top:8px;overflow:hidden" id="pg"></div><div id="pgInfo" class="muted">點掉泡泡！剩 5 秒</div>';
     var pg = $('pg');
     function spawn() { var b = document.createElement('button'); b.className = 'pop'; b.style.left = Math.random() * (pg.clientWidth - 50) + 'px'; b.style.top = Math.random() * 150 + 'px'; b.setAttribute('aria-label', '泡泡'); b.onclick = function () { n += 1; b.remove(); }; pg.appendChild(b); }
     spawn(); var sp = setInterval(spawn, 450);

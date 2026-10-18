@@ -6,7 +6,7 @@
   (function () {
     var need = ['ERG_CORE', 'ERG_AVATAR', 'ERG_CHARS', 'ERG_CHECKPOINTS', 'ERG_LOGIC', 'ERG_CASES', 'ERG_LAYOUT', 'ERG_PERSONAS', 'ERG_DATA'], miss = need.filter(function (k) { return !window[k]; });
     if (!miss.length) return;
-    var d = document.createElement('div'); d.id = 'loadFail'; d.style.cssText = 'position:fixed;inset:0;z-index:2147483646;background:#fff;color:#1e1e1e;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:24px;text-align:center;font-size:18px';
+    var d = document.createElement('div'); d.id = 'loadFail'; d.style.cssText = 'position:fixed;inset:0;z-index:2147483646;background:#fff;color:var(--ink-fixed);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:24px;text-align:center;font-size:var(--fs-4)';
     d.innerHTML = '<b>頁面沒有載入完整</b><div>可能是網路不穩。請按下面的按鈕重新整理。</div>'; var b = document.createElement('button'); b.textContent = '重新整理'; b.onclick = function () { location.reload(); }; d.appendChild(b);
     (document.body || document.documentElement).appendChild(d); if (window.console) console.error('缺少程式檔：' + miss.join(', '));
     throw new Error('頁面沒有載入完整：' + miss.join(', '));
@@ -129,8 +129,8 @@
     activeRef.once('value').then(function (s) {
       var v = s.val();
       if (v && v.dev && v.dev !== DEV) {
-        sysOverlay('<b style="font-size:18px">這個帳號已經在另一個地方開著</b><p style="margin:8px 0">另一邊是' + (v.ua === 'mobile' ? '手機' : '電腦') + '。同一個帳號一次只能在一個地方使用。</p>' +
-          '<div class="row"><button id="devTake">改用這裡</button><button class="ghost" id="devCancel">取消</button></div><p class="muted" style="font-size:12px;margin:8px 0 0">按「改用這裡」之後，另一邊會停下來，並顯示「已在別的地方登入」。進度存在雲端，不會不見。</p>');
+        sysOverlay('<b style="font-size:var(--fs-4)">這個帳號已經在另一個地方開著</b><p style="margin:8px 0">另一邊是' + (v.ua === 'mobile' ? '手機' : '電腦') + '。同一個帳號一次只能在一個地方使用。</p>' +
+          '<div class="row"><button id="devTake">改用這裡</button><button class="ghost" id="devCancel">取消</button></div><p class="muted" style="font-size:var(--fs-1);margin:8px 0 0">按「改用這裡」之後，另一邊會停下來，並顯示「已在別的地方登入」。進度存在雲端，不會不見。</p>');
         $('devTake').onclick = take; $('devCancel').onclick = function () { hideOverlay(); if ($('logoutBtn')) $('logoutBtn').click(); };
       } else take();
     }, function () { take(); });
@@ -141,7 +141,7 @@
     /* 先取消「斷線時刪除」再斷線：那個節點現在是另一邊的，不能被這一邊斷線時順手刪掉 */
     try { activeRef.off(); activeRef.onDisconnect().cancel(off); } catch (e) { off(); }
     setTimeout(off, 1500);
-    sysOverlay('<b style="font-size:18px">這個帳號剛剛在另一個地方登入了</b><p style="margin:8px 0">同一個帳號一次只能在一個地方使用，所以這裡已經停止，不會再存檔。你的進度在雲端，另一邊接著做就可以。</p><div class="row"><button id="devBack">改回這裡使用</button></div>');
+    sysOverlay('<b style="font-size:var(--fs-4)">這個帳號剛剛在另一個地方登入了</b><p style="margin:8px 0">同一個帳號一次只能在一個地方使用，所以這裡已經停止，不會再存檔。你的進度在雲端，另一邊接著做就可以。</p><div class="row"><button id="devBack">改回這裡使用</button></div>');
     $('devBack').onclick = function () { location.reload(); };
   }
   function readBindForm() {
@@ -257,20 +257,20 @@
     var look = avDraft.look, lit = APP.progress ? APP.progress() : APP.lit, litN = AV.prog(lit).lit;
     $('avPreview').innerHTML = charSvg(look, 7) + '<div style="font-weight:900;margin-top:4px">' + esc(APP.me.sid) + '</div>';
     $('avGrid').innerHTML = AV.PRESETS.map(function (p, i) {
-      return '<button class="avCard' + (avDraft.preset === p.id ? ' on' : '') + '" data-preset="' + p.id + '">' + charSvg(p.look, i + 1) + '<div style="font-size:12px;font-weight:900">' + esc(p.name) + '</div></button>';
+      return '<button class="avCard' + (avDraft.preset === p.id ? ' on' : '') + '" data-preset="' + p.id + '">' + charSvg(p.look, i + 1) + '<div style="font-size:var(--fs-1);font-weight:900">' + esc(p.name) + '</div></button>';
     }).join('');
     Array.prototype.forEach.call($('avGrid').querySelectorAll('[data-preset]'), function (b) {
       b.onclick = function () { var p = AV.preset(b.getAttribute('data-preset')); avDraft = { preset: p.id, look: CORE.clone(p.look) }; renderAvatar(); };
     });
     var html = '';
     ['head', 'body', 'hair', 'eyes', 'mouth', 'prop', 'pattern', 'cheek'].forEach(function (part) {
-      html += '<div><div style="font-size:13px;font-weight:900">' + AV.LABEL[part] + '</div><div class="partRow">' +
+      html += '<div><div style="font-size:var(--fs-2);font-weight:900">' + AV.LABEL[part] + '</div><div class="partRow">' +
         AV.options(part, lit).map(function (o) {
           return '<button class="opt pill' + (look[part] === o.value ? ' on' : '') + (o.locked ? ' lock' : '') + '" data-part="' + part + '" data-val="' + esc(o.value) + '"' + (o.locked ? ' disabled title="' + esc(o.hint) + '"' : '') + '>' + esc(o.name) + (o.locked ? ' 🔒' : '') + '</button>';
         }).join('') + '</div></div>';
     });
     [['skin', '膚色'], ['outfit', '衣服顏色']].concat(look.hair === 'cap' || look.hair === 'beanie' ? [['capColor', '帽子顏色']] : []).concat(['bun', 'pony', 'long', 'spiky'].indexOf(look.hair) >= 0 ? [['hairColor', '髮色']] : []).forEach(function (pc) {
-      html += '<div><div style="font-size:13px;font-weight:900">' + pc[1] + '</div><div class="partRow">' + AV.options(pc[0], lit).map(function (o) {
+      html += '<div><div style="font-size:var(--fs-2);font-weight:900">' + pc[1] + '</div><div class="partRow">' + AV.options(pc[0], lit).map(function (o) {
         return '<button class="sw' + (look[pc[0]] === o.value ? ' on' : '') + '" style="background:' + o.value + (o.locked ? ';opacity:.35' : '') + '" data-part="' + pc[0] + '" data-val="' + esc(o.value) + '"' + (o.locked ? ' disabled' : '') + ' aria-label="' + pc[1] + ' ' + o.value + '"></button>';
       }).join('') + '</div></div>';
     });
@@ -296,7 +296,7 @@
     if (!$('caseSel').children.length) $('caseSel').innerHTML = CASELIST.map(function (c, i) { return '<option value="' + esc(c.meta.id) + '" title="' + esc(c.meta.name) + '">' + (i + 1) + '. ' + esc(c.meta.short) + '</option>'; }).join('');   /* 10-12：選單用「編號. 短名」，長名稱在手機會被切掉 */
     /* 10-16：案例共 N 種，每次進大廳隨機先選一種（避免大家都只進第一種），旁邊寫明共幾種、可以自己換 */
     (function () { var sel = $('caseSel'), n = CASELIST.length; if (!sel || !n) return; sel.selectedIndex = Math.floor(Math.random() * n);
-      var h = $('caseHint'); if (!h) { h = document.createElement('div'); h.id = 'caseHint'; h.className = 'muted'; h.style.cssText = 'font-size:13px;margin:2px 0 4px'; sel.parentNode.parentNode.insertBefore(h, sel.parentNode.nextSibling); }
+      var h = $('caseHint'); if (!h) { h = document.createElement('div'); h.id = 'caseHint'; h.className = 'muted'; h.style.cssText = 'font-size:var(--fs-2);margin:2px 0 4px'; sel.parentNode.parentNode.insertBefore(h, sel.parentNode.nextSibling); }
       h.textContent = '案例共 ' + n + ' 種（每次進來先隨機選一種，可以自己換），每一種的人物、線索和結論都不一樣。'; })();
     renderLobby();
   }
@@ -306,8 +306,8 @@
       var first = e.ev.list.filter(function (x) { return !x.ok; })[0];
       box.innerHTML = '<div class="row"><b style="flex:1">我的檢核點　' + e.ev.lit + ' / ' + e.ev.total + (e.ev.passed ? '　<span class="tag ok">全部完成</span>' : '') + '</b></div>' +
         '<div class="dots" style="margin:6px 0">' + e.ev.list.map(function (x) { return '<i class="' + (x.ok ? 'lit' : '') + '" title="' + esc(x.label) + '" style="width:20px;height:20px"></i>'; }).join('') + '</div>' +
-        (e.ev.next ? '<div id="lobbyNext" style="margin:6px 0;padding:6px 10px;border:3px solid var(--ink);border-radius:10px;background:var(--yellow);color:#1e1e1e;font-size:14px"><b>下一步</b>　' + esc(e.ev.next.text) + '</div>' : '') +
-        '<details id="lobbyCk"' + (window.innerWidth >= 900 ? ' open' : '') + '><summary style="cursor:pointer;font-size:13px" class="muted">六個檢核點要做什麼（完成 ✔、還沒 ✘）</summary>' + window.ERG_CHECKPOINTS.listHtml(e.ev, { compact: true }) + '</details>';
+        (e.ev.next ? '<div id="lobbyNext" style="margin:6px 0;padding:6px 10px;border:var(--bw) solid var(--ink);border-radius:var(--r-m);background:var(--yellow);color:var(--ink-fixed);font-size:var(--fs-3)"><b>下一步</b>　' + esc(e.ev.next.text) + '</div>' : '') +
+        '<details id="lobbyCk"' + (window.innerWidth >= 900 ? ' open' : '') + '><summary style="cursor:pointer;font-size:var(--fs-2)" class="muted">六個檢核點要做什麼（完成 ✔、還沒 ✘）</summary>' + window.ERG_CHECKPOINTS.listHtml(e.ev, { compact: true }) + '</details>';
     }
     /* 三個班共用一個場次，房間會有一兩百間：我的房間全列；別人的房間先列「房主在線」「同班」「比較新」的，最多 20 間，其餘請同學給代碼。 */
     var rooms = DB.listRooms(APP.SESS), tb = $('roomRows'); tb.innerHTML = '';
@@ -318,11 +318,11 @@
     mineRows.concat(others.slice(0, CAP)).forEach(function (x) {
       var r = x.r, full = x.full, mine = x.mine;
       var tr = document.createElement('tr');
-      tr.innerHTML = '<td><b>' + esc(r.code) + '</b>' + (mine ? ' <span class="tag">我在裡面</span>' : (x.online ? ' <span class="tag ok">在線</span>' : '')) + '</td><td>' + esc(caseMeta(full.case || 'sms').short || caseMeta(full.case || 'sms').name) + '・' + (full.shift === 'night' ? '夜班' : '日班') + '</td><td>' + esc(full.hostName || r.host) + (full.cls ? ' <span class="muted" style="font-size:12px">' + esc(full.cls) + '</span>' : '') + '</td><td title="這間房到現在一共有幾位進來過（滿 4 位之後新來的只能旁觀）">' + r.count + ' 人' + (r.count >= 4 ? '（滿）' : '') + '</td><td></td>';
+      tr.innerHTML = '<td><b>' + esc(r.code) + '</b>' + (mine ? ' <span class="tag">我在裡面</span>' : (x.online ? ' <span class="tag ok">在線</span>' : '')) + '</td><td>' + esc(caseMeta(full.case || 'sms').short || caseMeta(full.case || 'sms').name) + '・' + (full.shift === 'night' ? '夜班' : '日班') + '</td><td>' + esc(full.hostName || r.host) + (full.cls ? ' <span class="muted" style="font-size:var(--fs-1)">' + esc(full.cls) + '</span>' : '') + '</td><td title="這間房到現在一共有幾位進來過（滿 4 位之後新來的只能旁觀）">' + r.count + ' 人' + (r.count >= 4 ? '（滿）' : '') + '</td><td></td>';
       var b = document.createElement('button'); b.className = 'ghost'; b.textContent = mine ? '回去' : (r.count >= 4 ? '旁觀' : '加入');
       b.onclick = function () { joinCode(r.code); }; tr.lastChild.appendChild(b); tb.appendChild(tr);
     });
-    var more = $('roomsMore'); if (!more) { more = document.createElement('div'); more.id = 'roomsMore'; more.className = 'muted'; more.style.cssText = 'font-size:13px;margin-top:6px'; var nr = $('noRooms'); nr.parentNode.insertBefore(more, nr.nextSibling); }
+    var more = $('roomsMore'); if (!more) { more = document.createElement('div'); more.id = 'roomsMore'; more.className = 'muted'; more.style.cssText = 'font-size:var(--fs-2);margin-top:6px'; var nr = $('noRooms'); nr.parentNode.insertBefore(more, nr.nextSibling); }
     more.textContent = others.length > CAP ? ('另外還有 ' + (others.length - CAP) + ' 間沒有列出來。要進同學的房間，請他把四個字的房間代碼給你，在上面的「加入」輸入。') : '';
     $('noRooms').style.display = tb.children.length ? 'none' : 'block';
   }

@@ -8,6 +8,7 @@
 
   var S = window.ERG_ROOM = { cur: null }, cur = null;
   function roomName(id) { var r = LAYOUT.room(id); return r ? r.name : id; }
+  function ic(n, fb) { var I = window.ERG_ICONS; return (I && I[n]) || fb; }   /* 10-18 圖示：沒載入 icons.js 就退回 emoji */
   function toTop() { try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) { window.scrollTo(0, 0); } }
   function toast(msg, onTap) {
     /* 10-13：提示訊息原本寫在場景下面的事件字幕那一格，但那一格每秒會被事件字幕更新蓋掉，而且整頁能捲之後可能根本不在畫面上。
@@ -144,7 +145,7 @@
   function setLoc(roomId, silent) {
     if (!cur) return; var rm = LAYOUT.room(roomId); if (!rm) return;
     cur.player.loc = roomId; cur.watchRoom=roomId; cur.me = spotIn(roomId); cur.sceneKey = ''; cur._locT = Date.now(); hidePop();
-    $('locLabel').textContent = (MM.ROOM_ICON[roomId] || '') + ' ' + rm.name;
+    $('locLabel').innerHTML = MM.iconHtml(MM.ROOM_ICON[roomId] || '') + ' ' + esc(rm.name);
     $('caption').textContent = cur.world.captionFor(roomId) || rm.name;
     if (!silent) DB.appendEvent(cur.code, { kind: 'move', env: APP.me.sid, to: roomId });
     var visited=cur.player.visited||[];cur.player.visited=[roomId].concat(visited.filter(function(x){return x!==roomId;})).slice(0,8);(cur.player.roomsSeen=cur.player.roomsSeen||{})[roomId]=true;
@@ -163,7 +164,7 @@
     var all = nearby(cur.player.loc), list = all.slice().sort(function (a, b) { return Math.hypot(a.x + a.w / 2 - hc.x, a.y + a.h / 2 - hc.y) - Math.hypot(b.x + b.w / 2 - hc.x, b.y + b.h / 2 - hc.y); }).slice(0, 6).sort(function (a, b) { return a.y - b.y || a.x - b.x; });
     var inNear = {}; list.forEach(function (r) { inNear[r.id] = true; }); inNear[cur.player.loc] = true;
     var rec = (cur.player.visited || []).filter(function (id) { return !inNear[id] && LAYOUT.room(id); }).slice(0, 4);
-    $('nav').innerHTML = '<button class="ghost" id="mapBtn" title="看整張地圖，點房間直接到">🗺️ 全部</button><b>附近：</b>' + list.map(function (r) { return '<button class="ghost chip" data-go="' + esc(r.id) + '">' + (MM.ROOM_ICON[r.id] || '') + ' ' + esc(r.name) + '</button>'; }).join('') + '<b>院外：</b><button class="ghost chip" data-go="home">🚌 病患的家</button><button class="ghost chip" data-go="clinic">🏥 回診門診</button>' + (rec.length ? '<b>去過：</b>' + rec.map(function (id) { return '<button class="ghost chip" data-visit="' + esc(id) + '">' + esc(LAYOUT.room(id).name) + '</button>'; }).join('') : '') + '<span id="navMore" aria-hidden="true">›</span>';
+    $('nav').innerHTML = '<button class="ghost" id="mapBtn" title="看整張地圖，點房間直接到">' + ic('map', '🗺️') + ' 全部</button><b>附近：</b>' + list.map(function (r) { return '<button class="ghost chip" data-go="' + esc(r.id) + '">' + (MM.ROOM_ICON[r.id] || '') + ' ' + esc(r.name) + '</button>'; }).join('') + '<b>院外：</b><button class="ghost chip" data-go="home">🚌 病患的家</button><button class="ghost chip" data-go="clinic">🏥 回診門診</button>' + (rec.length ? '<b>去過：</b>' + rec.map(function (id) { return '<button class="ghost chip" data-visit="' + esc(id) + '">' + esc(LAYOUT.room(id).name) + '</button>'; }).join('') : '') + '<span id="navMore" aria-hidden="true">›</span>';
     Array.prototype.forEach.call($('nav').querySelectorAll('[data-go],[data-visit]'), function (b) { b.onclick = function () { startTravel(b.dataset.go||b.dataset.visit); }; });
     $('mapBtn').onclick = openMap;
     var nv = $('nav'), more = $('navMore'); function hint() { more.style.display = nv.scrollLeft + nv.clientWidth >= nv.scrollWidth - 4 ? 'none' : 'flex'; } nv.onscroll = hint; hint();
@@ -196,7 +197,7 @@
     var out = cur.player.loc === 'home' || cur.player.loc === 'clinic';
     S.openModal('<div class="row" style="gap:6px"><b style="flex:1">全部房間</b><button class="ghost" id="mapZoomIn" aria-pressed="true">放大</button><button class="ghost" id="mapZoomAll" aria-pressed="false">全院</button><button class="ghost" id="mapClose">關閉</button></div>' +
       '<div class="row" style="margin-top:6px;gap:6px"><b>院外：</b><button class="ghost" data-remote="home">🚌 病患的家</button><button class="ghost" data-remote="clinic">🏥 回診門診</button></div>' +
-      '<div class="muted" style="font-size:12px;margin-top:4px">點一間房直接到</div>' +
+      '<div class="muted" style="font-size:var(--fs-1);margin-top:4px">點一間房直接到</div>' +
       '<div id="mapPan" class="mapPan zoomed" style="margin-top:8px">' + MM.svg(LAYOUT, Object.assign(MM.optsFrom(mapSrc()), { fontScale: 1.3, width: 420, clueText: true })) + '</div>' + MM.legendHtml(true));
     var pan = $('mapPan'), svg = pan.querySelector('svg');
     function centerOnMe() {
@@ -243,7 +244,7 @@
     if (!cur) return; var now = Date.now(), dt = cur.tickT ? (now - cur.tickT) / 1000 : 0; cur.tickT = now;
     if (clockActive()) cur.clock = CLK.tick(cur.clock, Math.min(dt, 1));
     advanceWalk(Math.min(dt,1));
-    $('clock').textContent = CLK.format(cur.clock); (function(){var D=window.ERG_DAYLIGHT,c=$('clock'),el=$('dayIcon');if(!D||!D.icon||!c)return;if(!el){el=document.createElement('span');el.id='dayIcon';el.style.cssText='font-size:18px;line-height:1';c.parentNode.insertBefore(el,c);}var ic=D.icon(S.simMin());if(el.textContent!==ic){el.textContent=ic;el.setAttribute('aria-label',ic==='🌙'?'現在是晚上':'現在是白天');el.title=ic==='🌙'?'現在是晚上':'現在是白天';}})(); persist(false); renderTokens(); eventWatch(); if (window.ERG_EVENT_UI) window.ERG_EVENT_UI.tick(cur,S); if(window.ERG_ROTATION_UI)window.ERG_ROTATION_UI.tick(S);
+    $('clock').textContent = CLK.format(cur.clock); (function(){var D=window.ERG_DAYLIGHT,c=$('clock'),el=$('dayIcon');if(!D||!D.icon||!c)return;if(!el){el=document.createElement('span');el.id='dayIcon';el.style.cssText='font-size:var(--fs-4);line-height:1';c.parentNode.insertBefore(el,c);}var ic=D.icon(S.simMin());if(el.textContent!==ic){el.textContent=ic;el.setAttribute('aria-label',ic==='🌙'?'現在是晚上':'現在是白天');el.title=ic==='🌙'?'現在是晚上':'現在是白天';}})(); persist(false); renderTokens(); eventWatch(); if (window.ERG_EVENT_UI) window.ERG_EVENT_UI.tick(cur,S); if(window.ERG_ROTATION_UI)window.ERG_ROTATION_UI.tick(S);
     if (CLK.isDayOver(cur.clock) && !cur.dayOverShown) { cur.dayOverShown = true; toast('本班急診時段結束（07:00）。去寫結論吧。'); }
   }
   function slowTick() { if (!cur) return; refreshTicker(); S.refreshDots(); }
@@ -325,7 +326,7 @@
   }
   function onFurnitureClick(f) {
     if ((cur.watchRoom || cur.player.loc) !== cur.player.loc) { toast('這是別間房的物件，先走過去再看。'); return; }
-    var html = '<b>' + MM.furnitureIcon(f) + ' ' + esc(f.label || f.type) + '</b><div class="popLine">' + esc(furnitureState(f)) + '</div><div class="row popBtns"><button data-act="card">記一張勘查卡</button><button class="ghost" data-act="note">記便利貼</button></div>';
+    var html = '<b>' + MM.iconHtml(MM.furnitureIcon(f)) + ' ' + esc(f.label || f.type) + '</b><div class="popLine">' + esc(furnitureState(f)) + '</div><div class="row popBtns"><button data-act="card">記一張勘查卡</button><button class="ghost" data-act="note">記便利貼</button></div>';
     var p = showPop(f.rx + (f.w || 30) / 2, f.ry, html);
     Array.prototype.forEach.call(p.querySelectorAll('[data-act]'), function (b) { b.onclick = function () { var a = b.dataset.act; hidePop(); if (a === 'card' && window.ERG_PANELS) { window.ERG_PANELS.prefill = { type: '勘查卡', text: (f.label || f.type) + '：' }; S.switchTab('cards'); } else if (a === 'note' && window.ERG_PANELS) window.ERG_PANELS.addOpenCard('便利貼', '看到：' + (f.label || f.type) + '，' + furnitureState(f) + '（' + S.simTime() + '，' + roomName(cur.player.loc) + '）'); }; });
   }
@@ -433,7 +434,7 @@
   }
   function showStrip(ev) {
     var third = ev.incident ? '警衛老陳趕到，兩個人一起被請出大門。' : (ev.text || '');
-    S.openModal('<h2 style="margin-top:0">' + esc(ev.title) + '</h2><div class="strip"><div class="panel"><span class="cap">' + esc(roomName(cur.player.loc) + '　' + S.simTime()) + '</span><div style="font-size:20px;font-weight:900;margin-top:8px">' + esc(ev.title) + '</div></div><div class="panel"><div class="big">' + esc(COMIC.sfxFor(ev)) + '</div></div><div class="panel"><span class="cap">' + esc(third) + '</span></div></div>' +
+    S.openModal('<h2 style="margin-top:0">' + esc(ev.title) + '</h2><div class="strip"><div class="panel"><span class="cap">' + esc(roomName(cur.player.loc) + '　' + S.simTime()) + '</span><div style="font-size:var(--fs-4);font-weight:900;margin-top:8px">' + esc(ev.title) + '</div></div><div class="panel"><div class="big">' + esc(COMIC.sfxFor(ev)) + '</div></div><div class="panel"><span class="cap">' + esc(third) + '</span></div></div>' +
       '<p class="muted" style="margin:10px 0 6px">三選一（模擬時間照走）：</p><div class="row"><button id="evWatch">看熱鬧（拿「目擊」便利貼）</button><button id="evCase" class="ghost">繼續查案</button></div>');
     $('evWatch').onclick = function () { if (window.ERG_PANELS) window.ERG_PANELS.addOpenCard('便利貼', '目擊：' + ev.title + '（' + S.simTime() + '，' + roomName(cur.player.loc) + '）'); toast('已記下一張「目擊」便利貼。'); S.closeModal(); };
     $('evCase').onclick = S.closeModal;

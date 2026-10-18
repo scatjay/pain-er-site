@@ -154,8 +154,8 @@
      opts.compact＝大廳用的精簡版（不印怎麼做與例子）。回傳 HTML 字串，不碰 DOM。 */
   function escHtml(s) { return String(s === undefined || s === null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function itemsHtml(x) {
-    return '<ul class="ckItems" style="margin:4px 0 0;padding-left:18px;font-size:13px;line-height:1.5">' + x.items.map(function (it) {
-      return '<li data-ok="' + (it.ok ? '1' : '0') + '">' + escHtml(it.text) + ' <b style="color:' + (it.ok ? (x.ok ? '#2b8a3e' : 'var(--ok)') : 'var(--bad)') + '">' + (it.ok ? '✔' : '✘') + '</b></li>';
+    return '<ul class="ckItems" style="margin:4px 0 0;padding-left:18px;font-size:var(--fs-2);line-height:1.5">' + x.items.map(function (it) {
+      return '<li data-ok="' + (it.ok ? '1' : '0') + '">' + escHtml(it.text) + ' <b style="color:' + (it.ok ? (x.ok ? '#1b5e2c' : 'var(--ok)') : 'var(--bad)') + '">' + (it.ok ? '✔' : '✘') + '</b></li>';
     }).join('') + '</ul>';
   }
   function listHtml(ev, opts) {
@@ -163,9 +163,9 @@
     return ev.list.map(function (x) {
       var title = '<div style="font-weight:900">' + x.id + ' ' + escHtml(x.label) + '　<span style="font-weight:400">' + escHtml(x.plain) + '</span></div>';
       if (opts.compact) return '<div class="ckRow" style="margin:6px 0">' + title + itemsHtml(x) + '</div>';
-      return '<div class="ck ' + (x.ok ? 'done' : '') + '"><div class="box" style="display:flex;align-items:center;justify-content:center">' + (x.ok ? '✔' : x.id) + '</div><div style="flex:1;min-width:0">' + title +
-        (x.ok ? '' : '<div class="muted" style="font-size:12px;margin-top:2px">' + escHtml(x.how) + '</div>') + itemsHtml(x) +
-        (x.eg && !x.ok ? '<div class="muted" style="font-size:12px;margin-top:4px;border-left:4px solid var(--yellow);padding-left:8px">' + escHtml(x.eg) + '</div>' : '') + '</div></div>';
+      return '<div class="ck ' + (x.ok ? 'done' : '') + '"><div class="box" style="display:flex;align-items:center;justify-content:center">' + (x.ok ? ((typeof window !== 'undefined' && window.ERG_ICONS && window.ERG_ICONS.check) || '✔') : x.id) + '</div><div style="flex:1;min-width:0">' + title +
+        (x.ok ? '' : '<div class="muted" style="font-size:var(--fs-1);margin-top:2px">' + escHtml(x.how) + '</div>') + itemsHtml(x) +
+        (x.eg && !x.ok ? '<div class="muted" style="font-size:var(--fs-1);margin-top:4px;border-left:var(--bw) solid var(--yellow);padding-left:8px">' + escHtml(x.eg) + '</div>' : '') + '</div></div>';
     }).join('');
   }
   function nextText(ev) { return ev.next ? ev.next.text : ''; }
