@@ -70,9 +70,9 @@
   }
   function clueBadge(r, info, compact, F, withText, dot) {
     var bx = clueBadgeBox(r, info, compact, F, withText, dot), seen = info.seen, left = info.left, done = bx.done, label = bx.label, w = bx.w, h = bx.h, fs = bx.fs, x = bx.x, y = bx.y;
-    var fill = !seen ? '#ffd43b' : (done ? '#b2f2bb' : '#ffd43b');
+    var fill = !seen ? '#fff8c5' : (done ? '#b2f2bb' : '#ffd43b'), edge = done ? '#1b5e2c' : '#a85600', dash = !seen ? ' stroke-dasharray="' + num(h * .22) + ' ' + num(h * .14) + '"' : '';   /* S3 狀態色塊：沒去過＝淡黃虛線、還剩＝黃、都記了＝綠；與圖例、去過徽章同一組色 */
     return '<g data-clue-badge="' + esc(r.id) + '" data-state="' + (!seen ? 'unseen' : (done ? 'done' : 'left')) + '"><title>' + esc(!seen ? '還沒去過：這裡有線索' : (done ? '這間的線索都記下了' : '還剩 ' + left + ' 條線索沒記')) + '</title>' +
-      '<rect x="' + num(x) + '" y="' + num(y) + '" width="' + num(w) + '" height="' + num(h) + '" rx="' + num(h * .3) + '" fill="' + fill + '" stroke="#1e1e1e" stroke-width="' + num(compact ? 4 : 2) + '"/>' +
+      '<rect x="' + num(x) + '" y="' + num(y) + '" width="' + num(w) + '" height="' + num(h) + '" rx="' + num(h * .3) + '" fill="' + fill + '" stroke="' + edge + '" stroke-width="' + num(compact ? 4 : 2) + '"' + dash + '/>' +
       '<text x="' + num(x + w / 2) + '" y="' + num(y + h / 2 + fs * .36) + '" font-size="' + num(fs) + '" font-weight="900" text-anchor="middle" fill="#1e1e1e">' + esc(label) + '</text></g>';
   }
   /* 每間房的線索狀態。clues：[{id,pin:{room}}]；markers：listMarkers 的結果（勘查卡有 clueId）；me：自己的代號（只算自己記的）。
@@ -89,8 +89,8 @@
   }
   /* 10-18 圖例：一行，放大視窗與手機「全部」用（小地圖空間不夠不放） */
   function legendHtml(collapsed) {
-    var chip = function (bg, fg, t) { return '<b style="display:inline-block;min-width:1.4em;text-align:center;background:' + bg + ';color:' + fg + ';border:2px solid #1e1e1e;border-radius:6px;padding:0 4px;margin-right:2px">' + t + '</b>'; };
-    return '<details class="ermm-legend" ' + (collapsed ? '' : 'open ') + 'style="font-size:13px;line-height:1.9;margin-top:6px"><summary data-legend-toggle="1" style="cursor:pointer;font-weight:900;min-height:32px;display:flex;align-items:center">圖例（記號是什麼意思）' + (collapsed ? '・放大時可拖曳' : '') + '</summary>📍 你在這裡　' + chip('#2f9e44', '#fff', '✓') + '去過　' + chip('#fff', '#1e1e1e', iconHtml('⚠️')) + '事件　' + chip('#495057', '#fff', '3') + '人數（藍＝有同學）　' + chip('#ffd43b', '#1e1e1e', '?') + '沒去過、有線索　' + chip('#ffd43b', '#1e1e1e', '剩 N 條') + '線索還沒記　' + chip('#b2f2bb', '#1e1e1e', '✔') + '線索都記了</details>';
+    var chip = function (bg, fg, t, edge) { return '<b style="display:inline-block;min-width:1.4em;text-align:center;background:' + bg + ';color:' + fg + ';border:2px solid ' + (edge || '#1e1e1e') + ';border-radius:6px;padding:0 4px;margin-right:2px">' + t + '</b>'; };
+    return '<details class="ermm-legend" ' + (collapsed ? '' : 'open ') + 'style="font-size:13px;line-height:1.9;margin-top:6px"><summary data-legend-toggle="1" style="cursor:pointer;font-weight:900;min-height:32px;display:flex;align-items:center">圖例（記號是什麼意思）' + (collapsed ? '・放大時可拖曳' : '') + '</summary>📍 你在這裡　' + chip('#b2f2bb', '#1e1e1e', '✓', '#1b5e2c') + '去過　' + chip('#fff', '#1e1e1e', iconHtml('⚠️')) + '事件　' + chip('#e9ecef', '#1e1e1e', '3', '#495057') + '人數　' + chip('#a5d8ff', '#1e1e1e', '3', '#1864ab') + '有同學　' + chip('#fff8c5', '#1e1e1e', '?', '#a85600') + '沒去過、有線索　' + chip('#ffd43b', '#1e1e1e', '剩 N 條', '#a85600') + '線索還沒記　' + chip('#b2f2bb', '#1e1e1e', '✔', '#1b5e2c') + '線索都記了</details>';
   }
   /* 三處地圖（桌面小地圖、桌面放大、手機全部）共用：把遊戲狀態變成 svg() 的 opts，呼叫端只補 width／fontScale。
      src：{ loc, me:{x,y}, roomsSeen, npcDots:[{x,y,kind}], players:[{x,y,label}], activeEventRooms:[id], clues, walkTarget } */
@@ -149,8 +149,8 @@
       }
       if (seen[r.id] && !isHall) {
         var vr = compact ? 28 : 15 * F, vx = compact ? r.x + vr + 8 : r.x + r.w - vr - 10, vy = compact ? r.y + r.h - vr - 8 : r.y + r.h - vr - 10;
-        out.push('<g data-visited="' + esc(r.id) + '"><title>去過了</title><circle cx="' + num(vx) + '" cy="' + num(vy) + '" r="' + num(vr) + '" fill="#2f9e44" stroke="#1e1e1e" stroke-width="' + num(vr * .15) + '"/>' +
-          '<path d="M' + num(vx - vr * .48) + ' ' + num(vy + vr * .04) + ' l' + num(vr * .32) + ' ' + num(vr * .36) + ' l' + num(vr * .62) + ' ' + num(-vr * .72) + '" fill="none" stroke="#fff" stroke-width="' + num(vr * .26) + '" stroke-linecap="round" stroke-linejoin="round"/></g>');
+        out.push('<g data-visited="' + esc(r.id) + '"><title>去過了</title><circle cx="' + num(vx) + '" cy="' + num(vy) + '" r="' + num(vr) + '" fill="#b2f2bb" stroke="#1b5e2c" stroke-width="' + num(vr * .15) + '"/>' +
+          '<path d="M' + num(vx - vr * .48) + ' ' + num(vy + vr * .04) + ' l' + num(vr * .32) + ' ' + num(vr * .36) + ' l' + num(vr * .62) + ' ' + num(-vr * .72) + '" fill="none" stroke="#1b5e2c" stroke-width="' + num(vr * .26) + '" stroke-linecap="round" stroke-linejoin="round"/></g>');
       }
       var ci = opts.clues && opts.clues[r.id];
       if (ci && ci.total > 0 && !isHall) out.push(clueBadge(r, ci, compact, F, !!opts.clueText, dotE));
@@ -181,8 +181,10 @@
     }
     (opts.eventRooms || []).forEach(function (id) {
       var r = byId[id]; if (!r) return;
-      out.push(compact ? glyph('⚠️', r.x + r.w - 10, r.y + r.h * .56 + 16, 56, 'end', ' data-event="1"')
-        : glyph('⚠️', r.x + r.w - 26, r.y + 36, 26 * F, 'end'));
+      /* S3 狀態色塊：事件＝淡紅底＋紅描邊（與房間的紅外框同一組色），圖示照舊 */
+      var ex = compact ? r.x + r.w - 10 : r.x + r.w - 26, eb = compact ? r.y + r.h * .56 + 16 : r.y + 36, es = compact ? 56 : 26 * F, ep = es * .1;
+      out.push('<rect x="' + num(ex - es - ep) + '" y="' + num(eb - es * .84 - ep) + '" width="' + num(es + ep * 2) + '" height="' + num(es + ep * 2) + '" rx="' + num(es * .25) + '" fill="#ffe3e3" stroke="#c92a2a" stroke-width="' + (compact ? 4 : 2) + '"/>');
+      out.push(compact ? glyph('⚠️', ex, eb, es, 'end', ' data-event="1"') : glyph('⚠️', ex, eb, es, 'end'));
     });
     /* 玩家自己：脈動的圈＋圖釘＋「你在這裡」標示，最後畫、壓在其他點上面 */
     var meDot = null;
@@ -199,8 +201,8 @@
       });
       rooms.forEach(function (r) {
         var c = cnt[r.id]; if (!c) return; var hall = r.type === 'hall' || r.type === 'outside', rr = hall ? Math.min(24, r.h * .36) : 24, cx = hall ? r.x + 120 : r.x + 8 + rr, cy = hall ? r.y + r.h / 2 : r.y + r.h * .6;
-        out.push('<g data-people="' + esc(r.id) + '" data-n="' + c.n + '"><title>' + esc('這間有 ' + c.n + ' 人' + (c.mates ? '（含 ' + c.mates + ' 位同學）' : '')) + '</title><circle cx="' + num(cx) + '" cy="' + num(cy) + '" r="' + num(rr) + '" fill="' + (c.mates ? '#339af0' : '#495057') + '" stroke="#1e1e1e" stroke-width="4"/>' +
-          '<text x="' + num(cx) + '" y="' + num(cy + rr * .38) + '" font-size="' + num(rr * 1.15) + '" font-weight="900" text-anchor="middle" fill="#fff">' + c.n + '</text></g>');
+        out.push('<g data-people="' + esc(r.id) + '" data-n="' + c.n + '"><title>' + esc('這間有 ' + c.n + ' 人' + (c.mates ? '（含 ' + c.mates + ' 位同學）' : '')) + '</title><circle cx="' + num(cx) + '" cy="' + num(cy) + '" r="' + num(rr) + '" fill="' + (c.mates ? '#a5d8ff' : '#e9ecef') + '" stroke="' + (c.mates ? '#1864ab' : '#495057') + '" stroke-width="4"/>' +
+          '<text x="' + num(cx) + '" y="' + num(cy + rr * .38) + '" font-size="' + num(rr * 1.15) + '" font-weight="900" text-anchor="middle" fill="#1e1e1e">' + c.n + '</text></g>');
       });
     }
     (opts.dots || []).forEach(function (d) {
@@ -262,7 +264,7 @@
         '<rect x="' + num(mx - bw / 2 + shift) + '" y="' + num(flip ? my + 52 * k : my - 98 * k) + '" width="' + num(bw) + '" height="' + num(46 * k) + '" rx="' + num(23 * k) + '" fill="#ff6b4a" stroke="#1e1e1e" stroke-width="' + num(4 * k) + '"/>' +
         '<path d="M' + num(ax - 12 * k) + ' ' + num(my - s * 54 * k) + ' L' + mx + ' ' + num(my - s * 24 * k) + ' L' + num(ax + 12 * k) + ' ' + num(my - s * 54 * k) + ' Z" fill="#ff6b4a" stroke="#1e1e1e" stroke-width="' + num(4 * k) + '" stroke-linejoin="round"/>' +
         '<rect x="' + num(ax - 11 * k) + '" y="' + num(flip ? my + 50 * k : my - 56 * k) + '" width="' + num(22 * k) + '" height="' + num(6 * k) + '" fill="#ff6b4a"/>' +
-        '<text x="' + num(mx + shift) + '" y="' + num(flip ? my + 84 * k : my - 66 * k) + '" font-size="' + num(fs2) + '" font-weight="900" text-anchor="middle" fill="#fff" stroke="#1e1e1e" stroke-width="' + num(1.2 * k) + '">📍 ' + lab + '</text></g>');
+        '<text x="' + num(mx + shift) + '" y="' + num(flip ? my + 84 * k : my - 66 * k) + '" font-size="' + num(fs2) + '" font-weight="900" text-anchor="middle" fill="#1e1e1e">📍 ' + lab + '</text></g>');
     }
     out.push('</svg>');
     return out.join('');
