@@ -45,6 +45,7 @@
       stageMode: 'room' };
     APP.show('game');
     $('roomLabel').textContent = '房間 ' + code + '・' + world.day.short + '・' + (shift === 'night' ? '夜班' : '日班') + '・' + world.meta.name;
+    if (window.ERG_CASE_TONE) window.ERG_CASE_TONE.apply(document, world.meta.id);   /* 10-19 案例色調：進房間依案例套色票（case_tone.js，桌機與手機共用） */
     buildTabs(); if(window.ERG_ROTATION_UI)window.ERG_ROTATION_UI.bind(S); buildSpeed(); buildDots();
     mountBoard();
     buildTravelControls(); refreshStageMode(); bindMusic();

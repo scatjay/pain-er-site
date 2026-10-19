@@ -29,6 +29,7 @@
       tab: 'clue', selClue: null, selNpc: null, lastSave: 0, seenEv: {}, tickT: 0, tokens: {}, soundOn: APP.me.profile.sound !== false, musicOn:APP.me.profile.music===true,amb: null,bgm:null,walk:null, mobile: true };
     APP.show('game');
     $('roomLabel').textContent = world.day.short + '・' + (shift === 'night' ? '夜班' : '日班') + '・' + world.meta.short;
+    if (window.ERG_CASE_TONE) window.ERG_CASE_TONE.apply(document, world.meta.id);   /* 10-19 案例色調：進房間依案例套色票（case_tone.js，桌機與手機共用） */
     cur.singleRoom = true;   /* 手機一次只看一間房；事件演出用這個旗標決定鏡頭不離開玩家所在的房間 */
     buildTabs(); if(window.ERG_ROTATION_UI)window.ERG_ROTATION_UI.bind(S); buildDots(); updateSpeedBtn();bindMusic();
     if (window.ERG_PANELS) window.ERG_PANELS.renderAll();

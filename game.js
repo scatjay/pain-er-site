@@ -306,14 +306,95 @@
       h.textContent = '案例共 ' + n + ' 種（每次進來先隨機選一種，可以自己換），每一種的人物、線索和結論都不一樣。'; })();
     renderLobby();
   }
+  /* ───── 第 2 週（2/3）：檢核點＋給你的指引＋回應指引（10-19 楊老師；檢核規則在 week2.js） ─────
+     指引：er/{場次}/guide/{學號}（tools/er_guide_publish.py 發布，不含姓名）；回應：er/{場次}/guideResp/{學號} = { a, b, c, t }。
+     兩個都只在進大廳時各讀一次（不訂閱），送出時寫一次。 */
+  var GUIDE = { loaded: false, busy: false, g: null, r: null, sid: '' };
+  function loadGuide() {
+    var sid = APP.me.sid; if (!sid || !ONLINE || GUIDE.busy || (GUIDE.loaded && GUIDE.sid === sid)) return;
+    GUIDE.busy = true; var fdb = firebase.database(), base = 'er/' + APP.SESS + '/';
+    Promise.all([fdb.ref(base + 'guide/' + sid).once('value'), fdb.ref(base + 'guideResp/' + sid).once('value')]).then(function (v) {
+      GUIDE.g = v[0].val(); GUIDE.r = v[1].val(); GUIDE.loaded = true; GUIDE.sid = sid; GUIDE.busy = false;
+      if ($('lobby').classList.contains('on')) renderLobby();
+    }, function () { GUIDE.busy = false; GUIDE.loaded = true; GUIDE.sid = sid; });
+  }
+  function week2Ctx() {
+    var sid = String(APP.me.sid), pf = (APP.me.profile && APP.me.profile.progress) || {}, sc = window.ERG_MY_SCORE || {}, seen = {};
+    DB.listRooms(APP.SESS).forEach(function (r) { var x = DB.getRoom(r.code) || {}; if (x.members && x.members[sid]) seen[x.case || 'sms'] = 1; });
+    var g = GUIDE.g || {}, cur = { ask: Number(pf.ask || sc.skAsk || 1), ctx: Number(pf.ctx || sc.skCtx || 1), badges: Number(pf.badges || (sc.badgeIds || []).length || 0) };
+    return { sk: { ask: cur.ask, ctx: cur.ctx }, badges: cur.badges, cases: Object.keys(seen).length, base: g.base || (APP.me.profile && APP.me.profile.w2base) || cur, resp: GUIDE.r || {}, hasGuide: !!(g.items && g.items.length), guide: g };
+  }
+  function guideHtml() {
+    var g = GUIDE.g;
+    if (!ONLINE) return '';
+    if (!GUIDE.loaded) return '<div class="muted" style="font-size:var(--fs-2)">正在讀取給你的指引…</div>';
+    if (!g || !g.items || !g.items.length) return '<div class="muted" style="font-size:var(--fs-2)">目前沒有給你的個別指引。照上面四項做，「回應指引」那一格寫你這週做了哪些改善就可以。</div>';
+    return '<details id="guideBox" open><summary style="cursor:pointer;font-weight:900">📩 給你的指引（依你 10/19 的進度寫的，共 ' + g.items.length + ' 件）</summary>' +
+      '<ol style="margin:6px 0 0;padding-left:20px;font-size:var(--fs-2);line-height:1.55">' + g.items.map(function (i) {
+        return '<li style="margin:6px 0"><b>' + esc(i.title) + '</b><div>怎麼做：' + esc(i.how) + '</div>' +
+          (i.qs && i.qs.length ? '<div>可以這樣問：' + i.qs.map(function (q) { return esc(q); }).join('　') + '</div>' : '') +
+          '<div><b>怎麼算完成：</b>' + esc(i.criteria) + '</div><div class="muted">什麼時候做：' + esc(i.when) + (i.where ? '｜在哪裡看進度：' + esc(i.where) : '') + '</div>' +
+          (i.small ? '<div class="muted">卡住時先做這一小步：' + esc(i.small) + '</div>' : '') + '</li>';
+      }).join('') + '</ol></details>';
+  }
+  function week2Html() {
+    var c = week2Ctx(), ev = window.ERG_WEEK2.evaluate(c), r = c.resp || {}, MIN = window.ERG_WEEK2.RESP_MIN;
+    var ta = function (k, label, ph) { return '<label style="display:block;margin:6px 0 2px;font-size:var(--fs-2)"><b>' + label + '</b></label><textarea id="gr_' + k + '" rows="2" maxlength="400" placeholder="' + esc(ph) + '" style="width:100%;box-sizing:border-box">' + esc(GUIDE.draft && GUIDE.draft[k] !== undefined ? GUIDE.draft[k] : (r[k] || '')) + '</textarea>'; };
+    return '<div id="week2Box"><div class="row"><b style="flex:1;font-size:var(--fs-4)">第 2 週（2/3）這週要做的事　' + ev.lit + ' / ' + ev.total + (ev.passed ? '　<span class="tag ok">全部完成</span>' : '') + '</b></div>' +
+      '<div class="muted" style="font-size:var(--fs-2);margin:2px 0 6px">這週繼續升級技能、追加成就，<b>最重要的是照「給你的指引」去做，並寫下你做了什麼</b>。10/20 到 W8 結束全天都可以訪談。第 1 週還沒完成的，下面可以繼續做。</div>' +
+      (ev.next ? '<div id="w2Next" style="margin:6px 0;padding:6px 10px;border:var(--bw) solid var(--ink);border-radius:var(--r-m);background:var(--yellow);color:var(--ink-fixed);font-size:var(--fs-3)"><b>這週下一步</b>　' + esc(ev.next.text) + '</div>' : '') +
+      window.ERG_CHECKPOINTS.listHtml(ev, { compact: true }) +
+      '<div style="margin-top:8px">' + guideHtml() + '</div>' +
+      (ONLINE ? '<div id="guideResp" style="margin-top:8px"><b>✍️ 回應指引</b>　<span class="muted" style="font-size:var(--fs-1)">每格 ' + MIN + ' 字以上，簡單具體就好；W7 作業貼同樣的內容並附截圖</span>' +
+        ta('a', '1. 指引建議我做哪幾件？', '寫件名就好，例如：問出 8 題不一樣的問題、把探問升到 Lv.2') +
+        ta('b', '2. 我做了什麼、結果如何？', '每件一句，要具體，例如：追問了 5 次「那時候你怎麼做」，探問升到 Lv.2') +
+        ta('c', '3. 還沒做到的、卡在哪、下一步？', '例如：還沒問到病人本人，因為找不到他在哪；下次先去候診區') +
+        '<div class="row" style="margin-top:6px"><button id="grSend"' + (sentToday(r) ? ' disabled' : '') + '>' + (sentToday(r) ? '今天已送出' : (r.t ? '再次送審' : '送出審核')) + '</button><span id="grMsg" class="muted" style="font-size:var(--fs-2)">' + (sentToday(r) ? '一天只能送一次，明天可以改好再送。' : '') + '</span></div>' + reviewHtml(r) + '</div>' : '') +
+      '</div>';
+  }
+  /* 10-19 楊老師：送出後顯示「審核中」，一天只能送一次（每天晚上用 Claude 批次審一次，tools/er_guide_review.py 寫回 guideResp/{學號}/rev） */
+  function dayKey(t) { var d = new Date(t); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
+  function sentToday(r) { return !!(r && r.t && dayKey(r.t) === dayKey(Date.now())); }
+  function reviewHtml(r) {
+    if (!r || !r.t) return '';
+    var rev = r.rev, when = new Date(r.t).toLocaleString('zh-TW', { hour12: false });
+    if (!rev || Number(rev.at || 0) < Number(r.t)) return '<div id="grReview" style="margin-top:6px;padding:6px 10px;border:var(--bw-s) solid var(--ink);border-radius:var(--r-m);font-size:var(--fs-2)">🕓 <b>審核中</b>　' + esc(when) + ' 送出。每天晚上審一次，明天進大廳會看到結果。</div>';
+    return '<div id="grReview" style="margin-top:6px;padding:6px 10px;border:var(--bw) solid ' + (rev.ok ? 'var(--ok)' : 'var(--bad)') + ';border-radius:var(--r-m);font-size:var(--fs-2)">' + (rev.ok ? '✅ <b>通過</b>' : '↩️ <b>需要補強</b>') + '　' + esc(rev.fb || '') + (rev.ok ? '' : '<div class="muted">照上面的建議改好，明天可以再送一次。</div>') + '</div>';
+  }
+  /* 房間裡的「檢核」分頁也顯示第 2 週（不含指引全文與回應表單：那兩個在大廳） */
+  APP.week2Summary = function () {
+    if (!window.ERG_WEEK2) return ''; loadGuide(); var ev = window.ERG_WEEK2.evaluate(week2Ctx());
+    return '<div id="cpWeek2" class="card" style="margin:0 0 10px;padding:8px 12px"><div class="row"><b style="flex:1">第 2 週（2/3）這週要做的事　' + ev.lit + ' / ' + ev.total + '</b>' + (ev.passed ? '<span class="tag ok">全部完成</span>' : '') + '</div>' +
+      (ev.next ? '<div style="margin:4px 0;font-size:var(--fs-2)"><b>這週下一步</b>　' + esc(ev.next.text) + '</div>' : '') + window.ERG_CHECKPOINTS.listHtml(ev, { compact: true }) +
+      '<div class="muted" style="font-size:var(--fs-1)">「給你的指引」和「回應指引」在大廳（按「回大廳」）。</div></div>';
+  };
+  function bindWeek2() {
+    var b = $('grSend'); if (!b) return;
+    b.onclick = function () {
+      var v = { a: $('gr_a').value.trim(), b: $('gr_b').value.trim(), c: $('gr_c').value.trim() }, MIN = window.ERG_WEEK2.RESP_MIN, short = [];
+      ['a', 'b', 'c'].forEach(function (k, i) { if (v[k].replace(/\s/g, '').length < MIN) short.push('第 ' + (i + 1) + ' 格'); });
+      if (short.length) { $('grMsg').textContent = short.join('、') + '還不到 ' + MIN + ' 字，再寫具體一點'; return; }
+      if (sentToday(GUIDE.r)) { $('grMsg').textContent = '今天已經送過了，明天可以再送。'; return; }
+      b.disabled = true; $('grMsg').textContent = '送出中…';
+      v.t = firebase.database.ServerValue.TIMESTAMP; if (GUIDE.r && GUIDE.r.passed) v.passed = GUIDE.r.passed;   /* 通過過一次就保留（再送審不會讓打勾消失） */
+      firebase.database().ref('er/' + APP.SESS + '/guideResp/' + APP.me.sid).set(v).then(function () {
+        GUIDE.r = { a: v.a, b: v.b, c: v.c, t: Date.now(), passed: (GUIDE.r || {}).passed || null }; GUIDE.draft = null; renderLobby(); var m = $('grMsg'); if (m) m.textContent = '已送出，進入審核。一天只能送一次，明天可以再改。';
+      }, function (err) { b.disabled = false; $('grMsg').textContent = '沒有送出（' + ((err && err.code) || '連線問題') + '），請再按一次'; });
+    };
+  }
   function renderLobby() {
+    loadGuide();
+    if ($('gr_a')) GUIDE.draft = { a: $('gr_a').value, b: $('gr_b').value, c: $('gr_c').value };   /* 還沒送出的字留著 */
     var e = evaluateAll(), box = $('progressBox');
     if (e) {
       var first = e.ev.list.filter(function (x) { return !x.ok; })[0];
-      box.innerHTML = '<div class="row"><b style="flex:1">我的檢核點　' + e.ev.lit + ' / ' + e.ev.total + (e.ev.passed ? '　<span class="tag ok">全部完成</span>' : '') + '</b></div>' +
+      var w1 = '<div class="row"><b style="flex:1">第 1 週（1/3）的檢核點　' + e.ev.lit + ' / ' + e.ev.total + (e.ev.passed ? '　<span class="tag ok">全部完成</span>' : '　<span class="muted" style="font-weight:400;font-size:var(--fs-2)">還沒完成的可以繼續做</span>') + '</b></div>' +
         '<div class="dots" style="margin:6px 0">' + e.ev.list.map(function (x) { return '<i class="' + (x.ok ? 'lit' : '') + '" title="' + esc(x.label) + '" style="width:20px;height:20px"></i>'; }).join('') + '</div>' +
         (e.ev.next ? '<div id="lobbyNext" style="margin:6px 0;padding:6px 10px;border:var(--bw) solid var(--ink);border-radius:var(--r-m);background:var(--yellow);color:var(--ink-fixed);font-size:var(--fs-3)"><b>下一步</b>　' + esc(e.ev.next.text) + '</div>' : '') +
-        '<details id="lobbyCk"' + (window.innerWidth >= 900 ? ' open' : '') + '><summary style="cursor:pointer;font-size:var(--fs-2)" class="muted">六個檢核點要做什麼（完成 ✔、還沒 ✘）</summary>' + window.ERG_CHECKPOINTS.listHtml(e.ev, { compact: true }) + '</details>';
+        '<details id="lobbyCk"' + (window.innerWidth >= 900 && !e.ev.passed ? ' open' : '') + '><summary style="cursor:pointer;font-size:var(--fs-2)" class="muted">六個檢核點要做什麼（完成 ✔、還沒 ✘）</summary>' + window.ERG_CHECKPOINTS.listHtml(e.ev, { compact: true }) + '</details>';
+      var ae = document.activeElement; if (ae && /^gr_[abc]$/.test(ae.id || '')) { /* 正在寫回應：不重畫，免得字被洗掉、游標跳走 */ }
+      else box.innerHTML = (window.ERG_WEEK2 ? week2Html() : '') + '<div style="margin-top:10px;padding-top:8px;border-top:var(--bw-s) dashed var(--ink)">' + w1 + '</div>';
+      bindWeek2();
     }
     /* 三個班共用一個場次，房間會有一兩百間：我的房間全列；別人的房間先列「房主在線」「同班」「比較新」的，最多 20 間，其餘請同學給代碼。 */
     var rooms = DB.listRooms(APP.SESS), tb = $('roomRows'); tb.innerHTML = '';
