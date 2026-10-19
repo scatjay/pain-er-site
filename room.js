@@ -6,6 +6,7 @@
   var CORE = window.ERG_CORE, L = window.ERG_LOGIC, XL = window.ExcalidrawLib, R = window.React, RD = window.ReactDOM;
   var LAYOUT = window.ERG_LAYOUT, FP = window.ERG_FLOORPLAN, MM = window.ERG_MINIMAP, CH = window.ERG_CHARS, AV = window.ERG_AVATAR, CLK = window.ERG_CLOCK;
   var COMIC = window.ERG_COMIC, AMB = window.ERG_AMBIENCE, BGM = window.ERG_BGM, DEPTH = window.ERG_DEPTH, CP = window.ERG_CHECKPOINTS, CL = window.ERG_CHECKLIST;
+  var VC = window.ERG_VIEW_CORE;   /* 決策邏輯（站位、路線、點人物／家具）在 view_core.js；這裡只管畫面與狀態 */
 
   /* 地圖的可視範圍：整間急診室（不含地圖外的家、回診、筆記本）；一次看完，不捲動 */
   var MAP = { x: 0, y: 0, w: 1700, h: 1150 };
@@ -258,46 +259,18 @@
   function onBoardPointer(st) {
     if (!cur || !st || !st.origin) return;
     if (!st._own) { if (cur._ownPtrT && Date.now() - cur._ownPtrT < 400) return; } else cur._ownPtrT = Date.now();   /* 自己聽的與 Excalidraw 回呼的只處理一次 */
-    var ox = st.origin.x, oy = st.origin.y, hit = null; S._lastPointer = { x: ox, y: oy };   /* 測試用 */
-    cur.world.clues.forEach(function (c) { var p = LAYOUT.abs(c.pin.room, c.pin.rx, c.pin.ry); if (ox >= p.x - 4 && ox <= p.x + 80 && oy >= p.y - 4 && oy <= p.y + 38) hit = c; });
+    var ox = st.origin.x, oy = st.origin.y; S._lastPointer = { x: ox, y: oy };   /* 測試用 */
+    var hit = VC.clueAt(cur.world, LAYOUT, ox, oy);
     if (hit) { hidePop(); cur.selClue = hit.id; S.switchTab('clue'); if (cur.role === 'member') DB.appendEvent(cur.code, { kind: 'clue-open', env: APP.me.sid, clue: hit.id }); return; }
-    var r = LAYOUT.roomAt(ox, oy);
-    /* 點到自己這間房的家具／物件：彈小卡 */
-    if (r && r === cur.player.loc) {
-      var rm = LAYOUT.room(r), fhit = null;
-      (LAYOUT.FURNITURE || []).forEach(function (f) { if (f.room !== r) return; var fx = rm.x + f.rx, fy = rm.y + f.ry; if (ox >= fx && ox <= fx + (f.w || 30) && oy >= fy && oy <= fy + (f.h || 20)) fhit = f; });
-      if (fhit) { setTimeout(function () { onFurnitureClick(fhit, ox, oy); }, 0); return; }
-      hidePop(); return;
-    }
+    /* 點到自己這間房的家具／物件：彈小卡；點別間房：全地圖模式＝直接到，房間模式＝走過去（判斷在 VC.boardClick） */
+    var act = VC.boardClick(LAYOUT, cur.player.loc, cur.stageMode, ox, oy);
+    if (act.kind === 'furniture') { setTimeout(function () { onFurnitureClick(act.furniture, act.x, act.y); }, 0); return; }
     hidePop();
-    if (r && r !== cur.player.loc && !/^hall|corridor|ambulance|street/.test(r)) { setTimeout(function () { if (cur.stageMode === 'map') jumpTo(r); else startTravel(r); }, 0); }   /* 全地圖模式＝看著地圖點房間，直接到；房間模式維持走過去 */
+    if (act.kind === 'jump' || act.kind === 'travel') { setTimeout(function () { if (cur.stageMode === 'map') jumpTo(act.room); else startTravel(act.room); }, 0); }
   }
 
   /* ───── 位置與移動 ───── */
-  function spotIn(roomId) {
-    var st = LAYOUT.STATIONS.filter(function (s) { return s.room === roomId; });
-    var rm = LAYOUT.room(roomId);
-    /* 10-12：原本固定站在第一個駐點旁，入口大廳會剛好踩在警衛與線索牌 C-01 上，牌子點不到。
-       改成在房裡挑一個離線索牌、駐點最遠的位置（候選點固定，不隨機，同一間房每次站同一處）。 */
-    var avoid = st.map(function (q) { return LAYOUT.abs(roomId, q.rx, q.ry); });
-    if (cur && cur.world) cur.world.clues.forEach(function (c) { if (c.pin.room === roomId) { var q = LAYOUT.abs(roomId, c.pin.rx, c.pin.ry); avoid.push({ x: q.x + 38, y: q.y + 17 }); } });
-    (LAYOUT.FURNITURE || []).forEach(function (f) { if (f.room === roomId) avoid.push({ x: rm.x + f.rx + (f.w || 30) / 2, y: rm.y + f.ry + (f.h || 20) / 2 + 20 }); });   /* 也不要站在家具與它的名稱上 */
-    if (!avoid.length) return { x: rm.x + rm.w / 2, y: rm.y + rm.h * 0.7 };
-    /* 10-13：只看「離得遠」不夠，身體還是常壓在牌子上。把自己的身體連同頭上的「你」標籤當成一塊（寬 60、高 98，腳底在站的位置），
-       碰到線索牌（84×42）或告示、白板、螢幕、燈箱就大扣分；候選點 9×5，順序固定，所以同一間房每次站同一處。 */
-    var blocks = [];
-    if (cur && cur.world) cur.world.clues.forEach(function (c) { if (c.pin.room === roomId) { var q = LAYOUT.abs(roomId, c.pin.rx, c.pin.ry); blocks.push({ x: q.x - 6, y: q.y - 6, w: 88, h: 46 }); } });
-    (LAYOUT.FURNITURE || []).forEach(function (f) { if (f.room === roomId && /^(sign|board|screen|lightbox)$/.test(f.type || '')) blocks.push({ x: rm.x + f.rx - 2, y: rm.y + f.ry - 2, w: (f.w || 30) + 4, h: (f.h || 20) + 4 }); });
-    function hits(x, y) { var n = 0, bx = x - 30, by = y - 98; blocks.forEach(function (b) { if (bx < b.x + b.w && bx + 60 > b.x && by < b.y + b.h && by + 98 > b.y) n += 1; }); return n; }
-    var best = null;
-    [0.5, 0.4, 0.6, 0.3, 0.7, 0.2, 0.8, 0.12, 0.88].forEach(function (fx) { [0.72, 0.62, 0.82, 0.52, 0.9].forEach(function (fy) {
-      var x = rm.x + rm.w * fx, y = rm.y + rm.h * fy, d = Infinity;
-      avoid.forEach(function (q) { d = Math.min(d, Math.hypot((q.x - x) / 1.4, q.y - y)); });
-      d -= 1000 * hits(x, y);
-      if (!best || d > best.d + 1) best = { x: x, y: y, d: d };
-    }); });
-    return { x: best.x, y: best.y };
-  }
+  function spotIn(roomId) { return VC.spotIn(LAYOUT, cur && cur.world, roomId); }   /* 選站位的邏輯在 view_core.js */
   function setLoc(roomId, silent) {
     if (!cur) return;
     var rm = LAYOUT.room(roomId); if (!rm) return;
@@ -313,36 +286,26 @@
     renderMinimap();
     if (window.ERG_PANELS) window.ERG_PANELS.onMove();
   }
-  function nearestNode(point, roomId) {
-    var ids = Object.keys(cur.world.graph.nodes), best = null, bd = Infinity;
-    ids.forEach(function (id) { var n = cur.world.graph.nodes[id]; if (roomId && n.room !== roomId) return; var d = Math.hypot(n.x-point.x,n.y-point.y); if(d<bd){bd=d;best=id;} });
-    return best;
-  }
   function startTravel(roomId) {
     if (!cur) return false;
     var target = LAYOUT.room(roomId); if (!target) return false;
     if (target.type === 'remote') { if (roomId === 'home' || roomId === 'clinic') { goRemote(roomId); return true; } return false; }
     if (cur.walk) cur.walk = null; clearTimeout(cur._jumpT);   /* 走路與傳送互斥：按了走路就取消還沒執行的傳送 */
-    var start = (cur.player.loc === 'home' || cur.player.loc === 'clinic') ? spotIn('street') : (cur.me || spotIn(cur.player.loc)), dest = spotIn(roomId), from = nearestNode(start), to = nearestNode(dest, roomId) || nearestNode(dest);
-    if (!from || !to) { toast('找不到可走的路線，請從附近房間前往。'); return false; }
-    var route = cur.world.graph.nodes[from].x === cur.world.graph.nodes[to].x && cur.world.graph.nodes[from].y === cur.world.graph.nodes[to].y ? { ids:[from] } : window.ERG_NPC.shortestPath(cur.world.graph, from, to);
-    if (!route) { toast('找不到可走的路線，請從附近房間前往。'); return false; }
-    var pts = [{x:start.x,y:start.y}]; route.ids.forEach(function(id){var n=cur.world.graph.nodes[id]; if(Math.hypot(n.x-pts[pts.length-1].x,n.y-pts[pts.length-1].y)>1)pts.push({x:n.x,y:n.y});});
-    if (Math.hypot(dest.x-pts[pts.length-1].x,dest.y-pts[pts.length-1].y)>1) pts.push(dest);
-    cur.walk = { points:pts, index:1, target:roomId, lastRoom:cur.player.loc };
-    var wl = 0; for (var wi = 1; wi < pts.length; wi++) wl += Math.hypot(pts[wi].x - pts[wi - 1].x, pts[wi].y - pts[wi - 1].y);
-    $('locLabel').textContent = '前往：' + target.name + '（約 ' + Math.max(1, Math.round(wl / (70 * cur.world.data.SIM.SECONDS_PER_SIM_MIN / cur.clock.secPerMin))) + ' 秒）';
+    var plan = VC.planTravel(cur.world, LAYOUT, { shortestPath: window.ERG_NPC.shortestPath }, { loc: cur.player.loc, me: cur.me }, roomId, VC.walkSpeed(cur.world, cur.clock));
+    if (!plan.ok) { toast('找不到可走的路線，請從附近房間前往。'); return false; }
+    cur.walk = plan.walk;
+    $('locLabel').textContent = '前往：' + target.name + '（約 ' + plan.seconds + ' 秒）';
     return true;
   }
   function advanceWalk(realDt) {
     if (!cur.walk || cur.clock.paused || !realDt) return;
-    var w=cur.walk, budget=70*cur.world.data.SIM.SECONDS_PER_SIM_MIN/cur.clock.secPerMin*realDt;
-    while(budget>0 && w.index<w.points.length){var a=cur.me,b=w.points[w.index],d=Math.hypot(b.x-a.x,b.y-a.y);if(d<=budget){cur.me={x:b.x,y:b.y};budget-=d;w.index++;}else{cur.me={x:a.x+(b.x-a.x)*budget/d,y:a.y+(b.y-a.y)*budget/d};budget=0;}}
-    var roomId=LAYOUT.roomAt(cur.me.x,cur.me.y);
+    var w=cur.walk, step=VC.stepWalk(LAYOUT, cur.me, w.points, w.index, VC.walkSpeed(cur.world, cur.clock)*realDt);
+    cur.me=step.me; w.index=step.index;
+    var roomId=step.roomId;
     if(roomId && roomId!==cur.player.loc){cur.player.loc=roomId;cur.watchRoom=roomId; $('locLabel').textContent='你在：'+roomName(roomId); $('mmHere').textContent=roomName(roomId); soundForRoom(roomId); if(cur.stageMode==='room') fitView(true); if(window.ERG_PANELS)window.ERG_PANELS.onMove();}
     cur._dirty=true;
     if(cur.walk && cur.stageMode==='room'){cur.focus={x:cur.me.x-280,y:cur.me.y-190,w:560,h:380};fitView(true);}
-    if(w.index>=w.points.length){var target=w.target;cur.walk=null;cur.stageMode='room';cur.focus=null;setLoc(target,true);refreshStageMode();DB.appendEvent(cur.code,{kind:'move',env:APP.me.sid,to:target});persist(true);}
+    if(step.done){var target=w.target;cur.walk=null;cur.stageMode='room';cur.focus=null;setLoc(target,true);refreshStageMode();DB.appendEvent(cur.code,{kind:'move',env:APP.me.sid,to:target});persist(true);}
   }
   function rememberRoom(id){var v=cur.player.visited||[];cur.player.visited=[id].concat(v.filter(function(x){return x!==id;})).slice(0,8);(cur.player.roomsSeen=cur.player.roomsSeen||{})[id]=true;}
   function buildTravelControls(){
@@ -362,10 +325,10 @@
      人在院外（病患的家、回診門診）時，點院內房間一樣直接到。 */
   function jumpTo(roomId) {
     if (!cur) return false;
-    var rm = LAYOUT.room(roomId); if (!rm) return false;
-    if (rm.type === 'remote') { if (roomId === 'home' || roomId === 'clinic') { goRemote(roomId); return true; } return false; }
-    if (rm.type !== 'room') return false;
-    if (roomId === cur.player.loc && !cur.walk) { toast('你已經在' + rm.name + '了'); return true; }
+    var jp = VC.planJump(LAYOUT, cur.player.loc, !!cur.walk, roomId), rm = LAYOUT.room(roomId);
+    if (jp.kind === 'remote') { goRemote(roomId); return true; }
+    if (jp.kind === 'same') { toast('你已經在' + rm.name + '了'); return true; }
+    if (jp.kind !== 'go') return false;
     cur.walk = null; cur.stageMode = 'room'; cur.focus = null;
     var st = $('stage'), v = $('teleVeil'); if (!v && st) { v = document.createElement('div'); v.id = 'teleVeil'; st.appendChild(v); }
     var reduce = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion:reduce)').matches);
@@ -410,6 +373,7 @@
   function slowTick() { if (!cur) return; renderMinimap(); refreshTicker(); S.refreshDots(); }
 
   function screenPos(x, y) {
+    if (S.screenOverride) { var ov3 = S.screenOverride(x, y); if (ov3) return ov3; }   /* 3D 視圖（view3d.js，?view=3d）接管時，彈窗位置改用 3D 投影；平常是 undefined，行為不變 */
     var st = (cur.api && cur.api.getAppState && cur.api.getAppState()) || cur.appState, z = st ? st.zoom.value : (cur.view ? cur.view.zoom : 1), sx = st ? st.scrollX : 0, sy = st ? st.scrollY : 0;
     return { x: (x + sx) * z, y: (y + sy) * z, z: z };
   }
@@ -602,52 +566,48 @@
   function pickTokenAt(e, id) {
     try {
       var ent0 = cur.world.entityById(id); if (!e || !ent0 || ent0.kind !== 'bot' || !document.elementsFromPoint) return id;
-      var stack = document.elementsFromPoint(e.clientX, e.clientY), better = null;
-      stack.forEach(function (n) { var t = n.closest ? n.closest('.tok') : null; if (!t || better || !t._eid || t._eid === id) return; var en = cur.world.entityById(t._eid); if (en && en.kind !== 'bot') better = t._eid; });
-      return better || id;
+      var ids = [];
+      document.elementsFromPoint(e.clientX, e.clientY).forEach(function (n) { var t = n.closest ? n.closest('.tok') : null; if (t && t._eid) ids.push(t._eid); });
+      return VC.pickPreferred(cur.world, id, ids);   /* 選哪個的規則在 view_core */
     } catch (x) { return id; }
   }
+  function popState() { return { loc: cur.player.loc, worldSec: cur.clock.worldSec }; }
   function onNpcClick(id) {
-    var ent = cur.world.entityById(id); if (!ent) return;
-    var pos = null; cur.world.at(cur.clock.worldSec).forEach(function (it) { if (it.ent.id === id) pos = it.pos; });
-    if (!pos) return;
-    var av = cur.world.availability(ent, pos, S.simMin()), here = pos.room === cur.player.loc, loc = LAYOUT.room(cur.player.loc), onHall = loc && (loc.type === 'hall' || loc.type === 'outside');
-    var m = cur.world.mutterFor(ent, pos, cur.clock.worldSec), lv = { free: '可以聊', short: '只能簡短聊（' + (av.reason || '正在忙') + '）', blocked: '現在不方便（' + (av.reason || '正在忙') + '）' }[av.level] || '';
+    var d = VC.npcPopup(cur.world, LAYOUT, popState(), id, S.simMin()); if (!d) return;
+    var ent = d.ent, pos = d.pos, m = d.mutter, av = d.av, here = d.here, onHall = d.onHall;
     var html = '<b>' + esc(ent.name) + '</b> <span class="muted">' + esc((ent.persona && ent.persona.title) || ent.kind || '') + '</span>' +
       '<div class="popLine">正在：' + esc(pos.act || '待著') + (av.fatigue && av.fatigue.level >= 2 ? '　看起來很累' : '') + '</div>' +
       (m ? '<div class="popLine muted">「' + esc(m.text) + '」</div>' : '') +
-      '<div class="popLine">' + (here ? esc(lv) : '在' + esc(roomName(pos.room)) + '，要走過去才問得到') + '</div><div class="row popBtns">' +
-      (here && !onHall && av.level !== 'blocked' && ent.kind !== 'bot' ? '<button data-act="intv">訪談</button>' : '') +
-      (!here && !/^hall|corridor|ambulance|street/.test(pos.room) ? '<button data-act="go">走過去</button>' : '') +
+      '<div class="popLine">' + (here ? esc(d.levelText) : '在' + esc(d.roomName) + '，要走過去才問得到') + '</div><div class="row popBtns">' +
+      (d.actions.indexOf('intv') >= 0 ? '<button data-act="intv">訪談</button>' : '') +
+      (d.actions.indexOf('go') >= 0 ? '<button data-act="go">走過去</button>' : '') +
       '<button class="ghost" data-act="note">記便利貼</button></div>';
     var p = showPop(pos.x, pos.y - 20, html);
     Array.prototype.forEach.call(p.querySelectorAll('[data-act]'), function (b) {
       b.onclick = function () {
         var a = b.dataset.act; hidePop();
         if (a === 'intv') { if (onHall) { toast('走道上不能訪談，請先走進一間房。'); return; } cur.selNpc = id; S.switchTab('intv'); }
-        else if (a === 'go') startTravel(pos.room);
-        else if (a === 'note' && window.ERG_PANELS) window.ERG_PANELS.addOpenCard('便利貼', '觀察：' + ent.name + ' 正在' + (pos.act || '待著') + '（' + S.simTime() + '，' + roomName(pos.room) + '）');
+        else if (a === 'go') startTravel(d.goRoom);
+        else if (a === 'note' && window.ERG_PANELS) window.ERG_PANELS.addOpenCard('便利貼', VC.npcNote(LAYOUT, ent, pos, S.simTime()));
       };
     });
   }
-  /* 物件的「使用中狀態」：跟 roomview／syncRoomProps 示範的三個狀態一致，其餘給觀察提示 */
-  function furnitureState(f) {
-    if (f.room === 'nurse' && f.type === 'board') return '白板上寫著：3 床待評估、家屬已到';
-    if (f.room === 'triage' && f.type === 'screen') return '叫號螢幕顯示 A018';
-    if (f.room === 'waiting' && f.type === 'seats') { var n = cur.world.at(cur.clock.worldSec).filter(function (it) { return it.pos.room === 'waiting' && /候診|等/.test(it.pos.act || ''); }).length; return '現在有 ' + n + ' 人在等'; }
-    return ({ desk: '櫃台上的動線與文件，看誰在排隊、排多久', counter: '櫃台：注意排隊方向與告示', bed: '病床：看誰在旁邊、有沒有人解釋', screen: '螢幕：上面顯示什麼、看得懂嗎', board: '白板：寫了什麼、給誰看', device: '設備：誰在操作、要等多久', sign: '告示：字夠大嗎、位置對嗎', lightbox: '燈箱／指標：從門口看得到嗎', phone: '電話：誰在用、講什麼', scanner: '掃描儀：流程卡在哪', rack: '架子：放了什麼單張', sofa: '沙發：誰坐在這裡等', stall: '隔間：隱私夠嗎', chair: '椅子：誰坐、有沒有人站著', glass: '玻璃窗：隔著窗溝通順不順', door: '門：誰進出、有沒有人卡住' })[f.type] || '可以觀察的物件';
-  }
   function onFurnitureClick(f, wx, wy) {
-    var html = '<b>' + MM.iconHtml(MM.furnitureIcon(f)) + ' ' + esc(f.label || f.type) + '</b><div class="popLine">' + esc(furnitureState(f)) + '</div><div class="row popBtns"><button data-act="card">記一張勘查卡</button><button class="ghost" data-act="note">記便利貼</button></div>';
+    var d = VC.furniturePopup(cur.world, LAYOUT, popState(), f);
+    var html = '<b>' + MM.iconHtml(MM.furnitureIcon(f)) + ' ' + esc(d.label) + '</b><div class="popLine">' + esc(d.state) + '</div><div class="row popBtns"><button data-act="card">記一張勘查卡</button><button class="ghost" data-act="note">記便利貼</button></div>';
     var p = showPop(wx, wy, html);
     Array.prototype.forEach.call(p.querySelectorAll('[data-act]'), function (b) {
       b.onclick = function () {
         var a = b.dataset.act; hidePop();
-        if (a === 'card' && window.ERG_PANELS) { window.ERG_PANELS.prefill = { type: '勘查卡', text: (f.label || f.type) + '：' }; S.switchTab('cards'); }
-        else if (a === 'note' && window.ERG_PANELS) window.ERG_PANELS.addOpenCard('便利貼', '看到：' + (f.label || f.type) + '，' + furnitureState(f) + '（' + S.simTime() + '，' + roomName(cur.player.loc) + '）');
+        if (a === 'card' && window.ERG_PANELS) { window.ERG_PANELS.prefill = d.cardPrefill; S.switchTab('cards'); }
+        else if (a === 'note' && window.ERG_PANELS) window.ERG_PANELS.addOpenCard('便利貼', VC.furnitureNote(cur.world, LAYOUT, popState(), f, S.simTime()));
       };
     });
   }
+  /* 給 3D 視圖（view3d.js）呼叫：同一套彈窗與點地板的判斷 */
+  S.onNpcClick = function (id) { if (cur) onNpcClick(id); };
+  S.boardPointer = function (x, y) { onBoardPointer({ origin: { x: x, y: y }, _own: true }); };
+  S.hidePop = function () { hidePop(); };
   S.entityHere = function () {
     var out = [], simMin = CLK.simMin(cur.clock);
     cur.world.at(cur.clock.worldSec).forEach(function (it) {

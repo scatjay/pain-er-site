@@ -158,16 +158,16 @@ body.proj{--fs:21px}body.proj .wrap{max-width:none}body.proj .small{display:none
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-<script src="er_firebase.js?v=202610191817"></script>
-<script src="checklist.js?v=202610191817"></script>
-<script src="checkpoints.js?v=202610191817"></script>
-<script src="avatar.js?v=202610191817"></script>
-<script src="local_db.js?v=202610191817"></script>
-<script src="app_core.js?v=202610191817"></script>
-<script src="achievements.js?v=202610191817"></script><script src="remote_db.js?v=202610191817"></script>
-<script src="layout.js?v=202610191817"></script>
-<script src="minimap.js?v=202610191817"></script>
-<script src="personas_inclusive.js?v=202610191817"></script><script src="er_data.js?v=202610191817"></script><script src="npc_voice.js?v=202610191817"></script><script src="personas.js?v=202610191817"></script>
+<script src="er_firebase.js?v=202610192122"></script>
+<script src="checklist.js?v=202610192122"></script>
+<script src="checkpoints.js?v=202610192122"></script>
+<script src="avatar.js?v=202610192122"></script>
+<script src="local_db.js?v=202610192122"></script>
+<script src="app_core.js?v=202610192122"></script>
+<script src="achievements.js?v=202610192122"></script><script src="remote_db.js?v=202610192122"></script>
+<script src="layout.js?v=202610192122"></script>
+<script src="minimap.js?v=202610192122"></script>
+<script src="personas_inclusive.js?v=202610192122"></script><script src="er_data.js?v=202610192122"></script><script src="npc_voice.js?v=202610192122"></script><script src="personas.js?v=202610192122"></script>
 <script>
 /* 教師名單：只有這裡的 Google 帳號能進。要加人就加在這裡（改完重新部署；資料庫規則 tools/er_after_google_enabled.py 也要加）。 */
 var TEACHER_EMAILS = ['scatjay@gmail.com', 'prof.chwu@mx.nthu.edu.tw', 'nthuchwu@gapp.nthu.edu.tw'];   /* 10-16 楊老師：清大吳智鴻老師（觀摩用，含後台） */
@@ -273,7 +273,7 @@ var CLASS_WINDOWS = [].concat(
     box.innerHTML = '<b>技能等級分布</b> <span class="muted" style="font-size:.85em">（' + (cls || '全部班級') + '，' + rows.length + ' 位用過新版的學生；門檻每堂課後依全班表現重算）</span><div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:4px">' + col('ask', 'skAsk', '探問') + col('ctx', 'skCtx', '情境感知') + '</div>';
   }
   function renderModelStats(d) {
-    var ms = d.modelStats || {}, days = Object.keys(ms).sort(), box = $('modelStats'); if (!box) return;
+    var ms = Object.assign({}, d.modelStats || {}, (d.admin && d.admin.modelStats) || {}), days = Object.keys(ms).sort(), box = $('modelStats'); if (!box) return;
     if (!days.length) { box.innerHTML = '<span class="muted">還沒有資料。</span>'; return; }
     var day = days[days.length - 1], m = ms[day] || {}, base = String(d.model || '').split('＋')[0].replace(/\./g, '_');
     var keys = Object.keys(m).sort(function (a, b) { return (m[b].turns || 0) - (m[a].turns || 0); }), all = keys.reduce(function (n, k) { return n + (m[k].turns || 0); }, 0);
@@ -310,7 +310,7 @@ var CLASS_WINDOWS = [].concat(
     fill([SESS]);
     auth.currentUser.getIdToken().then(function (tok) { return fetch(window.ERG_FB.databaseURL + '/er.json?shallow=true&auth=' + encodeURIComponent(tok)); }).then(function (r) { return r.ok ? r.json() : {}; }).then(function (v) { fill(Object.keys(v || {})); }).catch(function () {});
     $('sessSel').onchange = function () { SESS = $('sessSel').value; attach(); };
-    fdb.ref('er/_daemon').on('value', function (s) { daemon = s.val() || {}; renderDaemon(); });
+    /* 10-19：老師後台仍聽整個 er/_daemon（含 admin/）；學生端已改成只聽四個小欄位 */ fdb.ref('er/_daemon').on('value', function (s) { daemon = s.val() || {}; renderDaemon(); });
     setInterval(renderDaemon, 10000);
     $('liveOpen').onclick = function () { disarm(); setLive('open', 2, $('liveOpen'), '已開放 2 小時'); };
     $('liveAuto').onclick = function () { disarm(); setLive('auto', 0, $('liveAuto'), '已交回課表'); };
@@ -456,7 +456,7 @@ var CLASS_WINDOWS = [].concat(
     Object.keys(chats).forEach(function (code) { Object.keys(chats[code] || {}).forEach(function (sid) { var o = out[sid] || (out[sid] = { n: 0, last: null }); Object.keys(chats[code][sid] || {}).forEach(function (rec) { var c = chats[code][sid][rec] || {}; Object.keys(c.turns || {}).forEach(function (k) { var t = c.turns[k]; if (t.role !== 'u') return; o.n += 1; if (!o.last || t.t > o.last.t) o.last = { t: t.t, who: c.personaName || personaName(c.personaId), text: t.text, code: code }; }); }); }); });
     return out;
   }
-  function isOnline(sid) { var p = presence[sid]; return !!(p && Date.now() - Number(p.t || 0) < 200000); }
+  function isOnline(sid) { var p = presence[sid]; return !!(p && Date.now() - Number(p.t || 0) < 300000); }
   /* 10-15 楊老師：活躍人數地圖用訪談技能等級區分。點的顏色與中間的數字＝探問、情境感知兩項裡較高的那一級（還沒有等級資料的學生算 1 級）；橘色外圈＝最近 5 分鐘有訪談 */
   var LV_COLOR = { 1: '#a5d8ff', 2: '#8ce99a', 3: '#ffa94d' };
   function lvOf(sid) { var s = (scores || {})[sid] || {}; return Math.min(3, Math.max(1, Number(s.skAsk) || 1, Number(s.skCtx) || 1)); }
@@ -500,7 +500,7 @@ var CLASS_WINDOWS = [].concat(
     $('fbFilter').innerHTML = [['', '全部', keys.length]].concat(Object.keys(KINDS).map(function (k) { return [k, KINDS[k], cnt[k] || 0]; })).map(function (f) { return '<button class="sm' + (fbKind === f[0] ? ' on' : '') + '" data-k="' + f[0] + '">' + esc(f[1]) + ' ' + f[2] + '</button>'; }).join('');
     Array.prototype.forEach.call($('fbFilter').querySelectorAll('[data-k]'), function (b) { b.onclick = function () { fbKind = b.dataset.k; renderFb(); }; });
     var show = keys.filter(function (k) { return !fbKind || v[k].kind === fbKind; });
-    $('fbBox').innerHTML = show.length ? show.map(function (k) { var e = v[k], c = e.ctx || {}; return '<div class="fb"><span class="pill ' + (KCLS[e.kind] || '') + '">' + esc(KINDS[e.kind] || e.kind) + '</span> <b>' + esc(DEID ? aliasOf(String(e.sid)) : (e.sid + (e.name ? '　' + e.name : ''))) + '</b> <span class="muted" style="font-size:.85em">' + new Date(e.t).toLocaleString('zh-TW', { hour12: false }) + (c.room ? '・房 ' + esc(c.room) : '') + (c.loc ? '・' + esc(c.loc) : '') + (c.simTime ? '・' + esc(c.simTime) : '') + '</span><div>' + esc(e.text) + '</div>' + (c.errors && c.errors.length ? '<div class="muted small" style="font-size:.8em">錯誤：' + esc(c.errors.join(' ｜ ')) + '</div>' : '') + '</div>'; }).join('') : '<span class="muted">' + (keys.length ? '這一類沒有回報。' : '還沒有回報。') + '</span>';
+    $('fbBox').innerHTML = show.length ? show.map(function (k) { var e = v[k], c = e.ctx || {}, vs = e.state || c, vw = vs.view === '3d' ? '3D' + (vs.q ? '/' + vs.q : '') + (vs.err3 ? '・3D錯誤 ' + vs.err3 : '') : '2D' + (vs.fb3 ? '（3D退回：' + vs.fb3 + '）' : ''); return '<div class="fb"><span class="pill ' + (KCLS[e.kind] || '') + '">' + esc(KINDS[e.kind] || e.kind) + '</span> <b>' + esc(DEID ? aliasOf(String(e.sid)) : (e.sid + (e.name ? '　' + e.name : ''))) + '</b> <span class="muted" style="font-size:.85em">' + new Date(e.t).toLocaleString('zh-TW', { hour12: false }) + '・' + esc(vw) + (c.room ? '・房 ' + esc(c.room) : '') + (c.loc ? '・' + esc(c.loc) : '') + (c.simTime ? '・' + esc(c.simTime) : '') + '</span><div>' + esc(e.text) + '</div>' + (c.errors && c.errors.length ? '<div class="muted small" style="font-size:.8em">錯誤：' + esc(c.errors.join(' ｜ ')) + '</div>' : '') + '</div>'; }).join('') : '<span class="muted">' + (keys.length ? '這一類沒有回報。' : '還沒有回報。') + '</span>';
   }
   $('sumBtn').onclick = function () { var b = $('sumBtn'); b.disabled = true; $('sumStat').textContent = '送出中…'; fdb.ref('er/_cmd').push({ kind: 'summarize', sess: SESS, t: Date.now() }).then(function () { $('sumStat').textContent = '已送出，等代理程式（約半分鐘）…'; }, function (e) { $('sumStat').textContent = '沒有送出：' + ((e && e.code) || e); }).then(function () { setTimeout(function () { b.disabled = false; }, 8000); }); };
   function markersByRoom(rs) { var out = {}; rs.forEach(function (r) { try { out[r.code] = CORE.mcardEls(r).concat(DB.getScene(r.code).filter(function (e) { return !e.isDeleted && e.customData && e.customData.marker; })).map(function (e) { var m = e.customData.marker; return { id: m.id, type: m.type, author: m.author, refs: m.refs }; }); } catch (e) { out[r.code] = []; } }); return out; }

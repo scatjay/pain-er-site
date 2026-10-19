@@ -43,7 +43,12 @@
       /* 連線狀態：給介面用（訪談面板看 daemon 心跳也靠它） */
       fdb.ref('.info/connected').on('value', function (s) { window.ERG_ONLINE_STATE = !!s.val(); data.fire('online'); });
       /* 代理程式節點很小：心跳、模型、liveNow（上課時段或老師手動開放才 true）。沒有 liveNow 欄位（舊版代理程式）視為開放 */
-      fdb.ref('er/_daemon').on('value', function (s) { var d = s.val() || {}; window.ERG_DAEMON_HB = Number(d.heartbeat || 0); window.ERG_LIVE_OPEN = d.liveNow === undefined ? true : !!d.liveNow; data.fire('daemon'); });
+      /* 10-19：只聽四個很小的欄位（心跳、liveNow、上限原因與一句話），不再聽整個 er/_daemon；guard 其他欄位（花費、觸發次數…）只給老師後台，免得每 15 秒推給每位學生 */
+      var dm = { liveNow: undefined, reason: '', msg: '' }, dmGot = {};
+      function pushDaemon() { window.ERG_DAEMON_HB = Number(dm.heartbeat || 0); window.ERG_LIVE_OPEN = dm.liveNow === undefined ? true : !!dm.liveNow; window.ERG_LIVE_GUARD = (dm.reason === 'day_cap' || dm.reason === 'week_cap') ? { reason: dm.reason, msg: String(dm.msg || '') } : null; data.fire('daemon'); }
+      [['heartbeat', 'er/_daemon/heartbeat'], ['liveNow', 'er/_daemon/liveNow'], ['reason', 'er/_daemon/guard/reason'], ['msg', 'er/_daemon/guard/msg']].forEach(function (kv) {
+        fdb.ref(kv[1]).on('value', function (s) { var v = s.val(); dm[kv[0]] = (v === null && kv[0] === 'liveNow') ? undefined : v; dmGot[kv[0]] = 1; if (dmGot.heartbeat && dmGot.liveNow) pushDaemon(); /* 心跳與 liveNow 都到了才通知，避免先閃一下「連不上」 */ });
+      });
     } catch (e) { console.error('Firebase 啟動失敗，改用本機資料層', e); DB = data.DB; ONLINE = false; }
   })();
   var CASELIST = window.ERG_CASES.build(window.ERG, window.ERG_LAYOUT, window.ERG_PERSONAS, window.ERG_DATA).list;
@@ -255,6 +260,7 @@
   }
   function renderAvatar() {
     var look = avDraft.look, lit = APP.progress ? APP.progress() : APP.lit, litN = AV.prog(lit).lit;
+    window.ERG_AVATAR_DRAFT = avDraft; setTimeout(function () { if (window.ERG_AVATAR3D) window.ERG_AVATAR3D.render(avDraft); }, 0);   /* 3D 視圖（?view=3d）的角色預覽用；沒載入 view3d.js 時沒有作用 */
     $('avPreview').innerHTML = charSvg(look, 7) + '<div style="font-weight:900;margin-top:4px">' + esc(APP.me.sid) + '</div>';
     $('avGrid').innerHTML = AV.PRESETS.map(function (p, i) {
       return '<button class="avCard' + (avDraft.preset === p.id ? ' on' : '') + '" data-preset="' + p.id + '">' + charSvg(p.look, i + 1) + '<div style="font-size:var(--fs-1);font-weight:900">' + esc(p.name) + '</div></button>';
@@ -311,8 +317,9 @@
     }
     /* 三個班共用一個場次，房間會有一兩百間：我的房間全列；別人的房間先列「房主在線」「同班」「比較新」的，最多 20 間，其餘請同學給代碼。 */
     var rooms = DB.listRooms(APP.SESS), tb = $('roomRows'); tb.innerHTML = '';
+    if (window.ERG_SOCIAL && window.ERG_SOCIAL.refreshOnce) window.ERG_SOCIAL.refreshOnce();   /* 10-19：社群面板收合時不聽全班名單，進大廳讀一次（60 秒內不重讀） */
     var on = (window.ERG_SOCIAL && window.ERG_SOCIAL.online && window.ERG_SOCIAL.online()) || {}, nowT = Date.now(), CAP = 20;
-    var rows = rooms.map(function (r) { var full = DB.getRoom(r.code); var p = on[r.host]; return { r: r, full: full, mine: !!(full.members && full.members[APP.me.sid]), online: !!(p && nowT - Number(p.t || 0) < 200000), same: !!(full.cls && full.cls === APP.me.cls) }; });
+    var rows = rooms.map(function (r) { var full = DB.getRoom(r.code); var p = on[r.host]; return { r: r, full: full, mine: !!(full.members && full.members[APP.me.sid]), online: !!(p && nowT - Number(p.t || 0) < ((window.ERG_PRES && window.ERG_PRES.ONLINE_MS) || 300000)), same: !!(full.cls && full.cls === APP.me.cls) }; });
     var mineRows = rows.filter(function (x) { return x.mine; }), others = rows.filter(function (x) { return !x.mine; });
     others.sort(function (a, b) { return (b.online - a.online) || (b.same - a.same) || (Number(b.full.createdAt || 0) - Number(a.full.createdAt || 0)); });
     mineRows.concat(others.slice(0, CAP)).forEach(function (x) {
@@ -358,16 +365,23 @@
     if (window.ERG_ROOM && window.ERG_ROOM.cur && window.ERG_ROOM.toast) window.ERG_ROOM.toast(msg); else if ($('lobbyErr')) $('lobbyErr').textContent = msg;
   });
 
-  /* 成就：①頁面可見且在房間裡，每分鐘 playMin +1；②把自己的指標摘要寫到 er/{sess}/score/{sid}（小節點，全班可讀、排行用），內容沒變就不寫 */
-  var lastScoreJson = '';
-  function publishScore() {
+  /* 成就：①頁面可見且在房間裡，每分鐘 playMin +1；②把自己的指標摘要寫到 er/{sess}/score/{sid}（小節點，全班可讀、排行用）。
+     10-19 降流量：變動判斷不含 playMin（累計滿 5 分鐘或離開頁面才補寫，見 achievements.js scoreDecide）；
+     整份 score 節點只在「成就」分頁開著時才訂閱（平時只讀自己那一筆一次，用來避免把之前拿到的成就蓋掉）。 */
+  var lastScore = null, myScoreAsked = false;
+  function ensureMyScore() {
+    if (myScoreAsked || !ONLINE || !window.firebase || !APP.me.sid) return;
+    myScoreAsked = true;
+    window.firebase.database().ref('er/' + APP.SESS + '/score/' + APP.me.sid).once('value', function (snap) { window.ERG_MY_SCORE = snap.val() || {}; window.ERG_SCORES_READY = true; }, function () { myScoreAsked = false; });
+  }
+  function publishScore(force) {
     var R = window.ERG_ROOM, c = R && R.cur, A = window.ERG_ACH, P = window.ERG_PANELS;
     if (!ONLINE || !window.firebase || !c || !A || !APP.me.sid) return;
-    ensureScoreWatch();
+    ensureMyScore(); scoreWatch.tick();
     if (!window.ERG_SCORES_READY) return;   /* 10-15：還沒讀到自己之前發布的成就就先不寫，不然會把別間房拿到的蓋成較少 */
     var s = A.summary(c.player, P && P.achCtx ? P.achCtx() : {}); s.name = APP.me.name || APP.me.sid; s.cls = APP.me.cls || ''; s.t = Date.now();
-    var j = JSON.stringify([s.interviewees, s.rooms, s.cards, s.events, s.chatTurns, s.playMin, s.partners, s.conclusions, s.badges, s.skAsk, s.skCtx]);
-    if (j === lastScoreJson) return; lastScoreJson = j;
+    var d = A.scoreDecide(lastScore, s, force === true);
+    if (!d.write) return; lastScore = { sig: d.sig, playMin: Number(s.playMin) || 0 };
     try { window.firebase.database().ref('er/' + APP.SESS + '/score/' + APP.me.sid).set(s); } catch (e) { if (window.console) console.warn('score 寫入失敗', e); }
   }
   window.ERG_PUBLISH_SCORE = publishScore;
@@ -375,12 +389,23 @@
     var R = window.ERG_ROOM, c = R && R.cur; if (!c || document.hidden) return;
     c.player.playMin = (Number(c.player.playMin) || 0) + 1; if (R.persist) R.persist(true); publishScore();
   }, 60000);
-  var scoreRef = null;
-  function ensureScoreWatch() {
-    if (scoreRef || !ONLINE || !window.firebase || !APP.me.sid) return;
-    scoreRef = window.firebase.database().ref('er/' + APP.SESS + '/score');
-    scoreRef.on('value', function (snap) { window.ERG_SCORES = snap.val() || {}; window.ERG_SCORES_READY = true; var R = window.ERG_ROOM; if (R && R.cur && R.cur.tab === 'ach' && window.ERG_PANELS) window.ERG_PANELS.renderAch(); });
-  }
+  document.addEventListener('visibilitychange', function () { if (document.hidden) publishScore(true); });   /* 離開頁面時把累計分鐘補寫一次 */
+  var scoreWatch = {
+    inner: null,
+    ensure: function () {
+      if (!this.inner) this.inner = window.ERG_ACH.makeScoreWatch({
+        getTab: function () { var R = window.ERG_ROOM; return R && R.cur ? R.cur.tab : ''; },
+        subscribe: function () {
+          var ref = window.firebase.database().ref('er/' + APP.SESS + '/score');
+          var cb = ref.on('value', function (snap) { window.ERG_SCORES = snap.val() || {}; var R = window.ERG_ROOM; if (R && R.cur && R.cur.tab === 'ach' && window.ERG_PANELS) window.ERG_PANELS.renderAch(); });
+          return function () { ref.off('value', cb); };
+        }
+      });
+      return this.inner.ensure();
+    },
+    tick: function () { return this.inner ? this.inner.tick() : false; }
+  };
+  function ensureScoreWatch() { if (!ONLINE || !window.firebase || !APP.me.sid || !window.ERG_ACH) return; ensureMyScore(); scoreWatch.ensure(); }
   window.ERG_ENSURE_SCORE_WATCH = ensureScoreWatch;
 
   window.__ERG_DEBUG = { APP: APP, DB: DB };

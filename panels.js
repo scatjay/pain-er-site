@@ -18,7 +18,7 @@
   /* 成就分頁：自己的指標與徽章＋班級「誰最多」（線上模式讀 er/{sess}/score；本機版只有自己） */
   function achCtx() { var c = cur(); var cp = (window.ERG_CORE && window.ERG_CP && c) ? (function () { try { var st = window.ERG_CORE.checkpointState(c, me()); return window.ERG_CP.evaluate(st).every(function (x) { return x.ok; }); } catch (e) { return false; } })() : false; return { cpAllOk: cp, shift: c && c.world && c.world.shift, cases: casesTried(), keep: keptBadges() }; }
   /* 10-15：成就是照『現在這間房』的紀錄算的，換案例開新房間會歸零；把之前已發布的成就帶回來，已拿到的不收回 */
-  function keptBadges() { try { var s = (window.ERG_SCORES || {})[String(me())]; return (s && s.badgeIds) ? s.badgeIds.slice() : []; } catch (e) { return []; } }
+  function keptBadges() { try { var s = (window.ERG_SCORES || {})[String(me())] || window.ERG_MY_SCORE; return (s && s.badgeIds) ? s.badgeIds.slice() : []; } catch (e) { return []; } }
   /* 10-15：自己進過幾種不同案例的房間（從大廳索引算：成員有我的房間，不同的 case 數） */
   function casesTried() { try { var sid = String(me()), seen = {}; DB.listRooms(APP.SESS).forEach(function (r) { var x = (r && r.members !== undefined) ? r : (DB.getRoom(r.code) || {}); if (x.members && x.members[sid]) seen[x.case || 'sms'] = 1; }); return Object.keys(seen).length; } catch (e) { return 0; } }
   P.achCtx = achCtx;
@@ -57,10 +57,10 @@
   }
   function renderAch() {
     var p = $('p-ach'), A = window.ERG_ACH; if (!p || !A || !cur()) return;
-    P.setAchDot(false);
+    P.setAchDot(false); if (window.ERG_ENSURE_SCORE_WATCH) window.ERG_ENSURE_SCORE_WATCH();   /* 10-19：進成就分頁才訂閱班級排行 */
     var m = A.metrics(player(), achCtx());
     var board = window.ERG_SCORES ? A.leaderboard(window.ERG_SCORES, 3) : null;
-    var bh = board ? '<h2>班上誰最多</h2><div class="board">' + board.map(function (b) { return '<div class="b"><b>' + esc(b.label) + '</b>' + (b.rows.length ? '<ol style="margin:4px 0 0 18px;padding:0;font-size:var(--fs-2)">' + b.rows.map(function (r) { return '<li>' + esc(r.name) + '　' + r.v + ' ' + esc(b.unit) + '</li>'; }).join('') + '</ol>' : '<div class="muted" style="font-size:var(--fs-1)">還沒有人</div>') + '</div>'; }).join('') + '</div>' : '<p class="muted" style="font-size:var(--fs-1)">本機版沒有班級排行；線上版會列出班上誰最多。</p>';
+    var bh = board ? '<h2>班上誰最多</h2><div class="board">' + board.map(function (b) { return '<div class="b"><b>' + esc(b.label) + '</b>' + (b.rows.length ? '<ol style="margin:4px 0 0 18px;padding:0;font-size:var(--fs-2)">' + b.rows.map(function (r) { return '<li>' + esc(r.name) + '　' + r.v + ' ' + esc(b.unit) + '</li>'; }).join('') + '</ol>' : '<div class="muted" style="font-size:var(--fs-1)">還沒有人</div>') + '</div>'; }).join('') + '</div>' : (APP.online ? '<p class="muted" style="font-size:var(--fs-1)">正在讀取班級排行…</p>' : '<p class="muted" style="font-size:var(--fs-1)">本機版沒有班級排行；線上版會列出班上誰最多。</p>');
     p.innerHTML = '<h2>我的技能</h2>' + skillBlock(A, player()) + '<h2>我的成就</h2>' + A.html(m, esc) + bh;
     if (window.ERG_PUBLISH_SCORE) window.ERG_PUBLISH_SCORE();
   }
@@ -94,7 +94,7 @@
   };
   setInterval(function () { try { if (cur()) { if (!skCache.st || skCache.code !== cur().code) skillStats(); P.notifyProgress(); } } catch (e) {} }, 12000);
   var skClick = function () { if (RM.switchTab) RM.switchTab('ach'); };
-  document.addEventListener('click', function (e) { var t = e.target; if (t && t.id === 'skBtn') skClick(); });
+  document.addEventListener('click', function (e) { var t = e.target; if (t && t.closest && t.closest('#skBtn')) skClick(); });   /* 10-19：按到按鈕裡的文字（span）時 e.target 是 span，原本只認 id 會沒反應 */
   P.renderAch = renderAch;
   P.onRoomChanged = function () { if (!typing()) P.render(cur().tab); };
   P.onSceneChanged = function () { if (!typing()) { if (cur().tab === 'cards') renderCards(); if (cur().tab === 'concl') renderConcl(); } };
@@ -250,13 +250,14 @@
     var show = !!(APP.online && cur() && window.ERG_DAEMON_HB !== undefined && !liveReady());
     if (!show) { if (b) b.style.display = 'none'; return; }
     if (!b) { b = document.createElement('div'); b.id = 'liveBar'; b.setAttribute('role', 'status'); b.style.cssText = 'flex:none;background:#fff3bf;color:var(--ink-fixed);border-bottom:var(--bw) solid var(--ink-fixed);padding:4px 10px;font-size:var(--fs-2);font-weight:700;line-height:1.45;text-align:center'; tb.parentNode.insertBefore(b, tb.nextSibling); }
-    b.textContent = daemonUp() ? '⏸ 現在不是即時訪談的開放時間（上課時間才開），人物不會直接回話。逛現場、讀線索、記筆記、寫結論都可以做。' : '⏸ 即時訪談目前連不上，人物不會直接回話。逛現場、讀線索、記筆記、寫結論都可以做。';
+    var gd = window.ERG_LIVE_GUARD; /* 頂到額度上限：學生要看到明確原因與恢復時間，不是「不是開放時間」 */
+    b.textContent = daemonUp() ? (gd && gd.msg ? '⏸ ' + gd.msg : '⏸ 現在不是即時訪談的開放時間（上課時間才開），人物不會直接回話。逛現場、讀線索、記筆記、寫結論都可以做。') : '⏸ 即時訪談目前連不上，人物不會直接回話。逛現場、讀線索、記筆記、寫結論都可以做。';
     b.style.display = 'block';
   }
   if (APP.data && APP.data.listeners) APP.data.listeners.push(function (topic) { if (topic === 'daemon') liveBar(); });
   setInterval(liveBar, 5000);
   /* 狀態字：連線中／非上課時間暫停／目前離線 */
-  function liveLabel() { return liveReady() ? '連線中' : (daemonUp() ? '非上課時間，即時訪談暫停（可以逛、可以跟同學聊）' : '目前離線'); }
+  function liveLabel() { var gd = window.ERG_LIVE_GUARD; return liveReady() ? '連線中' : (daemonUp() ? (gd ? (gd.reason === 'week_cap' ? '本週即時訪談額度已用完（可以逛、可以跟同學聊）' : '今天的即時訪談額度已用完，明天 00:00 恢復（可以逛、可以跟同學聊）') : '非上課時間，即時訪談暫停（可以逛、可以跟同學聊）') : '目前離線'); }
   P.liveLabel = liveLabel;
   function safeKey(id) { return String(id).replace(/[.#$\[\]\/]/g, '_'); }
   function chatRef(recId) { return window.firebase.database().ref('er/' + APP.SESS + '/chat/' + cur().code + '/' + me() + '/' + safeKey(recId)); }

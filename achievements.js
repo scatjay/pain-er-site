@@ -169,6 +169,26 @@
     var m = metrics(player, ctx);
     return { interviewees: m.interviewees, rooms: m.rooms, cards: m.cards, events: m.events, chatTurns: m.chatTurns, playMin: m.playMin, partners: m.partners, conclusions: m.conclusions, badges: earned(m).length, skAsk: Number(((player || {}).skillLv || {}).ask) || 1, skCtx: Number(((player || {}).skillLv || {}).ctx) || 1, badgeIds: earned(m).map(function (b) { return b.id; }) };
   }
+  /* 10-19 降流量：成就摘要的「變動判斷」不含 playMin（它每分鐘 +1，會讓每位前景學生每分鐘寫一次，全班人人收到）；
+     playMin 改成累計滿 PLAYMIN_EVERY 分鐘才跟著寫一次，或離開頁面（force）時補寫。其他欄位一變就寫。 */
+  var PLAYMIN_EVERY = 5;
+  function scoreSig(s) { return JSON.stringify([s.interviewees, s.rooms, s.cards, s.events, s.chatTurns, s.partners, s.conclusions, s.badges, s.skAsk, s.skCtx]); }
+  /* st = { sig, playMin }（上次寫出去的）；回傳 { write, sig }。force＝離開頁面時，playMin 只要有差就補寫 */
+  function scoreDecide(st, s, force) {
+    var sig = scoreSig(s), pm = Number(s.playMin) || 0, last = Number(st && st.playMin) || 0;
+    if (!st || st.sig !== sig) return { write: true, sig: sig };
+    if (pm - last >= PLAYMIN_EVERY || (force && pm !== last)) return { write: true, sig: sig };
+    return { write: false, sig: sig };
+  }
+  /* 班級排行用的整份 score 節點：只在「成就」分頁開著時才訂閱，離開就退訂。subscribe(cb) 要回傳退訂函式。 */
+  function makeScoreWatch(o) {
+    var off = null;
+    return {
+      ensure: function () { if (off || o.getTab() !== 'ach') return false; off = o.subscribe(); return true; },
+      tick: function () { if (off && o.getTab() !== 'ach') { try { off(); } catch (e) {} off = null; return true; } return false; },
+      active: function () { return !!off; }
+    };
+  }
   /* 排行：scores = { sid: { name, ...summary } } → 每個項目的前三名 */
   var BOARD = [['interviewees', '訪談最多人', '人'], ['playMin', '待最久', '分鐘'], ['rooms', '走最多房間', '間'], ['chatTurns', '問最多題', '題'], ['cards', '便利貼最多', '張'], ['events', '遇到最多事件', '件'], ['badges', '徽章最多', '枚']];
   function leaderboard(scores, topN) {
@@ -186,5 +206,5 @@
     var grid = '<div class="achGrid">' + bs.map(function (b) { return '<div class="ach ' + (b.ok ? 'on' : '') + '" title="' + esc(b.desc) + '"><div class="achIcon">' + b.icon + '</div><div class="achName">' + esc(b.name) + '</div><div class="achDesc">' + esc(b.desc) + '</div></div>'; }).join('') + '</div>';
     return '<p class="muted" style="font-size:var(--fs-1);margin:4px 0">徽章 ' + got + ' / ' + bs.length + '。這不是分數，只是記錄你在急診室裡做過的事。</p>' + stat + grid;
   }
-  return { DEFS: DEFS, BOARD: BOARD, CORE_IDS: CORE_IDS, SPECIAL: SPECIAL, metrics: metrics, noteQuestion: noteQuestion, chatStats: chatStats, skills: skills, skillsHtml: skillsHtml, badges: badges, earned: earned, summary: summary, leaderboard: leaderboard, html: html };
+  return { DEFS: DEFS, BOARD: BOARD, CORE_IDS: CORE_IDS, SPECIAL: SPECIAL, metrics: metrics, noteQuestion: noteQuestion, chatStats: chatStats, skills: skills, skillsHtml: skillsHtml, badges: badges, earned: earned, summary: summary, leaderboard: leaderboard, html: html, scoreSig: scoreSig, scoreDecide: scoreDecide, makeScoreWatch: makeScoreWatch, PLAYMIN_EVERY: PLAYMIN_EVERY };
 });

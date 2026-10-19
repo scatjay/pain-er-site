@@ -1,0 +1,62 @@
+{
+ "version": 1,
+ "textures": [
+  {
+   "file": "floor_checker_256.png",
+   "use": "候診區／檢傷區主地板（世界座標 uv，一張 0.9 m）",
+   "model": "FLUX.1-dev Q8 GGUF（本機 ComfyUI 0.3.14，comfy-gen preset flux-dev-q8）",
+   "license_note": "見 SKILL §七：FLUX.1-dev 授權待讀原文，公開教學用風險中低",
+   "seed": 20261019,
+   "prompt": "soft pastel cream and peach checkered floor tile pattern, top-down flat view, hand-painted, cozy, simple shapes, rounded, flat colors, subtle paper grain, cute cartoon, seamless texture, two tones only",
+   "gen": {
+    "w": 512,
+    "h": 512,
+    "steps": 12,
+    "seconds_incl_two_server_starts": 195
+   },
+   "date": "2026-10-19",
+   "steps": [
+    "裁切兩格週期 (35,50,325,355) → 256 LANCZOS",
+    "邊帶 24 px 對邊互融成無縫",
+    "LAB KMeans k=2 各移向最近色盤色 60%",
+    "高斯柔化 σ0.8",
+    "亮度顆粒 2%",
+    "窄帶 6 px 再收縫",
+    "PNG optimize"
+   ],
+   "palette": "palette.json",
+   "metrics": {
+    "file": "assets3d/er_textures/floor_checker_256.png",
+    "size_bytes": 108603,
+    "px": [
+     256,
+     256
+    ],
+    "seam_mae_raw_crop": 7.05,
+    "seam_mae_final": 0.0,
+    "adjacent_px_mae_for_reference": 4.11,
+    "palette_lab_dist_before": 4.2,
+    "palette_lab_dist_after": 3.01,
+    "mean_luma": 229.9,
+    "rms_contrast": 0.05,
+    "p5_p95_luma": [
+     212.5,
+     247.3
+    ],
+    "cluster_targets_rgb": [
+     [
+      249,
+      216,
+      176
+     ],
+     [
+      253,
+      242,
+      207
+     ]
+    ]
+   },
+   "no_text_in_prompt": true
+  }
+ ]
+}

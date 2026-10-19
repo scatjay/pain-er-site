@@ -1,0 +1,62 @@
+{
+  "_說明": "3D 家具對照表（資料驅動）：layout.js 的家具 type（加上 label 正規表示式覆寫）→ 3D 建法。builder 的實作在 view3d.js 的 BUILDERS。stand_in=true 表示目前用簡單幾何（圓角盒、圓柱）頂著，缺口登記在 docs/3D_FURNITURE_GAPS.md。新增模型只要放進 assets3d/、在 models 清單加檔名、改這裡的對照即可。",
+  "models": ["desk", "chairDesk", "bedSingle", "loungeSofa", "cardboardBoxOpen", "bathroomSink", "toiletSquare", "bookcaseOpenLow", "kitchenCoffeeMachine", "rugDoormat", "trashcan", "laptop"],
+  "types": {
+    "seats":   { "builder": "bench" },
+    "chair":   { "builder": "chair", "model": "chair", "k": 1.9, "tint": "#8fc9d8", "rotY": 3.14159 },
+    "sofa":    { "builder": "sofa", "model": "loungeSofa", "tint": "#8fc9d8", "maxH": 0.9 },
+    "counter": { "builder": "counter" },
+    "screen":  { "builder": "screen" },
+    "board":   { "builder": "wallsign", "bg": "#e7c79a", "fg": "#4a3524", "h": 0.9, "y": 1.15 },
+    "sign":    { "builder": "wallsign", "bg": "#ffe9a8", "fg": "#4a3524", "h": 0.5, "y": 1.45 },
+    "desk":    { "builder": "model", "model": "desk", "fit": "foot", "maxH": 0.8 },
+    "bed":     { "builder": "bed", "model": "bedSingle", "rotY": 1.5708, "maxH": 0.55 },
+    "device":  { "builder": "device_box", "color": "#dfe9f2", "h": 0.5, "stand_in": true },
+    "door":    { "builder": "model", "model": "rugDoormat", "fit": "foot", "flat": true },
+    "rack":    { "builder": "model", "model": "bookcaseOpenLow", "fit": "foot", "maxH": 1.15 },
+    "stall":   { "builder": "stall" },
+    "scanner": { "builder": "scanner", "stand_in": true, "gap": "斷層掃描儀：沒有醫療機台模型，用盒子加圓柱孔拼裝" },
+    "glass":   { "builder": "glass", "stand_in": true, "gap": "控制室玻璃：半透明盒子頂著" },
+    "lightbox": { "builder": "box", "color": "#f4f1ff", "h": 1.2, "stand_in": true, "gap": "片燈箱：遠端地點（回診門診），不在本輪範圍" },
+    "phone":   { "builder": "box", "color": "#2b2f3a", "h": 1.4, "stand_in": true, "gap": "病患手機：遠端地點（家），不在本輪範圍" }
+  },
+  "labels": [
+    { "type": "chair",  "match": "輪椅", "model": "chairDesk", "k": 2.4, "tint": "#9fb7c9", "rotY": 0, "stand_in": true, "gap": "輪椅：用辦公椅頂著（沒有輪椅模型）" },
+    { "type": "device", "match": "飲水", "builder": "water" },
+    { "type": "device", "match": "鈴", "builder": "bell" },
+    { "type": "device", "match": "電腦", "builder": "model", "model": "laptop", "fit": "uniform", "k": 1.5, "yRaise": 0.76, "onDesk": true },
+    { "type": "device", "match": "咖啡機", "builder": "coffee" },
+    { "type": "device", "match": "玩具箱", "builder": "model", "model": "cardboardBoxOpen", "fit": "foot", "maxH": 0.55 },
+    { "type": "device", "match": "洗手台", "builder": "sinks" },
+    { "type": "device", "match": "點滴架", "builder": "drip", "stand_in": true, "gap": "點滴架：圓柱加盒子頂著" },
+    { "type": "device", "match": "繳費機|掛號機", "builder": "kiosk", "stand_in": true, "gap": "自助繳費／掛號機：盒子加斜面螢幕頂著" },
+    { "type": "device", "match": "設備", "builder": "equipment", "stand_in": true, "gap": "急救室設備列：櫃體盒子加幾個螢幕頂著" },
+    { "type": "device", "match": "血壓計", "builder": "device_box", "color": "#dfe9f2", "h": 0.5, "stand_in": true, "gap": "血壓計：盒子頂著" },
+    { "type": "sign",   "match": "分流|海報|說明", "builder": "wallsign", "bg": "#cfe9ff", "fg": "#223a52", "h": 0.5, "y": 1.45 }
+  ],
+  "rooms": {
+    "waiting":   { "wall": "#f4d6df", "floor": "#fff0e2", "zone": "暖",   "sitWp": "^wait-[123]$" },
+    "triage":    { "wall": "#ffdcae", "floor": "#fff2cc", "zone": "暖",   "sitWp": "^triage-chair$" },
+    "entrance":  { "wall": "#ffdcae", "floor": "#fff2cc", "zone": "暖" },
+    "lobby":     { "wall": "#ffe3b8", "floor": "#fff3d6", "zone": "暖" },
+    "service":   { "wall": "#ffe3b8", "floor": "#fff3d6", "zone": "暖" },
+    "family":    { "wall": "#f4d6df", "floor": "#fff0e2", "zone": "暖",   "sitWp": "^family-[12]$" },
+    "restroom":  { "wall": "#f1dfe6", "floor": "#f1ece8", "zone": "暖" },
+    "consultA":  { "wall": "#cfe7ee", "floor": "#e6f2f7", "zone": "冷" },
+    "consultB":  { "wall": "#cfe7ee", "floor": "#e6f2f7", "zone": "冷" },
+    "ped":       { "wall": "#d3eadb", "floor": "#e8f5ec", "zone": "冷" },
+    "obs":       { "wall": "#cfe0f2", "floor": "#e6eef8", "zone": "冷" },
+    "bays":      { "wall": "#d9d4ee", "floor": "#e8e4f4", "zone": "冷" },
+    "resus":     { "wall": "#e6d2d6", "floor": "#f1e4e6", "zone": "冷" },
+    "ct":        { "wall": "#d9d4ee", "floor": "#e8e4f4", "zone": "冷" },
+    "nurse":     { "wall": "#e3e0d4", "floor": "#ece8dc", "zone": "中性" },
+    "staff":     { "wall": "#e3e0d4", "floor": "#ece8dc", "zone": "中性", "sitWp": "^staff-couch$" },
+    "admin":     { "wall": "#e3e0d4", "floor": "#ece8dc", "zone": "中性" },
+    "discharge": { "wall": "#d6ebe0", "floor": "#e6f3ec", "zone": "冷" },
+    "pharmacy":  { "wall": "#d6ebe0", "floor": "#e6f3ec", "zone": "冷", "sitWp": "^pharm-wait$" }
+  },
+  "floorsOverride": {
+    "waiting": [[0, 510, 700, 560, "hall"], [0, 780, 700, 830, "hall"]],
+    "triage":  [[100, 780, 840, 830, "hall"], [100, 1050, 840, 1150, "street"]]
+  }
+}

@@ -6,7 +6,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  var VERSION = 'v2-20261009';
+  var VERSION = 'v3-20261019';
   var KINDS = { bug: '🐛 有問題', idea: '💡 建議', confuse: '❓ 看不懂' };
   var MAX = 500, KEEP = 200, KEY = 'erg2:feedback';
 
@@ -18,6 +18,22 @@
     return { ok: errors.length === 0, errors: errors };
   }
 
+  /* 檢視模式：3D 預覽（view3d.js 載入並正在顯示）才是 '3d'，其餘（2D、手機頁、3D 載入失敗退回 2D）一律 '2d'。
+     v3＝window.ERG_V3D（view3d.js 掛的小物件：active()、quality()、errors()、errCount()、fallback()）；沒有它＝沒載入 3D。純函式，方便測試。 */
+  function viewInfo(v3) {
+    var out = { view: '2d', q: '', err3: 0, fb3: '', errs3: [] };
+    if (!v3 || typeof v3 !== 'object') return out;
+    try {
+      var on = typeof v3.active === 'function' ? !!v3.active() : !!v3.loaded;
+      out.view = on ? '3d' : '2d';
+      out.q = typeof v3.quality === 'function' ? String(v3.quality() || '') : '';
+      out.err3 = typeof v3.errCount === 'function' ? (Number(v3.errCount()) || 0) : 0;
+      out.fb3 = typeof v3.fallback === 'function' ? String(v3.fallback() || '') : '';
+      out.errs3 = typeof v3.errors === 'function' ? (v3.errors() || []).slice(-3).map(function (e) { return '[3D] ' + String(e); }) : [];
+    } catch (e) { /* 取不到就當 2D，不能讓回報壞掉 */ }
+    return out;
+  }
+
   /* ctx：{ sid, cls, room, caseId, loc, simTime, w, h, ua, errors:[...] }（includeState 為 false 時只留版本與學號） */
   function buildEntry(input, ctx, now) {
     var v = validate(input); if (!v.ok) throw new Error(v.errors.join('；'));
@@ -26,6 +42,10 @@
     if (input.includeState !== false) {
       entry.state = { room: ctx.room || '', caseId: ctx.caseId || '', loc: ctx.loc || '', simTime: ctx.simTime || '', w: ctx.w || 0, h: ctx.h || 0, ua: String(ctx.ua || '').slice(0, 160),
         errors: (ctx.errors || []).slice(-5).map(function (e) { return String(e).slice(0, 200); }) };
+      /* 檢視模式：舊資料沒有這欄，一律視為 '2d'；3D 時多帶畫質與 3D 錯誤數，3D 退回 2D 時帶原因 */
+      entry.state.view = ctx.view === '3d' ? '3d' : '2d';
+      if (entry.state.view === '3d') { entry.state.q = String(ctx.q || ''); entry.state.err3 = Number(ctx.err3) || 0; }
+      if (ctx.fb3) entry.state.fb3 = String(ctx.fb3).slice(0, 60);
     }
     return entry;
   }
@@ -33,12 +53,15 @@
   function load(storage) { try { var a = JSON.parse(storage.getItem(KEY) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
   function save(storage, entry) { var list = load(storage).concat([entry]).slice(-KEEP); storage.setItem(KEY, JSON.stringify(list)); return list; }
   function mine(storage, sid) { return load(storage).filter(function (e) { return e.sid === String(sid); }); }
+  /* 缺 view 欄的舊回報視為 2D */
+  function viewOf(st) { return st && st.view === '3d' ? '3d' : '2d'; }
+  function viewLabel(st) { return viewOf(st) === '3d' ? ('3D' + (st.q ? '（畫質 ' + st.q + '）' : '') + (st.err3 ? '、3D 錯誤 ' + st.err3 : '')) : ('2D' + (st && st.fb3 ? '（3D 已退回：' + st.fb3 + '）' : '')); }
   /* 一鍵複製給老師的純文字 */
   function asText(list) {
     return list.map(function (e) {
       var d = new Date(e.t), p = function (n) { return (n < 10 ? '0' : '') + n; };
       return '[' + d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes()) + '] ' + (KINDS[e.kind] || e.kind) + '　' + e.sid + (e.cls ? '（' + e.cls + '）' : '') + '\n' + e.text +
-        (e.state ? '\n  狀態：房間 ' + e.state.room + '、案例 ' + e.state.caseId + '、位置 ' + e.state.loc + '、時間 ' + e.state.simTime + '、畫面 ' + e.state.w + '×' + e.state.h + (e.state.errors.length ? '\n  最近的錯誤：' + e.state.errors.join(' / ') : '') : '') + '\n  版本 ' + e.v;
+        (e.state ? '\n  狀態：房間 ' + e.state.room + '、案例 ' + e.state.caseId + '、位置 ' + e.state.loc + '、時間 ' + e.state.simTime + '、畫面 ' + e.state.w + '×' + e.state.h + '、檢視 ' + viewLabel(e.state) + (e.state.errors.length ? '\n  最近的錯誤：' + e.state.errors.join(' / ') : '') : '') + '\n  版本 ' + e.v;
     }).join('\n\n');
   }
 
@@ -50,8 +73,8 @@
     win.addEventListener('unhandledrejection', function (e) { errs.push('Promise：' + String(e.reason && e.reason.message || e.reason)); if (errs.length > 20) errs.shift(); });
     var doc = win.document, esc = APP.esc;
     function ctxNow() {
-      var R = win.ERG_ROOM && win.ERG_ROOM.cur;
-      return { sid: APP.me.sid, cls: APP.me.cls, room: R ? R.code : '', caseId: R ? (R.world.meta.id) : '', loc: R ? R.player.loc : '', simTime: R ? win.ERG_CLOCK.format(R.clock) : '', w: win.innerWidth, h: win.innerHeight, ua: win.navigator.userAgent, errors: errs };
+      var R = win.ERG_ROOM && win.ERG_ROOM.cur, vi = viewInfo(win.ERG_V3D);
+      return { sid: APP.me.sid, cls: APP.me.cls, room: R ? R.code : '', caseId: R ? (R.world.meta.id) : '', loc: R ? R.player.loc : '', simTime: R ? win.ERG_CLOCK.format(R.clock) : '', w: win.innerWidth, h: win.innerHeight, ua: win.navigator.userAgent, errors: errs.concat(vi.errs3), view: vi.view, q: vi.q, err3: vi.err3, fb3: vi.fb3 };
     }
     function open() {
       var mineList = APP.me.sid ? mine(APP.storage, APP.me.sid) : [];
@@ -84,5 +107,5 @@
     Array.prototype.forEach.call(doc.querySelectorAll('[data-fb]'), function (b) { b.onclick = open; });
     return { open: open };
   }
-  return { VERSION: VERSION, KINDS: KINDS, MAX: MAX, validate: validate, buildEntry: buildEntry, load: load, save: save, mine: mine, asText: asText, install: install };
+  return { VERSION: VERSION, KINDS: KINDS, MAX: MAX, validate: validate, viewInfo: viewInfo, viewOf: viewOf, viewLabel: viewLabel, buildEntry: buildEntry, load: load, save: save, mine: mine, asText: asText, install: install };
 });
