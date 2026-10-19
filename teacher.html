@@ -75,7 +75,7 @@ body.proj{--fs:21px}body.proj .wrap{max-width:none}body.proj .small{display:none
 </div>
 <div id="dashboard" hidden>
 <div class="top"><h1>痛點急診室 老師後台</h1>
-  <label class="muted">場次 <select id="sessSel"></select></label>
+  <label class="muted">看哪一週、哪一班 <select id="sessSel"></select></label> <span class="muted small" id="weekNote"></span>
   <button id="deidBtn" title="學號、姓名、信箱換成代號，投影時用">去識別化：關</button><button id="projBtn" title="字放大、藏掉次要資訊">投影模式：關</button>
   <span class="small muted" id="whoami" style="font-size:.85em"></span><button id="logoutBtn" class="ghost">登出</button></div>
 
@@ -91,7 +91,7 @@ body.proj{--fs:21px}body.proj .wrap{max-width:none}body.proj .small{display:none
 <div class="kpi"><div><div class="big" id="kOnline">0</div><div class="muted">人在線</div></div><div><div class="big" id="kStudents">0</div><div class="muted">人進過本場次</div></div><div><div class="big" id="kRooms">0</div><div class="muted">間房</div></div><div><div class="big" id="kIv">0</div><div class="muted">次訪談</div></div><div><div class="big" id="kQ">0</div><div class="muted">個提問</div></div><div><div class="big" id="kLit">0</div><div class="muted">人六點全亮</div></div></div>
 
 <nav class="tabs" id="tabs">
-  <button data-tab="live">現場</button><button data-tab="ask">提問與啟示</button><button data-tab="stu">學生 <span class="n" id="nStu">0</span></button><button data-tab="room">房間與逐字稿 <span class="n" id="nRoom">0</span></button><button data-tab="board">成就排行</button><button data-tab="fb">回報 <span class="n" id="nFb">0</span></button><button data-tab="use">用量與花費</button>
+  <button data-tab="live">現場</button><button data-tab="ask">提問與啟示</button><button data-tab="stu">學生 <span class="n" id="nStu">0</span></button><button data-tab="room">房間與逐字稿 <span class="n" id="nRoom">0</span></button><button data-tab="board">成就排行</button><button data-tab="fb">回報 <span class="n" id="nFb">0</span></button><button data-tab="rev">審核建議</button><button data-tab="use">用量與花費</button>
 </nav>
 
 <section class="pane" data-pane="live">
@@ -136,6 +136,16 @@ body.proj{--fs:21px}body.proj .wrap{max-width:none}body.proj .small{display:none
   <div class="card"><div class="row" id="fbFilter" style="margin-bottom:6px"></div><div id="fbBox">載入中…</div></div>
 </section>
 
+<section class="pane" data-pane="rev">
+  <h2>上週訪談審核（AI 建議，給你確認用）</h2>
+  <div class="card" id="revSum">讀取中…</div>
+  <h2>每位學生的審核建議</h2>
+  <div class="card"><div class="row" style="margin-bottom:6px"><select id="rvLv"><option value="">全部等級</option><option>起步</option><option>進步中</option><option>很好</option></select><input id="rvQ" placeholder="找學號、姓名或關鍵字" style="flex:1;min-width:8em"><span class="muted" id="rvCount"></span></div><div class="scroll" id="revRows">讀取中…</div></div>
+  <h2>第 2 週回應指引審核</h2>
+  <div class="card" id="respSum">讀取中…</div>
+  <h2>審核用量</h2>
+  <div class="card scroll" id="revUse">讀取中…</div>
+</section>
 <section class="pane" data-pane="use">
   <h2>各型號試用比較</h2>
   <div class="card"><div id="modelStats" class="scroll"><span class="muted">還沒有資料。</span></div><div class="muted" style="font-size:.85em;margin-top:6px">每段對話（一位學生問一位人物）固定分到一個型號。「出錯」＝被限流或 10 秒沒回，那一題會自動改用基本型號重問，學生不會看到忙碌。價錢依官方牌價計算。</div></div>
@@ -158,16 +168,16 @@ body.proj{--fs:21px}body.proj .wrap{max-width:none}body.proj .small{display:none
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-<script src="er_firebase.js?v=202610192158"></script>
-<script src="checklist.js?v=202610192158"></script>
-<script src="checkpoints.js?v=202610192158"></script>
-<script src="avatar.js?v=202610192158"></script>
-<script src="local_db.js?v=202610192158"></script>
-<script src="app_core.js?v=202610192158"></script>
-<script src="achievements.js?v=202610192158"></script><script src="remote_db.js?v=202610192158"></script>
-<script src="layout.js?v=202610192158"></script>
-<script src="minimap.js?v=202610192158"></script>
-<script src="personas_inclusive.js?v=202610192158"></script><script src="er_data.js?v=202610192158"></script><script src="npc_voice.js?v=202610192158"></script><script src="personas.js?v=202610192158"></script>
+<script src="er_firebase.js?v=202610192243"></script>
+<script src="checklist.js?v=202610192243"></script>
+<script src="checkpoints.js?v=202610192243"></script>
+<script src="avatar.js?v=202610192243"></script>
+<script src="local_db.js?v=202610192243"></script>
+<script src="app_core.js?v=202610192243"></script>
+<script src="achievements.js?v=202610192243"></script><script src="remote_db.js?v=202610192243"></script>
+<script src="layout.js?v=202610192243"></script>
+<script src="minimap.js?v=202610192243"></script>
+<script src="personas_inclusive.js?v=202610192243"></script><script src="er_data.js?v=202610192243"></script><script src="npc_voice.js?v=202610192243"></script><script src="personas.js?v=202610192243"></script>
 <script>
 /* 教師名單：只有這裡的 Google 帳號能進。要加人就加在這裡（改完重新部署；資料庫規則 tools/er_after_google_enabled.py 也要加）。 */
 var TEACHER_EMAILS = ['scatjay@gmail.com', 'prof.chwu@mx.nthu.edu.tw', 'nthuchwu@gapp.nthu.edu.tw'];   /* 10-16 楊老師：清大吳智鴻老師（觀摩用，含後台） */
@@ -246,8 +256,8 @@ var CLASS_WINDOWS = [].concat(
 
   /* 10-13：這個單元三個班、三週共用同一個場次（與 game.js 的 UNIT_SESS 同一個值，要一起改） */
   function today() { return 'ER-20261013'; }
-  function sessLabel(k) { var m = k.match(/^ER-(\d{4})(\d\d)(\d\d)$/); if (!m) return k; var d = new Date(+m[1], +m[2] - 1, +m[3]); return (+m[2]) + '/' + (+m[3]) + '（' + '日一二三四五六'.charAt(d.getDay()) + '）' + (k === today() ? ' 本單元' : ''); }
-  var SESS = today(), DB = null, profiles = {}, presence = {}, CP = window.ERG_CHECKPOINTS, CORE = window.ERG_CORE, booted = false, rooms = [], offs = [];
+  function sessLabel(k) { if (k === 'ER-20261013') return '衛教簡訊單元（三週共用：第 1 週 10/13 二丙二乙、10/15 二甲；第 2 週 10/20 起）'; var m = k.match(/^ER-(\d{4})(\d\d)(\d\d)$/); if (!m) return k; var d = new Date(+m[1], +m[2] - 1, +m[3]); return (+m[2]) + '/' + (+m[3]) + '（' + '日一二三四五六'.charAt(d.getDay()) + '）' + (k === today() ? ' 本單元' : ''); }
+  var guides = {}, gResp = {}, gOpen = {}, SESS = today(), DB = null, profiles = {}, presence = {}, CP = window.ERG_CHECKPOINTS, CORE = window.ERG_CORE, booted = false, rooms = [], offs = [];
   var h = location.hash.match(/^#chat\/([^/]+)\/([^/]+)\/([^/]+)\/([^/]+)$/); if (h) SESS = decodeURIComponent(h[1]);
   var qs0 = location.search.match(/[?&]sess=(ER-[A-Za-z0-9-]{4,24})/); if (isLocal && qs0) SESS = qs0[1];
 
@@ -282,12 +292,50 @@ var CLASS_WINDOWS = [].concat(
       return '<tr><td><b>' + esc(k.replace(/_/g, '.').replace('gemini-', '')) + '</b>' + (k === base ? ' <span class="pill">基本</span>' : '') + '</td><td>' + (MP[k.replace(/_/g, '.')] || '—') + '</td><td>' + n + '</td><td>' + (all ? Math.round(n / all * 100) : 0) + '%</td><td>' + (n ? ((v.ms || 0) / n / 1000).toFixed(1) : '—') + '</td><td>' + (v.fell ? '<span class="bad">' + v.fell + '</span>' : 0) + '</td><td>' + (n ? Math.round((v.tokOut || 0) / n) : '—') + '</td><td>' + usd.toFixed(4) + '</td><td>' + (n ? (usd / n * 1000).toFixed(2) : '—') + '</td></tr>';
     }).join('') + '</tbody></table><div class="muted" style="font-size:.85em">' + esc(day) + '，共 ' + all + ' 題（從開始分組試用起算）。秒數含排隊後的處理時間。</div>';
   }
+  /* 10-19 楊老師：「後台要看到所有的審核建議，還有這些建議的統整」「審核的用量也要顯示在教師後台」。
+     資料：er/_daemon/admin/ivReview（tools/er_interview_review.py --summarize 寫入）、admin/reviewUsage/{日}/{interview|resp}、場次的 guideResp。 */
+  function renderReview() {
+    var a = (daemon && daemon.admin) || {}, iv = a.ivReview, ru = a.reviewUsage || {};
+    if ($('revSum')) {
+      if (!iv || !iv.summary) $('revSum').innerHTML = '<span class="muted">還沒有審核結果。</span>';
+      else {
+        var S = iv.summary, L = S.levels || {};
+        var li = function (arr, bad) { return '<ol>' + (arr || []).map(function (x) { return '<li><b>' + esc(x.theme) + '</b>（約 ' + esc(x.count) + ' 位）<div class="muted small">例：' + esc(x.example || '') + '</div>' + (bad && x.teach ? '<div>👉 ' + esc(x.teach) + '</div>' : '') + '</li>'; }).join('') + '</ol>'; };
+        $('revSum').innerHTML = '<div>審了 <b>' + esc(S.n) + '</b> 位（' + esc(S.model || '') + '，' + esc(S.at || '') + '）　等級：' + Object.keys(L).map(function (k) { return esc(k) + ' ' + L[k]; }).join('、') + '　' +
+          (iv.published ? '<span class="ok">已發布到學生大廳（' + hm(iv.published) + '）</span>' : '<span class="bad">還沒發布給學生（等你確認）</span>') + '</div>' +
+          '<p>' + esc(S.overall || '') + '</p><div class="row" style="align-items:flex-start;gap:16px"><div style="flex:1;min-width:16em"><b>做得好的</b>' + li(S.strengths) + '</div><div style="flex:1;min-width:16em"><b>最常要改的</b>' + li(S.issues, true) + '</div></div>';
+      }
+    }
+    if ($('revRows')) {
+      var rows = iv && iv.rows ? Object.keys(iv.rows).map(function (k) { return [k, iv.rows[k]]; }) : [], lv = $('rvLv').value, q = $('rvQ').value.trim().toLowerCase();
+      rows = rows.filter(function (r) { var p = profiles[r[0]] || {}, t = (r[0] + ' ' + (p.name || '') + ' ' + r[1].good + r[1].fix + r[1].eg).toLowerCase(); return (!lv || r[1].level === lv) && (!q || t.indexOf(q) >= 0); }).sort(function (x, y) { return x[0] < y[0] ? -1 : 1; });
+      $('rvCount').textContent = rows.length + ' 位';
+      $('revRows').innerHTML = rows.length ? '<table><thead><tr><th>學生</th><th class="num">題數</th><th>等級</th><th>👍 做得好</th><th>🔧 要改</th><th>💬 示範問法</th></tr></thead><tbody>' + rows.map(function (r) {
+        var p = profiles[r[0]] || {}, v = r[1];
+        return '<tr><td><b>' + esc(DEID ? aliasOf(r[0]) : r[0] + (p.name ? '　' + p.name : '')) + '</b><div class="muted small">' + esc(p.cls || '') + '</div></td><td class="num">' + esc(v.n) + '</td><td>' + esc(v.level || '') + '</td><td>' + esc(v.good) + '</td><td>' + esc(v.fix) + '</td><td>' + esc(v.eg) + '</td></tr>';
+      }).join('') + '</tbody></table>' : '<span class="muted">沒有資料。</span>';
+    }
+    if ($('respSum')) {
+      var R = gResp || {}, ks = Object.keys(R), c = { '審核中': 0, '通過': 0, '需補強': 0 }, fbs = [];
+      ks.forEach(function (k) { var st = respState(R[k])[0].replace(/（.*）/, ''); c[st] = (c[st] || 0) + 1; if (R[k].rev && !R[k].rev.ok) fbs.push([k, R[k].rev.fb]); });
+      $('respSum').innerHTML = '送出過 <b>' + ks.length + '</b> 位：' + Object.keys(c).filter(function (k) { return k !== '未送'; }).map(function (k) { return esc(k) + ' ' + c[k]; }).join('、') + '（學生表「第 2 週指引」欄點開可看每人回應與審核意見）' +
+        (fbs.length ? '<details style="margin-top:6px"><summary>需補強的審核意見（' + fbs.length + '）</summary><ul>' + fbs.map(function (x) { return '<li><b>' + esc(DEID ? aliasOf(x[0]) : x[0]) + '</b>　' + esc(x[1] || '') + '</li>'; }).join('') + '</ul></details>' : '');
+    }
+    if ($('revUse')) {
+      var days = Object.keys(ru).sort().reverse(), NAME = { interview: '上週訪談審核（Vertex Gemini）', resp: '回應指引審核（Claude 批次）' }, tot = 0;
+      $('revUse').innerHTML = days.length ? '<table><thead><tr><th>日期</th><th>項目</th><th class="num">次數</th><th class="num">人數</th><th class="num">tokens 入／出</th><th class="num">花費（美元）</th><th>最後</th></tr></thead><tbody>' + days.map(function (d) {
+        return Object.keys(ru[d]).map(function (k) { var u = ru[d][k]; tot += Number(u.usd || 0);
+          return '<tr><td>' + esc(d.slice(4, 6) + '/' + d.slice(6)) + '</td><td>' + esc(NAME[k] || k) + '<div class="muted small">' + esc(u.model || '') + '</div></td><td class="num">' + esc(u.runs) + '</td><td class="num">' + esc(u.n) + '</td><td class="num">' + Number(u.tin || 0).toLocaleString() + '／' + Number(u.tout || 0).toLocaleString() + '</td><td class="num">' + Number(u.usd || 0).toFixed(3) + '</td><td>' + (u.last ? hm(u.last) : '') + '</td></tr>'; }).join('');
+      }).join('') + '</tbody></table><div class="muted small">合計約 US$' + tot.toFixed(3) + '。Vertex 走學校 EDU 抵免額；Claude 走全機 API 額度池。估算值，以帳單為準。</div>' : '<span class="muted">還沒有審核用量。</span>';
+    }
+  }
   function renderDaemon() {
     var d = daemon, age = d.heartbeat ? Date.now() - d.heartbeat : Infinity, fresh = age < 60000;
     $('daemon').innerHTML = fresh ? '<span class="ok">連線中</span>' : '<span class="bad">離線</span>';
     $('daemonSub').textContent = fresh ? ('模型 ' + (d.model || '') + '・心跳 ' + Math.round(age / 1000) + ' 秒前') : (d.heartbeat ? '最後心跳 ' + hm(d.heartbeat) + '。請跟助教說「急診室代理程式離線」。' : '還沒有心跳。');
     $('stDaemon').className = 'stat ' + (fresh ? 'isok' : 'isbad');
     try { renderModelStats(d); } catch (e) { console.error(e); }
+    try { renderReview(); } catch (e) { console.error(e); }
     var lv = d.live || {}, manual = (lv.mode === 'open' || lv.mode === 'closed') && Number(lv.until || 0) > Date.now(), open = !!d.liveNow && fresh;
     $('liveState').innerHTML = (open ? '<span class="ok">開放中</span>' : '<span class="bad">暫停</span>') + ' <span class="pill">' + (manual ? ('手動' + (lv.mode === 'open' ? '開放' : '關閉') + '到 ' + hm(lv.until)) : '照課表') + '</span>';
     $('stLive').className = 'stat ' + (open ? 'isok' : '');
@@ -309,7 +357,23 @@ var CLASS_WINDOWS = [].concat(
     var fill = function (keys) { keys = keys.filter(function (k) { return /^ER-\d{8}$/.test(k); }).sort().reverse(); if (keys.indexOf(SESS) < 0) keys.unshift(SESS); $('sessSel').innerHTML = keys.map(function (k) { return '<option value="' + esc(k) + '"' + (k === SESS ? ' selected' : '') + '>' + esc(sessLabel(k)) + '</option>'; }).join(''); };
     fill([SESS]);
     auth.currentUser.getIdToken().then(function (tok) { return fetch(window.ERG_FB.databaseURL + '/er.json?shallow=true&auth=' + encodeURIComponent(tok)); }).then(function (r) { return r.ok ? r.json() : {}; }).then(function (v) { fill(Object.keys(v || {})); }).catch(function () {});
-    $('sessSel').onchange = function () { SESS = $('sessSel').value; attach(); };
+    /* 10-19 楊老師：「後台還是沒有看到上週四的選單」「應該是分成週次來分析和呈現」「選單也更新一下」。
+       三班三週共用一個場次（ER-20261013），選單改成「週次 × 班級」：value＝場次|週次|班級；週次 0＝三週累計、班級空＝全部班級。 */
+    var MENU = [['0', '', '全部（三週累計，三班）']];
+    [['1', ['10/13', '10/13', '10/15（上週四）']], ['2', ['10/20', '10/20', '10/22']], ['3', ['10/27', '10/27', '10/29']]].forEach(function (w) {
+      MENU.push([w[0], '', '第 ' + w[0] + ' 週（' + w[0] + '/3）三班']);
+      [['二丙', 0], ['二乙', 1], ['二甲', 2]].forEach(function (c) { MENU.push([w[0], c[0], '　└ 第 ' + w[0] + ' 週 ' + c[0] + '（' + w[1][c[1]] + ' 上課）']); });
+    });
+    var fillMenu = function () { var sel = $('sessSel'), cur = sel.value; sel.innerHTML = MENU.map(function (m) { var v = 'ER-20261013|' + m[0] + '|' + m[1]; return '<option value="' + esc(v) + '">' + esc(m[2]) + '</option>'; }).join(''); sel.value = cur && sel.querySelector('option[value="' + cur + '"]') ? cur : 'ER-20261013|' + (Date.now() >= Date.parse('2026-10-20T07:10:00+08:00') ? '2' : '1') + '|'; };
+    fill = function () { fillMenu(); };   /* 場次清單固定，不再列其他日期的舊場次（10-13 之前的每日場次已停用） */
+    fillMenu();
+    var applyMenu = function () {
+      var v = $('sessSel').value.split('|'), cls = v[2] || '';
+      WEEK = Number(v[1]) || 0; chats = weekFilter(chatsAll); weekNote();
+      ['fCls', 'qCls'].forEach(function (id) { var el = $(id); if (!el) return; if (cls && !Array.prototype.some.call(el.options, function (o) { return o.value === cls; })) { var o = document.createElement('option'); o.value = cls; o.textContent = cls; el.appendChild(o); } el.value = cls; });
+      if (SESS !== v[0]) { SESS = v[0]; attach(); } else { try { render(); } catch (e) {} }
+    };
+    $('sessSel').onchange = applyMenu; applyMenu();
     /* 10-19：老師後台仍聽整個 er/_daemon（含 admin/）；學生端已改成只聽四個小欄位 */ fdb.ref('er/_daemon').on('value', function (s) { daemon = s.val() || {}; renderDaemon(); });
     setInterval(renderDaemon, 10000);
     $('liveOpen').onclick = function () { disarm(); setLive('open', 2, $('liveOpen'), '已開放 2 小時'); };
@@ -324,21 +388,26 @@ var CLASS_WINDOWS = [].concat(
     fdb.ref('usage').on('value', function (s) { usageAll = s.val() || {}; renderUsageAll(); }, function (e) { $('usageSum').innerHTML = '<span class="muted">讀不到（' + esc((e && e.code) || e) + '）</span>'; ['usage', 'useDays', 'useVertex', 'useCredit'].forEach(function (id) { denied($(id), '用量')(e); }); });
     fdb.ref('er/_feedback').limitToLast(100).on('value', function (s) { fbData = s.val() || {}; renderFb(); }, denied($('fbBox'), '回報'));
     ['fCls', 'fSort', 'fOnline'].forEach(function (id) { $(id).onchange = renderStudents; }); $('fQ').oninput = renderStudents;
+    $('rvLv').onchange = renderReview; $('rvQ').oninput = renderReview;
+    weekNote();
     attach();
     if (h) setTimeout(function () { showChats(h[2], h[3], h[4]); }, 900);
   }
   var tt = null; function schedule() { clearTimeout(tt); tt = setTimeout(render, 300); }
   function attach() {
     offs.forEach(function (f) { try { f(); } catch (e) {} }); offs = [];
-    profiles = {}; presence = {}; chats = {}; scores = {}; $('chatView').hidden = true;
+    profiles = {}; presence = {}; chats = {}; chatsAll = {}; scores = {}; $('chatView').hidden = true;
     var root = fdb.ref('er/' + SESS);
     function on(ref, fn, err) { ref.on('value', fn, err); offs.push(function () { ref.off('value', fn); }); }
     DB = window.ERG_REMOTE.makeRemoteDb({ root: root, sess: SESS, watchAll: true, notify: function (t) { if (/^(room:|lobby|scene:)/.test(t)) schedule(); } });
-    on(root.child('profiles'), function (s) { profiles = s.val() || {}; schedule(); renderUsageAll(); });
+    on(root.child('profiles'), function (s) { profiles = s.val() || {}; if (WEEK) chats = weekFilter(chatsAll); schedule(); renderUsageAll(); });
     on(root.child('presence'), function (s) { presence = s.val() || {}; schedule(); });
-    on(root.child('chat'), function (s) { chats = s.val() || {}; schedule(); });
+    on(root.child('chat'), function (s) { chatsAll = s.val() || {}; chats = weekFilter(chatsAll); schedule(); });
     on(root.child('analysis/summary'), function (s) { var v = s.val(); $('sumBox').textContent = v ? v.text : ''; $('sumStat').textContent = v ? ('上次摘要：' + hm(v.t) + '，' + v.n + ' 個問題') : ''; });
     renderUsageAll();
+    /* 10-19：第 2 週個人指引（一次讀，約 400 KB）與回應（訂閱，小）；學生表「第 2 週指引」欄用 */
+    root.child('guide').once('value').then(function (g) { guides = g.val() || {}; renderStudents(); }, function () {});
+    on(root.child('guideResp'), function (r) { gResp = r.val() || {}; renderStudents(); try { renderReview(); } catch (e) {} });
     on(root.child('score'), function (s) { var prev = scores; var first = !achSeen; scores = s.val() || {}; achSeen = true; renderBoard(); try { renderSkillDist(); } catch (e) {} try { if (!first) achNotify(prev || {}, scores); } catch (e) {} });
     schedule();
   }
@@ -370,6 +439,23 @@ var CLASS_WINDOWS = [].concat(
       '<div class="muted small" style="margin-top:6px">徽章清單：' + A.DEFS.map(function (d) { return d.icon + d.name; }).join('、') + '</div>' : '<span class="muted">還沒有人寫入分數（學生進房間一分鐘後會出現）。</span>';
   }
   /* ───── 即時位置、提問分析、再設計啟示 ───── */
+  /* 10-19 楊老師：「應該是分成週次來分析和呈現比較合理」。週次依各班上課日切（上課前一小時起算）；
+     提問、訪談、最後提問、提問樣態都只算該週；檢核點與成就是累計（遊戲本身是累計判定）。 */
+  var WEEK = 0, chatsAll = {};
+  var WEEK_START = { '二丙': ['2026-10-13T07:10', '2026-10-20T07:10', '2026-10-27T07:10', '2026-11-03T07:10'], '二乙': ['2026-10-13T11:50', '2026-10-20T11:50', '2026-10-27T11:50', '2026-11-03T11:50'], '二甲': ['2026-10-15T11:50', '2026-10-22T11:50', '2026-10-29T11:50', '2026-11-05T11:50'] };
+  function weekRange(cls, w) { var a = WEEK_START[cls] || WEEK_START['二丙']; return [w === 1 ? 0 : Date.parse(a[w - 1] + ':00+08:00'), Date.parse(a[w] + ':00+08:00')]; }
+  function weekFilter(all) {
+    if (!WEEK) return all;
+    var out = {};
+    Object.keys(all || {}).forEach(function (code) { Object.keys(all[code] || {}).forEach(function (sid) {
+      var rg = weekRange((profiles[sid] || {}).cls, WEEK);
+      Object.keys(all[code][sid] || {}).forEach(function (rec) { var c = all[code][sid][rec] || {}, tt = {}, k = 0;
+        Object.keys(c.turns || {}).forEach(function (t) { var x = c.turns[t] || {}, at = Number(x.t || 0); if (at >= rg[0] && at < rg[1]) { tt[t] = x; k += 1; } });
+        if (k) { out[code] = out[code] || {}; out[code][sid] = out[code][sid] || {}; out[code][sid][rec] = Object.assign({}, c, { turns: tt }); } });
+    }); });
+    return out;
+  }
+  function weekNote() { var el = $('weekNote'); if (!el) return; el.textContent = WEEK ? ('第 ' + WEEK + ' 週：二丙二乙 ' + ['10/13', '10/20', '10/27'][WEEK - 1] + ' 起、二甲 ' + ['10/15', '10/22', '10/29'][WEEK - 1] + ' 起（上課前一小時起算）。提問與訪談只算這週；檢核點、成就是累計。') : '三週累計。'; }
   var chats = {}, LAYOUT = window.ERG_LAYOUT, MM = window.ERG_MINIMAP, PER = window.ERG_PERSONAS;
   function personaName(id) { try { var p = PER.byId(id); return p ? p.name : id; } catch (e) { return id; } }
   /* 10-13：分類變細。規則可以是正規式，也可以是函式；一句話可以同時算在好幾類。全部不中才是「其他」。 */
@@ -513,10 +599,26 @@ var CLASS_WINDOWS = [].concat(
     var cmp = { sid: function (a, b) { return a.sid < b.sid ? -1 : 1; }, lit: function (a, b) { return a.lit - b.lit || (a.sid < b.sid ? -1 : 1); }, iv: function (a, b) { return b.iv - a.iv; }, q: function (a, b) { return b.q - a.q; }, idle: function (a, b) { return a.lastT - b.lastT; } }[sort];
     rows.sort(cmp);
     $('stuCount').textContent = rows.length === stuRows.length ? ('共 ' + rows.length + ' 人') : ('顯示 ' + rows.length + ' / ' + stuRows.length + ' 人');
-    $('students').innerHTML = rows.length ? '<table><thead><tr><th>學生</th><th>檢核點</th><th class="num">訪談</th><th class="num">提問</th><th>最後提問</th><th>房間・逐字稿</th><th class="small">裝置</th></tr></thead><tbody>' + rows.map(function (r) {
-      return '<tr><td>' + (r.online ? '<span title="在線" style="color:var(--ok)">●</span> ' : '<span class="muted" title="不在線">○</span> ') + '<b>' + esc(DEID ? aliasOf(r.sid) : (r.sid + (r.name ? '　' + r.name : ''))) + '</b>' + (DEID ? '' : '<div class="muted small" style="font-size:.8em">' + esc(r.cls) + ' ' + esc(r.email) + '</div>') + '</td><td class="dots">' + r.dots + (r.lit >= 0 ? ' <span class="muted">' + r.lit + '/6</span>' : '') + '</td><td class="num">' + r.iv + '</td><td class="num">' + r.q + '</td><td>' + (r.lastT ? '<span class="muted">' + hm(r.lastT) + '</span> ' + esc(r.lastWho) : '<span class="muted">—</span>') + '</td><td>' + (r.rooms.map(function (c) { return '<a href="#" data-chat="' + esc(c.code) + '|' + esc(r.sid) + '">' + esc(c.code) + (c.host ? '(主)' : '') + '</a>'; }).join(' ') || '<span class="muted">還沒進房</span>') + '</td><td class="small muted">' + esc(r.ua) + '</td></tr>';
+    $('students').innerHTML = rows.length ? '<table><thead><tr><th>學生</th><th>檢核點</th><th class="num">訪談</th><th class="num">提問</th><th>最後提問</th><th>技能・成就</th><th>第 2 週指引</th><th>房間・逐字稿</th><th class="small">裝置</th></tr></thead><tbody>' + rows.map(function (r) {
+      return '<tr><td>' + (r.online ? '<span title="在線" style="color:var(--ok)">●</span> ' : '<span class="muted" title="不在線">○</span> ') + '<b>' + esc(DEID ? aliasOf(r.sid) : (r.sid + (r.name ? '　' + r.name : ''))) + '</b>' + (DEID ? '' : '<div class="muted small" style="font-size:.8em">' + esc(r.cls) + ' ' + esc(r.email) + '</div>') + '</td><td class="dots">' + r.dots + (r.lit >= 0 ? ' <span class="muted">' + r.lit + '/6</span>' : '') + '</td><td class="num">' + r.iv + '</td><td class="num">' + r.q + '</td><td>' + (r.lastT ? '<span class="muted">' + hm(r.lastT) + '</span> ' + esc(r.lastWho) : '<span class="muted">—</span>') + '</td><td>' + skCell(r.sid) + '</td><td>' + guideCell(r.sid) + '</td><td>' + (r.rooms.map(function (c) { return '<a href="#" data-chat="' + esc(c.code) + '|' + esc(r.sid) + '">' + esc(c.code) + (c.host ? '(主)' : '') + '</a>'; }).join(' ') || '<span class="muted">還沒進房</span>') + '</td><td class="small muted">' + esc(r.ua) + '</td></tr>' + (gOpen[r.sid] ? '<tr><td colspan="9">' + guideDetail(r.sid) + '</td></tr>' : '');
     }).join('') + '</tbody></table>' : '<span class="muted">' + (stuRows.length ? '沒有符合條件的學生。' : '這個場次還沒有人。') + '</span>';
     bindChatLinks($('students'));
+    Array.prototype.forEach.call($('students').querySelectorAll('[data-guide]'), function (a) { a.onclick = function (e) { e.preventDefault(); var k = a.dataset.guide; gOpen[k] = !gOpen[k]; renderStudents(); }; });
+  }
+  function skCell(sid) { var x = (scores || {})[sid] || {}; return x.skAsk || x.skCtx || x.badgeIds ? '探' + (x.skAsk || 1) + '・境' + (x.skCtx || 1) + '・🏅' + ((x.badgeIds || []).length) : '<span class="muted">—</span>'; }
+  function respState(r) { if (!r || !r.t) return ['未送', 'muted']; if (r.rev && Number(r.rev.at) >= Number(r.t)) return r.rev.ok ? ['通過', 'ok'] : ['需補強', 'bad']; return [r.passed ? '通過（又送審）' : '審核中', r.passed ? 'ok' : '']; }
+  function guideCell(sid) {
+    var g = guides[sid]; if (!g || !g.items) return '<span class="muted">沒有指引</span>';
+    var st = (g.st && g.st.items) || [], c = { ok: 0, part: 0, todo: 0 }; g.items.forEach(function (_, k) { c[(st[k] || {}).s || 'todo'] += 1; });
+    var rs = respState(gResp[sid]);
+    return '<a href="#" data-guide="' + esc(sid) + '" title="點開看指引內容與回應">✔' + c.ok + ' ◐' + c.part + ' ✘' + c.todo + '</a>　<span class="' + rs[1] + '">' + rs[0] + '</span>';
+  }
+  function guideDetail(sid) {
+    var g = guides[sid] || {}, st = (g.st && g.st.items) || [], r = gResp[sid] || {}, L = { ok: '✔ 完成', part: '◐ 做了一部分', todo: '✘ 還沒做' };
+    return '<div style="padding:6px 10px;border-left:4px solid var(--line, #999)"><b>指引（' + esc(g.at || '') + ' 基準，狀態 ' + (g.st && g.st.at ? hm(g.st.at) : '未同步') + '）</b><ol style="margin:4px 0">' +
+      (g.items || []).map(function (it, k) { var x = st[k] || {}; return '<li>' + esc(it.title) + '　<b>' + (L[x.s] || L.todo) + '</b>' + ((x.p || []).length ? ' <span class="muted">' + x.p.map(function (q) { return q[0] + '/' + q[1]; }).join('、') + '</span>' : '') + '<div class="muted small">怎麼算完成：' + esc(it.criteria) + '</div></li>'; }).join('') + '</ol>' +
+      '<b>學生的回應</b>' + (r.t ? '（' + hm(r.t) + '）<div>1. ' + esc(r.a || '') + '</div><div>2. ' + esc(r.b || '') + '</div><div>3. ' + esc(r.c || '') + '</div>' : '<span class="muted">　還沒送出</span>') +
+      (r.rev ? '<div style="margin-top:4px"><b>審核（' + hm(r.rev.at) + '，AI 建議，不是成績）</b>：' + (r.rev.ok ? '通過' : '需補強') + '　' + esc(r.rev.fb || '') + '</div>' : '') + '</div>';
   }
   function render() {
     if (!DB) return;

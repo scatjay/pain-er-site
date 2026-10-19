@@ -425,7 +425,7 @@
   /* ───── 檢核點與報告 ───── */
   function renderCp() {
     var p = $('p-cp'), e = APP.evaluate(); if (!e) return; cur().ev = e;
-    var html = (APP.week2Summary ? APP.week2Summary() : '') + '<div class="row"><b style="flex:1">第 1 週（1/3）檢核點　' + e.ev.lit + ' / ' + e.ev.total + '</b>' + (e.ev.passed ? '<span class="tag ok">全部完成</span>' : '') + '</div>' +
+    var html = (APP.week2Summary ? APP.week2Summary() : '') + '<details id="cpW1"' + (cur().cpW1Open ? ' open' : '') + '><summary style="cursor:pointer"><b>第 1 週（1/3）檢核點　' + e.ev.lit + ' / ' + e.ev.total + '</b> ' + (e.ev.passed ? '<span class="tag ok">全部完成</span>' : '<span class="muted" style="font-size:var(--fs-2)">還沒完成的可以繼續做（點開看全部、在這裡提交）</span>') + '</summary>' +
       (e.ev.next ? '<div id="cpNext" class="card" style="margin:6px 0;padding:8px 12px;box-shadow:var(--sh) var(--sh) 0 var(--ink);background:var(--yellow);color:var(--ink-fixed)"><b>下一步</b>　' + esc(e.ev.next.text) + '</div>' : '') +
       CP.listHtml(e.ev);
     var gate = CORE.submitGate(e.state), sub = !!(player().submitted);
@@ -435,7 +435,8 @@
     if (!sub || !inWork) html += '<button id="submitBtn" ' + (canSub ? '' : 'disabled') + '>提交</button> <span class="muted" style="font-size:var(--fs-1)">' + subMsg + '</span>';
     else if (e.ev.passed) html += passedBlock(e);
     else html += '<div class="card" style="border-color:var(--bad)"><b>已經按過提交，但還有打叉的項目</b><div class="muted" style="font-size:var(--fs-2)">把上面打叉的補完，這裡就會變成綠色的「已通過」。</div></div>';
-    p.innerHTML = html;
+    p.innerHTML = html + '</details>';
+    var w1d = $('cpW1'); if (w1d) w1d.addEventListener('toggle', function () { cur().cpW1Open = w1d.open; });   /* 記住這間房開過，重畫時不會又收起來 */
     var sb = $('submitBtn'); if (sb) sb.onclick = doSubmit;
     var rb = $('reportBtn'); if (rb) rb.onclick = function () { showReport(e); };
   }

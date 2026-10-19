@@ -314,7 +314,10 @@
     var sid = APP.me.sid; if (!sid || !ONLINE || GUIDE.busy || (GUIDE.loaded && GUIDE.sid === sid)) return;
     GUIDE.busy = true; var fdb = firebase.database(), base = 'er/' + APP.SESS + '/';
     Promise.all([fdb.ref(base + 'guide/' + sid).once('value'), fdb.ref(base + 'guideResp/' + sid).once('value')]).then(function (v) {
-      GUIDE.g = v[0].val(); GUIDE.r = v[1].val(); GUIDE.loaded = true; GUIDE.sid = sid; GUIDE.busy = false;
+      GUIDE.g = v[0].val(); GUIDE.r = v[1].val(); GUIDE.sid = sid;
+      /* 老師帳號沒有自己的指引：讀一份去識別的示範（guide/_demo），上課可以直接展示學生看到的樣子 */
+      if (!GUIDE.g && multiLoginOk()) return fdb.ref(base + 'guide/_demo').once('value').then(function (d) { GUIDE.g = d.val(); if (GUIDE.g) GUIDE.g.demo = true; GUIDE.loaded = true; GUIDE.busy = false; if ($('lobby').classList.contains('on')) renderLobby(); });
+      GUIDE.loaded = true; GUIDE.busy = false;
       if ($('lobby').classList.contains('on')) renderLobby();
     }, function () { GUIDE.busy = false; GUIDE.loaded = true; GUIDE.sid = sid; });
   }
@@ -329,7 +332,7 @@
     if (!ONLINE) return '';
     if (!GUIDE.loaded) return '<div class="muted" style="font-size:var(--fs-2)">正在讀取給你的指引…</div>';
     if (!g || !g.items || !g.items.length) return '<div class="muted" style="font-size:var(--fs-2)">目前沒有給你的個別指引。照上面四項做，「回應指引」那一格寫你這週做了哪些改善就可以。</div>';
-    return '<details id="guideBox" open><summary style="cursor:pointer;font-weight:900">📩 給你的指引（依你 10/19 的進度寫的，共 ' + g.items.length + ' 件）</summary>' +
+    return '<details id="guideBox" open><summary style="cursor:pointer;font-weight:900">📩 給你的指引（' + (g.demo ? '老師帳號看到的是一位同學的去識別範例' : '依你 10/19 的進度寫的') + '，共 ' + g.items.length + ' 件）</summary>' +
       '<ol style="margin:6px 0 0;padding-left:20px;font-size:var(--fs-2);line-height:1.55">' + g.items.map(function (i) {
         return '<li style="margin:6px 0"><b>' + esc(i.title) + '</b><div>怎麼做：' + esc(i.how) + '</div>' +
           (i.qs && i.qs.length ? '<div>可以這樣問：' + i.qs.map(function (q) { return esc(q); }).join('　') + '</div>' : '') +
@@ -388,10 +391,10 @@
     var e = evaluateAll(), box = $('progressBox');
     if (e) {
       var first = e.ev.list.filter(function (x) { return !x.ok; })[0];
-      var w1 = '<div class="row"><b style="flex:1">第 1 週（1/3）的檢核點　' + e.ev.lit + ' / ' + e.ev.total + (e.ev.passed ? '　<span class="tag ok">全部完成</span>' : '　<span class="muted" style="font-weight:400;font-size:var(--fs-2)">還沒完成的可以繼續做</span>') + '</b></div>' +
+      var w1 = '<details id="w1Wrap"><summary style="cursor:pointer"><b>第 1 週（1/3）的檢核點　' + e.ev.lit + ' / ' + e.ev.total + '</b>' + (e.ev.passed ? '　<span class="tag ok">全部完成</span>' : '　<span class="muted" style="font-size:var(--fs-2)">還沒完成的可以繼續做' + (e.ev.next ? '｜下一步：' + esc(e.ev.next.text) : '') + '（點開看全部）</span>') + '</summary>' +
         '<div class="dots" style="margin:6px 0">' + e.ev.list.map(function (x) { return '<i class="' + (x.ok ? 'lit' : '') + '" title="' + esc(x.label) + '" style="width:20px;height:20px"></i>'; }).join('') + '</div>' +
         (e.ev.next ? '<div id="lobbyNext" style="margin:6px 0;padding:6px 10px;border:var(--bw) solid var(--ink);border-radius:var(--r-m);background:var(--yellow);color:var(--ink-fixed);font-size:var(--fs-3)"><b>下一步</b>　' + esc(e.ev.next.text) + '</div>' : '') +
-        '<details id="lobbyCk"' + (window.innerWidth >= 900 && !e.ev.passed ? ' open' : '') + '><summary style="cursor:pointer;font-size:var(--fs-2)" class="muted">六個檢核點要做什麼（完成 ✔、還沒 ✘）</summary>' + window.ERG_CHECKPOINTS.listHtml(e.ev, { compact: true }) + '</details>';
+        '<details id="lobbyCk"' + (window.innerWidth >= 900 && !e.ev.passed ? ' open' : '') + '><summary style="cursor:pointer;font-size:var(--fs-2)" class="muted">六個檢核點要做什麼（完成 ✔、還沒 ✘）</summary>' + window.ERG_CHECKPOINTS.listHtml(e.ev, { compact: true }) + '</details></details>';
       var ae = document.activeElement; if (ae && /^gr_[abc]$/.test(ae.id || '')) { /* 正在寫回應：不重畫，免得字被洗掉、游標跳走 */ }
       else box.innerHTML = (window.ERG_WEEK2 ? week2Html() : '') + '<div style="margin-top:10px;padding-top:8px;border-top:var(--bw-s) dashed var(--ink)">' + w1 + '</div>';
       bindWeek2();
