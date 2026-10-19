@@ -113,7 +113,12 @@ body.proj{--fs:21px}body.proj .wrap{max-width:none}body.proj .small{display:none
   <h2>學生進度（六個檢核點）</h2>
   <div class="card"><div class="row" style="margin-bottom:6px">
     <select id="fCls"><option value="">全部班級</option></select>
-    <select id="fSort"><option value="sid">依學號</option><option value="lit">檢核點少的在前</option><option value="iv">訪談多的在前</option><option value="q">提問多的在前</option><option value="idle">最久沒提問的在前</option></select>
+    <select id="fSort"><option value="sid">依學號</option><option value="lit">檢核點少的在前</option><option value="iv">訪談多的在前</option><option value="q">提問多的在前</option><option value="idle">最久沒提問的在前</option><option value="lvlo">技能等級低的在前</option><option value="lvhi">技能等級高的在前</option><option value="bdg">成就多的在前</option></select>
+    <select id="fLv" title="訪談技能等級（探問、情境感知取較高）"><option value="">全部技能等級</option><option value="1">Lv.1</option><option value="2">Lv.2</option><option value="3">Lv.3</option></select>
+    <select id="fCp" title="1/3（W6）六個檢核點"><option value="">1/3 檢核點：全部</option><option value="none">還沒進來／0 項</option><option value="part">做了一部分</option><option value="all">六項全亮</option></select>
+    <select id="fGd" title="2/3（W7）個人指引逐件狀態"><option value="">2/3 個人指引：全部</option><option value="todo">一件都還沒做</option><option value="part">做了一部分</option><option value="done">全部完成</option><option value="nog">沒有指引</option></select>
+    <select id="fRs" title="2/3（W7）回應指引審核"><option value="">回應：全部</option><option value="未送">未送</option><option value="審核中">審核中</option><option value="通過">通過</option><option value="需補強">需補強</option></select>
+    <select id="fIv" title="上週訪談審核等級（AI 建議）"><option value="">上週訪談：全部</option><option value="起步">起步</option><option value="進步中">進步中</option><option value="很好">很好</option><option value="none">沒有訪談</option></select>
     <label><input type="checkbox" id="fOnline"> 只看在線</label>
     <input id="fQ" placeholder="找學號或姓名" style="flex:1;min-width:8em">
     <span class="muted" id="stuCount"></span></div>
@@ -140,8 +145,8 @@ body.proj{--fs:21px}body.proj .wrap{max-width:none}body.proj .small{display:none
   <h2>上週訪談審核（AI 建議，給你確認用）</h2>
   <div class="card" id="revSum">讀取中…</div>
   <h2>每位學生的審核建議</h2>
-  <div class="card"><div class="row" style="margin-bottom:6px"><select id="rvLv"><option value="">全部等級</option><option>起步</option><option>進步中</option><option>很好</option></select><input id="rvQ" placeholder="找學號、姓名或關鍵字" style="flex:1;min-width:8em"><span class="muted" id="rvCount"></span></div><div class="scroll" id="revRows">讀取中…</div></div>
-  <h2>第 2 週回應指引審核</h2>
+  <div class="card"><div class="row" style="margin-bottom:6px"><select id="rvLv"><option value="">全部等級</option><option>起步</option><option>進步中</option><option>很好</option></select><select id="rvCls"><option value="">全部班級</option><option>二丙</option><option>二乙</option><option>二甲</option></select><select id="rvTh" title="依要改的方向分類"><option value="">全部要改的方向</option><option value="open">開場介紹／目的</option><option value="yn">是非題、封閉式</option><option value="adv">急著給建議或解法</option><option value="off">偏題、閒聊</option><option value="dig">追問、深入細節</option></select><select id="rvSort"><option value="sid">依學號</option><option value="nlo">題數少的在前</option><option value="nhi">題數多的在前</option><option value="lv">等級（起步在前）</option></select><input id="rvQ" placeholder="找學號、姓名或關鍵字" style="flex:1;min-width:8em"><span class="muted" id="rvCount"></span></div><div class="scroll" id="revRows">讀取中…</div></div>
+  <h2>2/3（W7）回應指引審核</h2>
   <div class="card" id="respSum">讀取中…</div>
   <h2>審核用量</h2>
   <div class="card scroll" id="revUse">讀取中…</div>
@@ -168,16 +173,16 @@ body.proj{--fs:21px}body.proj .wrap{max-width:none}body.proj .small{display:none
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-<script src="er_firebase.js?v=202610192243"></script>
-<script src="checklist.js?v=202610192243"></script>
-<script src="checkpoints.js?v=202610192243"></script>
-<script src="avatar.js?v=202610192243"></script>
-<script src="local_db.js?v=202610192243"></script>
-<script src="app_core.js?v=202610192243"></script>
-<script src="achievements.js?v=202610192243"></script><script src="remote_db.js?v=202610192243"></script>
-<script src="layout.js?v=202610192243"></script>
-<script src="minimap.js?v=202610192243"></script>
-<script src="personas_inclusive.js?v=202610192243"></script><script src="er_data.js?v=202610192243"></script><script src="npc_voice.js?v=202610192243"></script><script src="personas.js?v=202610192243"></script>
+<script src="er_firebase.js?v=202610192315"></script>
+<script src="checklist.js?v=202610192315"></script>
+<script src="checkpoints.js?v=202610192315"></script>
+<script src="avatar.js?v=202610192315"></script>
+<script src="local_db.js?v=202610192315"></script>
+<script src="app_core.js?v=202610192315"></script>
+<script src="achievements.js?v=202610192315"></script><script src="remote_db.js?v=202610192315"></script>
+<script src="layout.js?v=202610192315"></script>
+<script src="minimap.js?v=202610192315"></script>
+<script src="personas_inclusive.js?v=202610192315"></script><script src="er_data.js?v=202610192315"></script><script src="npc_voice.js?v=202610192315"></script><script src="personas.js?v=202610192315"></script>
 <script>
 /* 教師名單：只有這裡的 Google 帳號能進。要加人就加在這裡（改完重新部署；資料庫規則 tools/er_after_google_enabled.py 也要加）。 */
 var TEACHER_EMAILS = ['scatjay@gmail.com', 'prof.chwu@mx.nthu.edu.tw', 'nthuchwu@gapp.nthu.edu.tw'];   /* 10-16 楊老師：清大吳智鴻老師（觀摩用，含後台） */
@@ -256,7 +261,7 @@ var CLASS_WINDOWS = [].concat(
 
   /* 10-13：這個單元三個班、三週共用同一個場次（與 game.js 的 UNIT_SESS 同一個值，要一起改） */
   function today() { return 'ER-20261013'; }
-  function sessLabel(k) { if (k === 'ER-20261013') return '衛教簡訊單元（三週共用：第 1 週 10/13 二丙二乙、10/15 二甲；第 2 週 10/20 起）'; var m = k.match(/^ER-(\d{4})(\d\d)(\d\d)$/); if (!m) return k; var d = new Date(+m[1], +m[2] - 1, +m[3]); return (+m[2]) + '/' + (+m[3]) + '（' + '日一二三四五六'.charAt(d.getDay()) + '）' + (k === today() ? ' 本單元' : ''); }
+  function sessLabel(k) { if (k === 'ER-20261013') return '衛教簡訊單元（三週共用：1/3 W6 10/13 二丙二乙、10/15 二甲；2/3 W7 10/20 起）'; var m = k.match(/^ER-(\d{4})(\d\d)(\d\d)$/); if (!m) return k; var d = new Date(+m[1], +m[2] - 1, +m[3]); return (+m[2]) + '/' + (+m[3]) + '（' + '日一二三四五六'.charAt(d.getDay()) + '）' + (k === today() ? ' 本單元' : ''); }
   var guides = {}, gResp = {}, gOpen = {}, SESS = today(), DB = null, profiles = {}, presence = {}, CP = window.ERG_CHECKPOINTS, CORE = window.ERG_CORE, booted = false, rooms = [], offs = [];
   var h = location.hash.match(/^#chat\/([^/]+)\/([^/]+)\/([^/]+)\/([^/]+)$/); if (h) SESS = decodeURIComponent(h[1]);
   var qs0 = location.search.match(/[?&]sess=(ER-[A-Za-z0-9-]{4,24})/); if (isLocal && qs0) SESS = qs0[1];
@@ -308,7 +313,12 @@ var CLASS_WINDOWS = [].concat(
     }
     if ($('revRows')) {
       var rows = iv && iv.rows ? Object.keys(iv.rows).map(function (k) { return [k, iv.rows[k]]; }) : [], lv = $('rvLv').value, q = $('rvQ').value.trim().toLowerCase();
-      rows = rows.filter(function (r) { var p = profiles[r[0]] || {}, t = (r[0] + ' ' + (p.name || '') + ' ' + r[1].good + r[1].fix + r[1].eg).toLowerCase(); return (!lv || r[1].level === lv) && (!q || t.indexOf(q) >= 0); }).sort(function (x, y) { return x[0] < y[0] ? -1 : 1; });
+      var rc = $('rvCls').value, th = $('rvTh').value, so = $('rvSort').value;
+      var TH = { open: /開場|介紹|身分|自己是誰|目的|來意/, yn: /是非|封閉|開放式|有沒有|只能回/, adv: /建議|解法|答案|中立|忍住/, off: /偏離|主題|閒聊|玩笑|拉回/, dig: /追問|深入|細節|具體|後來|順著/ };
+      var LVO = { '起步': 0, '進步中': 1, '很好': 2 };
+      rows = rows.filter(function (r) { var p = profiles[r[0]] || profiles[String(r[0]).toLowerCase()] || {}, v = r[1], t = (r[0] + ' ' + (p.name || '') + ' ' + v.good + v.fix + v.eg).toLowerCase();
+        return (!lv || v.level === lv) && (!q || t.indexOf(q) >= 0) && (!rc || p.cls === rc) && (!th || TH[th].test((v.fix_raw || '') + v.fix)); })
+        .sort(function (x, y) { var a = x[1], b = y[1]; if (so === 'nlo') return (a.n || 0) - (b.n || 0); if (so === 'nhi') return (b.n || 0) - (a.n || 0); if (so === 'lv') return (LVO[a.level] || 0) - (LVO[b.level] || 0) || (x[0] < y[0] ? -1 : 1); return x[0] < y[0] ? -1 : 1; });
       $('rvCount').textContent = rows.length + ' 位';
       $('revRows').innerHTML = rows.length ? '<table><thead><tr><th>學生</th><th class="num">題數</th><th>等級</th><th>👍 做得好</th><th>🔧 要改</th><th>💬 示範問法</th></tr></thead><tbody>' + rows.map(function (r) {
         var p = profiles[r[0]] || {}, v = r[1];
@@ -361,8 +371,8 @@ var CLASS_WINDOWS = [].concat(
        三班三週共用一個場次（ER-20261013），選單改成「週次 × 班級」：value＝場次|週次|班級；週次 0＝三週累計、班級空＝全部班級。 */
     var MENU = [['0', '', '全部（三週累計，三班）']];
     [['1', ['10/13', '10/13', '10/15（上週四）']], ['2', ['10/20', '10/20', '10/22']], ['3', ['10/27', '10/27', '10/29']]].forEach(function (w) {
-      MENU.push([w[0], '', '第 ' + w[0] + ' 週（' + w[0] + '/3）三班']);
-      [['二丙', 0], ['二乙', 1], ['二甲', 2]].forEach(function (c) { MENU.push([w[0], c[0], '　└ 第 ' + w[0] + ' 週 ' + c[0] + '（' + w[1][c[1]] + ' 上課）']); });
+      MENU.push([w[0], '', w[0] + '/3（W' + (5 + Number(w[0])) + '）三班']);
+      [['二丙', 0], ['二乙', 1], ['二甲', 2]].forEach(function (c) { MENU.push([w[0], c[0], '　└ ' + w[0] + '/3（W' + (5 + Number(w[0])) + '）' + c[0] + '（' + w[1][c[1]] + ' 上課）']); });
     });
     var fillMenu = function () { var sel = $('sessSel'), cur = sel.value; sel.innerHTML = MENU.map(function (m) { var v = 'ER-20261013|' + m[0] + '|' + m[1]; return '<option value="' + esc(v) + '">' + esc(m[2]) + '</option>'; }).join(''); sel.value = cur && sel.querySelector('option[value="' + cur + '"]') ? cur : 'ER-20261013|' + (Date.now() >= Date.parse('2026-10-20T07:10:00+08:00') ? '2' : '1') + '|'; };
     fill = function () { fillMenu(); };   /* 場次清單固定，不再列其他日期的舊場次（10-13 之前的每日場次已停用） */
@@ -387,8 +397,8 @@ var CLASS_WINDOWS = [].concat(
     $('liveHelp').innerHTML = '課表自動開放的時段（上課前一小時到下課後一小時）：' + CLASS_WINDOWS.map(function (w) { return fmtWin({ a: new Date(w[0] + 'T' + w[1] + ':00').getTime(), b: new Date(w[0] + 'T' + w[2] + ':00').getTime() }); }).join('、') + '。其餘時間學生可以逛、可以跟同學聊，但人物不回話，不耗 Vertex。「開放 2 小時」與「關閉」是暫時蓋過課表，時間到自動交回。';
     fdb.ref('usage').on('value', function (s) { usageAll = s.val() || {}; renderUsageAll(); }, function (e) { $('usageSum').innerHTML = '<span class="muted">讀不到（' + esc((e && e.code) || e) + '）</span>'; ['usage', 'useDays', 'useVertex', 'useCredit'].forEach(function (id) { denied($(id), '用量')(e); }); });
     fdb.ref('er/_feedback').limitToLast(100).on('value', function (s) { fbData = s.val() || {}; renderFb(); }, denied($('fbBox'), '回報'));
-    ['fCls', 'fSort', 'fOnline'].forEach(function (id) { $(id).onchange = renderStudents; }); $('fQ').oninput = renderStudents;
-    $('rvLv').onchange = renderReview; $('rvQ').oninput = renderReview;
+    ['fCls', 'fSort', 'fOnline', 'fLv', 'fCp', 'fGd', 'fRs', 'fIv'].forEach(function (id) { $(id).onchange = renderStudents; }); $('fQ').oninput = renderStudents;
+    ['rvLv', 'rvCls', 'rvTh', 'rvSort'].forEach(function (id) { $(id).onchange = renderReview; }); $('rvQ').oninput = renderReview;
     weekNote();
     attach();
     if (h) setTimeout(function () { showChats(h[2], h[3], h[4]); }, 900);
@@ -455,7 +465,7 @@ var CLASS_WINDOWS = [].concat(
     }); });
     return out;
   }
-  function weekNote() { var el = $('weekNote'); if (!el) return; el.textContent = WEEK ? ('第 ' + WEEK + ' 週：二丙二乙 ' + ['10/13', '10/20', '10/27'][WEEK - 1] + ' 起、二甲 ' + ['10/15', '10/22', '10/29'][WEEK - 1] + ' 起（上課前一小時起算）。提問與訪談只算這週；檢核點、成就是累計。') : '三週累計。'; }
+  function weekNote() { var el = $('weekNote'); if (!el) return; el.textContent = WEEK ? (WEEK + '/3（W' + (5 + WEEK) + '）：二丙二乙 ' + ['10/13', '10/20', '10/27'][WEEK - 1] + ' 起、二甲 ' + ['10/15', '10/22', '10/29'][WEEK - 1] + ' 起（上課前一小時起算）。提問與訪談只算這週；檢核點、成就是累計。') : '三週累計。'; }
   var chats = {}, LAYOUT = window.ERG_LAYOUT, MM = window.ERG_MINIMAP, PER = window.ERG_PERSONAS;
   function personaName(id) { try { var p = PER.byId(id); return p ? p.name : id; } catch (e) { return id; } }
   /* 10-13：分類變細。規則可以是正規式，也可以是函式；一句話可以同時算在好幾類。全部不中才是「其他」。 */
@@ -595,8 +605,13 @@ var CLASS_WINDOWS = [].concat(
   var stuRows = [];
   function renderStudents() {
     var cls = $('fCls').value, sort = $('fSort').value, onl = $('fOnline').checked, q = $('fQ').value.trim().toLowerCase();
-    var rows = stuRows.filter(function (r) { return (!cls || r.cls === cls) && (!onl || r.online) && (!q || (r.sid + ' ' + r.name).toLowerCase().indexOf(q) >= 0); });
-    var cmp = { sid: function (a, b) { return a.sid < b.sid ? -1 : 1; }, lit: function (a, b) { return a.lit - b.lit || (a.sid < b.sid ? -1 : 1); }, iv: function (a, b) { return b.iv - a.iv; }, q: function (a, b) { return b.q - a.q; }, idle: function (a, b) { return a.lastT - b.lastT; } }[sort];
+    /* 10-19 楊老師：「學生清單要有多一點的篩選器，包括班級和等級，還有其他分類」 */
+    var fLv = $('fLv').value, fCp = $('fCp').value, fGd = $('fGd').value, fRs = $('fRs').value, fIv = $('fIv').value, IVR = (((daemon || {}).admin || {}).ivReview || {}).rows || {};
+    var gdState = function (sid) { var g = guides[sid]; if (!g || !g.items) return 'nog'; var st = (g.st && g.st.items) || [], ok = 0, any = 0; g.items.forEach(function (_, k) { var x = (st[k] || {}).s; if (x === 'ok') ok += 1; if (x === 'ok' || x === 'part') any += 1; }); return ok === g.items.length ? 'done' : (any ? 'part' : 'todo'); };
+    var ivLv = function (sid) { var v = IVR[sid] || IVR[String(sid).toUpperCase()]; return v ? (v.level || '') : 'none'; };
+    var bdg = function (sid) { return (((scores || {})[sid] || {}).badgeIds || []).length; };
+    var rows = stuRows.filter(function (r) { return (!cls || r.cls === cls) && (!onl || r.online) && (!q || (r.sid + ' ' + r.name).toLowerCase().indexOf(q) >= 0) && (!fLv || String(lvOf(r.sid)) === fLv) && (!fCp || (fCp === 'all' ? r.lit === 6 : fCp === 'none' ? r.lit <= 0 : (r.lit > 0 && r.lit < 6))) && (!fGd || gdState(r.sid) === fGd) && (!fRs || respState(gResp[r.sid])[0].replace(/（.*）/, '') === fRs) && (!fIv || ivLv(r.sid) === fIv); });
+    var cmp = { lvlo: function (a, b) { return lvOf(a.sid) - lvOf(b.sid) || (a.sid < b.sid ? -1 : 1); }, lvhi: function (a, b) { return lvOf(b.sid) - lvOf(a.sid) || (a.sid < b.sid ? -1 : 1); }, bdg: function (a, b) { return bdg(b.sid) - bdg(a.sid) || (a.sid < b.sid ? -1 : 1); }, sid: function (a, b) { return a.sid < b.sid ? -1 : 1; }, lit: function (a, b) { return a.lit - b.lit || (a.sid < b.sid ? -1 : 1); }, iv: function (a, b) { return b.iv - a.iv; }, q: function (a, b) { return b.q - a.q; }, idle: function (a, b) { return a.lastT - b.lastT; } }[sort];
     rows.sort(cmp);
     $('stuCount').textContent = rows.length === stuRows.length ? ('共 ' + rows.length + ' 人') : ('顯示 ' + rows.length + ' / ' + stuRows.length + ' 人');
     $('students').innerHTML = rows.length ? '<table><thead><tr><th>學生</th><th>檢核點</th><th class="num">訪談</th><th class="num">提問</th><th>最後提問</th><th>技能・成就</th><th>第 2 週指引</th><th>房間・逐字稿</th><th class="small">裝置</th></tr></thead><tbody>' + rows.map(function (r) {
@@ -640,7 +655,16 @@ var CLASS_WINDOWS = [].concat(
     var sel = $('fCls'), cur = sel.value, opts = Object.keys(clsSet).sort();
     if (sel.dataset.opts !== opts.join('|')) { sel.dataset.opts = opts.join('|'); sel.innerHTML = '<option value="">全部班級</option>' + opts.map(function (c) { return '<option' + (c === cur ? ' selected' : '') + '>' + esc(c) + '</option>'; }).join(''); }
     renderStudents();
-    $('kOnline').textContent = online; $('kStudents').textContent = all.length; $('kRooms').textContent = rooms.length; $('kIv').textContent = ivTotal; $('kLit').textContent = litAll;
+    /* 10-19 楊老師：「切換週次，上面的數據似乎都一樣」——選了週次時，人數／房間／訪談改成只算該週（依各班週次起訖）；六點全亮仍是累計 */
+    if (WEEK) {
+      var wk = {}, wRooms = {}, wConv = 0;
+      Object.keys(chats).forEach(function (code) { Object.keys(chats[code] || {}).forEach(function (sid) { var n = Object.keys(chats[code][sid] || {}).length; if (n) { wk[sid] = 1; wRooms[code] = 1; wConv += n; } }); });
+      rooms.forEach(function (r) { var rg = weekRange(r.cls || (profiles[r.host] || {}).cls, WEEK), t = Number(r.createdAt || 0); if (t >= rg[0] && t < rg[1]) wRooms[r.code] = 1; });
+      $('kStudents').textContent = Object.keys(wk).length; $('kRooms').textContent = Object.keys(wRooms).length; $('kIv').textContent = wConv;
+    } else { $('kStudents').textContent = all.length; $('kRooms').textContent = rooms.length; $('kIv').textContent = ivTotal; }
+    $('kOnline').textContent = online; $('kLit').textContent = litAll;
+    var KL = WEEK ? ['人這週有訪談', '間房這週有動靜', '段訪談對話（這週）', '個提問（這週）', '人六點全亮（累計）'] : ['人進過本場次', '間房', '次訪談', '個提問', '人六點全亮'];
+    ['kStudents', 'kRooms', 'kIv', 'kQ', 'kLit'].forEach(function (id, i) { var lab = $(id) && $(id).nextElementSibling; if (lab) lab.textContent = KL[i]; });
     $('nStu').textContent = all.length; $('nRoom').textContent = rooms.length;
     renderBoard();
     $('rooms').innerHTML = rooms.length ? '<table><thead><tr><th>代碼</th><th>案例・班別</th><th>主持</th><th>成員</th><th>即時訪談</th></tr></thead><tbody>' + rooms.map(function (r) {

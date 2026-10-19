@@ -425,7 +425,7 @@
   /* ───── 檢核點與報告 ───── */
   function renderCp() {
     var p = $('p-cp'), e = APP.evaluate(); if (!e) return; cur().ev = e;
-    var html = (APP.week2Summary ? APP.week2Summary() : '') + '<details id="cpW1"' + (cur().cpW1Open ? ' open' : '') + '><summary style="cursor:pointer"><b>第 1 週（1/3）檢核點　' + e.ev.lit + ' / ' + e.ev.total + '</b> ' + (e.ev.passed ? '<span class="tag ok">全部完成</span>' : '<span class="muted" style="font-size:var(--fs-2)">還沒完成的可以繼續做（點開看全部、在這裡提交）</span>') + '</summary>' +
+    var html = (APP.week2Summary ? APP.week2Summary() : '') + '<details id="cpW1"' + (cur().cpW1Open ? ' open' : '') + '><summary style="cursor:pointer"><b>痛點急診室 1/3（W6）檢核點　' + e.ev.lit + ' / ' + e.ev.total + '</b> ' + (e.ev.passed ? '<span class="tag ok">全部完成</span>' : '<span class="muted" style="font-size:var(--fs-2)">還沒完成的可以繼續做（點開看全部、在這裡提交）</span>') + '</summary>' +
       (e.ev.next ? '<div id="cpNext" class="card" style="margin:6px 0;padding:8px 12px;box-shadow:var(--sh) var(--sh) 0 var(--ink);background:var(--yellow);color:var(--ink-fixed)"><b>下一步</b>　' + esc(e.ev.next.text) + '</div>' : '') +
       CP.listHtml(e.ev);
     var gate = CORE.submitGate(e.state), sub = !!(player().submitted);

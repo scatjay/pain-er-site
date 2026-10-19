@@ -25,7 +25,7 @@
       { text: bCtx >= 3 ? '「情境感知」已經是最高級 Lv.3（保持就好）' : '「情境感知」升到 Lv.' + tCtx + '「' + SK_NAMES.ctx[tCtx - 1] + '」（現在 Lv.' + ctx + '）', ok: ctx >= tCtx, todo: '打開「成就」分頁，看「情境感知」技能卡寫的「升到下一級還差」：多走幾間房、找不同的人問' }
     ];
     var need = bBadges + BADGE_PLUS;
-    var bdItems = [{ text: '比第 1 週多拿 ' + BADGE_PLUS + ' 枚成就（' + Math.max(0, badges - bBadges) + ' / ' + BADGE_PLUS + '，現在共 ' + badges + ' 枚）', ok: badges >= need, todo: '打開「成就」分頁，挑還沒亮的成就去做（例如換一種案例、問到病人本人、追問「後來呢」）' }];
+    var bdItems = [{ text: '比 1/3（W6）結束時多拿 ' + BADGE_PLUS + ' 枚成就（' + Math.max(0, badges - bBadges) + ' / ' + BADGE_PLUS + '，現在共 ' + badges + ' 枚）', ok: badges >= need, todo: '打開「成就」分頁，挑還沒亮的成就去做（例如換一種案例、問到病人本人、追問「後來呢」）' }];
     var csItems = [{ text: '玩過 2 種以上的案例（現在 ' + num(c.cases, 0) + ' 種）', ok: num(c.cases, 0) >= 2, todo: '回大廳，「案例」選一個你還沒玩過的，按「開一間」' }];
     var rpItems = [
       { text: '讀完上面「給你的指引」', ok: !c.hasGuide || len(r.a) + len(r.b) + len(r.c) > 0, todo: '在大廳打開「給你的指引」，讀一下這週建議你做的事' },
@@ -44,8 +44,8 @@
     var list = [];
     if (myItems.length) list.push({ id: 0, label: '我的個人檢核點', plain: '照「給你的指引」逐件完成', how: '下面「給你的指引」每一件都寫了怎麼做、怎麼算完成。任何時間都可以做（10/20 到 W8 結束全天開放訪談）；打勾狀態白天每兩小時更新一次（07:15 到 23:15）' + (g.st && g.st.at ? '（上次更新 ' + new Date(g.st.at).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false }) + '）' : '') + '。', items: myItems });
     list = list.concat([
-      { id: 1, label: '技能再升一級', plain: '探問、情境感知各升一級', how: '從第 1 週結束時的等級，各再升一級（至少到 Lv.2）。升級條件寫在「成就」分頁的技能卡上。', items: skItems },
-      { id: 2, label: '追加成就', plain: '比第 1 週多 ' + BADGE_PLUS + ' 枚', how: '「成就」分頁裡還沒亮的格子就是可以做的事。', items: bdItems },
+      { id: 1, label: '技能再升一級', plain: '探問、情境感知各升一級', how: '從 1/3（W6）結束時的等級，各再升一級（至少到 Lv.2）。升級條件寫在「成就」分頁的技能卡上。', items: skItems },
+      { id: 2, label: '追加成就', plain: '比 1/3（W6）多 ' + BADGE_PLUS + ' 枚', how: '「成就」分頁裡還沒亮的格子就是可以做的事。', items: bdItems },
       { id: 3, label: '換一種案例', plain: '玩過 2 種以上', how: '案例共 6 種，每一種的人物、線索和結論都不一樣。在新的案例也去訪談、寫結論。', items: csItems },
       { id: 4, label: '回應指引（最重要）', plain: '照指引做，並寫下你做了什麼', how: '大廳的「給你的指引」是依你自己的進度寫的。照著做，再在「回應指引」三格裡簡單、具體地寫下來；W7 作業也要交同樣的內容。', items: rpItems }
     ]);

@@ -338,13 +338,19 @@
           (i.qs && i.qs.length ? '<div>可以這樣問：' + i.qs.map(function (q) { return esc(q); }).join('　') + '</div>' : '') +
           '<div><b>怎麼算完成：</b>' + esc(i.criteria) + '</div><div class="muted">什麼時候做：' + esc(i.when) + (i.where ? '｜在哪裡看進度：' + esc(i.where) : '') + '</div>' +
           (i.small ? '<div class="muted">卡住時先做這一小步：' + esc(i.small) + '</div>' : '') + '</li>';
-      }).join('') + '</ol></details>';
+      }).join('') + '</ol>' + ivHtml(g.iv) + '</details>';
+  }
+  /* 上週訪談的回饋（tools/er_interview_review.py --publish 寫入 guide/{學號}/iv；楊老師確認後才發布） */
+  function ivHtml(iv) {
+    if (!iv || !iv.good) return '';
+    return '<div id="ivBox" style="margin:8px 0 0;padding:8px 12px;border:var(--bw-s) solid var(--ink);border-radius:var(--r-m);font-size:var(--fs-2);line-height:1.6"><b>🗣️ 你上週的訪談</b>' +
+      '<div>👍 ' + esc(iv.good) + '</div><div>🔧 ' + esc(iv.fix) + '</div><div>💬 下次可以這樣問：' + esc(iv.eg) + '</div></div>';
   }
   function week2Html() {
     var c = week2Ctx(), ev = window.ERG_WEEK2.evaluate(c), r = c.resp || {}, MIN = window.ERG_WEEK2.RESP_MIN;
     var ta = function (k, label, ph) { return '<label style="display:block;margin:6px 0 2px;font-size:var(--fs-2)"><b>' + label + '</b></label><textarea id="gr_' + k + '" rows="2" maxlength="400" placeholder="' + esc(ph) + '" style="width:100%;box-sizing:border-box">' + esc(GUIDE.draft && GUIDE.draft[k] !== undefined ? GUIDE.draft[k] : (r[k] || '')) + '</textarea>'; };
-    return '<div id="week2Box"><div class="row"><b style="flex:1;font-size:var(--fs-4)">第 2 週（2/3）這週要做的事　' + ev.lit + ' / ' + ev.total + (ev.passed ? '　<span class="tag ok">全部完成</span>' : '') + '</b></div>' +
-      '<div class="muted" style="font-size:var(--fs-2);margin:2px 0 6px">這週繼續升級技能、追加成就，<b>最重要的是照「給你的指引」去做，並寫下你做了什麼</b>。10/20 到 W8 結束全天都可以訪談。第 1 週還沒完成的，下面可以繼續做。</div>' +
+    return '<div id="week2Box"><div class="row"><b style="flex:1;font-size:var(--fs-4)">痛點急診室 2/3（W7）這週要做的事　' + ev.lit + ' / ' + ev.total + (ev.passed ? '　<span class="tag ok">全部完成</span>' : '') + '</b></div>' +
+      '<div class="muted" style="font-size:var(--fs-2);margin:2px 0 6px">這週繼續升級技能、追加成就，<b>最重要的是照「給你的指引」去做，並寫下你做了什麼</b>。10/20 到 W8 結束全天都可以訪談。1/3（W6）還沒完成的，下面可以繼續做。</div>' +
       (ev.next ? '<div id="w2Next" style="margin:6px 0;padding:6px 10px;border:var(--bw) solid var(--ink);border-radius:var(--r-m);background:var(--yellow);color:var(--ink-fixed);font-size:var(--fs-3)"><b>這週下一步</b>　' + esc(ev.next.text) + '</div>' : '') +
       window.ERG_CHECKPOINTS.listHtml(ev, { compact: true }) +
       '<div style="margin-top:8px">' + guideHtml() + '</div>' +
@@ -367,7 +373,7 @@
   /* 房間裡的「檢核」分頁也顯示第 2 週（不含指引全文與回應表單：那兩個在大廳） */
   APP.week2Summary = function () {
     if (!window.ERG_WEEK2) return ''; loadGuide(); var ev = window.ERG_WEEK2.evaluate(week2Ctx());
-    return '<div id="cpWeek2" class="card" style="margin:0 0 10px;padding:8px 12px"><div class="row"><b style="flex:1">第 2 週（2/3）這週要做的事　' + ev.lit + ' / ' + ev.total + '</b>' + (ev.passed ? '<span class="tag ok">全部完成</span>' : '') + '</div>' +
+    return '<div id="cpWeek2" class="card" style="margin:0 0 10px;padding:8px 12px"><div class="row"><b style="flex:1">痛點急診室 2/3（W7）這週要做的事　' + ev.lit + ' / ' + ev.total + '</b>' + (ev.passed ? '<span class="tag ok">全部完成</span>' : '') + '</div>' +
       (ev.next ? '<div style="margin:4px 0;font-size:var(--fs-2)"><b>這週下一步</b>　' + esc(ev.next.text) + '</div>' : '') + window.ERG_CHECKPOINTS.listHtml(ev, { compact: true }) +
       '<div class="muted" style="font-size:var(--fs-1)">「給你的指引」和「回應指引」在大廳（按「回大廳」）。</div></div>';
   };
@@ -391,7 +397,7 @@
     var e = evaluateAll(), box = $('progressBox');
     if (e) {
       var first = e.ev.list.filter(function (x) { return !x.ok; })[0];
-      var w1 = '<details id="w1Wrap"><summary style="cursor:pointer"><b>第 1 週（1/3）的檢核點　' + e.ev.lit + ' / ' + e.ev.total + '</b>' + (e.ev.passed ? '　<span class="tag ok">全部完成</span>' : '　<span class="muted" style="font-size:var(--fs-2)">還沒完成的可以繼續做' + (e.ev.next ? '｜下一步：' + esc(e.ev.next.text) : '') + '（點開看全部）</span>') + '</summary>' +
+      var w1 = '<details id="w1Wrap"><summary style="cursor:pointer"><b>痛點急診室 1/3（W6）的檢核點　' + e.ev.lit + ' / ' + e.ev.total + '</b>' + (e.ev.passed ? '　<span class="tag ok">全部完成</span>' : '　<span class="muted" style="font-size:var(--fs-2)">還沒完成的可以繼續做' + (e.ev.next ? '｜下一步：' + esc(e.ev.next.text) : '') + '（點開看全部）</span>') + '</summary>' +
         '<div class="dots" style="margin:6px 0">' + e.ev.list.map(function (x) { return '<i class="' + (x.ok ? 'lit' : '') + '" title="' + esc(x.label) + '" style="width:20px;height:20px"></i>'; }).join('') + '</div>' +
         (e.ev.next ? '<div id="lobbyNext" style="margin:6px 0;padding:6px 10px;border:var(--bw) solid var(--ink);border-radius:var(--r-m);background:var(--yellow);color:var(--ink-fixed);font-size:var(--fs-3)"><b>下一步</b>　' + esc(e.ev.next.text) + '</div>' : '') +
         '<details id="lobbyCk"' + (window.innerWidth >= 900 && !e.ev.passed ? ' open' : '') + '><summary style="cursor:pointer;font-size:var(--fs-2)" class="muted">六個檢核點要做什麼（完成 ✔、還沒 ✘）</summary>' + window.ERG_CHECKPOINTS.listHtml(e.ev, { compact: true }) + '</details></details>';
