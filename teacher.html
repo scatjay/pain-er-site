@@ -67,7 +67,7 @@ body.proj .sum{font-size:1.05em}
 /* ───── 學生狀態（10-20 改版；設計稿 ui/teacher_redesign_1020.md）：狀態＝色＋圖示＋文字三者並用，不只靠顏色 ───── */
 :root{--s0bg:var(--panel2);--s0fg:var(--muted);--s1bg:var(--yellow);--s1fg:var(--onyellow);--s2bg:var(--badbg);--s2fg:#a51d1d;--s3bg:var(--infobg);--s3fg:var(--info);--s4bg:var(--okbg);--s4fg:#1b5e2c}
 @media (prefers-color-scheme:dark){:root{--s2fg:var(--bad);--s4fg:var(--ok)}}
-.clsbar{display:flex;gap:6px 12px;flex-wrap:wrap;align-items:center;margin-top:8px;padding:6px 10px;border:2px solid var(--line);border-radius:10px;min-height:44px;background:var(--panel)}.clsbar.during{border-color:var(--ok)}.clsbar .grow{flex:1}.clsbar .sm{min-height:32px}.clsbar .ld{display:inline-block;width:12px;height:12px;border:2px solid var(--line);border-top-color:var(--info);border-radius:50%;animation:clsspin .8s linear infinite;vertical-align:-2px;margin-right:4px}@keyframes clsspin{to{transform:rotate(360deg)}}@media (prefers-reduced-motion:reduce){.clsbar .ld{animation:none}}.ldnote{padding:4px 8px;margin-bottom:6px;border-radius:8px;background:var(--infobg);color:var(--info);font-size:.9em}
+.onlbig{display:inline-flex;align-items:baseline;gap:6px;padding:4px 14px;border-radius:99px;background:var(--ok);color:#fff;font-weight:900;font-size:20px;line-height:1.2;white-space:nowrap}.onlbig small{font-size:13px;font-weight:700;opacity:.92}.onlbig.zero{background:var(--line);color:var(--muted,#6c655b)}.clsbar{display:flex;gap:6px 12px;flex-wrap:wrap;align-items:center;margin-top:8px;padding:6px 10px;border:2px solid var(--line);border-radius:10px;min-height:44px;background:var(--panel)}.clsbar.during{border-color:var(--ok)}.clsbar .grow{flex:1}.clsbar .sm{min-height:32px}.clsbar .ld{display:inline-block;width:12px;height:12px;border:2px solid var(--line);border-top-color:var(--info);border-radius:50%;animation:clsspin .8s linear infinite;vertical-align:-2px;margin-right:4px}@keyframes clsspin{to{transform:rotate(360deg)}}@media (prefers-reduced-motion:reduce){.clsbar .ld{animation:none}}.ldnote{padding:4px 8px;margin-bottom:6px;border-radius:8px;background:var(--infobg);color:var(--info);font-size:.9em}
 .sysbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:8px;min-height:36px}.sysbar .sm{min-height:32px}
 details.sysbox{margin-top:4px}details.sysbox>summary{cursor:pointer;min-height:32px;display:flex;align-items:center;color:var(--muted);font-size:.9em}
 .stc{display:inline-flex;align-items:center;gap:4px;padding:1px 8px;border-radius:999px;font-weight:800;font-size:.82em;white-space:nowrap;border:1px solid currentColor}
@@ -114,7 +114,7 @@ details.sysbox{margin-top:4px}details.sysbox>summary{cursor:pointer;min-height:3
   <button id="deidBtn" title="學號、姓名、信箱換成代號，投影時用">去識別化：關</button><button id="projBtn" title="字放大、藏掉次要資訊">投影模式：關</button>
   <span class="small muted" id="whoami" style="font-size:.85em"></span><button id="logoutBtn" class="ghost">登出</button></div>
 
-<div class="clsbar" id="clsBar" role="status" aria-live="polite"><span id="clsNow">讀取中…</span><span id="clsNext" class="muted"></span><span class="grow"></span><span id="clsUpd" class="muted"></span><button id="clsAuto" class="sm ghost" hidden>回到自動</button><button id="clsRefresh" class="sm" title="重新讀取個人指引，並重算狀態、漏斗、介入清單與所有分頁">立即更新</button></div>
+<div class="clsbar" id="clsBar" role="status" aria-live="polite"><span id="clsOnline" class="onlbig" title="現在有幾位學生在線上（5 分鐘內有心跳）"></span><span id="clsNow">讀取中…</span><span id="clsNext" class="muted"></span><span class="grow"></span><span id="clsUpd" class="muted"></span><button id="clsAuto" class="sm ghost" hidden>回到自動</button><button id="clsRefresh" class="sm" title="重新讀取個人指引，並重算狀態、漏斗、介入清單與所有分頁">立即更新</button></div>
 
 <div class="sysbar" id="sysBar"><span id="sysTxt" class="muted">讀取中…</span><button id="liveCloseQuick" class="sm warn" title="上課中緊急把人物對話關掉（按兩次，12 小時）">關閉人物對話</button></div>
 <details id="sysBox" class="sysbox"><summary>系統與場次狀態（代理程式、開關、用量、人數）</summary>
@@ -486,7 +486,7 @@ var CLASS_WINDOWS = [].concat(
     }
     DB = window.ERG_REMOTE.makeRemoteDb({ root: root, sess: SESS, watchAll: true, notify: function (t) { if (/^(room:|lobby|scene:)/.test(t)) schedule(); } });
     on(root.child('profiles'), function (s) { profiles = s.val() || {}; if (WEEK) chats = weekFilter(chatsAll); schedule(); renderUsageAll(); });
-    on(root.child('presence'), function (s) { presence = s.val() || {}; schedule(); });
+    on(root.child('presence'), function (s) { presence = s.val() || {}; schedule(); try { drawOnline(); } catch (e) {} });
     on(root.child('chat'), function (s) { chatsAll = s.val() || {}; chats = weekFilter(chatsAll); schedule(); });
     /* 摘要渲染：先遮罩（去識別化時把學號換成當場次代號）、再轉義，之後只插入固定標籤。切去識別化時用 lastSum 重畫 */
     var lastSum = null;
@@ -503,7 +503,7 @@ var CLASS_WINDOWS = [].concat(
     on(root.child('score'), function (s) { var prev = scores; var first = !achSeen; scores = s.val() || {}; achSeen = true; renderBoard(); stSchedule(); try { renderSkillDist(); } catch (e) {} try { if (!first) achNotify(prev || {}, scores); } catch (e) {} });
     schedule();
   }
-  setInterval(function () { if (DB) schedule(); }, 30000);   /* 在線人數會隨時間過期，定時重算 */
+  setInterval(function () { if (DB) schedule(); try { drawOnline(); } catch (e) {} }, 30000);   /* 在線人數會隨時間過期，定時重算 */
 
   /* 成就排行：學生端每分鐘把自己的指標摘要寫到 er/{sess}/score/{sid}（achievements.js 的 summary） */
   var scores = {};
@@ -850,7 +850,18 @@ var CLASS_WINDOWS = [].concat(
   /* 單次重讀超過 500 KB 就從每 2 分鐘改成每 5 分鐘（Firebase 流量＝錢，免費額度每天 360 MB） */
   function stGuideKB(g) { try { stGuideBytes = new Blob([JSON.stringify(g || {})]).size; } catch (e) { stGuideBytes = 0; } stReadMs = stGuideBytes > 500 * 1024 ? 600000 : 300000; }
   function fmtIn(m) { m = Math.max(0, m); return m >= 2880 ? Math.floor(m / 1440) + ' 天' : m >= 120 ? Math.floor(m / 60) + ' 小時' + (m % 60 ? ' ' + (m % 60) + ' 分' : '') : m + ' 分'; }
+  function drawOnline() {
+    var el = $('clsOnline'); if (!el) return;
+    var ids = Object.keys(presence || {}).filter(function (k) { return isOnline(k); }), n = ids.length, cls = (stCC && stCC.cls) || '', c = 0, byCls = {};
+    stuRows.forEach(function (r) { if (r.online && r.cls) byCls[r.cls] = (byCls[r.cls] || 0) + 1; });
+    c = cls ? (byCls[cls] || 0) : 0;
+    var detail = Object.keys(byCls).sort().map(function (k) { return k + ' ' + byCls[k]; }).join('　');
+    el.className = 'onlbig' + (n ? '' : ' zero');
+    el.innerHTML = '<span aria-hidden="true">●</span> 在線 <span style="font-size:28px">' + n + '</span> 人' + (cls && n ? '<small>' + esc(cls) + ' ' + c + '</small>' : '') + (detail && !cls ? '<small>' + esc(detail) + '</small>' : '');
+    el.title = '現在有幾位學生在線上（5 分鐘內有心跳）' + (detail ? '：' + detail : '');
+  }
   function drawClsBar() {
+    try { drawOnline(); } catch (e) {}
     var bar = $('clsBar'); if (!bar || !stCC) return; var c = stCC, now = '', pf = c.phase;
     if (pf === 'during') now = '<b>現在：' + esc(c.cls) + '・上課中</b>（' + c.start + '–' + c.end + '，還有 ' + c.minsToEnd + ' 分）';
     else if (pf === 'before') now = '<b>現在：' + esc(c.cls) + '・上課前</b>（' + c.start + ' 開始，還有 ' + c.minsToStart + ' 分）';
