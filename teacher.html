@@ -64,6 +64,31 @@ body.proj{--fs:21px}body.proj .wrap{max-width:none}body.proj .small{display:none
 .stag{display:inline-block;padding:0 8px;margin-right:6px;border-radius:999px;font-size:.85em;font-weight:900;background:var(--infobg);color:var(--info);border:1px solid var(--info);white-space:nowrap}
 q.sq{quotes:none;display:inline;padding:0 5px;border-left:3px solid var(--info);background:var(--panel2);border-radius:3px;font-style:normal}
 body.proj .sum{font-size:1.05em}
+/* ───── 學生狀態（10-20 改版；設計稿 ui/teacher_redesign_1020.md）：狀態＝色＋圖示＋文字三者並用，不只靠顏色 ───── */
+:root{--s0bg:var(--panel2);--s0fg:var(--muted);--s1bg:var(--yellow);--s1fg:var(--onyellow);--s2bg:var(--badbg);--s2fg:#a51d1d;--s3bg:var(--infobg);--s3fg:var(--info);--s4bg:var(--okbg);--s4fg:#1b5e2c}
+@media (prefers-color-scheme:dark){:root{--s2fg:var(--bad);--s4fg:var(--ok)}}
+.sysbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:8px;min-height:36px}.sysbar .sm{min-height:32px}
+details.sysbox{margin-top:4px}details.sysbox>summary{cursor:pointer;min-height:32px;display:flex;align-items:center;color:var(--muted);font-size:.9em}
+.stc{display:inline-flex;align-items:center;gap:4px;padding:1px 8px;border-radius:999px;font-weight:800;font-size:.82em;white-space:nowrap;border:1px solid currentColor}
+.stc.s0{background:var(--s0bg);color:var(--s0fg);border-style:dashed}.stc.s1{background:var(--s1bg);color:var(--s1fg)}.stc.s2{background:var(--s2bg);color:var(--s2fg)}.stc.s3{background:var(--s3bg);color:var(--s3fg)}.stc.s4{background:var(--s4bg);color:var(--s4fg)}
+.fnl{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px 10px;align-items:center}.fnl .cn{white-space:nowrap}.fnl .cn small{color:var(--muted)}
+.fnl .bar{display:flex;gap:3px;min-height:44px}.fnl .seg{flex:1 1 2.6em;min-width:2.6em;min-height:44px;padding:0 4px;display:flex;align-items:center;justify-content:center;gap:4px;border-width:2px;font-weight:800;border-radius:8px}
+.fnl .seg.s0{background:var(--s0bg);color:var(--s0fg);border-style:dashed;border-color:var(--s0fg)}.fnl .seg.s1{background:var(--s1bg);color:var(--s1fg);border-color:var(--s1fg)}.fnl .seg.s2{background:var(--s2bg);color:var(--s2fg);border-color:var(--s2fg)}.fnl .seg.s3{background:var(--s3bg);color:var(--s3fg);border-color:var(--s3fg)}.fnl .seg.s4{background:var(--s4bg);color:var(--s4fg);border-color:var(--s4fg)}
+.fnl .seg.sel{outline:3px solid var(--ink);outline-offset:1px}.fnl .seg[disabled]{cursor:default;opacity:1}
+.stlegend{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px}.defs{font-size:.88em;margin-top:6px;display:flex;gap:4px 12px;flex-wrap:wrap}.defs b{font-variant-numeric:tabular-nums}.defn{font-size:.82em;color:var(--muted);margin-top:2px}.defn summary{cursor:pointer;min-height:28px;display:flex;align-items:center}
+.st2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0 12px;align-items:start}.st2 .card{margin:8px 0}.st2 h3{margin:0 0 4px;font-size:1em}.stL,.stR{min-width:0}
+@media (max-width:980px){.st2{display:flex;flex-direction:column}.stL,.stR{display:contents}#stFunnel{order:1}#stIntervene{order:2}#stNear{order:3}#stCommons{order:4}}
+.ivc{border:2px solid var(--ink);border-radius:10px;padding:8px 10px;margin:8px 0;background:var(--panel)}.ivc .h{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.ivc .why{font-size:.88em;color:var(--muted);margin-top:4px}.ivc .say{margin:4px 0;padding-left:8px;border-left:3px solid var(--info)}.ivc .row{margin-top:6px}.ivc .row button{min-height:36px}
+.cbar{display:flex;align-items:center;gap:6px;margin:3px 0;min-height:32px}.cbar .k{min-height:32px;width:9em;flex:none;text-align:left;border:0;background:none;padding:0;font-weight:400;text-decoration:underline;cursor:pointer}.cbar .t{flex:1;height:.9em;border:1px solid var(--ink);border-radius:4px;overflow:hidden}.cbar .t>div{height:100%;background:var(--yellow)}.cbar .v{width:3em;text-align:right;color:var(--muted);flex:none}
+.st2 .sm,.stool .sm,.stfx .sm{min-height:32px}
+.stool{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:6px}.stool select,.stool input{min-height:36px}.stfx{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:.88em;margin:4px 0}
+.stwrap{max-height:75vh;overflow:auto}#stList table{border-collapse:separate;border-spacing:0}#stList thead th{position:sticky;top:0;background:var(--panel);z-index:2;border-bottom:2px solid var(--ink)}#stList th small{font-weight:400}
+#stList tbody tr{cursor:pointer}#stList td{vertical-align:middle}#stList .lk{border:0;background:none;padding:2px 0;font-weight:900;text-decoration:underline;cursor:pointer;min-height:32px}#stList td.pr{white-space:nowrap}
+@media (max-width:760px){#stList table,#stList tbody,#stList tr,#stList td{display:block;width:auto}#stList thead{display:none}#stList tr{border:2px solid var(--line);border-radius:10px;margin:8px 0;padding:6px 8px;min-height:72px}#stList td{border:0;padding:2px 0}#stList .hm{display:none}#stList .lk{min-height:44px}.stwrap{max-height:none}#weekNote{display:none}#whoami{display:none}.top{gap:6px}.stlegend .hint{display:none}.fnl .seg{min-height:40px}}
+#stDrawer{position:fixed;top:0;right:0;bottom:0;width:min(440px,100vw);background:var(--bg);border-left:2px solid var(--ink);z-index:25;overflow:auto;padding:0 14px 20px;box-shadow:-6px 0 0 rgba(0,0,0,.12)}@media (max-width:760px){#stDrawer{width:100vw;border-left:0;box-shadow:none}}
+#stDrawer .dh{position:sticky;top:0;background:var(--bg);padding:10px 0 6px;border-bottom:2px solid var(--ink);display:flex;gap:8px;align-items:center;z-index:3}#stDrawer .dh h2{margin:0;flex:1;font-size:1.1em}#stDrawer .dh button{min-height:44px;min-width:44px}
+#stDrawer h3{font-size:.95em;margin:14px 0 4px;border-bottom:1px solid var(--line);padding-bottom:2px}#stDrawer ul{margin:2px 0;padding-left:1.2em}#stDrawer li{margin:2px 0}.dsay{display:flex;gap:6px;align-items:flex-start}.dsay>div{flex:1}
+.projNote{display:none}body.proj .projNote{display:block}body.proj .stPriv{display:none!important}
 [hidden]{display:none!important}
 </style>
 </head>
@@ -88,6 +113,8 @@ body.proj .sum{font-size:1.05em}
   <button id="deidBtn" title="學號、姓名、信箱換成代號，投影時用">去識別化：關</button><button id="projBtn" title="字放大、藏掉次要資訊">投影模式：關</button>
   <span class="small muted" id="whoami" style="font-size:.85em"></span><button id="logoutBtn" class="ghost">登出</button></div>
 
+<div class="sysbar" id="sysBar"><span id="sysTxt" class="muted">讀取中…</span><button id="liveCloseQuick" class="sm warn" title="上課中緊急把人物對話關掉（按兩次，12 小時）">關閉人物對話</button></div>
+<details id="sysBox" class="sysbox"><summary>系統與場次狀態（代理程式、開關、用量、人數）</summary>
 <div class="status">
   <div class="stat" id="stDaemon"><div class="lab">即時訪談代理程式</div><div class="val" id="daemon">讀取中…</div><div class="lab small" id="daemonSub"></div></div>
   <div class="stat" id="stLive"><div class="lab">人物即時對話</div><div class="val" id="liveState">讀取中…</div>
@@ -98,10 +125,37 @@ body.proj .sum{font-size:1.05em}
 <details class="small muted" style="font-size:.85em;margin-top:4px"><summary style="cursor:pointer">開關怎麼運作</summary><div id="liveHelp"></div></details>
 
 <div class="kpi"><div><div class="big" id="kOnline">0</div><div class="muted">人在線</div></div><div><div class="big" id="kStudents">0</div><div class="muted">人進過本場次</div></div><div><div class="big" id="kRooms">0</div><div class="muted">間房</div></div><div><div class="big" id="kIv">0</div><div class="muted">次訪談</div></div><div><div class="big" id="kQ">0</div><div class="muted">個提問</div></div><div><div class="big" id="kLit">0</div><div class="muted">人六點全亮</div></div></div>
+</details>
 
 <nav class="tabs" id="tabs">
-  <button data-tab="live">現場</button><button data-tab="ask">提問與啟示</button><button data-tab="stu">學生 <span class="n" id="nStu">0</span></button><button data-tab="room">房間與逐字稿 <span class="n" id="nRoom">0</span></button><button data-tab="board">成就排行</button><button data-tab="fb">回報 <span class="n" id="nFb">0</span></button><button data-tab="rev">審核建議</button><button data-tab="use">用量與花費</button>
+  <button data-tab="st">學生狀態</button><button data-tab="live">現場</button><button data-tab="ask">提問與啟示</button><button data-tab="stu">學生（原表） <span class="n" id="nStu">0</span></button><button data-tab="room">房間與逐字稿 <span class="n" id="nRoom">0</span></button><button data-tab="board">成就排行</button><button data-tab="fb">回報 <span class="n" id="nFb">0</span></button><button data-tab="rev">審核建議</button><button data-tab="use">用量與花費</button>
 </nav>
+
+<section class="pane" data-pane="st">
+  <div class="projNote muted card">投影模式：個別學生的名單與引導建議不顯示（只留全班的人數與共同問題）。</div>
+  <div class="st2">
+    <div class="stL">
+      <div class="card" id="stFunnel">載入中…</div>
+      <div class="card" id="stCommons"></div>
+    </div>
+    <div class="stR">
+      <div class="card stPriv" id="stIntervene"></div>
+      <div class="card stPriv" id="stNear"></div>
+    </div>
+  </div>
+  <div class="card stPriv" id="stListCard">
+    <div class="stool"><b>學生列表</b>
+      <select id="stCls" aria-label="班級"><option value="">全部班級</option></select>
+      <select id="stStage" aria-label="狀態"><option value="">全部狀態</option><option value="S1">◔ 沒開口</option><option value="S2">⚠ 卡住</option><option value="S3">▶ 進行中</option><option value="S4">✔ 完成</option></select>
+      <select id="stHint" aria-label="引導類型"><option value="">全部引導類型</option></select>
+      <label><input type="checkbox" id="stOnl"> 只看在線</label>
+      <input id="stQ" placeholder="找代號" aria-label="找代號" style="min-width:7em;flex:1">
+      <select id="stSort" aria-label="排序"><option value="pri">排序：需要介入的優先</option><option value="sid">學號／代號</option><option value="lit">檢核點少的在前</option><option value="ask">提問多的在前</option><option value="idle">最久沒動的在前</option><option value="lv">技能等級低的在前</option></select>
+      <span class="muted" id="stCount"></span></div>
+    <div class="stfx" id="stFx"></div>
+    <div class="stwrap" id="stList"></div>
+  </div>
+</section>
 
 <section class="pane" data-pane="live">
   <h2>現在在哪裡、在訪談誰</h2>
@@ -176,6 +230,7 @@ body.proj .sum{font-size:1.05em}
 <p class="muted small" style="font-size:.8em;margin-top:16px">只讀（除了即時對話的三顆開關與主題摘要）。資料來自 Firebase 專案 gen-lang-client-0556836042（Spark 免費方案，沒有綁帳單）。檢核點用遊戲同一套規則計算。去識別化：學號、姓名、信箱換成當場次的固定代號（學生01、02…）。</p>
 </div>
 </div>
+<aside id="stDrawer" role="dialog" aria-modal="true" aria-labelledby="stDrawerT" hidden></aside>
 <div id="qrBig" hidden><h1>痛點急診室 老師後台</h1><div class="qr" id="qrBigBox"></div><div class="qrurl" id="qrBigUrl"></div><div class="muted">只有教師名單裡的 Google 帳號能進</div><button id="qrBigClose">關閉</button></div>
 <div id="toast" hidden></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
@@ -192,6 +247,7 @@ body.proj .sum{font-size:1.05em}
 <script src="layout.js?v=202610201105"></script>
 <script src="minimap.js?v=202610201105"></script>
 <script src="personas_inclusive.js?v=202610201105"></script><script src="er_data.js?v=202610201105"></script><script src="npc_voice.js?v=202610201105"></script><script src="personas.js?v=202610201105"></script>
+<script src="week2.js?v=202610201105"></script><script src="teacher_model.js?v=202610201105"></script>
 <script>
 /* 教師名單：只有這裡的 Google 帳號能進。要加人就加在這裡（改完重新部署；資料庫規則 tools/er_after_google_enabled.py 也要加）。 */
 var TEACHER_EMAILS = ['scatjay@gmail.com', 'prof.chwu@mx.nthu.edu.tw', 'nthuchwu@gapp.nthu.edu.tw'];   /* 10-16 楊老師：清大吳智鴻老師（觀摩用，含後台） */
@@ -236,15 +292,15 @@ var CLASS_WINDOWS = [].concat(
   $('logoutBtn').onclick = function () { $('logoutBtn').disabled = true; auth.signOut().then(function () { location.href = location.pathname; }, function (e) { $('logoutBtn').disabled = false; toast('登出沒成功：' + ((e && e.code) || e)); }); };
 
   /* ───── 分頁 ───── */
-  var TAB = 'live';
+  var TAB = 'st';
   function setTab(t) {
-    if (!document.querySelector('[data-pane="' + t + '"]')) t = 'live'; TAB = t;
+    if (!document.querySelector('[data-pane="' + t + '"]')) t = 'st'; TAB = t;
     Array.prototype.forEach.call(document.querySelectorAll('[data-pane]'), function (p) { p.classList.toggle('cur', p.dataset.pane === t); });
     Array.prototype.forEach.call(document.querySelectorAll('#tabs [data-tab]'), function (b) { b.classList.toggle('on', b.dataset.tab === t); });
-    try { localStorage.setItem('ergT_tab', t); } catch (e) {}
+    try { localStorage.setItem('ergT_tab2', t); } catch (e) {}
   }
   Array.prototype.forEach.call(document.querySelectorAll('#tabs [data-tab]'), function (b) { b.onclick = function () { setTab(b.dataset.tab); }; });
-  (function () { var t = 'live'; try { t = localStorage.getItem('ergT_tab') || 'live'; } catch (e) {} setTab(t); })();
+  (function () { var t = 'st'; try { t = localStorage.getItem('ergT_tab2') || 'st'; } catch (e) {} setTab(t); })();
 
   /* ───── 學生入口 QR ───── */
   function qrSvg(text) { try { var q = window.qrcode(0, 'M'); q.addData(text); q.make(); return q.createSvgTag({ cellSize: 4, margin: 2, scalable: true }); } catch (e) { return ''; } }
@@ -393,8 +449,8 @@ var CLASS_WINDOWS = [].concat(
       if (SESS !== v[0]) { SESS = v[0]; attach(); } else { try { render(); } catch (e) {} }
     };
     $('sessSel').onchange = applyMenu; applyMenu();
-    /* 10-19：老師後台仍聽整個 er/_daemon（含 admin/）；學生端已改成只聽四個小欄位 */ fdb.ref('er/_daemon').on('value', function (s) { daemon = s.val() || {}; renderDaemon(); });
-    setInterval(renderDaemon, 10000);
+    /* 10-19：老師後台仍聽整個 er/_daemon（含 admin/）；學生端已改成只聽四個小欄位 */ fdb.ref('er/_daemon').on('value', function (s) { daemon = s.val() || {}; renderDaemon(); renderSysTxt(); });
+    setInterval(function () { renderDaemon(); renderSysTxt(); }, 10000);
     $('liveOpen').onclick = function () { disarm(); setLive('open', 2, $('liveOpen'), '已開放 2 小時'); };
     $('liveAuto').onclick = function () { disarm(); setLive('auto', 0, $('liveAuto'), '已交回課表'); };
     /* 關閉要按兩次：上課中誤觸會讓全班的人物都不回話 */
@@ -431,9 +487,9 @@ var CLASS_WINDOWS = [].concat(
     on(root.child('analysis/summary'), function (s) { lastSum = s.val(); renderSum(); });
     renderUsageAll();
     /* 10-19：第 2 週個人指引（一次讀，約 400 KB）與回應（訂閱，小）；學生表「第 2 週指引」欄用 */
-    root.child('guide').once('value').then(function (g) { guides = g.val() || {}; renderStudents(); }, function () {});
-    on(root.child('guideResp'), function (r) { gResp = r.val() || {}; renderStudents(); try { renderReview(); } catch (e) {} });
-    on(root.child('score'), function (s) { var prev = scores; var first = !achSeen; scores = s.val() || {}; achSeen = true; renderBoard(); try { renderSkillDist(); } catch (e) {} try { if (!first) achNotify(prev || {}, scores); } catch (e) {} });
+    root.child('guide').once('value').then(function (g) { guides = g.val() || {}; renderStudents(); stSchedule(); }, function () {});
+    on(root.child('guideResp'), function (r) { gResp = r.val() || {}; renderStudents(); stSchedule(); try { renderReview(); } catch (e) {} });
+    on(root.child('score'), function (s) { var prev = scores; var first = !achSeen; scores = s.val() || {}; achSeen = true; renderBoard(); stSchedule(); try { renderSkillDist(); } catch (e) {} try { if (!first) achNotify(prev || {}, scores); } catch (e) {} });
     schedule();
   }
   setInterval(function () { if (DB) schedule(); }, 30000);   /* 在線人數會隨時間過期，定時重算 */
@@ -656,9 +712,11 @@ var CLASS_WINDOWS = [].concat(
     var sids = {}; rooms.forEach(function (r) { Object.keys(r.members || {}).forEach(function (s) { sids[s] = true; }); }); Object.keys(profiles).forEach(function (s) { sids[s] = true; });
     var all = Object.keys(sids).sort(); buildAlias(all);
     var mb = markersByRoom(rooms), ivTotal = 0, litAll = 0, ask = askStats(), clsSet = {}, online = 0;
+    var rByCode = {}; rooms.forEach(function (r) { rByCode[r.code] = r; });
+    var cdb = { listRooms: function () { return rooms.map(function (r) { return { code: r.code }; }); }, getRoom: function (c) { return rByCode[c]; } };
     stuRows = all.map(function (sid) {
       var prof = profiles[sid] || {}, st, ev;
-      try { st = CORE.checkpointState(DB, SESS, sid, { cls: prof.cls || '' }, mb, { directions: [] }); ev = CP.evaluate(st); } catch (e) { ev = null; }
+      try { st = CORE.checkpointState(cdb, SESS, sid, { cls: prof.cls || '' }, mb, { directions: [] }); ev = CP.evaluate(st); } catch (e) { ev = null; }
       if (ev && ev.passed) litAll += 1;
       var iv = 0; rooms.forEach(function (r) { var p = CORE.getPlayer(r, sid); if (p) iv += p.interviews.length; }); ivTotal += iv;
       var a = ask[sid] || { n: 0, last: null }, on = isOnline(sid); if (on) online += 1; if (prof.cls) clsSet[prof.cls] = true;
@@ -688,6 +746,7 @@ var CLASS_WINDOWS = [].concat(
     }).join('') + '</tbody></table>' : '<span class="muted">還沒有房間。</span>';
     bindChatLinks($('rooms'));
     try { renderLive(ask); renderAnalysis(); } catch (e) { console.error(e); }
+    try { stMb = mb; stSchedule(); } catch (e) { console.error(e); }
     $('updated').textContent = '畫面更新 ' + new Date().toLocaleTimeString('zh-TW', { hour12: false });
   }
   /* ───── 用量與花費 ─────
@@ -762,6 +821,147 @@ var CLASS_WINDOWS = [].concat(
       if (!Object.keys(v).length) html += '<p class="muted">' + (sid ? '這位學生在這間房還沒有即時訪談。' : '這間房還沒有即時訪談。') + '</p>';
       box.innerHTML = html; $('chatClose').onclick = function () { box.hidden = true; if (location.hash) history.replaceState(null, '', location.pathname + location.search); }; box.scrollIntoView({ block: 'start' });
     }, denied(box, '逐字稿'));
+  }
+  /* ───── 學生狀態（10-20 改版）：畫面只負責呈現，算法在 teacher_model.js（ERG_TMODEL）。設計稿 ui/teacher_redesign_1020.md ───── */
+  var TMODEL = window.ERG_TMODEL, stMb = {}, stOut = null, stT = null, stOpen = '', stOpener = null, stShow = 8;
+  var stF = { cls: '', stage: '', hint: '', cp: '', online: false, q: '', sort: 'pri' };
+  var ST_GLYPH = { S0: '○', S1: '◔', S2: '⚠', S3: '▶', S4: '✔' }, ST_NAME = { S0: '未綁定', S1: '沒開口', S2: '卡住', S3: '進行中', S4: '完成' }, CIRC = ['①', '②', '③', '④', '⑤', '⑥'];
+  var ST_SUB = { noroom: '沒進房', noask: '進房沒開口', start: '剛開始', run: '', time: '花時間沒進展' };
+  function stSchedule() { clearTimeout(stT); stT = setTimeout(function () { try { renderStatus(); } catch (e) { console.error(e); } }, 400); }
+  function stName(sid) { var p = profiles[sid] || {}; return DEID ? aliasOf(sid) : sid + (p.name ? '　' + p.name : ''); }
+  function stChip(stage, sub) { return '<span class="stc ' + stage.toLowerCase() + '">' + ST_GLYPH[stage] + ' ' + ST_NAME[stage] + (sub && ST_SUB[sub] ? '・' + ST_SUB[sub] : '') + '</span>'; }
+  var SNZ = {}; try { SNZ = JSON.parse(localStorage.getItem('ergT_snz') || '{}'); } catch (e) {}
+  function snoozed(sid) { var k = SESS + ':' + sid; return SNZ[k] && SNZ[k] > Date.now(); }
+  function snooze(sid) { SNZ[SESS + ':' + sid] = Date.now() + 3 * 3600000; Object.keys(SNZ).forEach(function (k) { if (SNZ[k] < Date.now()) delete SNZ[k]; }); try { localStorage.setItem('ergT_snz', JSON.stringify(SNZ)); } catch (e) {} }
+
+  /* 系統狀態一行（常駐）＋兩段式「關閉人物對話」 */
+  function renderSysTxt() {
+    var d = daemon || {}, age = d.heartbeat ? Date.now() - d.heartbeat : Infinity, fresh = age < 60000, open = !!d.liveNow && fresh, el = $('sysTxt'); if (!el) return;
+    el.innerHTML = '<span class="' + (fresh ? 'ok' : 'bad') + '">● ' + (fresh ? '代理程式連線中' : '代理程式離線') + '</span>　<span class="' + (open ? 'ok' : 'bad') + '">● ' + (open ? '人物對話開放中' : '人物對話暫停') + '</span>　<span class="muted">' + esc($('usageSum') ? $('usageSum').textContent : '') + '</span>';
+  }
+  (function () {
+    var b = $('liveCloseQuick'), tm = null; if (!b) return;
+    function dis() { clearTimeout(tm); b.classList.remove('arm'); b.textContent = '關閉人物對話'; }
+    b.onclick = function () { if (!b.classList.contains('arm')) { b.classList.add('arm'); b.textContent = '再按一次確認關閉'; tm = setTimeout(dis, 6000); return; } dis(); setLive('closed', 12, b, '已關閉 12 小時'); };
+    try { $('sysBox').open = localStorage.getItem('ergT_sys') === '1'; $('sysBox').ontoggle = function () { try { localStorage.setItem('ergT_sys', this.open ? '1' : '0'); } catch (e) {} }; } catch (e) {}
+  })();
+
+  function renderStatus() {
+    if (!$('stFunnel')) return;
+    stOut = TMODEL && DB ? TMODEL.build({ rooms: rooms, chats: chatsAll, markersByRoom: stMb, profiles: profiles, scores: scores, presence: presence, guides: guides, guideResp: gResp, week: WEEK, weekRange: weekRange, now: Date.now() }) : null;
+    if (!stOut) { $('stFunnel').innerHTML = '<span class="muted">資料載入中…</span>'; return; }
+    renderFunnel(); renderIntervene(); renderNear(); renderCommons(); renderStList(); renderSysTxt(); if (stOpen) renderDrawer();
+  }
+  function applyFilter(o) { Object.keys(o).forEach(function (k) { stF[k] = o[k]; }); syncTool(); renderStList(); try { $('stListCard').scrollIntoView({ block: 'nearest' }); } catch (e) {} }
+
+  function renderFunnel() {
+    var T = stOut.totals, scope = WEEK ? '這週' : '累計';
+    $('stFunnel').innerHTML = '<div class="stlegend">' + ['S0', 'S1', 'S2', 'S3', 'S4'].map(function (g) { return stChip(g); }).join('') + '<span class="muted hint" style="font-size:.85em">點一段＝只看那一類；再點一次取消。「未綁定」只有人數、沒有名單。</span></div><div class="fnl">' +
+      stOut.funnel.filter(function (f) { return f.size > 0; }).map(function (f) {
+        return '<div class="cn"><b>' + esc(f.cls) + '</b> <small>' + f.size + '</small></div><div class="bar">' + ['S0', 'S1', 'S2', 'S3', 'S4'].map(function (g) {
+          var c = f[g]; if (!c) return '';
+          var on = stF.cls === f.cls && stF.stage === g;
+          return '<button class="seg ' + g.toLowerCase() + (on ? ' sel' : '') + '" style="flex-grow:' + c + '" data-cls="' + esc(f.cls) + '" data-g="' + g + '"' + (g === 'S0' ? ' disabled' : '') + ' aria-label="' + esc(f.cls + ' ' + ST_NAME[g] + ' ' + c + ' 人') + '" title="' + esc(f.cls + ' ' + ST_NAME[g] + ' ' + c + ' 人') + '">' + ST_GLYPH[g] + ' ' + c + '</button>';
+        }).join('') + '</div>';
+      }).join('') + '</div><div class="defs"><span>名冊 <b>' + T.roster + '</b></span><span>已綁定 <b>' + T.bound + '</b></span><span>進過房 <b>' + T.entered + '</b></span><span>有提問（' + scope + '） <b>' + T.asked + '</b></span><span>在線 <b>' + T.online + '</b></span><span>完成六點（累計） <b>' + T.passed + '</b></span></div><details class="defn"><summary>人數怎麼算？</summary>名冊＝三班選課人數；已綁定＝有登入並選了班；進過房＝進過任何一間房。班級是學生自己選的，各班「未綁定」是約數，三班合計 <b>' + T.S0 + '</b> 人是準確的。</details>';
+    Array.prototype.forEach.call($('stFunnel').querySelectorAll('.seg:not([disabled])'), function (b) { b.onclick = function () { var same = stF.cls === b.dataset.cls && stF.stage === b.dataset.g; applyFilter({ cls: same ? '' : b.dataset.cls, stage: same ? '' : b.dataset.g, cp: '', hint: '' }); }; });
+  }
+
+  function hintHtml(h) { return '<div class="why">依據：' + esc(h.basis) + '</div><div class="say">「' + esc(h.say) + '」</div>'; }
+  function renderIntervene() {
+    var list = stOut.interventions.filter(function (i) { return (!stF.cls || i.cls === stF.cls) && !snoozed(i.sid); }), shown = stShow ? list.slice(0, stShow) : list;
+    $('stIntervene').innerHTML = '<h3>需要我介入（' + shown.length + '／' + list.length + '）　<select id="stShowN" aria-label="顯示幾位"><option value="5">顯示 5 位</option><option value="8">顯示 8 位</option><option value="0">全部</option></select></h3><div class="muted" style="font-size:.85em">依據是可以對照的數字；建議的話只給你看，不會自動送給學生。排序：在線的卡住者優先。</div>' +
+      (shown.map(function (i) {
+        var r = stOut.rows.filter(function (x) { return x.sid === i.sid; })[0];
+        return '<div class="ivc" data-sid="' + esc(i.sid) + '"><div class="h">' + stChip(i.stage, r && r.sub) + ' <b>' + esc(stName(i.sid)) + '</b> <span class="muted">' + esc(i.cls) + '</span>' + (i.online ? ' <span class="ok">● 在線</span>' : '') + '</div>' + hintHtml(i.hints[0]) + (i.hints.length > 1 ? '<div class="muted small" style="font-size:.85em">另外：' + i.hints.slice(1).map(function (h) { return esc(h.label); }).join('、') + '（點「看詳情」）</div>' : '') +
+          '<div class="row"><button class="sm" data-open="' + esc(i.sid) + '">看詳情</button><button class="sm ghost" data-snz="' + esc(i.sid) + '" title="這台瀏覽器 3 小時內不再列出">先觀察</button></div></div>';
+      }).join('') || '<div class="muted" style="margin-top:6px">目前沒有需要介入的人。</div>');
+    $('stShowN').value = String(stShow); $('stShowN').onchange = function () { stShow = Number(this.value) || 0; renderIntervene(); };
+    bindOpen($('stIntervene'));
+    Array.prototype.forEach.call($('stIntervene').querySelectorAll('[data-snz]'), function (b) { b.onclick = function (e) { e.stopPropagation(); snooze(b.dataset.snz); toast('已先觀察：這台瀏覽器 3 小時內不再列出'); renderIntervene(); }; });
+  }
+  function renderNear() {
+    var list = stOut.nearly.filter(function (x) { return !stF.cls || x.cls === stF.cls; });
+    $('stNear').innerHTML = '<h3>差一步／本週進步（' + list.length + '）</h3><div class="muted" style="font-size:.85em">好消息也列出來：可以直接稱讚、推他過終點。</div>' + (list.slice(0, 12).map(function (x) {
+      return '<div class="ivc"><div class="h"><span class="stc s4">' + (x.key === 'P_NEAR' ? '差一步' : x.key === 'P_UP' ? '技能升級' : '成就 +3') + '</span> <b>' + esc(stName(x.sid)) + '</b> <span class="muted">' + esc(x.cls) + '</span></div><div class="why">依據：' + esc(x.basis) + '</div><div class="say">「' + esc(x.say) + '」</div><div class="row"><button class="sm" data-open="' + esc(x.sid) + '">看詳情</button></div></div>';
+    }).join('') || '<div class="muted" style="margin-top:6px">還沒有。</div>') + (list.length > 12 ? '<div class="muted small">還有 ' + (list.length - 12) + ' 位…</div>' : '');
+    bindOpen($('stNear'));
+  }
+  function renderCommons() {
+    var C = stOut.commons, CPD = (window.ERG_CHECKPOINTS && window.ERG_CHECKPOINTS.DEFS) || [], tot = 0, fu = Object.keys(C.firstUnlit).sort(function (a, b) { return C.firstUnlit[b] - C.firstUnlit[a]; }); fu.forEach(function (k) { tot += C.firstUnlit[k]; });
+    var DEN = { H_YN: C.nAsk5, H_DUP: C.nAsk5, H_NOFOLLOW: C.nAsk8, H_NOECHO: C.nAsk8, H_KEY: C.nAsk8 };
+    var hk = Object.keys(C.hits).filter(function (k) { return C.hits[k] > 0; }).sort(function (a, b) { return C.hits[b] - C.hits[a]; });
+    $('stCommons').innerHTML = '<h3>全班共同問題</h3><b style="font-size:.9em">卡在哪一個檢核點（進行中＋卡住 ' + tot + ' 人）</b>' + (fu.map(function (k) { var d = CPD[Number(k) - 1] || {}; return '<div class="cbar"><button class="k" data-cp="' + k + '" title="只看卡在這一點的人">' + CIRC[Number(k) - 1] + ' ' + esc(d.label || '第' + k + '點') + '</button><div class="t"><div style="width:' + Math.round(C.firstUnlit[k] / (tot || 1) * 100) + '%"></div></div><span class="v">' + C.firstUnlit[k] + '</span></div>'; }).join('') || '<div class="muted">沒有。</div>') +
+      '<b style="font-size:.9em;display:block;margin-top:8px">提問與引導的共同現象</b>' + (hk.map(function (k) { var def = TMODEL.HINT_DEFS[k] || {}; return '<div class="cbar"><button class="k" data-hint="' + k + '" title="只看這一類的人">' + esc(def.label || k) + '</button><div class="t"><div style="width:' + Math.min(100, Math.round(C.hits[k] / (DEN[k] || stOut.totals.bound || 1) * 100)) + '%"></div></div><span class="v">' + C.hits[k] + (DEN[k] ? '／' + DEN[k] : '') + '</span></div>'; }).join('') || '<div class="muted">沒有。</div>') +
+      '<div class="row" style="margin-top:8px"><button class="sm" id="stToSum">看主題摘要（提問與啟示）▸</button></div>';
+    Array.prototype.forEach.call($('stCommons').querySelectorAll('[data-cp]'), function (b) { b.onclick = function () { applyFilter({ cp: stF.cp === b.dataset.cp ? '' : b.dataset.cp, stage: '', hint: '', cls: stF.cls }); }; });
+    Array.prototype.forEach.call($('stCommons').querySelectorAll('[data-hint]'), function (b) { b.onclick = function () { applyFilter({ hint: stF.hint === b.dataset.hint ? '' : b.dataset.hint, stage: '', cp: '' }); }; });
+    $('stToSum').onclick = function () { setTab('ask'); try { $('sumBox').scrollIntoView({ block: 'start' }); } catch (e) {} };
+  }
+
+  /* 列表 */
+  function syncTool() { $('stCls').value = stF.cls; $('stStage').value = stF.stage; $('stHint').value = stF.hint; $('stOnl').checked = stF.online; $('stSort').value = stF.sort; if ($('stQ').value !== stF.q) $('stQ').value = stF.q; }
+  function stRows() {
+    var f = stF, q = f.q.trim().toLowerCase();
+    var rows = stOut.rows.filter(function (r) {
+      if (f.cls && r.cls !== f.cls) return false; if (f.stage && r.stage !== f.stage) return false; if (f.online && !r.online) return false;
+      if (f.hint && !r.hints.some(function (h) { return h.key === f.hint; })) return false;
+      if (f.cp && !((r.stage === 'S2' || r.stage === 'S3') && r.cp.first && String(r.cp.first.id) === f.cp)) return false;
+      if (q && (DEID ? aliasOf(r.sid) : r.sid + ' ' + ((profiles[r.sid] || {}).name || '')).toLowerCase().indexOf(q) < 0) return false; return true;
+    });
+    var by = { pri: function (a, b) { return b.priority - a.priority || a.cp.lit - b.cp.lit || (a.sid < b.sid ? -1 : 1); }, sid: function (a, b) { return a.sid < b.sid ? -1 : 1; }, lit: function (a, b) { return a.cp.lit - b.cp.lit || (a.sid < b.sid ? -1 : 1); }, ask: function (a, b) { return b.ask.n - a.ask.n; }, idle: function (a, b) { return a.lastSeen - b.lastSeen; }, lv: function (a, b) { return Math.max(a.skill.ask, a.skill.ctx) - Math.max(b.skill.ask, b.skill.ctx) || (a.sid < b.sid ? -1 : 1); } }[f.sort] || null;
+    if (by) rows.sort(by); return rows;
+  }
+  function hintChip(r) { var h = r.hints.filter(function (x) { return x.kind !== 'pos'; })[0]; return h ? '<span class="pill' + (h.sev >= 2 ? ' bad' : '') + '" title="' + esc(h.basis) + '">' + esc(h.label) + '</span>' + (r.hints.length > 1 ? ' <span class="muted">+' + (r.hints.length - 1) + '</span>' : '') : (r.pos[0] ? '<span class="pill ok">' + esc(r.pos[0].label) + '</span>' : '<span class="muted">—</span>'); }
+  function renderStList() {
+    if (!stOut) return;
+    var hs = $('stHint'); if (hs.options.length < 2) { Object.keys(TMODEL.HINT_DEFS).filter(function (k) { return TMODEL.HINT_DEFS[k].kind !== 'pos'; }).forEach(function (k) { var o = document.createElement('option'); o.value = k; o.textContent = TMODEL.HINT_DEFS[k].label; hs.appendChild(o); }); }
+    var cs = $('stCls'), want = stOut.funnel.map(function (f) { return f.cls; }).join('|'); if (cs.dataset.o !== want) { cs.dataset.o = want; cs.innerHTML = '<option value="">全部班級</option>' + stOut.funnel.map(function (f) { return '<option>' + esc(f.cls) + '</option>'; }).join(''); }
+    syncTool();
+    var rows = stRows(), scope = WEEK ? '本週' : '累計';
+    $('stCount').textContent = rows.length === stOut.rows.length ? ('共 ' + rows.length + ' 人') : ('顯示 ' + rows.length + ' / ' + stOut.rows.length + ' 人');
+    var fx = []; if (stF.cls) fx.push(['cls', '班級：' + stF.cls]); if (stF.stage) fx.push(['stage', '狀態：' + ST_NAME[stF.stage]]); if (stF.hint) fx.push(['hint', '引導：' + ((TMODEL.HINT_DEFS[stF.hint] || {}).label || stF.hint)]); if (stF.cp) fx.push(['cp', '卡在第 ' + stF.cp + ' 點']); if (stF.online) fx.push(['online', '只看在線']); if (stF.q) fx.push(['q', '找：' + stF.q]);
+    $('stFx').innerHTML = fx.length ? '生效中的篩選：' + fx.map(function (x) { return '<button class="sm" data-fx="' + x[0] + '" aria-label="取消 ' + esc(x[1]) + '">' + esc(x[1]) + ' ✕</button>'; }).join('') + '<button class="sm ghost" data-fx="*">全部清除</button>' : '';
+    Array.prototype.forEach.call($('stFx').querySelectorAll('[data-fx]'), function (b) { b.onclick = function () { var k = b.dataset.fx; if (k === '*') { stF.cls = stF.stage = stF.hint = stF.cp = stF.q = ''; stF.online = false; } else stF[k] = (k === 'online' ? false : ''); renderStList(); }; });
+    $('stList').innerHTML = rows.length ? '<table><thead><tr><th>狀態</th><th>學生</th><th>進度 <small>（累計）</small></th><th>提問 <small>（' + scope + '）</small></th><th class="hm">技能・成就 <small>（累計）</small></th><th class="hm">最近</th><th>引導</th></tr></thead><tbody>' + rows.map(function (r) {
+      var f = r.cp.first, yn = r.ask.n >= 5 ? '・是非 ' + Math.round(r.ask.ynRatio * 100) + '%' : '';
+      return '<tr data-sid="' + esc(r.sid) + '"><td data-l="狀態">' + stChip(r.stage, r.sub) + '</td><td data-l="學生"><button class="lk" data-open="' + esc(r.sid) + '">' + esc(stName(r.sid)) + '</button> ' + (r.online ? '<span class="ok" title="在線">●</span>' : '') + ' <span class="muted small">' + esc(r.cls) + '</span></td><td class="pr" data-l="進度"><span class="dots">' + r.cp.dots.map(function (o) { return '<i class="' + (o ? 'lit' : '') + '"></i>'; }).join('') + '</span> <span class="muted">' + r.cp.lit + '/6' + (f && r.stage !== 'S4' && r.stage !== 'S1' ? '　卡在' + CIRC[f.id - 1] : '') + '</span></td><td data-l="提問">' + r.ask.n + ' 題' + yn + '</td><td class="hm pr" title="探問 Lv.' + r.skill.ask + '、情境感知 Lv.' + r.skill.ctx + '、成就 ' + r.badges.n + ' 枚">探' + r.skill.ask + ' 情' + r.skill.ctx + ' 🏅' + r.badges.n + '</td><td class="hm pr muted">' + (r.lastSeen ? ago(r.lastSeen) : '—') + '</td><td data-l="引導">' + hintChip(r) + '</td></tr>';
+    }).join('') + '</tbody></table>' : '<span class="muted">沒有符合條件的學生。</span>';
+    bindOpen($('stList'));
+    Array.prototype.forEach.call($('stList').querySelectorAll('tbody tr'), function (tr) { tr.onclick = function (e) { if (e.target.closest && e.target.closest('button,a')) return; openDrawer(tr.dataset.sid, tr.querySelector('.lk')); }; });
+  }
+  ['stCls', 'stStage', 'stHint', 'stSort'].forEach(function (id) { $(id).onchange = function () { stF[{ stCls: 'cls', stStage: 'stage', stHint: 'hint', stSort: 'sort' }[id]] = this.value; renderStList(); }; });
+  $('stOnl').onchange = function () { stF.online = this.checked; renderStList(); };
+  $('stQ').oninput = function () { stF.q = this.value; renderStList(); };
+
+  /* 詳情側欄（第二層，也是最後一層） */
+  function bindOpen(root) { Array.prototype.forEach.call(root.querySelectorAll('[data-open]'), function (b) { b.onclick = function (e) { e.stopPropagation(); openDrawer(b.dataset.open, b); }; }); }
+  function openDrawer(sid, opener) { stOpen = sid; stOpener = opener || null; renderDrawer(); $('stDrawer').hidden = false; var x = $('stDrawerX'); if (x) x.focus(); }
+  function closeDrawer() { stOpen = ''; $('stDrawer').hidden = true; if (stOpener && document.body.contains(stOpener)) { try { stOpener.focus(); } catch (e) {} } stOpener = null; }
+  document.addEventListener('keydown', function (e) {
+    if ($('stDrawer').hidden) return; if (e.key === 'Escape') { closeDrawer(); return; }
+    if (e.key === 'Tab') { var f = $('stDrawer').querySelectorAll('button,a[href],input,select'); if (!f.length) return; var a = f[0], z = f[f.length - 1]; if (e.shiftKey && document.activeElement === a) { e.preventDefault(); z.focus(); } else if (!e.shiftKey && document.activeElement === z) { e.preventDefault(); a.focus(); } }
+  });
+  function stRecent(sid, k) { var out = []; Object.keys(chatsAll || {}).forEach(function (code) { var by = (chatsAll[code] || {})[sid] || {}; Object.keys(by).forEach(function (rk) { var c = by[rk] || {}; Object.keys(c.turns || {}).forEach(function (t) { var x = c.turns[t]; if (x && x.role === 'u') out.push({ t: Number(x.t || 0), who: c.personaName || personaName(c.personaId), text: String(x.text || ''), code: code }); }); }); }); return out.sort(function (a, b) { return b.t - a.t; }).slice(0, k); }
+  function renderDrawer() {
+    var r = stOut && stOut.rows.filter(function (x) { return x.sid === stOpen; })[0], box = $('stDrawer'); if (!r) { if (stOut) closeDrawer(); return; }
+    var B = window.ERG_ACH, bi = function (id) { return badgeInfo(id); }, cpl = r.cp.list || [];
+    var hints = r.hints.filter(function (h) { return h.kind !== 'pos'; }), praise = r.pos;
+    box.innerHTML = '<div class="dh"><h2 id="stDrawerT">' + esc(stName(r.sid)) + ' <span class="muted small">' + esc(r.cls) + '</span></h2>' + stChip(r.stage, r.sub) + '<button id="stDrawerX" aria-label="關閉">✕</button></div>' +
+      '<div class="muted" style="margin-top:6px">' + (r.online ? '<span class="ok">● 在線</span>' : '不在線') + '　最近動靜：' + (r.lastSeen ? ago(r.lastSeen) : '—') + '　累計 ' + r.playMin + ' 分鐘</div>' +
+      '<h3>建議的一句引導（只給老師看，不會自動送出）</h3>' + (hints.slice(0, 5).map(function (h, i) { return '<div class="dsay"><div><b>' + (i + 1) + ' ' + esc(h.label) + '</b><div class="why muted" style="font-size:.88em">依據：' + esc(h.basis) + '</div><div class="say" style="border-left:3px solid var(--info);padding-left:8px;margin:3px 0">「' + esc(h.say) + '」</div></div><button class="sm ghost" data-cpy="' + i + '" style="min-height:36px">複製</button></div>'; }).join('') || '<span class="muted">目前沒有建議。</span>') +
+      '<div class="row" style="margin-top:6px"><button class="sm ghost" id="stDrawerSnz">先觀察</button></div>' + (praise.length ? '<h3>可以稱讚的地方</h3>' + praise.map(function (h) { return '<div class="dsay"><div><b>' + esc(h.label) + '</b><div class="why muted" style="font-size:.88em">依據：' + esc(h.basis) + '</div><div class="say" style="border-left:3px solid var(--ok);padding-left:8px;margin:3px 0">「' + esc(h.say) + '」</div></div></div>'; }).join('') : '') +
+      '<h3>檢核點（累計）　' + r.cp.lit + '／6</h3><ul>' + cpl.map(function (x) { var undone = (x.items || []).filter(function (i) { return !i.ok; }); return '<li>' + CIRC[x.id - 1] + ' ' + esc(x.label) + ' ' + (x.ok ? '<b class="ok">✔</b>' : '<b class="bad">✘</b>') + (undone.length ? '<ul>' + undone.map(function (i) { return '<li>' + esc(i.text) + ' <b class="bad">✘</b></li>'; }).join('') + '</ul>' : '') + '</li>'; }).join('') + '</ul>' +
+      '<h3>提問樣態（' + (WEEK ? '本週' : '累計') + '，來自逐字稿）</h3><div>' + r.ask.n + ' 題｜追問 ' + (r.ask.ev + r.ask.why) + '｜接話 ' + r.ask.echo + '｜是非 ' + Math.round(r.ask.ynRatio * 100) + '%｜重複貼 ' + Math.round(r.ask.dupRatio * 100) + '%｜問過 ' + r.ask.whoN + ' 位人物｜問到簡訊 ' + r.ask.sms + ' 題｜開場說明來意：' + (r.ask.intro == null ? '—' : (r.ask.intro > 0 ? '有' : '沒有')) + '</div>' +
+      '<div style="margin-top:4px">' + stRecent(r.sid, 3).map(function (q) { return '<div class="q" style="font-size:.92em"><span class="muted">' + hm(q.t) + '</span> → ' + esc(q.who) + '：' + esc(q.text) + '</div>'; }).join('') + '</div>' +
+      '<h3>技能・成就（累計）</h3><div>探問 Lv.' + r.skill.ask + '　情境感知 Lv.' + r.skill.ctx + '　🏅 ' + r.badges.n + ' 枚　玩過 ' + r.cases + ' 種案例</div>' +
+      [['探問', r.skill.askNext], ['情境感知', r.skill.ctxNext]].map(function (p) { var nx = p[1]; if (!nx) return '<div class="muted small">' + p[0] + '：已是最高級</div>'; var todo = nx.items.filter(function (i) { return !i.ok; }); return '<div style="margin-top:4px"><b>' + p[0] + '升到 Lv.' + nx.lv + ' 還差：</b>' + (todo.length ? '<ul>' + todo.map(function (i) { return '<li>' + esc(i.text) + '</li>'; }).join('') + '</ul>' : '<span class="muted">都達到了</span>') + '</div>'; }).join('') +
+      (r.w7 ? '<h3>第 2 週（W7）　' + r.w7.lit + '／' + r.w7.total + '</h3><ul>' + r.w7.list.map(function (x) { return '<li>' + esc(x.label) + ' ' + (x.ok ? '<b class="ok">✔</b>' : '<b class="bad">✘</b>') + ' <span class="muted small">' + esc(x.detail) + '</span></li>'; }).join('') + '</ul>' + (r.guide ? '<div>個人指引 ✔' + r.guide.ok + ' ◐' + r.guide.part + ' ✘' + r.guide.todo + '</div>' : '<div class="muted small">沒有個人指引資料（或這個帳號讀不到）。</div>') + '<div>回應指引：' + ({ none: '未送', review: '審核中', pass: '通過', fix: '需補強' }[r.resp]) + (gResp[r.sid] && gResp[r.sid].rev && gResp[r.sid].rev.fb ? '　<span class="muted">' + esc(String(gResp[r.sid].rev.fb).slice(0, 80)) + '</span>' : '') + '</div>' : '') +
+      '<h3>逐字稿與其他</h3><div>' + (r.rooms.map(function (c) { return '<a href="#" data-chat="' + esc(c.code) + '|' + esc(r.sid) + '">' + esc(c.code) + (c.host ? '(主)' : '') + '</a>'; }).join(' ') || '<span class="muted">還沒進房</span>') + '</div><div class="muted small">裝置：' + esc((profiles[r.sid] || {}).ua || '—') + (DEID ? '' : '　' + esc((profiles[r.sid] || {}).email || '')) + '</div>';
+    $('stDrawerX').onclick = closeDrawer;
+    Array.prototype.forEach.call(box.querySelectorAll('[data-cpy]'), function (b) { b.onclick = function () { var h = hints[Number(b.dataset.cpy)]; if (!h) return; (navigator.clipboard ? navigator.clipboard.writeText(h.say) : Promise.reject()).then(function () { toast('已複製'); }, function () { toast('複製不了，請手動選取'); }); }; });
+    $('stDrawerSnz').onclick = function () { snooze(r.sid); toast('已先觀察：這台瀏覽器 3 小時內不再列出'); renderIntervene(); };
+    Array.prototype.forEach.call(box.querySelectorAll('[data-chat]'), function (a) { a.onclick = function (e) { e.preventDefault(); var p = a.dataset.chat.split('|'); closeDrawer(); showChats(p[0], p[1] || undefined); }; });
   }
 })();
 </script>
