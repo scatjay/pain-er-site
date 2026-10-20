@@ -841,14 +841,14 @@ var CLASS_WINDOWS = [].concat(
      ?now=2026-10-20T09:00:00+08:00 只在本機有效，用來測試。 */
   var NOWO = null; (function () { var m = isLocal && location.search.match(/[?&]now=([^&]+)/); if (m) { var t = Date.parse(decodeURIComponent(m[1])); if (isFinite(t)) NOWO = { base: t, at: Date.now() }; } })();
   function clk() { return NOWO ? NOWO.base + (Date.now() - NOWO.at) : Date.now(); }
-  var stManual = false, stCC = null, stPrevCls = '', stLoading = false, stReadMs = 120000, stGuideBytes = 0, LOAD_KEYS = ['profiles', 'presence', 'chat', 'score', 'guideResp', 'guide'];
+  var stManual = false, stCC = null, stPrevCls = '', stLoading = false, stReadMs = 300000, stGuideBytes = 0, LOAD_KEYS = ['profiles', 'presence', 'chat', 'score', 'guideResp', 'guide'];
   var LOAD_NAME = { profiles: '名單', presence: '在線', chat: '逐字稿', score: '分數', guideResp: '指引回應', guide: '個人指引' };
   stCC = TMODEL.currentClass(clk()); stF.cls = stCC.cls;
   function loadedN() { return LOAD_KEYS.filter(function (k) { return loaded[k]; }).length; }
   function loadedAll() { return loadedN() >= LOAD_KEYS.length; }
   function stMark(k, failed) { if (!loaded[k]) loaded[k] = failed ? 'fail' : 'ok'; if (loadedAll() && !stUpd) stUpd = Date.now(); drawClsBar(); stSchedule(); }
   /* 單次重讀超過 500 KB 就從每 2 分鐘改成每 5 分鐘（Firebase 流量＝錢，免費額度每天 360 MB） */
-  function stGuideKB(g) { try { stGuideBytes = new Blob([JSON.stringify(g || {})]).size; } catch (e) { stGuideBytes = 0; } stReadMs = stGuideBytes > 500 * 1024 ? 300000 : 120000; }
+  function stGuideKB(g) { try { stGuideBytes = new Blob([JSON.stringify(g || {})]).size; } catch (e) { stGuideBytes = 0; } stReadMs = stGuideBytes > 500 * 1024 ? 600000 : 300000; }
   function fmtIn(m) { m = Math.max(0, m); return m >= 2880 ? Math.floor(m / 1440) + ' 天' : m >= 120 ? Math.floor(m / 60) + ' 小時' + (m % 60 ? ' ' + (m % 60) + ' 分' : '') : m + ' 分'; }
   function drawClsBar() {
     var bar = $('clsBar'); if (!bar || !stCC) return; var c = stCC, now = '', pf = c.phase;
