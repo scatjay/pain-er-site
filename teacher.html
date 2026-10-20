@@ -67,6 +67,8 @@ body.proj .sum{font-size:1.05em}
 /* ───── 學生狀態（10-20 改版；設計稿 ui/teacher_redesign_1020.md）：狀態＝色＋圖示＋文字三者並用，不只靠顏色 ───── */
 :root{--s0bg:var(--panel2);--s0fg:var(--muted);--s1bg:var(--yellow);--s1fg:var(--onyellow);--s2bg:var(--badbg);--s2fg:#a51d1d;--s3bg:var(--infobg);--s3fg:var(--info);--s4bg:var(--okbg);--s4fg:#1b5e2c}
 @media (prefers-color-scheme:dark){:root{--s2fg:var(--bad);--s4fg:var(--ok)}}
+.rmtool select,.rmtool button{min-height:36px}.chatnav{gap:8px;align-items:center;margin:6px 0}.chatnav button{min-height:44px;min-width:44px}#chatClose{min-height:44px;min-width:44px}.chatnav span{flex:1;min-width:8em}
+@media (max-width:760px){.rmtool select,.rmtool button{min-height:44px}#rooms table,#rooms tbody,#rooms tr,#rooms td{display:block;width:auto}#rooms thead{display:none}#rooms tr{border:2px solid var(--line);border-radius:10px;margin:8px 0;padding:6px 8px}#rooms td{border:0;padding:2px 0;overflow-wrap:anywhere}#rooms a.lk{display:inline-flex;align-items:center;min-height:44px}#rooms.scroll{overflow-x:hidden}.chatnav button{flex:1 1 40%}.chatnav span{order:3;flex-basis:100%}}
 .onlbig{display:inline-flex;align-items:baseline;gap:6px;padding:4px 14px;border-radius:99px;background:var(--ok);color:#fff;font-weight:900;font-size:20px;line-height:1.2;white-space:nowrap}.onlbig small{font-size:13px;font-weight:700;opacity:.92}.onlbig.zero{background:var(--line);color:var(--muted,#6c655b)}.clsbar{display:flex;gap:6px 12px;flex-wrap:wrap;align-items:center;margin-top:8px;padding:6px 10px;border:2px solid var(--line);border-radius:10px;min-height:44px;background:var(--panel)}.clsbar.during{border-color:var(--ok)}.clsbar .grow{flex:1}.clsbar .sm{min-height:32px}.clsbar .ld{display:inline-block;width:12px;height:12px;border:2px solid var(--line);border-top-color:var(--info);border-radius:50%;animation:clsspin .8s linear infinite;vertical-align:-2px;margin-right:4px}@keyframes clsspin{to{transform:rotate(360deg)}}@media (prefers-reduced-motion:reduce){.clsbar .ld{animation:none}}.ldnote{padding:4px 8px;margin-bottom:6px;border-radius:8px;background:var(--infobg);color:var(--info);font-size:.9em}
 .sysbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:8px;min-height:36px}.sysbar .sm{min-height:32px}
 details.sysbox{margin-top:4px}details.sysbox>summary{cursor:pointer;min-height:32px;display:flex;align-items:center;color:var(--muted);font-size:.9em}
@@ -86,8 +88,8 @@ details.sysbox{margin-top:4px}details.sysbox>summary{cursor:pointer;min-height:3
 .stwrap{max-height:75vh;overflow:auto}#stList table{border-collapse:separate;border-spacing:0}#stList thead th{position:sticky;top:0;background:var(--panel);z-index:2;border-bottom:2px solid var(--ink)}#stList th small{font-weight:400}
 #stList tbody tr{cursor:pointer}#stList td{vertical-align:middle}#stList .lk{border:0;background:none;padding:2px 0;font-weight:900;text-decoration:underline;cursor:pointer;min-height:32px}#stList td.pr{white-space:nowrap}
 @media (max-width:760px){#stList table,#stList tbody,#stList tr,#stList td{display:block;width:auto}#stList thead{display:none}#stList tr{border:2px solid var(--line);border-radius:10px;margin:8px 0;padding:6px 8px;min-height:72px}#stList td{border:0;padding:2px 0}#stList .hm{display:none}#stList .lk{min-height:44px}.stwrap{max-height:none}#weekNote{display:none}#whoami{display:none}.top{gap:6px}.stlegend .hint{display:none}.fnl .seg{min-height:40px}}
-#stDrawer{position:fixed;top:0;right:0;bottom:0;width:min(440px,100vw);background:var(--bg);border-left:2px solid var(--ink);z-index:25;overflow:auto;padding:0 14px 20px;box-shadow:-6px 0 0 rgba(0,0,0,.12)}@media (max-width:760px){#stDrawer{width:100vw;border-left:0;box-shadow:none}}
-#stDrawer .dh{position:sticky;top:0;background:var(--bg);padding:10px 0 6px;border-bottom:2px solid var(--ink);display:flex;gap:8px;align-items:center;z-index:3}#stDrawer .dh h2{margin:0;flex:1;font-size:1.1em}#stDrawer .dh button{min-height:44px;min-width:44px}
+#stDrawer,#chReader{position:fixed;top:0;right:0;bottom:0;width:min(440px,100vw);background:var(--bg);border-left:2px solid var(--ink);z-index:25;overflow:auto;padding:0 14px 20px;box-shadow:-6px 0 0 rgba(0,0,0,.12)}@media (max-width:760px){#stDrawer,#chReader{width:100vw;border-left:0;box-shadow:none}}
+#stDrawer .dh,#chReader .dh{position:sticky;top:0;background:var(--bg);padding:10px 0 6px;border-bottom:2px solid var(--ink);display:flex;gap:8px;align-items:center;z-index:3}#stDrawer .dh h2,#chReader .dh h2{margin:0;flex:1;font-size:1.1em}#stDrawer .dh button,#chReader .dh button{min-height:44px;min-width:44px}@media (min-width:761px){#chReader{width:min(560px,100vw)}}#chReader{z-index:30}#chReader .card{margin:8px 0}#chReader .rdtool{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}#chReader .rdtool button{min-height:44px}
 #stDrawer h3{font-size:.95em;margin:14px 0 4px;border-bottom:1px solid var(--line);padding-bottom:2px}#stDrawer ul{margin:2px 0;padding-left:1.2em}#stDrawer li{margin:2px 0}.dsay{display:flex;gap:6px;align-items:flex-start}.dsay>div{flex:1}
 .projNote{display:none}body.proj .projNote{display:block}body.proj .stPriv{display:none!important}
 [hidden]{display:none!important}
@@ -193,8 +195,13 @@ details.sysbox{margin-top:4px}details.sysbox>summary{cursor:pointer;min-height:3
 
 <section class="pane" data-pane="room">
   <h2>房間</h2>
+  <div class="card rmtool" id="rmTool"><div class="row" style="gap:8px;align-items:center;flex-wrap:wrap">
+    <label for="rmCls"><b>班級</b></label><select id="rmCls"><option value="">全部班級</option><option>二丙</option><option>二乙</option><option>二甲</option></select>
+    <label for="rmWeek"><b>波次</b></label><select id="rmWeek"><option value="0">全部週次</option><option value="1">第 1 週（W6）</option><option value="2">第 2 週（W7）</option><option value="3">第 3 週（W8）</option></select>
+    <button id="rmClear" class="sm" title="班級與波次都回到「全部」">全部班級・全部週次</button></div>
+    <div id="rmSum" class="muted" role="status" aria-live="polite" style="margin-top:6px"></div>
+    <div class="muted small">班級＝房主的班級（房間成員來自不同班會標「混班」）。波次＝房間建立時間落在該班的第幾週（各班上課前一小時起算，二丙二乙 10/13、二甲 10/15 為第 1 週起點）；班級選擇與「學生狀態」分頁共用。</div></div>
   <div class="card scroll" id="rooms"></div>
-  <div id="chatView" class="card" hidden></div>
 </section>
 
 <section class="pane" data-pane="board">
@@ -234,6 +241,7 @@ details.sysbox{margin-top:4px}details.sysbox>summary{cursor:pointer;min-height:3
 </div>
 </div>
 <aside id="stDrawer" role="dialog" aria-modal="true" aria-labelledby="stDrawerT" hidden></aside>
+<aside id="chReader" role="dialog" aria-modal="true" aria-labelledby="chReaderT" hidden></aside>
 <div id="qrBig" hidden><h1>痛點急診室 老師後台</h1><div class="qr" id="qrBigBox"></div><div class="qrurl" id="qrBigUrl"></div><div class="muted">只有教師名單裡的 Google 帳號能進</div><button id="qrBigClose">關閉</button></div>
 <div id="toast" hidden></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
@@ -250,7 +258,7 @@ details.sysbox{margin-top:4px}details.sysbox>summary{cursor:pointer;min-height:3
 <script src="layout.js?v=202610201105"></script>
 <script src="minimap.js?v=202610201105"></script>
 <script src="personas_inclusive.js?v=202610201105"></script><script src="er_data.js?v=202610201105"></script><script src="npc_voice.js?v=202610201105"></script><script src="personas.js?v=202610201105"></script>
-<script src="week2.js?v=202610201105"></script><script src="teacher_model.js?v=202610201247"></script>
+<script src="week2.js?v=202610201105"></script><script src="teacher_model.js?v=202610201400"></script>
 <script>
 /* 教師名單：只有這裡的 Google 帳號能進。要加人就加在這裡（改完重新部署；資料庫規則 tools/er_after_google_enabled.py 也要加）。 */
 var TEACHER_EMAILS = ['scatjay@gmail.com', 'prof.chwu@mx.nthu.edu.tw', 'nthuchwu@gapp.nthu.edu.tw'];   /* 10-16 楊老師：清大吳智鴻老師（觀摩用，含後台） */
@@ -324,7 +332,7 @@ var CLASS_WINDOWS = [].concat(
   syncDeid();
   function aliasOf(sid) { if (!DEID) return sid; if (!alias[sid]) { var n = Object.keys(alias).length + 1; alias[sid] = '學生' + (n < 10 ? '0' : '') + n; } return alias[sid]; }
   function buildAlias(sids) { alias = {}; sids.slice().sort().forEach(function (s) { aliasOf(s); }); }
-  $('deidBtn').onclick = function () { DEID = !DEID; try { localStorage.setItem('erg_t_deid', DEID ? '1' : '0'); } catch (e) {} syncDeid(); $('chatView').hidden = true; render(); renderFb(); renderUsageAll(); if (window.__renderSum) window.__renderSum(); };
+  $('deidBtn').onclick = function () { DEID = !DEID; try { localStorage.setItem('erg_t_deid', DEID ? '1' : '0'); } catch (e) {} syncDeid(); render(); if (chatCur && !$('chReader').hidden) rdRender(); renderFb(); renderUsageAll(); if (window.__renderSum) window.__renderSum(); };
   $('projBtn').onclick = function () { PROJ = !PROJ; $('projBtn').textContent = '投影模式：' + (PROJ ? '開' : '關'); $('projBtn').classList.toggle('on', PROJ); document.body.classList.toggle('proj', PROJ); };
 
   /* 10-13：這個單元三個班、三週共用同一個場次（與 game.js 的 UNIT_SESS 同一個值，要一起改） */
@@ -470,12 +478,12 @@ var CLASS_WINDOWS = [].concat(
     ['rvLv', 'rvCls', 'rvTh', 'rvSort'].forEach(function (id) { $(id).onchange = renderReview; }); $('rvQ').oninput = renderReview;
     weekNote();
     attach();
-    if (h) setTimeout(function () { showChats(h[2], h[3], h[4]); }, 900);
+    if (h) setTimeout(function () { var u = function (x) { x = decodeURIComponent(x); return x === '-' ? undefined : x; }; showChats(decodeURIComponent(h[2]), u(h[3]), u(h[4])); }, 900);
   }
   var tt = null; function schedule() { clearTimeout(tt); tt = setTimeout(render, 300); }
   function attach() {
     offs.forEach(function (f) { try { f(); } catch (e) {} }); offs = [];
-    profiles = {}; presence = {}; chats = {}; chatsAll = {}; scores = {}; $('chatView').hidden = true;
+    profiles = {}; presence = {}; chats = {}; chatsAll = {}; scores = {}; closeReader(true);
     var root = fdb.ref('er/' + SESS); curRoot = root; loaded = {}; stUpd = 0; stLastRead = 0; stFail = '';
     /* 讀取進度：六份資料各收到一次（或讀取失敗）才算載入完成，畫面在那之前要說「讀取中」，不要讓空畫面看起來像沒人 */
     function on(ref, fn, err) {
@@ -534,8 +542,7 @@ var CLASS_WINDOWS = [].concat(
   /* 10-19 楊老師：「應該是分成週次來分析和呈現比較合理」。週次依各班上課日切（上課前一小時起算）；
      提問、訪談、最後提問、提問樣態都只算該週；檢核點與成就是累計（遊戲本身是累計判定）。 */
   var WEEK = 0, chatsAll = {};
-  var WEEK_START = { '二丙': ['2026-10-13T07:10', '2026-10-20T07:10', '2026-10-27T07:10', '2026-11-03T07:10'], '二乙': ['2026-10-13T11:50', '2026-10-20T11:50', '2026-10-27T11:50', '2026-11-03T11:50'], '二甲': ['2026-10-15T11:50', '2026-10-22T11:50', '2026-10-29T11:50', '2026-11-05T11:50'] };
-  function weekRange(cls, w) { var a = WEEK_START[cls] || WEEK_START['二丙']; return [w === 1 ? 0 : Date.parse(a[w - 1] + ':00+08:00'), Date.parse(a[w] + ':00+08:00')]; }
+  function weekRange(cls, w) { return window.ERG_TMODEL.weekRange(cls, w); }   /* 單一來源在 teacher_model.js（有單元測試） */
   function weekFilter(all) {
     if (!WEEK) return all;
     var out = {};
@@ -653,7 +660,7 @@ var CLASS_WINDOWS = [].concat(
     $('liveList').innerHTML = list.length ? list.slice(0, 30).map(function (it) { return '<div style="margin:4px 0">' + (it.active ? '🟡 ' : '⚪ ') + '<a href="#" data-chat="' + esc(it.code) + '|' + esc(it.sid) + '"><b>' + esc(aliasOf(it.sid)) + '</b></a> <span class="muted" title="訪談技能等級（探問、情境感知取較高）">Lv' + lvOf(it.sid) + '</span> 在 ' + esc(it.room) + (it.recent ? '，問 ' + esc(it.recent.who) + '：「' + esc(String(it.recent.text).slice(0, 24)) + '」' : '，還沒訪談') + '</div>'; }).join('') + '<div class="muted" style="font-size:.8em">🟡＝5 分鐘內有提問。點名字看逐字稿。</div>' : '<span class="muted">還沒有人進房。</span>';
     bindChatLinks($('liveList'));
   }
-  function bindChatLinks(el) { Array.prototype.forEach.call(el.querySelectorAll('[data-chat]'), function (a) { a.onclick = function (e) { e.preventDefault(); var p = a.dataset.chat.split('|'); showChats(p[0], p[1] || undefined); }; }); }
+  function bindChatLinks(el) { Array.prototype.forEach.call(el.querySelectorAll('[data-chat]'), function (a) { a.onclick = function (e) { e.preventDefault(); rdFrom = a; var p = a.dataset.chat.split('|'); showChats(p[0], p[1] || undefined); }; }); }
   function renderAnalysis() {
     var qs = [], who = {}, convs = [], byPid = {}, qsel = $('qCls'), qcls = qsel.value, clsSeen = {};
     Object.keys(profiles || {}).forEach(function (sid) { var c = (profiles[sid] || {}).cls; if (c) clsSeen[c] = true; });
@@ -751,11 +758,7 @@ var CLASS_WINDOWS = [].concat(
     ['kStudents', 'kRooms', 'kIv', 'kQ', 'kLit'].forEach(function (id, i) { var lab = $(id) && $(id).nextElementSibling; if (lab) lab.textContent = KL[i]; });
     $('nStu').textContent = all.length; $('nRoom').textContent = rooms.length;
     renderBoard();
-    $('rooms').innerHTML = rooms.length ? '<table><thead><tr><th>代碼</th><th>案例・班別</th><th>主持</th><th>成員</th><th>即時訪談</th></tr></thead><tbody>' + rooms.map(function (r) {
-      var n = 0; Object.keys(chats[r.code] || {}).forEach(function (sid) { n += (ask[sid] && chats[r.code][sid]) ? Object.keys(chats[r.code][sid]).length : 0; });
-      return '<tr><td><b>' + esc(r.code) + '</b></td><td>' + esc(r.case || 'sms') + '・' + (r.shift === 'night' ? '夜班' : '日班') + '</td><td>' + esc(aliasOf(String(r.host))) + '</td><td>' + Object.keys(r.members || {}).map(function (s) { return esc(aliasOf(s)); }).join('、') + '</td><td>' + (n ? '<a href="#" data-chat="' + esc(r.code) + '|">看逐字稿（' + n + ' 段）</a>' : '<span class="muted">還沒有</span>') + '</td></tr>';
-    }).join('') + '</tbody></table>' : '<span class="muted">還沒有房間。</span>';
-    bindChatLinks($('rooms'));
+    rmIdx = TMODEL.indexRooms(rooms, profiles, chatsAll); rmVer += 1; renderRoomList();
     try { renderLive(ask); renderAnalysis(); } catch (e) { console.error(e); }
     try { stMb = mb; stSchedule(); } catch (e) { console.error(e); }
     $('updated').textContent = '畫面更新 ' + new Date().toLocaleTimeString('zh-TW', { hour12: false });
@@ -816,23 +819,91 @@ var CLASS_WINDOWS = [].concat(
     $('usageSum').innerHTML = num(tot.turns) + ' 題・' + rows.length + ' 人' + (capped ? ' <span class="pill bad">' + capped + ' 人到上限</span>' : '');
     $('usage').innerHTML = rows.length ? '<table><thead><tr><th>學生</th><th class="num">題數</th><th class="num">tokens（入/出）</th><th class="num">花費</th><th>最後</th></tr></thead><tbody>' + rows.map(function (k) { return '<tr><td>' + esc(aliasOf(k)) + '</td><td class="num">' + (u[k].turns || 0) + (u[k].turns >= CAP ? ' <span class="pill bad">已達上限</span>' : '') + '</td><td class="num">' + num(u[k].tokIn) + ' / ' + num(u[k].tokOut) + '</td><td class="num">' + fUsd(costUsd(u[k])) + '</td><td class="muted">' + (u[k].last ? hm(u[k].last) : '') + '</td></tr>'; }).join('') + '</tbody></table>' + (others.length ? '<div class="muted" style="font-size:.85em;margin-top:6px">另有 ' + others.length + ' 個不是這個場次學生的帳號（系統測試用）共 ' + otherTurns + ' 題，沒有列在表裡。</div>' : '') : '<span class="muted">這個場次還沒有人用即時訪談。</span>';
   }
-  function showChats(code, sid, rec) {
-    setTab('room');
-    var box = $('chatView'); box.hidden = false; box.innerHTML = '讀取中…';
-    fdb.ref('er/' + SESS + '/chat/' + code + (sid ? '/' + sid + (rec ? '/' + rec : '') : '')).once('value', function (s) {
-      var v = s.val() || {}, html = '<div class="row"><b style="flex:1">逐字稿　房 ' + esc(code) + (sid ? '　' + esc(aliasOf(sid)) : '　全部成員') + '</b><button id="chatClose">關閉</button></div>' +
-        '<div class="legend muted">顏色：<i class="lu"></i>黃色、靠右＝學生問的<i class="la"></i>白色、靠左＝受訪人物回答的</div>';   /* 10-13 楊老師：「黃色是學生的話，還是受訪對象的話？標示一下」 */
-      function one(sid0, rec0, c) {
-        var turns = Object.keys(c.turns || {}).map(function (k) { return c.turns[k]; }).sort(function (a, b) { return a.t - b.t; });
-        var stu = aliasOf(sid0), pn = c.personaName || personaName(c.personaId) || c.personaId || '人物';
-        return '<div class="card"><b>' + esc(stu) + '</b>　受訪：' + esc(pn) + '　<span class="muted">' + turns.filter(function (t) { return t.role === 'u'; }).length + ' 題' + (turns.length ? '・' + hm(turns[0].t) + ' 起' : '') + '</span>' +
-          turns.map(function (t) { var u = t.role === 'u'; return '<div class="turn"><div class="bub ' + (u ? 'u' : 'a') + '"><span class="who">' + (u ? (DEID ? '' : '學生 ') + esc(stu) + ' 問' : '受訪者 ' + esc(pn) + ' 答') + '</span>' + esc(t.text) + '</div></div>'; }).join('') + '</div>';
-      }
-      if (sid && rec) html += one(sid, rec, v); else if (sid) Object.keys(v).forEach(function (r) { html += one(sid, r, v[r]); }); else Object.keys(v).forEach(function (s0) { Object.keys(v[s0]).forEach(function (r) { html += one(s0, r, v[s0][r]); }); });
-      if (!Object.keys(v).length) html += '<p class="muted">' + (sid ? '這位學生在這間房還沒有即時訪談。' : '這間房還沒有即時訪談。') + '</p>';
-      box.innerHTML = html; $('chatClose').onclick = function () { box.hidden = true; if (location.hash) history.replaceState(null, '', location.pathname + location.search); }; box.scrollIntoView({ block: 'start' });
-    }, denied(box, '逐字稿'));
+  /* ───── 房間與逐字稿的班級、波次篩選（10-20）─────
+     算法在 teacher_model.js（indexRooms／filterRooms／sumRooms／chatNeighbors，有單元測試）；這裡只負責畫。
+     班級與「學生狀態」共用 stF.cls／stManual（同一個選擇狀態）；波次 rmWeek 只在這個分頁。兩者記在 sessionStorage，重新整理後保留。
+     全在記憶體內過濾，不新增 Firebase 監聽；render() 時建一次索引（rmVer 遞增），篩選只過濾索引。 */
+  var rmIdx = [], rmShown = [], rmWeek = 0, rmVer = 0, rmKey = '', chatCur = null, RM_KEY = 'erg_t_rm';
+  function rmSave() { try { sessionStorage.setItem(RM_KEY, JSON.stringify({ week: rmWeek, cls: stF.cls, manual: stManual })); } catch (e) {} }
+  function fmtT(t) { if (!t) return ''; var d = new Date(t); return (d.getMonth() + 1) + '/' + d.getDate() + ' ' + hm(t); }
+  function renderRoomList() {
+    var box = $('rooms'); if (!box || !DB) return;
+    var key = rmVer + '|' + stF.cls + '|' + rmWeek + '|' + (DEID ? 1 : 0);
+    if (key === rmKey && box.firstChild) { rmSave(); return; }
+    rmKey = key; rmSave();
+    $('rmCls').value = stF.cls; $('rmWeek').value = String(rmWeek);
+    rmShown = TMODEL.filterRooms(rmIdx, { cls: stF.cls, week: rmWeek });
+    var sm = TMODEL.sumRooms(rmShown), mixN = rmShown.filter(function (x) { return x.mixed; }).length;
+    $('rmSum').innerHTML = '<b>' + (stF.cls || '全部班級') + '・' + (rmWeek ? TMODEL.WAVES[rmWeek - 1].label : '全部週次') + '</b>：<b>' + sm.rooms + '</b> 間房（全部 ' + rmIdx.length + ' 間' + (mixN ? '，其中混班 ' + mixN + ' 間' : '') + '）・發言 <b>' + sm.turns + '</b> 句・人物對話 <b>' + sm.asks + '</b> 題（' + sm.withChat + ' 間有逐字稿）';
+    $('rmSum').title = '發言＝學生問與人物答的所有句子；人物對話題數＝其中學生問的題數';
+    box.innerHTML = rmShown.length ? '<table><thead><tr><th>代碼</th><th>班級・週次</th><th>案例・班別</th><th>主持</th><th>成員</th><th>即時訪談</th></tr></thead><tbody>' + rmShown.map(function (x) {
+      var r = x.room;
+      return '<tr><td><b>' + esc(r.code) + '</b></td><td>' + esc(x.cls || '—') + (x.mixed ? ' <span class="pill" title="成員來自：' + esc(x.classes.join('、')) + '">混班：' + esc(x.classes.join('＋')) + '</span>' : '') + '<br><span class="muted small">' + (x.week ? TMODEL.WAVES[x.week - 1].label : '週次外') + '・' + fmtT(x.createdAt) + '</span></td><td>' + esc(r.case || 'sms') + '・' + (r.shift === 'night' ? '夜班' : '日班') + '</td><td>' + esc(aliasOf(String(r.host))) + '</td><td>' + Object.keys(r.members || {}).map(function (s) { return esc(aliasOf(s)); }).join('、') + '</td><td>' + (x.convs ? '<a href="#" class="lk" data-chat="' + esc(r.code) + '|">看逐字稿（' + x.convs + ' 段・' + x.asks + ' 題）</a>' : '<span class="muted">還沒有</span>') + '</td></tr>';
+    }).join('') + '</tbody></table>' : '<span class="muted">' + (rmIdx.length ? '這個篩選下沒有房間。把班級或波次改成「全部」就會看到其他房間。' : '還沒有房間。') + '</span>';
+    bindChatLinks(box); chatNavUpdate();
   }
+  function chatNavUpdate() {
+    var pv = $('chatPrev'), nx = $('chatNext'), pos = $('chatPos'); if (!pv || !nx || !chatCur) return;
+    var nb = TMODEL.chatNeighbors(rmShown, chatCur.code);
+    pv.disabled = !nb.prev; nx.disabled = !nb.next;
+    pos.textContent = nb.n ? (nb.pos >= 0 ? '第 ' + (nb.pos + 1) + ' / ' + nb.n + ' 間' : '這間不在目前篩選內（篩選內共 ' + nb.n + ' 間）') + '（' + (stF.cls || '全部班級') + '・' + (rmWeek ? TMODEL.WAVES[rmWeek - 1].label : '全部週次') + '，只算有逐字稿的房間）' : '目前篩選下沒有有逐字稿的房間';
+  }
+  function chatGo(dir) { if (!chatCur) return; var nb = TMODEL.chatNeighbors(rmShown, chatCur.code), c = nb[dir]; if (c) showChats(c); }
+  function rmChangeCls(v) { stF.cls = v; stManual = true; syncTool(); stAll(); }
+  $('rmCls').onchange = function () { rmChangeCls(this.value); };
+  $('rmWeek').onchange = function () { rmWeek = Number(this.value) || 0; renderRoomList(); };
+  $('rmClear').onclick = function () { rmWeek = 0; rmChangeCls(''); };
+  /* ───── 就地閱讀逐字稿（10-20 楊老師：「這個模式沒辦法直接閱讀逐字稿」）─────
+     原本點房間代碼會切到「房間」分頁、捲到 186 間房的列表底下才看得到逐字稿，學生表的篩選與捲動位置都丟了。
+     現在在目前頁面右側開一層閱讀側欄（手機全螢幕），資料來自已在記憶體的 chatsAll（零額外讀取、不新增監聽）；
+     學生狀態詳情側欄開著時疊在上面（Esc 先關閱讀層）；上一間／下一間走「房間」分頁目前的班級＋波次篩選結果。 */
+  var rdOpener = null, rdOpenerKey = '', rdFrom = null;
+  function closeReader(quiet) {
+    var box = $('chReader'); if (!box) return; var was = !box.hidden; box.hidden = true; chatCur = null;
+    if (location.hash) { try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {} }
+    if (was && !quiet) {   /* 列表可能在閱讀期間重畫過（連結是新的節點），找不到原節點就用房間代碼找回同一個連結 */
+      var o = rdOpener && document.body.contains(rdOpener) ? rdOpener : (rdOpenerKey ? document.querySelector('a[data-chat="' + rdOpenerKey.replace(/"/g, '') + '"]') : null);
+      if (o) { try { o.focus(); } catch (e) {} }
+    }
+    if (!quiet) { rdOpener = null; rdOpenerKey = ''; }
+  }
+  function rdRender() {
+    var box = $('chReader'), c = chatCur; if (!c) return;
+    var v = (chatsAll || {})[c.code] || {}, sid = c.only ? c.sid0 : '', ri = null;
+    rmIdx.forEach(function (x) { if (x.code === c.code) ri = x; });
+    var html = '<div class="dh"><h2 id="chReaderT">逐字稿　房 ' + esc(c.code) + (sid ? '　' + esc(aliasOf(sid)) : '　全部成員') + '</h2><button id="chatClose" aria-label="關閉逐字稿">✕</button></div>' +
+      '<div class="muted small" style="margin-top:6px">' + (ri ? esc(ri.cls || '—') + (ri.mixed ? '（混班：' + esc(ri.classes.join('＋')) + '）' : '') + '・' + (ri.week ? TMODEL.WAVES[ri.week - 1].label : '週次外') + '・建立 ' + fmtT(ri.createdAt) : '') + '</div>' +
+      '<div class="rdtool chatnav" id="chatNav"><button id="chatPrev">← 上一間</button><span id="chatPos" class="muted" role="status" aria-live="polite"></span><button id="chatNext">下一間 →</button></div>' +
+      (c.sid0 ? '<div class="rdtool"><button id="chatOnly" aria-pressed="' + (c.only ? 'true' : 'false') + '" class="' + (c.only ? 'on' : '') + '">' + (c.only ? '只看 ' + esc(aliasOf(c.sid0)) + ' 的提問（按一下看全部成員）' : '看全部成員（按一下只看 ' + esc(aliasOf(c.sid0)) + '）') + '</button></div>' : '') +
+      '<div class="legend muted">顏色：<i class="lu"></i>黃色、靠右＝學生問的<i class="la"></i>白色、靠左＝受訪人物回答的</div>';   /* 10-13 楊老師：「黃色是學生的話，還是受訪對象的話？標示一下」 */
+    function one(sid0, rec0, cv) {
+      var turns = Object.keys(cv.turns || {}).map(function (k) { return cv.turns[k]; }).sort(function (a, b) { return a.t - b.t; });
+      var stu = aliasOf(sid0), pn = cv.personaName || personaName(cv.personaId) || cv.personaId || '人物';
+      return '<div class="card"><b>' + esc(stu) + '</b>　受訪：' + esc(pn) + '　<span class="muted">' + turns.filter(function (t) { return t.role === 'u'; }).length + ' 題' + (turns.length ? '・' + fmtT(turns[0].t) + ' 起' : '') + '</span>' +
+        turns.map(function (t) { var u = t.role === 'u'; return '<div class="turn"><div class="bub ' + (u ? 'u' : 'a') + '"><span class="who">' + (u ? (DEID ? '' : '學生 ') + esc(stu) + ' 問' : '受訪者 ' + esc(pn) + ' 答') + '　' + hm(t.t) + '</span>' + esc(t.text) + '</div></div>'; }).join('') + '</div>';
+    }
+    var any = 0;
+    Object.keys(v).sort().forEach(function (s0) { if (sid && s0 !== sid) return; Object.keys(v[s0] || {}).forEach(function (r) { if (c.rec && r !== c.rec && sid) return; html += one(s0, r, v[s0][r]); any += 1; }); });
+    if (!any) html += '<p class="muted">' + (sid ? '這位學生在這間房還沒有即時訪談。' : '這間房還沒有即時訪談。') + '</p>';
+    html += '<p class="muted small">同學之間的聊天內容不在房間資料裡（房間只記「有聊過」），所以這裡只有人物訪談。</p>';
+    box.innerHTML = html;
+    $('chatClose').onclick = function () { closeReader(); };
+    $('chatPrev').onclick = function () { chatGo('prev'); }; $('chatNext').onclick = function () { chatGo('next'); };
+    if ($('chatOnly')) $('chatOnly').onclick = function () { chatCur.only = !chatCur.only; rdRender(); $('chatOnly').focus(); };
+    chatNavUpdate(); box.scrollTop = 0;
+  }
+  function showChats(code, sid, rec) {
+    var box = $('chReader'); if (box.hidden) { rdOpener = rdFrom || document.activeElement; rdFrom = null; rdOpenerKey = (rdOpener && rdOpener.dataset && rdOpener.dataset.chat) || ''; }
+    chatCur = { code: String(code), sid0: sid || '', only: !!sid, rec: rec || '' };
+    try { history.replaceState(null, '', location.pathname + location.search + '#chat/' + encodeURIComponent(SESS) + '/' + encodeURIComponent(code) + '/' + encodeURIComponent(sid || '-') + '/' + encodeURIComponent(rec || '-')); } catch (e) {}
+    box.hidden = false; rdRender();
+    var x = $('chatClose'); if (x && !(box.contains(document.activeElement))) x.focus();
+  }
+  document.addEventListener('keydown', function (e) {
+    var box = $('chReader'); if (!box || box.hidden) return;
+    if (e.key === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); closeReader(); return; }   /* 詳情側欄的 Esc 處理器在後面註冊；這裡先擋掉，才不會一次關兩層 */
+    if (e.key === 'Tab') { var f = Array.prototype.filter.call(box.querySelectorAll('button,a[href],input,select'), function (x) { return !x.disabled; }); if (!f.length) return; var a = f[0], z = f[f.length - 1]; if (e.shiftKey && document.activeElement === a) { e.preventDefault(); z.focus(); } else if (!e.shiftKey && document.activeElement === z) { e.preventDefault(); a.focus(); } else if (!box.contains(document.activeElement)) { e.preventDefault(); a.focus(); } }
+  });
   /* ───── 學生狀態（10-20 改版）：畫面只負責呈現，算法在 teacher_model.js（ERG_TMODEL）。設計稿 ui/teacher_redesign_1020.md ───── */
   var TMODEL = window.ERG_TMODEL, stV = null, stMb = {}, stOut = null, stT = null, stOpen = '', stOpener = null, stShow = 8;
   var stF = { cls: '', stage: '', hint: '', cp: '', online: false, q: '', sort: 'pri' };
@@ -844,6 +915,7 @@ var CLASS_WINDOWS = [].concat(
   var stManual = false, stCC = null, stPrevCls = '', stLoading = false, stReadMs = 300000, stGuideBytes = 0, LOAD_KEYS = ['profiles', 'presence', 'chat', 'score', 'guideResp', 'guide'];
   var LOAD_NAME = { profiles: '名單', presence: '在線', chat: '逐字稿', score: '分數', guideResp: '指引回應', guide: '個人指引' };
   stCC = TMODEL.currentClass(clk()); stF.cls = stCC.cls;
+  try { var rs0 = JSON.parse(sessionStorage.getItem('erg_t_rm') || '{}'); rmWeek = Number(rs0.week) || 0; if (rs0.manual && typeof rs0.cls === 'string') { stF.cls = rs0.cls; stManual = true; } } catch (e) {}
   function loadedN() { return LOAD_KEYS.filter(function (k) { return loaded[k]; }).length; }
   function loadedAll() { return loadedN() >= LOAD_KEYS.length; }
   function stMark(k, failed) { if (!loaded[k]) loaded[k] = failed ? 'fail' : 'ok'; if (loadedAll() && !stUpd) stUpd = Date.now(); drawClsBar(); stSchedule(); }
@@ -891,7 +963,7 @@ var CLASS_WINDOWS = [].concat(
   setInterval(stTick, 60000);
   $('clsRefresh').onclick = function () { stRefresh(false); };
   $('clsAuto').onclick = function () { stManual = false; stCC = TMODEL.currentClass(clk()); stF.cls = stCC.cls; stF.stage = stF.hint = stF.cp = ''; stAll(); toast('已回到自動：' + stCC.cls); };
-  function stAll() { if (!stOut) return; stV = TMODEL.scope(stOut, stF.cls); renderFunnel(); renderIntervene(); renderNear(); renderCommons(); renderStList(); drawClsBar(); }
+  function stAll() { try { renderRoomList(); } catch (e) { console.error(e); } if (!stOut) return; stV = TMODEL.scope(stOut, stF.cls); renderFunnel(); renderIntervene(); renderNear(); renderCommons(); renderStList(); drawClsBar(); }
   var ST_GLYPH = { S0: '○', S1: '◔', S2: '⚠', S3: '▶', S4: '✔' }, ST_NAME = { S0: '未綁定', S1: '沒開口', S2: '卡住', S3: '進行中', S4: '完成' }, CIRC = ['①', '②', '③', '④', '⑤', '⑥'];
   var ST_SUB = { noroom: '沒進房', noask: '進房沒開口', start: '剛開始', run: '', time: '花時間沒進展' };
   function stSchedule() { clearTimeout(stT); stT = setTimeout(function () { try { renderStatus(); } catch (e) { console.error(e); } }, 400); }
@@ -967,7 +1039,7 @@ var CLASS_WINDOWS = [].concat(
   }
 
   /* 列表 */
-  function syncTool() { $('stCls').value = stF.cls; $('stStage').value = stF.stage; $('stHint').value = stF.hint; $('stOnl').checked = stF.online; $('stSort').value = stF.sort; if ($('stQ').value !== stF.q) $('stQ').value = stF.q; }
+  function syncTool() { $('stCls').value = stF.cls; if ($('rmCls')) $('rmCls').value = stF.cls; $('stStage').value = stF.stage; $('stHint').value = stF.hint; $('stOnl').checked = stF.online; $('stSort').value = stF.sort; if ($('stQ').value !== stF.q) $('stQ').value = stF.q; }
   function stRows() {
     var f = stF, q = f.q.trim().toLowerCase();
     var rows = stOut.rows.filter(function (r) {
@@ -1006,7 +1078,7 @@ var CLASS_WINDOWS = [].concat(
   function openDrawer(sid, opener) { stOpen = sid; stOpener = opener || null; renderDrawer(); $('stDrawer').hidden = false; var x = $('stDrawerX'); if (x) x.focus(); }
   function closeDrawer() { stOpen = ''; $('stDrawer').hidden = true; if (stOpener && document.body.contains(stOpener)) { try { stOpener.focus(); } catch (e) {} } stOpener = null; }
   document.addEventListener('keydown', function (e) {
-    if ($('stDrawer').hidden) return; if (e.key === 'Escape') { closeDrawer(); return; }
+    if ($('stDrawer').hidden || !$('chReader').hidden) return; if (e.key === 'Escape') { closeDrawer(); return; }
     if (e.key === 'Tab') { var f = $('stDrawer').querySelectorAll('button,a[href],input,select'); if (!f.length) return; var a = f[0], z = f[f.length - 1]; if (e.shiftKey && document.activeElement === a) { e.preventDefault(); z.focus(); } else if (!e.shiftKey && document.activeElement === z) { e.preventDefault(); a.focus(); } }
   });
   function stRecent(sid, k) { var out = []; Object.keys(chatsAll || {}).forEach(function (code) { var by = (chatsAll[code] || {})[sid] || {}; Object.keys(by).forEach(function (rk) { var c = by[rk] || {}; Object.keys(c.turns || {}).forEach(function (t) { var x = c.turns[t]; if (x && x.role === 'u') out.push({ t: Number(x.t || 0), who: c.personaName || personaName(c.personaId), text: String(x.text || ''), code: code }); }); }); }); return out.sort(function (a, b) { return b.t - a.t; }).slice(0, k); }
@@ -1028,7 +1100,7 @@ var CLASS_WINDOWS = [].concat(
     $('stDrawerX').onclick = closeDrawer;
     Array.prototype.forEach.call(box.querySelectorAll('[data-cpy]'), function (b) { b.onclick = function () { var h = hints[Number(b.dataset.cpy)]; if (!h) return; (navigator.clipboard ? navigator.clipboard.writeText(h.say) : Promise.reject()).then(function () { toast('已複製'); }, function () { toast('複製不了，請手動選取'); }); }; });
     $('stDrawerSnz').onclick = function () { snooze(r.sid); toast('已先觀察：這台瀏覽器 3 小時內不再列出'); renderIntervene(); };
-    Array.prototype.forEach.call(box.querySelectorAll('[data-chat]'), function (a) { a.onclick = function (e) { e.preventDefault(); var p = a.dataset.chat.split('|'); closeDrawer(); showChats(p[0], p[1] || undefined); }; });
+    Array.prototype.forEach.call(box.querySelectorAll('[data-chat]'), function (a) { a.onclick = function (e) { e.preventDefault(); rdFrom = a; var p = a.dataset.chat.split('|'); showChats(p[0], p[1] || undefined); }; });
   }
 })();
 </script>

@@ -114,6 +114,51 @@
     return { cls: near.cls, phase: 'idle', minsToStart: Math.ceil(near.s - exact), minsToEnd: Math.ceil(near.e - exact), start: near.startHm, end: near.endHm, dow: near.dow, dowName: near.dowName, next: brief(next, nowMin), last: brief(last, nowMin) };
   }
 
+  /* ───── 房間與逐字稿：分班、分波次（10-20 楊老師：「逐字稿進來之後，可以分班和分波次去瀏覽」）─────
+     「波次」＝單元的第幾週（W6／W7／W8）：資料裡沒有別的波次欄位，三週共用同一個場次，只有週次有各班上課日的明確定義。
+     房間算在哪一週＝房間建立時間落在該班的哪一週區間（各班上課前一小時起算，二甲比二丙晚兩天，所以邊界分開算）。
+     房間的班級＝房主的班級（名單 → 房間自己的 cls → 第一位有班級的成員）；成員來自不同班就標混班。純函式，不碰 Firebase。 */
+  var WEEK_START = { '二丙': ['2026-10-13T07:10', '2026-10-20T07:10', '2026-10-27T07:10', '2026-11-03T07:10'], '二乙': ['2026-10-13T11:50', '2026-10-20T11:50', '2026-10-27T11:50', '2026-11-03T11:50'], '二甲': ['2026-10-15T11:50', '2026-10-22T11:50', '2026-10-29T11:50', '2026-11-05T11:50'] };
+  var WAVES = [{ w: 1, label: '第 1 週（W6）' }, { w: 2, label: '第 2 週（W7）' }, { w: 3, label: '第 3 週（W8）' }];
+  function weekRange(cls, w) { var a = WEEK_START[cls] || WEEK_START['二丙']; return [w === 1 ? 0 : Date.parse(a[w - 1] + ':00+08:00'), Date.parse(a[w] + ':00+08:00')]; }
+  /* 時間 t 落在該班第幾週；第 1 週涵蓋之前的一切，第 3 週結束（11/3）之後或沒有時間 → 0 */
+  function weekOf(cls, t) {
+    t = num(t, 0); if (!t) return 0;
+    for (var w = 1; w <= 3; w++) { var rg = weekRange(cls, w); if (t >= rg[0] && t < rg[1]) return w; }
+    return 0;
+  }
+  function roomClass(room, profiles) {
+    room = room || {}; profiles = profiles || {}; var seen = {}, list = [];
+    keys(room.members).forEach(function (s) { var c = (profiles[s] || {}).cls; if (c && !seen[c]) { seen[c] = 1; list.push(c); } });
+    var host = (profiles[String(room.host)] || {}).cls || room.cls || list[0] || '';
+    if (host && !seen[host]) { seen[host] = 1; list.push(host); }
+    return { cls: host, mixed: list.length > 1, classes: list.sort() };
+  }
+  function roomChatStats(chatOfRoom) {
+    var o = { turns: 0, asks: 0, convs: 0 };
+    keys(chatOfRoom).forEach(function (sid) { keys(chatOfRoom[sid]).forEach(function (rec) {
+      var ts = arr((chatOfRoom[sid][rec] || {}).turns); if (!ts.length) return; o.convs += 1; o.turns += ts.length; ts.forEach(function (x) { if (x && x.role === 'u') o.asks += 1; });
+    }); });
+    return o;
+  }
+  /* 一次標好每間房的班級、混班、週次、發言數（O(房間＋句數)）；之後篩選只是過濾這份陣列 */
+  function indexRooms(rooms, profiles, chatsAll) {
+    return arr(rooms).map(function (r) {
+      var rc = roomClass(r, profiles), st = roomChatStats((chatsAll || {})[r.code]);
+      return { code: r.code, room: r, cls: rc.cls, mixed: rc.mixed, classes: rc.classes, week: weekOf(rc.cls, r.createdAt), createdAt: num(r.createdAt, 0), turns: st.turns, asks: st.asks, convs: st.convs };
+    });
+  }
+  function filterRooms(idx, f) {
+    f = f || {}; var week = num(f.week, 0);
+    return idx.filter(function (x) { return (!f.cls || x.cls === f.cls) && (!week || x.week === week); });
+  }
+  function sumRooms(list) { var o = { rooms: list.length, turns: 0, asks: 0, withChat: 0 }; list.forEach(function (x) { o.turns += x.turns; o.asks += x.asks; if (x.convs) o.withChat += 1; }); return o; }
+  /* 上一間／下一間：只在「有逐字稿」的篩選結果內走；目前這間不在結果裡就回 pos＝-1，上一間／下一間從頭尾算起 */
+  function chatNeighbors(list, code) {
+    var w = list.filter(function (x) { return x.convs > 0; }).map(function (x) { return x.code; }), i = w.indexOf(String(code));
+    return { n: w.length, pos: i, prev: i > 0 ? w[i - 1] : (i < 0 && w.length ? w[w.length - 1] : null), next: i >= 0 && i < w.length - 1 ? w[i + 1] : (i < 0 && w.length ? w[0] : null) };
+  }
+
   function build(input, opts) {
     input = input || {}; opts = opts || {};
     var D = opts.deps || {}, CORE = D.CORE || CORE0, CP = D.CP || CP0, ACH = D.ACH || ACH0, W2 = D.W2 || W20;   /* deps 只給單元測試換假的檢核點用 */
@@ -246,5 +291,5 @@
     return { now: now, week: week, totals: totals, rows: rows, funnel: funnel, interventions: interventions, nearly: nearly, commons: commons, defs: { RULES: RULES, STAGES: STAGES, HINTS: HINT_DEFS } };
   }
 
-  return { RULES: RULES, STAGES: STAGES, HINT_DEFS: HINT_DEFS, build: build, respState: respState, weekNode: weekNode, scope: scope, currentClass: currentClass, SCHEDULE: SCHEDULE, WINDOW_PAD_MIN: WINDOW_PAD_MIN };
+  return { RULES: RULES, STAGES: STAGES, HINT_DEFS: HINT_DEFS, build: build, respState: respState, weekNode: weekNode, scope: scope, currentClass: currentClass, SCHEDULE: SCHEDULE, WINDOW_PAD_MIN: WINDOW_PAD_MIN, WEEK_START: WEEK_START, WAVES: WAVES, weekRange: weekRange, weekOf: weekOf, roomClass: roomClass, indexRooms: indexRooms, filterRooms: filterRooms, sumRooms: sumRooms, chatNeighbors: chatNeighbors };
 });
