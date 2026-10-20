@@ -59,5 +59,13 @@
     return { list: list, lit: list.filter(function (x) { return x.ok; }).length, total: list.length, passed: list.every(function (x) { return x.ok; }), next: next };
   }
   function started(now) { return (now || Date.now()) >= Date.parse(START); }
-  return { START: START, BADGE_PLUS: BADGE_PLUS, RESP_MIN: RESP_MIN, evaluate: evaluate, started: started };
+  /* 10-20 起新增的徽章不算進「比 1/3（W6）多 3 枚」：W6 結束的基準快照（10-19）不含它，已有人先拿到會等於少做一枚。
+     總數 total 減去「已拿到的、不在基準裡的新徽章」；ids 是玩家已拿到的徽章 id 清單。 */
+  var NEW_SINCE_BASE = ['pry_open'];
+  function badgeCount(total, ids) {
+    var n = Number(total) || 0, got = ids || [];
+    NEW_SINCE_BASE.forEach(function (id) { if (got.indexOf(id) >= 0) n -= 1; });
+    return Math.max(0, n);
+  }
+  return { START: START, BADGE_PLUS: BADGE_PLUS, RESP_MIN: RESP_MIN, evaluate: evaluate, started: started, badgeCount: badgeCount, NEW_SINCE_BASE: NEW_SINCE_BASE };
 });

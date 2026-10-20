@@ -96,12 +96,21 @@
   var skClick = function () { if (RM.switchTab) RM.switchTab('ach'); };
   document.addEventListener('click', function (e) { var t = e.target; if (t && t.closest && t.closest('#skBtn')) skClick(); });   /* 10-19：按到按鈕裡的文字（span）時 e.target 是 span，原本只認 id 會沒反應 */
   P.renderAch = renderAch;
-  P.onRoomChanged = function () { if (!typing()) P.render(cur().tab); };
-  P.onSceneChanged = function () { if (!typing()) { if (cur().tab === 'cards') renderCards(); if (cur().tab === 'concl') renderConcl(); } };
+  /* 10-20：手指／滑鼠按著的時候不重畫面板。學生在欄位打完字直接按按鈕，mousedown 先讓欄位失焦、存檔通知又重畫面板，
+     按鈕被換掉，click 就消失（二乙回報「結論都寫了卻沒辦法結束」）。按著時先記下，放開後等 click 跑完再補畫。 */
+  var ptrDown = false, ptrPending = false;
+  document.addEventListener('pointerdown', function () { ptrDown = true; }, true);
+  ['pointerup', 'pointercancel'].forEach(function (n) { document.addEventListener(n, function () {
+    ptrDown = false; if (ptrPending) { ptrPending = false; setTimeout(function () { try { if (cur() && !typing()) P.render(cur().tab); } catch (e) {} }, 60); }
+  }, true); });
+  P.onRoomChanged = function () { if (ptrDown) { ptrPending = true; return; } if (!typing()) P.render(cur().tab); };
+  P.onSceneChanged = function () { if (ptrDown) { ptrPending = true; return; } if (!typing()) { if (cur().tab === 'cards') renderCards(); if (cur().tab === 'concl') renderConcl(); } };
   P.onMove = function () { renderClue(); renderIntv(); };
-  P.onWatch = function () { try { if (cur() && cur().tab === 'clue') renderClue(); } catch (e) {} };   /* 輪播換看的房間時，右側線索跟著更新（10-15） */
+  P.onWatch = function () { try { if (cur() && cur().tab === 'clue') renderClue(); if (cur() && cur().tab === 'intv' && !typing() && !cur().selNpc) renderIntv(); } catch (e) {} };   /* 輪播換看的房間時，右側線索跟著更新（10-15） */
   /* 每秒看一次：正在看的人物如果離開這間房，訪談分頁改成顯示他的紀錄（檢核表還在） */
   setInterval(function () {
+    /* 10-20：沒選人時，名單（現場的人、輪播正在看的房間）跟著時間變，變了就重畫；以前只有玩家移動才重畫，名單會停在舊的 */
+    var cc = cur(); if (cc && cc.tab === 'intv' && !cc.selNpc && !typing()) { var sig = RM.entityHere().map(function (h) { return h.ent.id + h.av.level; }).join(',') + '|' + (cc.rotation && cc.rotation.on ? cc.watchRoom : '') + '|' + watchNote() + '|' + goNote(); if (sig !== cc._intvSig) { cc._intvSig = sig; renderIntv(); } }
     var c = cur(); if (!c || c.tab !== 'intv' || !c.selNpc || typing()) return;
     var still = false, pid = null; RM.entityHere().forEach(function (h) { if (h.ent.id === c.selNpc) still = true; });
     if (still) return;
@@ -144,6 +153,14 @@
     return PER.buildPrompt(persona, { timeText: RM.simTime(), roomName: roomNameOf(player().loc), act: h.pos.act || '待著', state: st, level: h.av.level, promptLine: promptLine,
       topic: w.meta.short, attitudeLabel: w.meta.id === 'sms' ? '對這套簡訊的態度' : '對這套做法的態度' });
   }
+  /* 10-20 楊老師：輪播只換『觀看』的房間、不移動玩家，訪談只問得到玩家所在房的人。輪播正在看別間房時，面板上方講清楚，並列出那間房現在的人 */
+  function watchNote() {
+    var c = cur(), loc = player().loc, w = c && c.watchRoom;
+    if (!c || !c.rotation || !c.rotation.on || !w || w === loc) return '';
+    var names = [];
+    c.world.at(c.clock.worldSec).forEach(function (it) { if (it.pos.room === w && it.ent.kind !== 'bot') names.push(it.ent.name); });
+    return '<p style="margin:0 0 6px">👀 輪播正在看「<b>' + esc(roomNameOf(w)) + '</b>」：' + (names.length ? esc(names.join('、')) : '現在沒有人') + '。你自己還在「' + esc(roomNameOf(loc)) + '」，要訪談那裡的人得走過去（下方「其他房間的人」點一下就過去）。</p>';
+  }
   function renderIntv() {
     var p = $('p-intv'), here = RM.entityHere();
     if (cur().role !== 'member') { p.innerHTML = '<p class="muted">旁觀者不能訪談。</p>'; return; }
@@ -157,7 +174,7 @@
     if (!sel && recPid && recFor(recPid) < 0) recPid = null;
     /* 選了現場的人在訪談時，急診室的時間先暫停（不然問到一半他就照班表走掉了） */
     c0.intvHold = !!sel;
-    var html = '<div class="muted" style="font-size:var(--fs-2)">這間房裡的人（只有在同一房間才問得到）：</div><div class="row" style="margin:6px 0">' +
+    var html = goNote() + watchNote() + '<div class="muted" style="font-size:var(--fs-2)">這間房裡的人（只有在同一房間才問得到）：</div><div class="row" style="margin:6px 0">' +
       (here.length ? here.map(function (h) { return '<button class="pill ' + (sel && sel.ent.id === h.ent.id ? 'on' : '') + '" data-npc="' + esc(h.ent.id) + '">' + esc(h.ent.name) + '・' + ({ free: '可聊', short: '簡短', blocked: '正忙' })[h.av.level] + '</button>'; }).join('') : '<span class="muted">現在這間房沒有人。</span>') + '</div>';
     /* 其他房間的人：灰色、不能選，後面標在哪間房（10-12 楊老師）。要訪談就先走過去——用地圖或下方的房間按鈕。 */
     html += '<div class="muted" style="font-size:var(--fs-2);margin-top:8px">其他房間的人（點一下，直接過去找他）：</div><div id="allNpc" style="font-size:var(--fs-2);margin:4px 0 6px">' + allNpcHtml() + '</div>';
@@ -228,17 +245,53 @@
     });
     var rooms = Object.keys(byRoom).filter(function (rid) { return rid !== mine; }).sort(function (a, b) { return LAY.room(a).name.localeCompare(LAY.room(b).name); });
     if (!rooms.length) return '<span class="muted">現在其他房間沒有可以訪談的人。</span>';
-    return rooms.map(function (rid) { return byRoom[rid].map(function (h) { return '<button type="button" class="pill" data-goto="' + esc(h.ent.id) + '" data-room="' + esc(rid) + '" data-name="' + esc(h.ent.name) + '" title="點一下，直接過去' + esc(roomNameOf(rid)) + '找他" style="font-size:var(--fs-1);min-height:32px;padding:2px 9px;margin:2px;border-style:dashed;cursor:pointer">' + esc(h.ent.name) + '　<span style="font-weight:400">在' + esc(roomNameOf(rid)) + '</span></button>'; }).join(''); }).join('');   /* 10-15 楊老師：不在這間房的人，點一下就直接傳送過去（不用走路），到了自動選他 */
+    return rooms.map(function (rid) { return byRoom[rid].map(function (h) { var gb = c._goBusy, mineBusy = !!(gb && gb.id === h.ent.id); return '<button type="button" class="pill' + (mineBusy ? ' going' : '') + '" data-goto="' + esc(h.ent.id) + '" data-room="' + esc(rid) + '" data-name="' + esc(h.ent.name) + '"' + (gb ? ' disabled aria-disabled="true"' : '') + (mineBusy ? ' aria-busy="true"' : '') + ' title="點一下，直接過去' + esc(roomNameOf(rid)) + '找他" style="font-size:var(--fs-1);min-height:32px;padding:2px 9px;margin:2px;border-style:dashed;cursor:pointer">' + (mineBusy ? '<span class="goSpin" aria-hidden="true"></span><span class="goHour" aria-hidden="true">⏳</span> 前往中…' : esc(h.ent.name) + '　<span style="font-weight:400">在' + esc(roomNameOf(rid)) + '</span>') + '</button>'; }).join(''); }).join('');   /* 10-15 楊老師：不在這間房的人，點一下就直接傳送過去（不用走路），到了自動選他 */
   }
+  /* 10-20 楊老師：點「其他房間的人」後新房間要載入一陣子，這段時間畫面不能沒反應。
+     點下去先立刻畫出『前往中…』（轉圈圈＋面板上方一行字、名單全部暫時不能點，避免連點），下一個畫面畫完才真的傳送；
+     到了就清掉；8 秒還沒到或傳送出錯，改成可重試的說明並解除禁用。完全不新增資料庫讀寫。 */
+  (function () { if (document.getElementById('goStyle')) return; var st = document.createElement('style'); st.id = 'goStyle';
+    st.textContent = '.goSpin{display:inline-block;width:.9em;height:.9em;border:2px solid var(--ink,#222);border-top-color:transparent;border-radius:50%;vertical-align:-.12em;animation:goSpin .8s linear infinite}.goHour{display:none}@keyframes goSpin{to{transform:rotate(360deg)}}#allNpc button.going{opacity:1}#allNpc button[disabled]:not(.going){opacity:.5;cursor:not-allowed}@media (prefers-reduced-motion:reduce){.goSpin{display:none;animation:none}.goHour{display:inline}}';
+    document.head.appendChild(st); })();
+  P.goTimeoutMs = 8000;
+  function goNote() {
+    var c = cur(); if (!c) return '';
+    var b = c._goBusy, m = c._goMsg;
+    if (b) return '<p id="goNote" role="status" aria-live="polite" style="margin:0 0 6px;font-weight:700"><span class="goSpin" aria-hidden="true"></span><span class="goHour" aria-hidden="true">⏳</span> 正在前往「' + esc(roomNameOf(b.room)) + '」找 ' + esc(b.name || '他') + '…</p>';
+    if (m && Date.now() < m.until) return '<p id="goNote" role="status" aria-live="polite" style="margin:0 0 6px;font-weight:700;color:var(--red,#b00020)">' + esc(m.text) + '</p>';
+    return '';
+  }
+  function goFinish(c, msg) {
+    var b = c._goBusy; if (!b) return; clearTimeout(b.timer); c._goBusy = null;
+    c._goMsg = msg ? { text: msg, until: Date.now() + 12000 } : null;
+  }
+  function goRerender() { try { if (cur() && cur().tab === 'intv' && !typing()) renderIntv(); } catch (e) {} }
   function bindAllNpc(p) {
     Array.prototype.forEach.call(p.querySelectorAll('[data-goto]'), function (b) { b.onclick = function () {
-      var id = b.dataset.goto, rid = b.dataset.room, c = cur();
+      var id = b.dataset.goto, rid = b.dataset.room, c = cur(), nm = b.dataset.name || '他';
+      if (c._goBusy) return;   /* 正在前往：連點只算一次 */
       if (rid === player().loc) { c.selNpc = id; renderIntv(); return; }
-      c.pendingNpc = id; RM.toast('到了' + roomNameOf(rid) + '，找 ' + (b.dataset.name || '他') + '…'); if (RM.teleport) RM.teleport(rid); else RM.travel(rid);
+      c._goMsg = null; var busy = c._goBusy = { id: id, room: rid, name: nm, t0: Date.now(), done: false };
+      busy.timer = setTimeout(function () {   /* 超時：解除禁用，讓學生可以再點一次 */
+        if (c._goBusy !== busy) return; c.pendingNpc = null; goFinish(c, '還在載入，請再等一下，或重新點一次「' + nm + '」。'); goRerender();
+      }, P.goTimeoutMs);
+      renderIntv();   /* 立刻畫出『前往中…』（此時還沒開始傳送） */
+      var run = function () {
+        if (busy.done || c._goBusy !== busy) return; busy.done = true;
+        try {
+          c.pendingNpc = id; RM.toast('到了' + roomNameOf(rid) + '，找 ' + nm + '…'); if (RM.teleport) RM.teleport(rid); else RM.travel(rid);
+          if (c._goBusy === busy && player().loc === rid) { var here = RM.entityHere().some(function (h) { return h.ent.id === id; }); if (!here) { c.pendingNpc = null; goFinish(c, '到了「' + roomNameOf(rid) + '」，但 ' + nm + ' 剛好走開了，請看名單再點一次。'); } else goFinish(c); goRerender(); }
+        } catch (e) {
+          c.pendingNpc = null; goFinish(c, '前往「' + roomNameOf(rid) + '」沒有成功，請再點一次「' + nm + '」。'); goRerender();
+          if (window.console && console.error) console.error('goto failed', e);
+        }
+      };
+      if (typeof requestAnimationFrame === 'function') requestAnimationFrame(function () { setTimeout(run, 0); });
+      setTimeout(run, 150);   /* 分頁在背景時畫面不會更新，不能因此卡住：150 ms 後無論如何都執行 */
     }; });
   }
   /* 走到目的房間後，自動選取剛才點的人 */
-  P.onMove = (function (orig) { return function () { var c = cur(); if (c && c.pendingNpc) { var id = c.pendingNpc, here = RM.entityHere().some(function (h) { return h.ent.id === id; }); if (here) { c.pendingNpc = null; c.selNpc = id; RM.switchTab('intv'); } } orig(); }; })(P.onMove);
+  P.onMove = (function (orig) { return function () { var c = cur(); if (c && c.pendingNpc) { var id = c.pendingNpc, here = RM.entityHere().some(function (h) { return h.ent.id === id; }); if (here) { c.pendingNpc = null; c.selNpc = id; goFinish(c); RM.switchTab('intv'); } else if (c._goBusy && player().loc === c._goBusy.room) { c.pendingNpc = null; goFinish(c, '到了「' + roomNameOf(player().loc) + '」，但 ' + (c._goBusy ? c._goBusy.name : '他') + ' 剛好走開了，請看名單再點一次。'); } } orig(); }; })(P.onMove);
 
   /* ───── 即時訪談（Firebase 佇列 → 老師電腦上的代理程式 → Vertex → 寫回）───── */
   function daemonUp() { return !!(APP.online && window.ERG_DAEMON_HB && Date.now() - window.ERG_DAEMON_HB < 60000); }
@@ -257,7 +310,7 @@
   if (APP.data && APP.data.listeners) APP.data.listeners.push(function (topic) { if (topic === 'daemon') liveBar(); });
   setInterval(liveBar, 5000);
   /* 狀態字：連線中／非上課時間暫停／目前離線 */
-  function liveLabel() { var gd = window.ERG_LIVE_GUARD; return liveReady() ? '連線中' : (daemonUp() ? (gd ? (gd.reason === 'week_cap' ? '本週即時訪談額度已用完（可以逛、可以跟同學聊）' : '今天的即時訪談額度已用完，明天 00:00 恢復（可以逛、可以跟同學聊）') : '非上課時間，即時訪談暫停（可以逛、可以跟同學聊）') : '目前離線'); }
+  function liveLabel() { var gd = window.ERG_LIVE_GUARD; return liveReady() ? '連線中' : (daemonUp() ? (gd ? (gd.reason === 'week_cap' ? '本週即時訪談額度已用完（可以逛、可以到公開討論區聊）' : '今天的即時訪談額度已用完，明天 00:00 恢復（可以逛、可以到公開討論區聊）') : '非上課時間，即時訪談暫停（可以逛、可以到公開討論區聊）') : '目前離線'); }
   P.liveLabel = liveLabel;
   function safeKey(id) { return String(id).replace(/[.#$\[\]\/]/g, '_'); }
   function chatRef(recId) { return window.firebase.database().ref('er/' + APP.SESS + '/chat/' + cur().code + '/' + me() + '/' + safeKey(recId)); }
@@ -324,6 +377,9 @@
   P.addOpenCard = function (type, text) { try { makeCard(type, { text: text }); } catch (e) { RM.toast(e.message); } };
   function renderCards() {
     var p = $('p-cards'), pre = P.prefill || {}; P.prefill = null;
+    /* 10-20：房間資料一更新（別人加入、存檔通知）面板會整個重畫，打到一半的字與點好的根據編號被清空。重畫前先記下，重畫後放回去。 */
+    var keep = null;
+    if (!pre.type && $('cardForm')) { var kv = function (id) { var x = $(id); return x ? x.value : ''; }; keep = { type: P.cardType, text: kv('cf-text'), saw: kv('cf-saw'), refs: kv('cf-refs'), clue: kv('cf-clue') }; }
     var mine = L.listMarkers(RM.markerEls());
     var html = '<div class="card" style="margin-top:0"><b>記一筆</b><div class="row" style="margin-top:6px">' + CARD_TYPES.map(function (t) { return '<button class="pill ' + ((pre.type || P.cardType || '便利貼') === t ? 'on' : '') + '" data-ct="' + t + '">' + t + '</button>'; }).join('') + '</div>' +
       '<div id="cardForm" style="margin-top:6px"></div></div>' +
@@ -352,10 +408,16 @@
       $('cf-add').onclick = function () {
         var fields = type === '勘查卡' ? { clue: $('cf-clue').value, saw: $('cf-saw').value.trim() } : { text: $('cf-text').value.trim() };
         if ($('cf-refs')) { fields.refs = $('cf-refs').value.split(/[,，\s]+/).filter(Boolean); if (!fields.refs.length) { $('cf-err').textContent = '請填它根據哪一張卡（點上面的編號）'; return; } }
-        try { makeCard(type, fields); renderCards(); } catch (e) { $('cf-err').textContent = e.message; }
+        try { makeCard(type, fields); ['cf-text', 'cf-saw', 'cf-refs'].forEach(function (k) { if ($(k)) $(k).value = ''; }); renderCards(); } catch (e) { $('cf-err').textContent = e.message; }
       };
     }
     form();
+    if (keep && keep.type === type) {
+      var put = function (id, v) { var x = $(id); if (x && v) x.value = v; };
+      put('cf-text', keep.text); put('cf-saw', keep.saw); put('cf-refs', keep.refs); put('cf-clue', keep.clue);
+      var rl = keep.refs ? keep.refs.split(/[,，\s]+/).filter(Boolean) : [];
+      Array.prototype.forEach.call(p.querySelectorAll('[data-rp]'), function (b) { b.classList.toggle('on', rl.indexOf(b.dataset.rp) >= 0); });
+    }
     Array.prototype.forEach.call(p.querySelectorAll('[data-ct]'), function (b) { b.onclick = function () { P.prefill = { type: b.dataset.ct }; renderCards(); }; });
     /* 10-13 楊老師：「按下回到全景沒有反應」。手機沒有畫布，這兩顆本來就是空的 ⇒ 手機不放；
        電腦原本只有先按過「看筆記本」才看得出變化 ⇒ 改成跟頂列「⟲ 全景」同一件事（整張地圖）。 */
@@ -372,6 +434,13 @@
   function renderConcl() {
     var p = $('p-concl'), dirs = (cur().world.meta.directions || []).concat(['其他']), ids = myIds(), cs = player().conclusions;
     var html = '<div class="muted" style="font-size:var(--fs-2)">每一條結論都要有根據的編號與取捨，不寫「最佳方案」，要寫在什麼前提下選哪個、放棄什麼。</div>';
+    /* 10-20：結論、卡片、訪談都跟著「房間」走。學生換了一間房（或另開新房）就看到一片空白，以為結論不見了（10-15、10-13 兩次回報）。
+       這間房還沒寫東西、但自己在別間房寫過，就明講在哪一間。 */
+    if (!cs.some(function (c) { return c && (String(c.text || '').trim() || String(c.tradeoff || '').trim() || (c.refs && c.refs.length)); })) {
+      var els = [];
+      try { DB.listRooms(APP.SESS).forEach(function (r) { if (r.code === cur().code) return; var full = DB.getRoom(r.code); if (!full || !full.members || !full.members[me()]) return; var op = CORE.getPlayer(full, me()); if (!op) return; var n = op.conclusions.filter(function (c) { return c && (String(c.text || '').trim() || String(c.tradeoff || '').trim()); }).length; if (n) els.push({ code: r.code, n: n }); }); } catch (e) {}
+      if (els.length) html += '<div id="conclElsewhere" class="card" style="margin:6px 0;background:var(--yellow);color:var(--ink-fixed)"><b>你的結論沒有不見</b>：結論跟著房間走，這間房還沒寫。你在 ' + els.map(function (x) { return '房間 <b>' + esc(x.code) + '</b>（' + x.n + ' 條）'; }).join('、') + ' 寫過。回大廳進那間房就看得到；也可以在這間房重寫。</div>';
+    }
     cs.forEach(function (c, i) {
       html += '<div class="card" style="box-shadow:var(--sh) var(--sh) 0 var(--ink)"><b>結論 ' + (i + 1) + '</b> <button class="ghost" data-del="' + i + '" style="float:right;padding:0 8px">刪除</button>' +
         '<label>發現<textarea data-ci="' + i + '" data-f="text">' + esc(c.text) + '</textarea></label>' +
@@ -382,11 +451,17 @@
     });
     html += '<div class="row"><button class="ghost" id="cAdd">新增一條結論</button></div>';
     var e = cur().ev, c4 = e && e.ev.list[3];
-    html += '<div class="muted" style="margin-top:8px;font-size:var(--fs-2)">' + (c4 ? (c4.ok ? '✔ 結論都有根據與取捨' : '還缺：' + esc(c4.detail)) : '') + '</div>';
+    html += '<div id="cStat" class="muted" style="margin-top:8px;font-size:var(--fs-2)">' + (c4 ? (c4.ok ? '✔ 結論都有根據與取捨' : '還缺：' + esc(c4.detail)) : '') + '</div>';
     html += '<hr><button id="finishBtn" ' + (player().finished ? 'disabled' : '') + '>' + (player().finished ? '這一場已結束' : '結束這一場') + '</button> <span class="muted" style="font-size:var(--fs-1)">' + (isHost() ? '這是你自己的房間，結束後才算第 1 場完成。' : '這是你去討論的房間，討論完在「討論」分頁按完成。') + '</span><div id="cErr" class="err"></div>';
     p.innerHTML = html;
     $('cAdd').onclick = function () { cs.push({ text: '', refs: [], tradeoff: '', direction: '' }); save(); renderConcl(); };
-    Array.prototype.forEach.call(p.querySelectorAll('[data-ci]'), function (el) { el.onchange = function () { cs[+el.dataset.ci][el.dataset.f] = el.value; save(); renderConcl(); }; });
+    Array.prototype.forEach.call(p.querySelectorAll('[data-ci]'), function (el) { el.onchange = function () {
+      cs[+el.dataset.ci][el.dataset.f] = el.value; save();
+      /* 10-20：不能在這裡整頁重畫。change 在「失焦」時才觸發，學生打完字直接去點根據編號或「結束這一場」，
+         那一下 mousedown 先讓欄位失焦、重畫把按鈕換掉，click 就消失了（二乙同學回報「都寫了卻沒辦法結束」）。只更新下方的提示文字。 */
+      var ee = cur().ev, cc = ee && ee.ev.list[3], st = $('cStat');
+      if (st && cc) st.textContent = cc.ok ? '✔ 結論都有根據與取捨' : '還缺：' + cc.detail;
+    }; });
     Array.prototype.forEach.call(p.querySelectorAll('[data-ref]'), function (b) { b.onclick = function () { var a = b.dataset.ref.split('|'), c = cs[+a[0]], k = c.refs.indexOf(a[1]); if (k >= 0) c.refs.splice(k, 1); else c.refs.push(a[1]); save(); renderConcl(); }; });
     Array.prototype.forEach.call(p.querySelectorAll('[data-del]'), function (b) { b.onclick = function () { cs.splice(+b.dataset.del, 1); save(); renderConcl(); }; });
     $('finishBtn').onclick = function () {
@@ -404,6 +479,8 @@
       html += '<p>這是你自己的房間。' + (others.length ? '現在房裡還有：' + others.map(esc).join('、') + '。' : '還沒有別人進來。') + ' 你的討論要到別人的房間做（大廳找一間有人的房間加入）。</p>';
     } else {
       html += '<p>你在 <b>' + esc(room.host) + '</b> 的房間，這是你的「討論場次」。</p><div><b>1. 和誰討論</b></div><div>' + (others.length ? others.map(function (o) { return '<button class="pill ' + (d.partners.indexOf(o) >= 0 ? 'on' : '') + '" data-pt="' + esc(o) + '">' + esc(o) + '</button>'; }).join('') : '<span class="muted">房裡只有你，等同學進來或留言給房主。</span>') + '</div>' +
+        /* 10-20：對方按了確認，這邊原本只在「檢核」分頁才看得到（二乙回報「同學已經按確認但我這裡沒有顯示」）。討論分頁也列出來。 */
+        (d.partners.length ? '<div id="discConf" style="margin-top:6px;font-size:var(--fs-2)">' + d.partners.map(function (o) { var op = (room.players || {})[o], yes = !!(op && op.confirms && op.confirms[me()]); return '<div data-conf="' + esc(o) + '" data-ok="' + (yes ? '1' : '0') + '"><b>' + esc(o) + '</b>：' + (yes ? '<b style="color:var(--ok)">已按確認 ✔</b>' : '還沒按「確認我們討論過」（請他到這間房的「討論」分頁按）') + '</div>'; }).join('') + '</div>' : '') +
         '<div style="margin-top:8px"><b>2. 討論檢核</b></div>' + [['read', '我讀過對方的結論'], ['diff', '我們有一處看法不同'], ['complement', '我們有一處互相補到對方'], ['outcome', '我因此改了或確認了我的結論']].map(function (x) {
           return '<div class="ck ' + (d.checks[x[0]] ? 'done' : '') + '"><button class="box" data-ck="' + x[0] + '">' + (d.checks[x[0]] ? ic('check', '✔') : '') + '</button><div style="flex:1;min-width:0"><div style="font-weight:900">' + x[1] + '</div>' + (x[0] !== 'read' && d.checks[x[0]] ? '<input data-dn="' + x[0] + '" maxlength="40" value="' + esc(d.notes[x[0]] || '') + '" placeholder="一句話（最多 40 字）">' : '') + '</div></div>'; }).join('') +
         '<button id="discDone" ' + (pl.finished ? 'disabled' : '') + '>' + (pl.finished ? '討論已完成' : '完成這次討論') + '</button> <span id="discErr" class="err"></span>';

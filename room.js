@@ -361,12 +361,27 @@
 
   /* ───── 時鐘與畫面更新 ───── */
   function clockActive() { return !document.hidden && cur.tab !== 'concl' && cur.tab !== 'disc' && cur.tab !== 'cp' && !cur.modalOpen && !(cur.tab === 'intv' && cur.intvHold); }   /* 10-13：在訪談分頁選了現場的人＝正在訪談，時間先暫停 */
+  /* 10-20：結論、討論、檢核分頁（和暫停鍵）會讓急診室時間停住，但畫面上看不出來，學生以為壞了（二乙回報「時間不會動，要找的人不會出現」）。
+     時鐘旁邊顯示 ⏸ 和原因，第一次停住時再提示一次。 */
+  function pauseReason() {
+    if (!cur || document.hidden) return '';
+    if (cur.clock.paused) return '時間已暫停（你按了「暫停」）。按上方的速度鈕就會繼續。';
+    if (cur.tab === 'concl' || cur.tab === 'disc' || cur.tab === 'cp') return '你在「' + ({ concl: '結論', disc: '討論', cp: '檢核' })[cur.tab] + '」分頁，急診室的時間先暫停。切到線索、訪談或筆記就會繼續。';
+    if (cur.modalOpen) return '開著視窗的時候，急診室的時間先暫停；關掉視窗就會繼續。';
+    return '';
+  }
+  function pauseMark() {
+    var c = $('clock'); if (!c) return; var el = $('clockPause'), why = pauseReason();
+    if (!el) { el = document.createElement('span'); el.id = 'clockPause'; el.style.cssText = 'font-size:var(--fs-3);margin-left:4px;cursor:help'; el.textContent = '⏸'; c.parentNode.insertBefore(el, c.nextSibling); }
+    el.style.display = why ? '' : 'none'; el.title = why;
+    if (why && !cur.pauseTold) { cur.pauseTold = true; if (!cur.modalOpen) toast(why); } if (!why) cur.pauseTold = false;
+  }
   function frame() {
     if (!cur) return;
     var now = Date.now(), dt = cur.tickT ? (now - cur.tickT) / 1000 : 0; cur.tickT = now;
     if (clockActive()) cur.clock = CLK.tick(cur.clock, Math.min(dt, 1));
     advanceWalk(Math.min(dt,1));
-    $('clock').textContent = simText(cur.clock); (function(){var D=window.ERG_DAYLIGHT,c=$('clock'),el=$('dayIcon');if(!D||!D.icon||!c)return;if(!el){el=document.createElement('span');el.id='dayIcon';el.style.cssText='font-size:var(--fs-4);line-height:1';c.parentNode.insertBefore(el,c);}var ic=D.icon(S.simMin());if(el.textContent!==ic){el.textContent=ic;el.setAttribute('aria-label',ic==='🌙'?'現在是晚上':'現在是白天');el.title=ic==='🌙'?'現在是晚上':'現在是白天';}})();
+    pauseMark(); $('clock').textContent = simText(cur.clock); (function(){var D=window.ERG_DAYLIGHT,c=$('clock'),el=$('dayIcon');if(!D||!D.icon||!c)return;if(!el){el=document.createElement('span');el.id='dayIcon';el.style.cssText='font-size:var(--fs-4);line-height:1';c.parentNode.insertBefore(el,c);}var ic=D.icon(S.simMin());if(el.textContent!==ic){el.textContent=ic;el.setAttribute('aria-label',ic==='🌙'?'現在是晚上':'現在是白天');el.title=ic==='🌙'?'現在是晚上':'現在是白天';}})();
     if (CLK.isDayOver(cur.clock) && !cur.dayOverShown) { cur.dayOverShown = true; toast('本班急診時段結束（07:00）。去寫結論吧。'); }
     persist(false);
     eventWatch(); if (window.ERG_EVENT_UI) window.ERG_EVENT_UI.tick(cur,S); if(window.ERG_ROTATION_UI)window.ERG_ROTATION_UI.tick(S);
@@ -397,7 +412,7 @@
       if ((!vis[ent.id] && !cur.tokens[ent.id]) || (cur.stageMode !== 'map' && pos.room !== inRoom)) return;
       var id = ent.id, here = pos.room === inRoom;
       var el = cur.tokens[id];
-      if (!el) { el = cur.tokens[id] = document.createElement('div'); el.className = 'tok'; ov.appendChild(el); el._eid = id; el.onclick = function (e) { onNpcClick(pickTokenAt(e, id)); }; }
+      if (!el) { el = cur.tokens[id] = document.createElement('div'); el.className = 'tok'; ov.appendChild(el); el._eid = id; el.onclick = function (e) { onNpcClick(cyclePick(e, pickTokenAt(e, id))); }; }
       seen[id] = true;
       var av = cur.world.availability(ent, pos, simMin), moving = pos.state === 'move';
       var fatigue = av.fatigue || { level: 0 }, mood = fatigue.level >= 2 ? 'sleepy' : (av.level === 'blocked' ? 'busy' : (moving ? 'idle' : (ent.kind === 'incident' ? 'angry' : 'idle')));
@@ -564,6 +579,17 @@
     return p;
   }
   /* 點到人物時：同一個點底下疊了好幾個人，就優先選「可以訪談的真人物」，其次才是模擬同學（模擬同學常站在警衛或護理師身上，會把點擊攔走，變成點不到要訪談的人）。 */
+  /* 10-20：兩個人疊得很近、下面那位幾乎被蓋住時點不到（二乙回報「人物重疊沒辦法點」）。同一個點連按，就輪流選這個點底下的每一位。 */
+  function cyclePick(e, base) {
+    try {
+      if (!e || !document.elementsFromPoint) return base;
+      var ids = []; document.elementsFromPoint(e.clientX, e.clientY).forEach(function (n) { var t = n.closest ? n.closest('.tok') : null; if (t && t._eid && ids.indexOf(t._eid) < 0) ids.push(t._eid); });
+      var lp = cur._lastPick, now = Date.now(), pick = base;
+      if (ids.length > 1 && lp && lp.base === base && now - lp.t < 8000 && Math.abs(e.clientX - lp.x) < 14 && Math.abs(e.clientY - lp.y) < 14 && ids.indexOf(lp.id) >= 0) pick = ids[(ids.indexOf(lp.id) + 1) % ids.length];
+      cur._lastPick = { base: base, id: pick, t: now, x: e.clientX, y: e.clientY };
+      return pick;
+    } catch (x) { return base; }
+  }
   function pickTokenAt(e, id) {
     try {
       var ent0 = cur.world.entityById(id); if (!e || !ent0 || ent0.kind !== 'bot' || !document.elementsFromPoint) return id;

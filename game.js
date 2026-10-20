@@ -324,7 +324,7 @@
   function week2Ctx() {
     var sid = String(APP.me.sid), pf = (APP.me.profile && APP.me.profile.progress) || {}, sc = window.ERG_MY_SCORE || {}, seen = {};
     DB.listRooms(APP.SESS).forEach(function (r) { var x = DB.getRoom(r.code) || {}; if (x.members && x.members[sid]) seen[x.case || 'sms'] = 1; });
-    var g = GUIDE.g || {}, cur = { ask: Number(pf.ask || sc.skAsk || 1), ctx: Number(pf.ctx || sc.skCtx || 1), badges: Number(pf.badges || (sc.badgeIds || []).length || 0) };
+    var g = GUIDE.g || {}, cur = { ask: Number(pf.ask || sc.skAsk || 1), ctx: Number(pf.ctx || sc.skCtx || 1), badges: window.ERG_WEEK2.badgeCount(pf.badges || (sc.badgeIds || []).length || 0, sc.badgeIds) };
     return { sk: { ask: cur.ask, ctx: cur.ctx }, badges: cur.badges, cases: Object.keys(seen).length, base: g.base || (APP.me.profile && APP.me.profile.w2base) || cur, resp: GUIDE.r || {}, hasGuide: !!(g.items && g.items.length), guide: g };
   }
   function guideHtml() {
@@ -358,7 +358,7 @@
         ta('a', '1. 指引建議我做哪幾件？', '寫件名就好，例如：問出 8 題不一樣的問題、把探問升到 Lv.2') +
         ta('b', '2. 我做了什麼、結果如何？', '每件一句，要具體，例如：追問了 5 次「那時候你怎麼做」，探問升到 Lv.2') +
         ta('c', '3. 還沒做到的、卡在哪、下一步？', '例如：還沒問到病人本人，因為找不到他在哪；下次先去候診區') +
-        '<div class="row" style="margin-top:6px"><button id="grSend"' + (sentToday(r) ? ' disabled' : '') + '>' + (sentToday(r) ? '今天已送出' : (r.t ? '再次送審' : '送出審核')) + '</button><span id="grMsg" class="muted" style="font-size:var(--fs-2)">' + (sentToday(r) ? '一天只能送一次，明天可以改好再送。' : '') + '</span></div>' + reviewHtml(r) + '</div>' : '') +
+        '<div class="row" style="margin-top:6px"><button id="grSend"' + (sentToday(r) ? ' disabled' : '') + '>' + (sentToday(r) ? '今天已送出' : (r.t ? '再次送審' : '送出審核')) + '</button><span id="grMsg" class="muted" style="font-size:var(--fs-2)">' + (sentToday(r) ? '一天只能送出一次審核，明天可以改好再送。' : '一天只能送出一次審核（每晚審一次），三格都寫好再送。') + '</span></div>' + reviewHtml(r) + '</div>' : '') +
       '</div>';
   }
   /* 10-19 楊老師：送出後顯示「審核中」，一天只能送一次（每天晚上用 Claude 批次審一次，tools/er_guide_review.py 寫回 guideResp/{學號}/rev） */

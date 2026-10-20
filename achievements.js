@@ -13,6 +13,8 @@
 
   function arr(a) { return Array.isArray(a) ? a : (a && typeof a === 'object' ? Object.keys(a).map(function (k) { return a[k]; }) : []); }
   function keys(o) { return o && typeof o === 'object' ? Object.keys(o) : []; }
+  /* 10-20：某一格（events／need）有沒有內容，判準同 filledItems（文字、備註或標籤任一有東西）。 */
+  function itemHasContent(x) { return !!(x && ((x.text && String(x.text).trim()) || (x.note && String(x.note).trim()) || (x.tags && x.tags.length))); }
   function filledItems(rec) { var it = (rec && rec.items) || {}; return keys(it).filter(function (k) { var x = it[k]; return x && ((x.text && String(x.text).trim()) || (x.note && String(x.note).trim()) || (x.tags && x.tags.length)); }).length; }
 
   /* 10-13 二丙第一堂課之後加的「問法」計數（楊老師：根據現狀設計新的成就去誘導）。
@@ -107,11 +109,11 @@
   /* ctx：{ now, cpAllOk（六個檢核點全亮）, shift（'day'|'night'） } */
   function metrics(player, ctx) {
     ctx = ctx || {}; player = player || {};
-    var recs = arr(player.interviews), who = {}, complete = 0, maxItems = 0;
-    recs.forEach(function (r) { if (!r || !r.personaId) return; var n = filledItems(r); if (n > 0) who[r.personaId] = Math.max(who[r.personaId] || 0, n); if (n > maxItems) maxItems = n; if (n >= 4) complete++; });
+    var recs = arr(player.interviews), who = {}, complete = 0, maxItems = 0, pried = {};
+    recs.forEach(function (r) { if (!r || !r.personaId) return; var n = filledItems(r); if (n > 0) who[r.personaId] = Math.max(who[r.personaId] || 0, n); if (n > maxItems) maxItems = n; if (n >= 4) complete++; if (CORE_IDS.indexOf(r.personaId) >= 0 && r.items && (itemHasContent(r.items.events) || itemHasContent(r.items.need))) pried[r.personaId] = 1; });
     var ids = keys(who);
     return {
-      interviewees: ids.length, interviewIds: ids, interviewsDeep: complete, maxItems: maxItems,
+      interviewees: ids.length, interviewIds: ids, coreOpened: keys(pried).length, interviewsDeep: complete, maxItems: maxItems,
       coreDone: CORE_IDS.filter(function (id) { return who[id]; }).length, coreTotal: CORE_IDS.length,
       rooms: arr(player.visited).length, cards: arr(player.cards).length, events: keys(player.seenEv).length,
       keep: arr(ctx.keep),   /* 10-15：之前在別間房已經解開的成就（從 score/{學號} 讀回來）；換案例開新房間時，已拿到的不會不見 */
@@ -128,6 +130,8 @@
   /* 徽章定義：id、名稱、說明、條件。順序＝顯示順序。 */
   var DEFS = [
     { id: 'first_talk', icon: '🗣️', name: '破冰', desc: '第一次訪談（記下至少一格）', test: function (m) { return m.interviewees >= 1; } },
+    /* 10-20 楊老師：對任一位重要關係人（core:true）問到「那天發生了什麼事」或「真正需要什麼」並記下，不只停在第一句。 */
+    { id: 'pry_open', icon: '🔓', name: '撬開話匣子', desc: '讓任一位重要關係人說出「那天發生了什麼事」或「真正需要什麼」，並記下來', test: function (m) { return m.coreOpened >= 1; } },
     { id: 'five_talks', icon: '🤝', name: '人脈王', desc: '訪談過 5 個不同的人', test: function (m) { return m.interviewees >= 5; } },
     /* 10-15 楊老師：大家都只開第一個案例，沒發現還有其他五種 → 加三枚『換案例』成就（案例共 6 種） */
     { id: 'case_two', icon: '🚪', name: '換一間試試', desc: '玩過 2 種不同案例的房間（開房時，「案例」可以選別的）', test: function (m) { return m.cases >= 2; } },
