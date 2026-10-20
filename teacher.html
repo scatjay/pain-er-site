@@ -344,6 +344,7 @@ var CLASS_WINDOWS = [].concat(
 
   /* ───── 即時對話開關 ───── */
   var daemon = {};
+  var SKEW = 0; function srvNow() { return Date.now() + SKEW; }   /* 老師電腦時鐘可能偏快或偏慢：心跳新鮮度一律用伺服器時間比 */
   function nextWindow() {
     var now = Date.now(), best = null;
     CLASS_WINDOWS.forEach(function (w) { var a = new Date(w[0] + 'T' + w[1] + ':00').getTime(), b = new Date(w[0] + 'T' + w[2] + ':00').getTime(); if (b > now && (!best || a < best.a)) best = { a: a, b: b }; });
@@ -416,7 +417,7 @@ var CLASS_WINDOWS = [].concat(
     }
   }
   function renderDaemon() {
-    var d = daemon, age = d.heartbeat ? Date.now() - d.heartbeat : Infinity, fresh = age < 60000;
+    var d = daemon, age = d.heartbeat ? srvNow() - d.heartbeat : Infinity, fresh = age < 90000;
     $('daemon').innerHTML = fresh ? '<span class="ok">連線中</span>' : '<span class="bad">離線</span>';
     $('daemonSub').textContent = fresh ? ('模型 ' + (d.model || '') + '・心跳 ' + Math.round(age / 1000) + ' 秒前') : (d.heartbeat ? '最後心跳 ' + hm(d.heartbeat) + '。請跟助教說「急診室代理程式離線」。' : '還沒有心跳。');
     $('stDaemon').className = 'stat ' + (fresh ? 'isok' : 'isbad');
@@ -461,7 +462,7 @@ var CLASS_WINDOWS = [].concat(
       if (SESS !== tgt) { SESS = tgt; attach(); } else { try { render(); } catch (e) {} }
     };
     $('sessSel').onchange = applyMenu; applyMenu();
-    /* 10-19：老師後台仍聽整個 er/_daemon（含 admin/）；學生端已改成只聽四個小欄位 */ fdb.ref('er/_daemon').on('value', function (s) { daemon = s.val() || {}; renderDaemon(); renderSysTxt(); });
+    /* 10-19：老師後台仍聽整個 er/_daemon（含 admin/）；學生端已改成只聽四個小欄位 */ try { fdb.ref('.info/serverTimeOffset').on('value', function (o) { SKEW = Number(o.val()) || 0; }); } catch (e) {} fdb.ref('er/_daemon').on('value', function (s) { daemon = s.val() || {}; renderDaemon(); renderSysTxt(); });
     setInterval(function () { renderDaemon(); renderSysTxt(); }, 10000);
     $('liveOpen').onclick = function () { disarm(); setLive('open', 2, $('liveOpen'), '已開放 2 小時'); };
     $('liveAuto').onclick = function () { disarm(); setLive('auto', 0, $('liveAuto'), '已交回課表'); };
@@ -975,7 +976,7 @@ var CLASS_WINDOWS = [].concat(
 
   /* 系統狀態一行（常駐）＋兩段式「關閉人物對話」 */
   function renderSysTxt() {
-    var d = daemon || {}, age = d.heartbeat ? Date.now() - d.heartbeat : Infinity, fresh = age < 60000, open = !!d.liveNow && fresh, el = $('sysTxt'); if (!el) return;
+    var d = daemon || {}, age = d.heartbeat ? srvNow() - d.heartbeat : Infinity, fresh = age < 90000, open = !!d.liveNow && fresh, el = $('sysTxt'); if (!el) return;
     el.innerHTML = '<span class="' + (fresh ? 'ok' : 'bad') + '">● ' + (fresh ? '代理程式連線中' : '代理程式離線') + '</span>　<span class="' + (open ? 'ok' : 'bad') + '">● ' + (open ? '人物對話開放中' : '人物對話暫停') + '</span>　<span class="muted">' + esc($('usageSum') ? $('usageSum').textContent : '') + '</span>';
   }
   (function () {
