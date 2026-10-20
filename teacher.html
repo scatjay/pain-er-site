@@ -55,6 +55,15 @@ a{color:var(--info)}
 #qrBig .qr svg{width:min(70vmin,620px);height:min(70vmin,620px)}#qrBig .qrurl{font-size:clamp(1.1em,3.2vw,2.2em)}
 #toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 16px;border-radius:999px;font-weight:700;z-index:40;max-width:90vw}
 body.proj{--fs:21px}body.proj .wrap{max-width:none}body.proj .small{display:none}
+/* 主題摘要（summary_render.js 產生）：一段一張卡、重點置頂、引用句標出；沿用上面的色票 */
+.sum{margin-top:6px;line-height:1.65}.summeta{font-size:.8em;color:var(--muted);margin-bottom:6px}
+.sumkey{background:var(--yellow);color:var(--onyellow);border:2px solid var(--ink);border-radius:12px;padding:8px 12px;margin:6px 0}.sumkh{font-weight:900;margin-bottom:2px}.sumkey .stag{background:var(--panel);color:var(--ink)}.sumkey q.sq{color:#1e1e1e;background:rgba(255,255,255,.6)}
+.sumc{border:2px solid var(--ink);border-radius:12px;background:var(--panel);margin:8px 0;padding:0 12px 4px}.sumc>summary{cursor:pointer;font-weight:900;padding:8px 0;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.sumn{display:inline-block;min-width:1.7em;text-align:center;border-radius:999px;background:var(--ink);color:var(--bg);font-size:.85em}.sumcount{margin-left:auto;font-weight:400;font-size:.8em;color:var(--muted)}
+.sumul{margin:2px 0 6px;padding-left:1.2em}.sumul li{margin:5px 0}.sumul li.sub{margin-left:1.2em;list-style:circle}.sump{margin:4px 0}
+.stag{display:inline-block;padding:0 8px;margin-right:6px;border-radius:999px;font-size:.85em;font-weight:900;background:var(--infobg);color:var(--info);border:1px solid var(--info);white-space:nowrap}
+q.sq{quotes:none;display:inline;padding:0 5px;border-left:3px solid var(--info);background:var(--panel2);border-radius:3px;font-style:normal}
+body.proj .sum{font-size:1.05em}
 [hidden]{display:none!important}
 </style>
 </head>
@@ -106,7 +115,7 @@ body.proj{--fs:21px}body.proj .wrap{max-width:none}body.proj .small{display:none
   <details style="margin-top:8px"><summary class="muted" style="cursor:pointer">最近 30 個問題</summary><div id="qRecent" style="font-size:.9em"></div></details></div>
   <h2>對「衛教簡訊再設計」的啟示</h2>
   <div class="card"><div class="cols"><div><b>訪談檢核標到的問題</b><div id="iTags"></div></div><div><b>結論裡的方向</b><div id="iConcl"></div></div></div>
-  <div class="row" style="margin-top:10px"><button id="sumBtn">請 Vertex 做主題摘要</button><span id="sumStat" class="muted small"></span></div><div id="sumBox" style="margin-top:6px;white-space:pre-wrap"></div></div>
+  <div class="row" style="margin-top:10px"><button id="sumBtn">請 Vertex 做主題摘要</button><span id="sumStat" class="muted small"></span></div><div id="sumBox" style="margin-top:6px"></div></div>
 </section>
 
 <section class="pane" data-pane="stu">
@@ -179,7 +188,7 @@ body.proj{--fs:21px}body.proj .wrap{max-width:none}body.proj .small{display:none
 <script src="avatar.js?v=202610192315"></script>
 <script src="local_db.js?v=202610192315"></script>
 <script src="app_core.js?v=202610192315"></script>
-<script src="achievements.js?v=202610192315"></script><script src="remote_db.js?v=202610192315"></script>
+<script src="achievements.js?v=202610192315"></script><script src="remote_db.js?v=202610192315"></script><script src="summary_render.js?v=202610200900"></script>
 <script src="layout.js?v=202610192315"></script>
 <script src="minimap.js?v=202610192315"></script>
 <script src="personas_inclusive.js?v=202610192315"></script><script src="er_data.js?v=202610192315"></script><script src="npc_voice.js?v=202610192315"></script><script src="personas.js?v=202610192315"></script>
@@ -256,7 +265,7 @@ var CLASS_WINDOWS = [].concat(
   syncDeid();
   function aliasOf(sid) { if (!DEID) return sid; if (!alias[sid]) { var n = Object.keys(alias).length + 1; alias[sid] = '學生' + (n < 10 ? '0' : '') + n; } return alias[sid]; }
   function buildAlias(sids) { alias = {}; sids.slice().sort().forEach(function (s) { aliasOf(s); }); }
-  $('deidBtn').onclick = function () { DEID = !DEID; try { localStorage.setItem('erg_t_deid', DEID ? '1' : '0'); } catch (e) {} syncDeid(); $('chatView').hidden = true; render(); renderFb(); renderUsageAll(); };
+  $('deidBtn').onclick = function () { DEID = !DEID; try { localStorage.setItem('erg_t_deid', DEID ? '1' : '0'); } catch (e) {} syncDeid(); $('chatView').hidden = true; render(); renderFb(); renderUsageAll(); if (window.__renderSum) window.__renderSum(); };
   $('projBtn').onclick = function () { PROJ = !PROJ; $('projBtn').textContent = '投影模式：' + (PROJ ? '開' : '關'); $('projBtn').classList.toggle('on', PROJ); document.body.classList.toggle('proj', PROJ); };
 
   /* 10-13：這個單元三個班、三週共用同一個場次（與 game.js 的 UNIT_SESS 同一個值，要一起改） */
@@ -413,7 +422,13 @@ var CLASS_WINDOWS = [].concat(
     on(root.child('profiles'), function (s) { profiles = s.val() || {}; if (WEEK) chats = weekFilter(chatsAll); schedule(); renderUsageAll(); });
     on(root.child('presence'), function (s) { presence = s.val() || {}; schedule(); });
     on(root.child('chat'), function (s) { chatsAll = s.val() || {}; chats = weekFilter(chatsAll); schedule(); });
-    on(root.child('analysis/summary'), function (s) { var v = s.val(); $('sumBox').textContent = v ? v.text : ''; $('sumStat').textContent = v ? ('上次摘要：' + hm(v.t) + '，' + v.n + ' 個問題') : ''; });
+    /* 摘要渲染：先遮罩（去識別化時把學號換成當場次代號）、再轉義，之後只插入固定標籤。切去識別化時用 lastSum 重畫 */
+    var lastSum = null;
+    function maskSum(t) { return DEID ? String(t).replace(/(^|[^0-9a-z])(\d[a-z]\d[a-z]\d{4})(?![0-9a-z])/gi, function (_, pre, m) { var k = Object.keys(profiles || {}).filter(function (x) { return x.toLowerCase() === m.toLowerCase(); })[0]; return pre + aliasOf(k || m); }) : t; }
+    function renderSum() { var v = lastSum; $('sumBox').innerHTML = v ? window.ERG_SUMMARY.render(v.text, { mask: maskSum }) : ''; $('sumStat').textContent = v ? ('上次摘要：' + hm(v.t) + '，' + v.n + ' 個問題') : ''; }
+    window.__renderSum = renderSum;
+    if (isLocal) window.__setSum = function (text, t, n) { lastSum = { text: text, t: t || Date.now(), n: n || 0 }; renderSum(); };
+    on(root.child('analysis/summary'), function (s) { lastSum = s.val(); renderSum(); });
     renderUsageAll();
     /* 10-19：第 2 週個人指引（一次讀，約 400 KB）與回應（訂閱，小）；學生表「第 2 週指引」欄用 */
     root.child('guide').once('value').then(function (g) { guides = g.val() || {}; renderStudents(); }, function () {});
