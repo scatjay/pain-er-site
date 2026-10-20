@@ -3,7 +3,7 @@
    規則不另寫第二套：檢核點＝app_core.checkpointState＋checkpoints.evaluate、技能與成就＝achievements.js、
    第 2 週＝week2.js；分層門檻沿用 tools/er_guidance.py 的 tier_of（1／8 題）。取「提問最多的那間房」現算，
    同 tools/er_analyze.js（INDIVIDUAL_GUIDANCE_PLAN 第 6 節已定）。不改任何評分或檢核判定規則，只讀它們的結果。
-   輸入全是 teacher.html 已經讀進記憶體的資料，不新增 Firebase 監聽或讀取。輸出不含姓名、信箱；學號只放在 sid。
+   輸入全是 teacher.html 已經讀進記憶體的資料，不新增 Firebase 監聽或讀取。currentClass（課表）與 scope（只算某一班）也在這裡，純函式。輸出不含姓名、信箱；學號只放在 sid。
    設計稿：ui/teacher_redesign_1020.md。 */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory(require('./app_core.js'), require('./checkpoints.js'), require('./achievements.js'), require('./week2.js'));
@@ -56,6 +56,63 @@
     return r.passed ? 'pass' : 'review';
   }
   function hint(key, sev, basis, say) { return { key: key, kind: (HINT_DEFS[key] || {}).kind || 'coach', label: (HINT_DEFS[key] || {}).label || key, sev: sev, basis: basis, say: say }; }
+
+  function totalsOf(rows) {
+    return { roster: 0, bound: rows.length, entered: rows.filter(function (r) { return r.rooms.length; }).length, asked: rows.filter(function (r) { return r.ask.n >= 1; }).length, online: rows.filter(function (r) { return r.online; }).length, passed: rows.filter(function (r) { return r.stage === 'S4'; }).length, S0: 0 };
+  }
+  function commonsOf(rows) {
+    var firstUnlit = {}; rows.forEach(function (r) { if ((r.stage === 'S2' || r.stage === 'S3') && r.cp.first) firstUnlit[r.cp.first.id] = (firstUnlit[r.cp.first.id] || 0) + 1; });
+    var hits = {}; rows.forEach(function (r) { r.hints.forEach(function (h) { if (h.kind === 'coach' || h.key === 'H_STUCK' || h.kind === 'w7') hits[h.key] = (hits[h.key] || 0) + 1; }); });
+    return { firstUnlit: firstUnlit, hits: hits, nAsk5: rows.filter(function (r) { return r.ask.n >= RULES.hint.ynMinN; }).length, nAsk8: rows.filter(function (r) { return r.ask.n >= RULES.hint.followMinN; }).length };
+  }
+  /* 只算某一班：漏斗、總數、介入清單、差一步、全班共同問題都改成該班（cls 空＝原樣回傳）。用 build 的輸出重算，不再讀任何資料。 */
+  function scope(out, cls) {
+    if (!out || !cls) return out;
+    var known = out.funnel.map(function (f) { return f.cls; }).filter(function (c) { return c !== '其他'; });
+    var inCls = function (r) { return cls === '其他' ? (known.indexOf(r.cls) < 0 || r.cls === '其他') : r.cls === cls; };
+    var rows = out.rows.filter(inCls), f = out.funnel.filter(function (x) { return x.cls === cls; }), tot = totalsOf(rows);
+    if (f[0] && cls !== '其他') { tot.roster = f[0].size; tot.S0 = f[0].S0; }
+    return Object.assign({}, out, { rows: rows, funnel: f, totals: tot, interventions: out.interventions.filter(inCls), nearly: out.nearly.filter(inCls), commons: commonsOf(rows), scopeCls: cls });
+  }
+
+  /* ───── 課表（單一來源）：依「現在是哪個班的上課時段」決定後台預設看哪一班 ─────
+     上課時間 dow：0＝週日…6＝週六；時區固定 Asia/Taipei（UTC+8，無日光節約），所以只用 now（毫秒）加 8 小時算，不讀本機時區。
+     顯示視窗＝上課前 PAD 分鐘到下課後 PAD 分鐘（含頭尾那一分鐘），與 tools/er_chat_daemon.py 的 CLASS_WINDOWS 一致
+     （二丙 07:10–11:00、二乙與二甲 11:50–15:40）。 */
+  var SCHEDULE = [
+    { cls: '二丙', dow: 2, start: '08:10', end: '10:00' },
+    { cls: '二乙', dow: 2, start: '12:50', end: '14:40' },
+    { cls: '二甲', dow: 4, start: '12:50', end: '14:40' }
+  ];
+  var WINDOW_PAD_MIN = 60, TZ_MS = 8 * 3600000, DAY_MS = 86400000, DOW_NAME = '日一二三四五六';
+  function hmMin(s) { var p = String(s).split(':'); return Number(p[0]) * 60 + Number(p[1]); }
+  function occurrences(now) {
+    var day0 = Math.floor((now + TZ_MS) / DAY_MS) * DAY_MS - TZ_MS, dow0 = new Date(now + TZ_MS).getUTCDay(), out = [];
+    for (var k = -8; k <= 8; k++) {
+      var dow = (((dow0 + k) % 7) + 7) % 7, base = (day0 + k * DAY_MS) / 60000;
+      SCHEDULE.forEach(function (c) { if (c.dow === dow) out.push({ cls: c.cls, dow: dow, dowName: '週' + DOW_NAME.charAt(dow), startHm: c.start, endHm: c.end, s: base + hmMin(c.start), e: base + hmMin(c.end) }); });
+    }
+    return out.sort(function (a, b) { return a.s - b.s; });
+  }
+  function brief(o, nowMin) { return o ? { cls: o.cls, dow: o.dow, dowName: o.dowName, start: o.startHm, end: o.endHm, startMs: o.s * 60000, minsToStart: Math.ceil(o.s - nowMin) } : null; }
+  /* 回傳 { cls, phase:'before'|'during'|'after'|'idle', minsToStart, minsToEnd, start, end, dowName, next, last }。
+     視窗內：cls＝該班；視窗外：cls＝距離現在最近的一堂（剛結束或快到）、phase 'idle'。
+     minsToStart／minsToEnd 為無條件進位的整分鐘（已開始／已結束則 ≤0）；next＝在這之後的下一堂（idle 時＝真正的下一堂）。 */
+  function currentClass(now) {
+    now = now == null ? Date.now() : Number(now);
+    var occ = occurrences(now), nowMin = Math.floor(now / 60000), exact = now / 60000, PAD = WINDOW_PAD_MIN, cur = null, i, o;
+    for (i = 0; i < occ.length; i++) { o = occ[i]; if (nowMin >= o.s && nowMin < o.e) { cur = o; break; } }
+    if (!cur) for (i = 0; i < occ.length; i++) { o = occ[i]; if (nowMin >= o.s - PAD && nowMin <= o.e + PAD) { cur = o; break; } }
+    function after(c) { for (var j = 0; j < occ.length; j++) if (occ[j].s > c.s) return occ[j]; return null; }
+    if (cur) {
+      var ph = nowMin < cur.s ? 'before' : (nowMin < cur.e ? 'during' : 'after'), nx = after(cur);
+      return { cls: cur.cls, phase: ph, minsToStart: Math.ceil(cur.s - exact), minsToEnd: Math.ceil(cur.e - exact), start: cur.startHm, end: cur.endHm, dow: cur.dow, dowName: cur.dowName, next: brief(nx, nowMin), last: null };
+    }
+    var last = null, next = null;
+    occ.forEach(function (c) { if (c.e < nowMin) last = c; if (c.s > nowMin && !next) next = c; });
+    var near = !last ? next : (!next ? last : ((next.s - nowMin) < (nowMin - last.e) ? next : last));
+    return { cls: near.cls, phase: 'idle', minsToStart: Math.ceil(near.s - exact), minsToEnd: Math.ceil(near.e - exact), start: near.startHm, end: near.endHm, dow: near.dow, dowName: near.dowName, next: brief(next, nowMin), last: brief(last, nowMin) };
+  }
 
   function build(input, opts) {
     input = input || {}; opts = opts || {};
@@ -175,7 +232,7 @@
       o.S0 = Math.max(0, o.size - o.bound);
       return o;
     });
-    var totals = { roster: 0, bound: rows.length, entered: rows.filter(function (r) { return r.rooms.length; }).length, asked: rows.filter(function (r) { return r.ask.n >= 1; }).length, online: rows.filter(function (r) { return r.online; }).length, passed: rows.filter(function (r) { return r.stage === 'S4'; }).length, S0: 0 };
+    var totals = totalsOf(rows);
     funnel.forEach(function (f) { if (f.cls !== '其他') { totals.roster += f.size; totals.S0 += f.S0; } });
 
     var interventions = rows.filter(function (r) { return r.stage !== 'S4' && r.sev >= 2; })
@@ -184,12 +241,10 @@
     var nearly = []; rows.forEach(function (r) { r.pos.forEach(function (p) { nearly.push({ sid: r.sid, cls: r.cls, key: p.key, basis: p.basis, say: p.say }); }); });
 
     /* 全班共同問題：進行中與卡住的學生，第一個沒亮的檢核點分布；提問品質規則各命中幾人 */
-    var firstUnlit = {}; rows.forEach(function (r) { if ((r.stage === 'S2' || r.stage === 'S3') && r.cp.first) firstUnlit[r.cp.first.id] = (firstUnlit[r.cp.first.id] || 0) + 1; });
-    var hits = {}; rows.forEach(function (r) { r.hints.forEach(function (h) { if (h.kind === 'coach' || h.key === 'H_STUCK' || h.kind === 'w7') hits[h.key] = (hits[h.key] || 0) + 1; }); });
-    var commons = { firstUnlit: firstUnlit, hits: hits, nAsk5: rows.filter(function (r) { return r.ask.n >= R.hint.ynMinN; }).length, nAsk8: rows.filter(function (r) { return r.ask.n >= R.hint.followMinN; }).length };
+    var commons = commonsOf(rows);
 
     return { now: now, week: week, totals: totals, rows: rows, funnel: funnel, interventions: interventions, nearly: nearly, commons: commons, defs: { RULES: RULES, STAGES: STAGES, HINTS: HINT_DEFS } };
   }
 
-  return { RULES: RULES, STAGES: STAGES, HINT_DEFS: HINT_DEFS, build: build, respState: respState, weekNode: weekNode };
+  return { RULES: RULES, STAGES: STAGES, HINT_DEFS: HINT_DEFS, build: build, respState: respState, weekNode: weekNode, scope: scope, currentClass: currentClass, SCHEDULE: SCHEDULE, WINDOW_PAD_MIN: WINDOW_PAD_MIN };
 });
