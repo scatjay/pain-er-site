@@ -28,7 +28,7 @@
     var bdItems = [{ text: '比 1/3（W6）結束時多拿 ' + BADGE_PLUS + ' 枚成就（' + Math.max(0, badges - bBadges) + ' / ' + BADGE_PLUS + '，現在共 ' + badges + ' 枚）', ok: badges >= need, todo: '打開「成就」分頁，挑還沒亮的成就去做（例如換一種案例、問到病人本人、追問「後來呢」）' }];
     var csItems = [{ text: '玩過 2 種以上的案例（現在 ' + num(c.cases, 0) + ' 種）', ok: num(c.cases, 0) >= 2, todo: '回大廳，「案例」選一個你還沒玩過的，按「開一間」' }];
     var rpItems = [
-      { text: '讀完上面「給你的指引」', ok: !c.hasGuide || len(r.a) + len(r.b) + len(r.c) > 0, todo: '在大廳打開「給你的指引」，讀一下這週建議你做的事' },
+      { text: '讀完上面「給你的指引」', ok: !c.hasGuide || !!c.guideSeen || len(r.a) + len(r.b) + len(r.c) > 0, todo: '在大廳打開「給你的指引」，讀一下這週建議你做的事' },
       { text: '寫「指引建議我做什麼」（' + RESP_MIN + ' 字以上）', ok: len(r.a) >= RESP_MIN, todo: '在大廳「回應指引」的第 1 格，寫指引建議你做哪幾件事' },
       { text: '寫「我做了什麼、結果如何」（每件一句，要具體）', ok: len(r.b) >= RESP_MIN, todo: '在第 2 格寫你做了什麼，例如「追問了 5 次『那時候你怎麼做』，探問升到 Lv.2」' },
       { text: '寫「還沒做到的、卡在哪、下一步」', ok: len(r.c) >= RESP_MIN, todo: '在第 3 格誠實寫還沒做到的那一件、卡在哪裡、打算怎麼補' },
@@ -39,7 +39,12 @@
     var g = c.guide || {}, gst = (g.st && g.st.items) || [];
     var myItems = (g.items || []).map(function (it, k) {
       var x = gst[k] || {}, part = x.s === 'part', prog = (x.p || []).map(function (q) { return Math.min(q[0], q[1]) + '/' + q[1]; }).join('、');
-      return { text: it.title + (part ? '（做了一部分' + (prog ? '：' + prog : '') + '）' : (x.s !== 'ok' && prog ? '（' + prog + '）' : '')), ok: x.s === 'ok', todo: it.small || it.how };
+      /* 10-20：同步狀態最多落後 2 小時；技能等級在畫面上是即時算的。技能類的項目用即時等級再判一次，免得同一頁一處 ✗ 一處 ✓（二乙 0192） */
+      var okNow = x.s === 'ok', mm = /(探問|情境感知)[」』]?\s*升到\s*Lv\.?\s*(\d)/.exec(String(it.title || ''));
+      if (mm && num(mm[2], 9) <= (mm[1] === '探問' ? ask : ctx)) okNow = true;
+      var step = it.small || it.how;
+      if (/勘查/.test(it.title || '')) step = '問完一位之後，走進房間找黃色「線索」牌，點開讀，再按「記一張勘查卡」，記滿三張就過';
+      return { text: it.title + (okNow ? '' : part ? '（做了一部分' + (prog ? '：' + prog : '') + '）' : (prog ? '（' + prog + '）' : '')), ok: okNow, todo: '「' + it.title + '」先做這一小步：' + step };
     });
     var list = [];
     if (myItems.length) list.push({ id: 0, label: '我的個人檢核點', plain: '照「給你的指引」逐件完成', how: '下面「給你的指引」每一件都寫了怎麼做、怎麼算完成。任何時間都可以做（10/20 到 W8 結束全天開放訪談）；打勾狀態白天每兩小時更新一次（07:15 到 23:15）' + (g.st && g.st.at ? '（上次更新 ' + new Date(g.st.at).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false }) + '）' : '') + '。', items: myItems });

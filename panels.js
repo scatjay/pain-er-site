@@ -509,7 +509,9 @@
     /* 10-13：提交要在「檢核點算的那一間房」按（紀錄最完整的那間）。二乙有同學在 8 間空房按了提交，真正做完的房間卻沒提交，檢核點 6 永遠不亮。 */
     var wr = e.state._workRoom, inWork = !wr || wr === cur().code, canSub = gate.ok && inWork && (isHost() || !!wr);
     var subMsg = !inWork ? '你的紀錄（卡片、訪談、結論）在房間 ' + esc(wr) + '，提交要回到那間房按。' : (isHost() || wr ? (gate.ok ? '前面都完成了，可以提交。' : '還不能提交，先把上面打叉的補完。') : '提交要回到自己開的房間做。');
-    if (!sub || !inWork) html += '<button id="submitBtn" ' + (canSub ? '' : 'disabled') + '>提交</button> <span class="muted" style="font-size:var(--fs-1)">' + subMsg + '</span>';
+    /* 10-20 二乙 0914：前五點都亮、卻在別間房（例如做討論的同學房間）看到灰掉的提交鈕，一行小字沒人看到。改成醒目的說明，並列出缺的項目 */
+    var why = !inWork ? '你的紀錄（卡片、訪談、結論）在房間 <b>' + esc(wr) + '</b>，提交鈕要回到那間房才按得下去（現在這間是 ' + esc(cur().code) + '）。回大廳，在「我在裡面」的清單按「回去」進房間 ' + esc(wr) + '。' : (!gate.ok ? '還不能提交：' + gate.blockers.map(esc).join('；') : '');
+    if (!sub || !inWork) html += '<button id="submitBtn" ' + (canSub ? '' : 'disabled') + '>提交</button> <span class="muted" style="font-size:var(--fs-1)">' + subMsg + '</span>' + (why && !canSub ? '<div id="submitWhy" class="card" style="margin-top:6px;border-color:var(--bad);font-size:var(--fs-2)">' + why + '</div>' : '');
     else if (e.ev.passed) html += passedBlock(e);
     else html += '<div class="card" style="border-color:var(--bad)"><b>已經按過提交，但還有打叉的項目</b><div class="muted" style="font-size:var(--fs-2)">把上面打叉的補完，這裡就會變成綠色的「已通過」。</div></div>';
     p.innerHTML = html + '</details>';

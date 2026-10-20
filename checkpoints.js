@@ -106,7 +106,7 @@
     var linksOk = s.linksOk !== undefined ? !!s.linksOk : !!sub.links;
     var items = [
       { text: '問完的訪談都有對話連結（即時訪談會自動帶入）', ok: linksOk, todo: '到「訪談」，替問完的那幾位補上對話連結（即時訪談會自動帶入；貼到 Gemini 訪談的要自己貼分享連結）' },
-      { text: '在自己房間的「檢核」按「提交」', ok: pressed, todo: '回到自己開的房間，在「檢核」按「提交」' }
+      { text: '在自己房間的「檢核」按「提交」', ok: pressed, todo: s._workRoom ? '回到房間 ' + s._workRoom + '（你的卡片、訪談、結論都記在那間；不一定是你開的房間），在「檢核」最下面按「提交」' : '回到自己開的房間，在「檢核」按「提交」' }
     ];
     return { ok: !!(sub.scene && sub.text && sub.links), detail: ['場景檔', '結論文字', '對話連結'].map(function (n, i) { return n + (sub[['scene', 'text', 'links'][i]] ? '✔' : '＿'); }).join(' '), items: items };
   }
@@ -114,7 +114,7 @@
   /* label＝遊戲裡的名稱；plain＝白話一句；how＝怎麼做；eg＝實例（用簡訊案的線索與人物原話） */
   var DEFS = [
     { id: 1, label: '勘查', plain: '到現場看線索', fn: cpSurvey,
-      how: '走進急診室的各個房間，找黃色的小牌子（上面寫著「線索」）。點它會看到一項現場的事實，按「記一張勘查卡」把它記下來。「勘查卡」「問號」「重要」三種卡都算。' },
+      how: '走進急診室的各個房間，找黃色的小牌子（上面寫著「線索」）。點它會看到一項現場的事實，按「記一張勘查卡」把它記下來。「勘查卡」「問號」「重要」三種卡都算。小訣竅：問完一位之後，順手到房間裡找黃色「線索」牌，點開讀，再按「記一張勘查卡」，三張就過。' },
     { id: 2, label: '訪談', plain: '找人問清楚', fn: cpInterview,
       how: '點畫面上的人物開始訪談。問到這三件事就各打一個勾：他一開始怎麼說、那天發生了什麼事、他真正需要什麼。' },
     { id: 3, label: '矛盾或假設', plain: '把看到的和聽到的對起來', fn: cpReasoning,

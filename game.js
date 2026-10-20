@@ -324,8 +324,12 @@
   function week2Ctx() {
     var sid = String(APP.me.sid), pf = (APP.me.profile && APP.me.profile.progress) || {}, sc = window.ERG_MY_SCORE || {}, seen = {};
     DB.listRooms(APP.SESS).forEach(function (r) { var x = DB.getRoom(r.code) || {}; if (x.members && x.members[sid]) seen[x.case || 'sms'] = 1; });
-    var g = GUIDE.g || {}, cur = { ask: Number(pf.ask || sc.skAsk || 1), ctx: Number(pf.ctx || sc.skCtx || 1), badges: window.ERG_WEEK2.badgeCount(pf.badges || (sc.badgeIds || []).length || 0, sc.badgeIds) };
-    return { sk: { ask: cur.ask, ctx: cur.ctx }, badges: cur.badges, cases: Object.keys(seen).length, base: g.base || (APP.me.profile && APP.me.profile.w2base) || cur, resp: GUIDE.r || {}, hasGuide: !!(g.items && g.items.length), guide: g };
+    /* 10-20：本機存的進度（profile.progress）只在這台裝置的房間裡更新，換裝置或離開房間後會落後；已發布的成績（score）跨裝置。兩邊取大的（二丙 0179 成就總數增加但追加成就 0/3） */
+    var mx = function (a, b) { return Math.max(Number(a) || 0, Number(b) || 0); };
+    var g = GUIDE.g || {}, cur = { ask: mx(mx(pf.ask, sc.skAsk), 1), ctx: mx(mx(pf.ctx, sc.skCtx), 1), badges: window.ERG_WEEK2.badgeCount(mx(mx(pf.badges, (sc.badgeIds || []).length), sc.badges), sc.badgeIds) };
+    var hasG = !!(g.items && g.items.length);
+    return { sk: { ask: cur.ask, ctx: cur.ctx }, badges: cur.badges, cases: Object.keys(seen).length, base: g.base || (APP.me.profile && APP.me.profile.w2base) || cur, resp: GUIDE.r || {}, hasGuide: hasG, guide: g,
+      guideSeen: hasG && GUIDE.loaded };   /* 指引已經顯示在大廳＝讀過，「下一步」不再永遠卡在「去讀指引」，改指向個人檢核點最前面沒做完的一件（10-20 檢討） */
   }
   function guideHtml() {
     var g = GUIDE.g;
