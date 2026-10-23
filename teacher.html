@@ -92,10 +92,46 @@ details.sysbox{margin-top:4px}details.sysbox>summary{cursor:pointer;min-height:3
 #stDrawer .dh,#chReader .dh{position:sticky;top:0;background:var(--bg);padding:10px 0 6px;border-bottom:2px solid var(--ink);display:flex;gap:8px;align-items:center;z-index:3}#stDrawer .dh h2,#chReader .dh h2{margin:0;flex:1;font-size:1.1em}#stDrawer .dh button,#chReader .dh button{min-height:44px;min-width:44px}@media (min-width:761px){#chReader{width:min(560px,100vw)}}#chReader{z-index:30}#chReader .card{margin:8px 0}#chReader .rdtool{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}#chReader .rdtool button{min-height:44px}
 #stDrawer h3{font-size:.95em;margin:14px 0 4px;border-bottom:1px solid var(--line);padding-bottom:2px}#stDrawer ul{margin:2px 0;padding-left:1.2em}#stDrawer li{margin:2px 0}.dsay{display:flex;gap:6px;align-items:flex-start}.dsay>div{flex:1}
 .projNote{display:none}body.proj .projNote{display:block}body.proj .stPriv{display:none!important}
+/* ───── 10-22 技能等級徽章：越高級越有高級感。Lv.1 樸素圓環／Lv.2 銀盾＋星／Lv.3 金冠＋三星；形狀、星數、亮度都不同，不只靠色相 ───── */
+:root{--k1fg:#3d4f5f;--k1bg:#e8edf2;--k1bd:#9fb0bf;--k2fg:#26343d;--k2bg:linear-gradient(180deg,#f4f7f9,#cfd8de 55%,#e9eef1);--k2bd:#8fa3ad;--k3fg:#4a3200;--k3bg:linear-gradient(180deg,#fff1b8,#f2c14e 55%,#fde58f);--k3bd:#b8860b;--k3glow:rgba(201,143,10,.35)}
+@media (prefers-color-scheme:dark){:root{--k1fg:#c4d2dd;--k1bg:#2a3a46;--k1bd:#4a5f6e;--k2fg:#f4f8fa;--k2bg:linear-gradient(180deg,#3c4a54,#566873 55%,#46565f);--k2bd:#8fa3ad;--k3fg:#2b1c00;--k3bg:linear-gradient(180deg,#f6d36a,#e0b030 55%,#f0c850);--k3bd:#ffe08a;--k3glow:rgba(255,214,102,.4)}}
+.skb{display:inline-flex;align-items:center;gap:4px;padding:1px 9px 1px 5px;font-weight:800;font-size:.85em;line-height:1.5;white-space:nowrap;border:1px solid var(--k1bd);background:var(--k1bg);color:var(--k1fg);border-radius:4px;vertical-align:middle}
+.skb .skg{width:1.6em;height:1.6em;flex:none}
+.skb.sk-lv0{background:transparent;color:var(--muted);border:1px dashed var(--line);font-weight:600}
+.skb.sk-lv1{box-shadow:none}
+.skb.sk-lv2{background:var(--k2bg);color:var(--k2fg);border-color:var(--k2bd);border-radius:999px;box-shadow:inset 0 1px 0 rgba(255,255,255,.75)}
+.skb.sk-lv3{background:var(--k3bg);color:var(--k3fg);border:1.5px solid var(--k3bd);border-radius:999px;box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 0 0 1px var(--k3glow),0 1px 6px var(--k3glow);font-family:'Noto Serif TC','Songti TC','PMingLiU',serif;font-weight:900}
+.skbar{display:flex;align-items:center;gap:6px;margin:4px 0}.skbar .nm{width:150px;flex:none;font-size:.9em;display:flex;align-items:center;gap:4px;white-space:nowrap}.skbar .nm .skb{font-size:.82em}.skbar .tr{flex:1;height:16px;background:var(--panel2);border:1px solid var(--line);border-radius:7px;overflow:hidden}.skbar .tr>i{display:block;position:relative;height:100%;overflow:hidden}.skbar .sn{width:60px;text-align:right;font-variant-numeric:tabular-nums}
+.skbar.sk-lv1 .tr>i{background-color:#7f93a5;border-radius:0}
+.skbar.sk-lv2 .tr>i{background-image:linear-gradient(180deg,#f4f7f9 0%,#b5c3cc 45%,#7f929d 55%,#cfd9df 100%);box-shadow:inset 0 1px 0 #fff;border-radius:6px 0 0 6px}
+.skbar.sk-lv3 .tr>i{background-image:linear-gradient(180deg,#fff3b0 0%,#f5c542 42%,#c98f0a 58%,#f7d774 100%);box-shadow:inset 0 1px 0 #fffbe0,0 0 8px rgba(245,197,66,.7);border-radius:7px 0 0 7px}
+.skbar.sk-lv3.shine .tr>i::after{content:"";position:absolute;top:0;bottom:0;left:-40%;width:35%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.85),transparent);animation:skshine 1.3s ease-out .4s 1 both}
+@keyframes skshine{from{left:-40%}to{left:120%}}
+@media (prefers-reduced-motion:reduce){.skbar.sk-lv3.shine .tr>i::after{animation:none;display:none}}
+.sklegend{display:flex;gap:6px 14px;flex-wrap:wrap;align-items:center;font-size:.85em;margin:4px 0 6px}.sklegend .lg{display:inline-flex;gap:4px;align-items:center;flex-wrap:wrap}.sklegend .lt{color:var(--muted)}
+.skdot{display:inline-block;position:relative;width:24px;height:24px;line-height:20px;text-align:center;border-radius:50%;font-weight:900;box-sizing:border-box;color:#1e1e1e;border:1.5px solid #1e1e1e}
+.skdot.sk-lv1{background:#b7c6d4}.skdot.sk-lv2{background:#e3e9ed;box-shadow:0 0 0 2px #7f929d}.skdot.sk-lv3{background:#ffd24d;box-shadow:0 0 0 2px #c98f0a}.skdot.sk-lv3::after{content:"★";position:absolute;right:-8px;top:-9px;font-size:12px;line-height:1;color:#f5c542;-webkit-text-stroke:.7px #8a5a00}
+.skdot.ring{border:3px solid #e8590c}
+/* 每位學生的審核建議（10-22 分色版面） */
+:root{--ctA-bg:#dbe9ff;--ctA-fg:#17407a;--ctA-bd:#6b9be0;--ctB-bg:#dcf5e0;--ctB-fg:#14541f;--ctB-bd:#5eb272;--ctC-bg:#f1e1ff;--ctC-fg:#55267f;--ctC-bd:#b27fe0;--rvg-bg:#eef9f0;--rvg-bg2:#e3f3e7;--rvg-bar:#2b8a3e;--rvf-bg:#fff4e8;--rvf-bg2:#ffead2;--rvf-bar:#e8590c;--rvz:#f6f1e4}
+@media (prefers-color-scheme:dark){:root{--ctA-bg:#1c3a5e;--ctA-fg:#c9e0ff;--ctA-bd:#5b86c4;--ctB-bg:#1d4a2b;--ctB-fg:#c6f3d1;--ctB-bd:#4f9c63;--ctC-bg:#43285f;--ctC-fg:#e9d6fb;--ctC-bd:#9b6cc8;--rvg-bg:#16301f;--rvg-bg2:#1b3a26;--rvg-bar:#69db7c;--rvf-bg:#3a2713;--rvf-bg2:#44301a;--rvf-bar:#ffa94d;--rvz:#1d2c35}}
+.ct{display:inline-block;padding:0 8px;border-radius:5px;font-size:.82em;font-weight:800;line-height:1.55;white-space:nowrap;border:1px solid var(--ct-bd,var(--line));background:var(--ct-bg,var(--panel2));color:var(--ct-fg,var(--ink))}
+.ct.cA{--ct-bg:var(--ctA-bg);--ct-fg:var(--ctA-fg);--ct-bd:var(--ctA-bd)}.ct.cB{--ct-bg:var(--ctB-bg);--ct-fg:var(--ctB-fg);--ct-bd:var(--ctB-bd)}.ct.cC{--ct-bg:var(--ctC-bg);--ct-fg:var(--ctC-fg);--ct-bd:var(--ctC-bd)}
+#revRows{max-height:75vh;overflow:auto}#revRows table{border-collapse:separate;border-spacing:0;min-width:780px}
+#revRows thead th{position:sticky;top:0;z-index:2;background:var(--panel);border-bottom:2px solid var(--ink);padding:8px 10px;vertical-align:middle}
+#revRows td{padding:10px;border-bottom:1px solid var(--line);vertical-align:top;line-height:1.6;overflow-wrap:anywhere;word-break:break-word}
+#revRows tbody tr:nth-child(even) td{background:var(--rvz)}
+#revRows td.rvg{background:var(--rvg-bg);border-left:3px solid var(--rvg-bar)}#revRows td.rvf{background:var(--rvf-bg);border-left:3px solid var(--rvf-bar)}
+#revRows tbody tr:nth-child(even) td.rvg{background:var(--rvg-bg2)}#revRows tbody tr:nth-child(even) td.rvf{background:var(--rvf-bg2)}
+#revRows th.rvg{border-left:3px solid var(--rvg-bar)}#revRows th.rvf{border-left:3px solid var(--rvf-bar)}
+#revRows th.rvg,#revRows th.rvf{color:var(--ink)}#revRows th .ic{width:1.15em;height:1.15em;vertical-align:-.2em;margin-right:4px}#revRows th.rvg .ic{color:var(--rvg-bar)}#revRows th.rvf .ic{color:var(--rvf-bar)}
+#revRows td.rvn{min-width:10.5em;white-space:nowrap}.rvid{font-family:ui-monospace,Consolas,'Courier New',monospace;font-variant-numeric:tabular-nums;font-weight:800;margin-right:6px}
+#revRows td.rvg,#revRows td.rvf,#revRows td.rve{min-width:13em}
 [hidden]{display:none!important}
 </style>
 </head>
 <body>
+<div id="skDefs" aria-hidden="true"></div>
 <div class="wrap">
 <div id="gate" class="card" style="max-width:520px;margin:40px auto">
   <h1>痛點急診室 老師後台</h1>
@@ -158,6 +194,7 @@ details.sysbox{margin-top:4px}details.sysbox>summary{cursor:pointer;min-height:3
       <select id="stSort" aria-label="排序"><option value="pri">排序：需要介入的優先</option><option value="sid">學號／代號</option><option value="lit">檢核點少的在前</option><option value="ask">提問多的在前</option><option value="idle">最久沒動的在前</option><option value="lv">技能等級低的在前</option></select>
       <span class="muted" id="stCount"></span></div>
     <div class="stfx" id="stFx"></div>
+    <div id="stSkLg"></div>
     <div class="stwrap" id="stList"></div>
   </div>
 </section>
@@ -248,17 +285,17 @@ details.sysbox{margin-top:4px}details.sysbox>summary{cursor:pointer;min-height:3
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-<script src="er_firebase.js?v=202610201642"></script>
-<script src="checklist.js?v=202610201642"></script>
-<script src="checkpoints.js?v=202610201642"></script>
-<script src="avatar.js?v=202610201642"></script>
-<script src="local_db.js?v=202610201642"></script>
-<script src="app_core.js?v=202610201642"></script>
-<script src="achievements.js?v=202610201642"></script><script src="remote_db.js?v=202610201642"></script><script src="summary_render.js?v=202610201642"></script>
-<script src="layout.js?v=202610201642"></script>
-<script src="minimap.js?v=202610201642"></script>
-<script src="personas_inclusive.js?v=202610201642"></script><script src="er_data.js?v=202610201642"></script><script src="npc_voice.js?v=202610201642"></script><script src="personas.js?v=202610201642"></script>
-<script src="week2.js?v=202610201642"></script><script src="teacher_model.js?v=202610201642"></script>
+<script src="er_firebase.js?v=202610231224"></script>
+<script src="checklist.js?v=202610231224"></script>
+<script src="checkpoints.js?v=202610231224"></script>
+<script src="avatar.js?v=202610231224"></script>
+<script src="local_db.js?v=202610231224"></script>
+<script src="app_core.js?v=202610231224"></script>
+<script src="achievements.js?v=202610231224"></script><script src="remote_db.js?v=202610231224"></script><script src="summary_render.js?v=202610231224"></script>
+<script src="layout.js?v=202610231224"></script>
+<script src="minimap.js?v=202610231224"></script><script src="map_layout.js?v=202610231224"></script><script src="skill_badge.js?v=202610231224"></script>
+<script src="personas_inclusive.js?v=202610231224"></script><script src="er_data.js?v=202610231224"></script><script src="npc_voice.js?v=202610231224"></script><script src="personas.js?v=202610231224"></script>
+<script src="week2.js?v=202610231224"></script><script src="teacher_model.js?v=202610231224"></script>
 <script>
 /* 教師名單：只有這裡的 Google 帳號能進。要加人就加在這裡（改完重新部署；資料庫規則 tools/er_after_google_enabled.py 也要加）。 */
 var TEACHER_EMAILS = ['scatjay@gmail.com', 'prof.chwu@mx.nthu.edu.tw', 'nthuchwu@gapp.nthu.edu.tw'];   /* 10-16 楊老師：清大吳智鴻老師（觀摩用，含後台） */
@@ -354,15 +391,19 @@ var CLASS_WINDOWS = [].concat(
   var MP = { 'gemini-2.5-flash-lite': '0.10／0.40', 'gemini-2.5-flash': '0.30／2.50', 'gemini-3-flash-preview': '0.50／3.00', 'gemini-3.1-flash-lite': '0.25／1.50', 'gemini-3.5-flash-lite': '0.30／2.50' };   /* 與 tools/er_chat_daemon.py 的 PRICE_USD_PER_M 同一份 */
   /* 技能等級分布（10-13 楊老師：技能三級）：學生的等級跟著分數一起發布到 er/場次/score/學號（skAsk、skCtx），只有進過新版遊戲的學生才有 */
   var SK_NAMES = { ask: ['開口問', '會追問', '追到底'], ctx: ['到處看', '找對人', '對得起來'] };
+  var SKB = window.ERG_SKB; if ($('skDefs')) $('skDefs').innerHTML = SKB.defs();
+  var skShined = false;   /* Lv.3 光澤掃過只在這次打開頁面的第一次畫出來時播一次，之後重畫不再閃 */
+  function skLegend() { return '<div class="sklegend"><span class="lg"><span class="lt">探問</span>' + [1, 2, 3].map(function (n) { return SKB.badge(n, 'Lv.' + n + ' ' + SK_NAMES.ask[n - 1]); }).join('') + '</span><span class="lg"><span class="lt">情境感知</span>' + [1, 2, 3].map(function (n) { return SKB.badge(n, 'Lv.' + n + ' ' + SK_NAMES.ctx[n - 1]); }).join('') + '</span></div>'; }
   function renderSkillDist() {
     var box = $('skillDist'); if (!box) return;
     var cls = $('qCls') ? $('qCls').value : '', rows = Object.keys(scores || {}).map(function (k) { return scores[k] || {}; }).filter(function (x) { return x.skAsk && (!cls || x.cls === cls); });
     if (!rows.length) { box.innerHTML = '<b>技能等級分布</b> <span class="muted">還沒有學生用新版（學生打開成就分頁或繼續玩就會出現）。</span>'; return; }
     function col(key, f, title) {
       var c = [0, 0, 0]; rows.forEach(function (x) { c[Math.min(3, Math.max(1, Number(x[f]) || 1)) - 1] += 1; });
-      return '<div style="flex:1;min-width:230px"><b>' + title + '</b>' + c.map(function (n, i) { return '<div style="display:flex;align-items:center;gap:6px;margin:3px 0"><span style="width:118px;font-size:.9em">Lv.' + (i + 1) + ' ' + SK_NAMES[key][i] + '</span><span style="flex:1;background:#e9ecef;border-radius:6px;height:14px;overflow:hidden"><span style="display:block;height:14px;width:' + Math.round(n / rows.length * 100) + '%;background:#f08c00"></span></span><span style="width:60px;text-align:right">' + n + ' 人</span></div>'; }).join('') + '</div>';
+      return '<div style="flex:1;min-width:300px"><b>' + title + '</b>' + c.map(function (n, i) { return '<div class="skbar sk-lv' + (i + 1) + (skShined ? '' : ' shine') + '" data-lv="' + (i + 1) + '"><span class="nm">' + SKB.badge(i + 1, 'Lv.' + (i + 1) + ' ' + SK_NAMES[key][i]) + '</span><span class="tr"><i style="width:' + Math.round(n / rows.length * 100) + '%"></i></span><span class="sn">' + n + ' 人</span></div>'; }).join('') + '</div>';
     }
     box.innerHTML = '<b>技能等級分布</b> <span class="muted" style="font-size:.85em">（' + (cls || '全部班級') + '，' + rows.length + ' 位用過新版的學生；門檻每堂課後依全班表現重算）</span><div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:4px">' + col('ask', 'skAsk', '探問') + col('ctx', 'skCtx', '情境感知') + '</div>';
+    skShined = true;
   }
   function renderModelStats(d) {
     var ms = Object.assign({}, d.modelStats || {}, (d.admin && d.admin.modelStats) || {}), days = Object.keys(ms).sort(), box = $('modelStats'); if (!box) return;
@@ -376,6 +417,9 @@ var CLASS_WINDOWS = [].concat(
   }
   /* 10-19 楊老師：「後台要看到所有的審核建議，還有這些建議的統整」「審核的用量也要顯示在教師後台」。
      資料：er/_daemon/admin/ivReview（tools/er_interview_review.py --summarize 寫入）、admin/reviewUsage/{日}/{interview|resp}、場次的 guideResp。 */
+  var IC_OK = '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M7.5 12.4l3 3 6-6.4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    IC_FIX = '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M7.5 12h8M12.5 8l4 4-4 4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    IC_EG = '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true" style="color:var(--info)"><path d="M4 5.5h16v10H10l-4.5 4v-4H4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>';
   function renderReview() {
     var a = (daemon && daemon.admin) || {}, iv = a.ivReview, ru = a.reviewUsage || {};
     if ($('revSum')) {
@@ -397,9 +441,9 @@ var CLASS_WINDOWS = [].concat(
         return (!lv || v.level === lv) && (!q || t.indexOf(q) >= 0) && (!rc || p.cls === rc) && (!th || TH[th].test((v.fix_raw || '') + v.fix)); })
         .sort(function (x, y) { var a = x[1], b = y[1]; if (so === 'nlo') return (a.n || 0) - (b.n || 0); if (so === 'nhi') return (b.n || 0) - (a.n || 0); if (so === 'lv') return (LVO[a.level] || 0) - (LVO[b.level] || 0) || (x[0] < y[0] ? -1 : 1); return x[0] < y[0] ? -1 : 1; });
       $('rvCount').textContent = rows.length + ' 位';
-      $('revRows').innerHTML = rows.length ? '<table><thead><tr><th>學生</th><th class="num">題數</th><th>等級</th><th>👍 做得好</th><th>🔧 要改</th><th>💬 示範問法</th></tr></thead><tbody>' + rows.map(function (r) {
-        var p = profiles[r[0]] || {}, v = r[1];
-        return '<tr><td><b>' + esc(DEID ? aliasOf(r[0]) : r[0] + (p.name ? '　' + p.name : '')) + '</b><div class="muted small">' + esc(p.cls || '') + '</div></td><td class="num">' + esc(v.n) + '</td><td>' + esc(v.level || '') + '</td><td>' + esc(v.good) + '</td><td>' + esc(v.fix) + '</td><td>' + esc(v.eg) + '</td></tr>';
+      $('revRows').innerHTML = rows.length ? '<table><thead><tr><th>學生</th><th class="num">題數</th><th>等級</th><th class="rvg">' + IC_OK + '做得好</th><th class="rvf">' + IC_FIX + '要改的方向</th><th>' + IC_EG + '示範問法</th></tr></thead><tbody>' + rows.map(function (r) {
+        var p = profiles[r[0]] || {}, v = r[1], ctc = { '二甲': 'cA', '二乙': 'cB', '二丙': 'cC' }[p.cls] || '', lvn = { '起步': 1, '進步中': 2, '很好': 3, '熟練': 3 }[v.level] || 0;
+        return '<tr><td class="rvn"><span class="rvid">' + esc(DEID ? aliasOf(r[0]) : r[0]) + '</span>' + (p.cls ? '<span class="ct ' + ctc + '">' + esc(p.cls) + '</span>' : '') + (!DEID && p.name ? '<div class="muted small">' + esc(p.name) + '</div>' : '') + '</td><td class="num">' + esc(v.n) + '</td><td>' + SKB.badge(lvn, v.level || '—') + '</td><td class="rvg">' + esc(v.good) + '</td><td class="rvf">' + esc(v.fix) + '</td><td class="rve">' + esc(v.eg) + '</td></tr>';
       }).join('') + '</tbody></table>' : '<span class="muted">沒有資料。</span>';
     }
     if ($('respSum')) {
@@ -642,24 +686,42 @@ var CLASS_WINDOWS = [].concat(
     Object.keys(chats).forEach(function (code) { Object.keys(chats[code] || {}).forEach(function (sid) { var o = out[sid] || (out[sid] = { n: 0, last: null }); Object.keys(chats[code][sid] || {}).forEach(function (rec) { var c = chats[code][sid][rec] || {}; Object.keys(c.turns || {}).forEach(function (k) { var t = c.turns[k]; if (t.role !== 'u') return; o.n += 1; if (!o.last || t.t > o.last.t) o.last = { t: t.t, who: c.personaName || personaName(c.personaId), text: t.text, code: code }; }); }); }); });
     return out;
   }
+  function bindLiveMap() {
+    var box = $('liveMap'); Array.prototype.forEach.call(box.querySelectorAll('[data-livedots]'), function (g) { g.onclick = function () { liveRoomOpen = liveRoomOpen === g.getAttribute('data-livedots') ? '' : g.getAttribute('data-livedots'); renderLive(lastAsk); }; });
+    Array.prototype.forEach.call(box.querySelectorAll('[data-liveclose]'), function (a) { a.onclick = function (e) { e.preventDefault(); liveRoomOpen = ''; renderLive(lastAsk); }; });
+  }
   function isOnline(sid) { var p = presence[sid]; return !!(p && Date.now() - Number(p.t || 0) < 300000); }
   /* 10-15 楊老師：活躍人數地圖用訪談技能等級區分。點的顏色與中間的數字＝探問、情境感知兩項裡較高的那一級（還沒有等級資料的學生算 1 級）；橘色外圈＝最近 5 分鐘有訪談 */
-  var LV_COLOR = { 1: '#a5d8ff', 2: '#8ce99a', 3: '#ffa94d' };
+  /* 10-22：顏色改鋼藍灰→銀→金，2 級加銀色外圈、3 級加金色外圈與小星（橘色外圈仍是「5 分鐘內有訪談」） */
+  var LV_COLOR = { 1: '#b7c6d4', 2: '#e3e9ed', 3: '#ffd24d' };
   function lvOf(sid) { var s = (scores || {})[sid] || {}; return Math.min(3, Math.max(1, Number(s.skAsk) || 1, Number(s.skCtx) || 1)); }
+  var liveRoomOpen = '', lastAsk = {};
   function renderLive(ask) {
-    var dots = [], list = [], now = Date.now();
+    lastAsk = ask;
+    var studs = [], list = [], now = Date.now();
     rooms.forEach(function (r) {
       Object.keys(r.players || {}).forEach(function (sid) {
         var p = r.players[sid], rm = LAYOUT.room(p.loc || 'entrance'); if (!rm) return;
         var recent = (ask[sid] || {}).last, active = !!(recent && now - recent.t < 5 * 60000);
-        dots.push({ x: rm.x + rm.w * (0.3 + 0.4 * ((sid.charCodeAt(sid.length - 1) % 7) / 7)), y: rm.y + rm.h * (0.35 + 0.4 * ((sid.charCodeAt(Math.max(0, sid.length - 2)) % 5) / 5)), kind: 'npc', color: LV_COLOR[lvOf(sid)], glyph: String(lvOf(sid)), ring: active, label: aliasOf(sid).slice(-2) });
+        studs.push({ sid: sid, room: rm.id, lv: lvOf(sid), ring: active, label: aliasOf(sid).slice(-2) });
         list.push({ sid: sid, room: rm.name, code: r.code, recent: recent, active: active });
       });
     });
-    $('liveMap').innerHTML = MM.svg(LAYOUT, { compact: true, fontScale: 1.2, onlyMap: true, width: 560, showFurniture: false, dots: dots, clickable: false }) + '<div class="muted" style="font-size:.85em;margin-top:4px">點的顏色與數字＝訪談技能等級（<span style="background:#a5d8ff;padding:0 6px;border-radius:8px">1 級</span> <span style="background:#8ce99a;padding:0 6px;border-radius:8px">2 級</span> <span style="background:#ffa94d;padding:0 6px;border-radius:8px">3 級</span>，取探問與情境感知較高的一項）；橘色外圈＝最近 5 分鐘有訪談。</div>';
+    /* 10-22：圓點改規則排列（map_layout.js）：依房間寬度格狀排、等級高到低、編號放圓點下方；放不下顯示「+M」，點房間在地圖下方展開完整名單 */
+    var ML = window.ERG_MAPLAYOUT, shortOf = function (r) { return MM.SHORT[r.id] || r.name; }, MAPW = 1240;
+    var lay = ML.compute(LAYOUT, studs, { width: MAPW, shortOf: shortOf }), sc = lay.scale, u = function (px) { return Math.round(px / sc * 10) / 10; };
+    var base = MM.svg(LAYOUT, { compact: true, fontScale: 1.2, onlyMap: true, width: MAPW, nameMax: lay.opts.nameMax, hideRoomIcon: true, showFurniture: false, dots: [], clickable: false });
+    var ov = ML.overlay(LAYOUT, lay, { colors: LV_COLOR, openId: liveRoomOpen, esc: esc, skin: true });
+    var expand = '';
+    if (liveRoomOpen) {
+      var xr = LAYOUT.room(liveRoomOpen), xs = ML.sortStudents(studs.filter(function (s) { return s.room === liveRoomOpen; }));
+      expand = '<div id="liveExpand" style="margin-top:6px;padding:8px;border:2px solid #e8590c;border-radius:8px;background:#fff9db"><b>' + esc(xr ? xr.name : liveRoomOpen) + '</b>：' + xs.length + ' 人（等級高到低）　<a href="#" data-liveclose="1">收起</a><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">' +
+        xs.map(function (s) { var hit = list.filter(function (it) { return it.sid === s.sid; })[0]; return '<a href="#"' + (hit ? ' data-chat="' + esc(hit.code) + '|' + esc(s.sid) + '"' : '') + ' style="display:inline-flex;flex-direction:column;align-items:center;min-width:34px;text-decoration:none;color:#1e1e1e"><span class="skdot sk-lv' + s.lv + (s.ring ? ' ring' : '') + '">' + s.lv + '</span><span style="font-size:12px">' + esc(s.label) + '</span></a>'; }).join('') + '</div></div>';
+    }
+    $('liveMap').innerHTML = base.replace('</svg>', ov + '</svg>') + expand + '<div class="muted" style="font-size:.85em;margin-top:4px">點的顏色、外圈與數字＝訪談技能等級（<span class="skdot sk-lv1" style="width:18px;height:18px;line-height:15px;font-size:11px">1</span> 鋼藍灰 <span class="skdot sk-lv2" style="width:18px;height:18px;line-height:15px;font-size:11px;margin-left:6px">2</span> 銀色外圈 <span class="skdot sk-lv3" style="width:18px;height:18px;line-height:15px;font-size:11px;margin-left:6px">3</span> 金色外圈＋小星，取探問與情境感知較高的一項）；橘色粗框＝最近 5 分鐘有訪談。</div>';
     list.sort(function (a, b) { return (b.recent ? b.recent.t : 0) - (a.recent ? a.recent.t : 0); });
-    $('liveList').innerHTML = list.length ? list.slice(0, 30).map(function (it) { return '<div style="margin:4px 0">' + (it.active ? '🟡 ' : '⚪ ') + '<a href="#" data-chat="' + esc(it.code) + '|' + esc(it.sid) + '"><b>' + esc(aliasOf(it.sid)) + '</b></a> <span class="muted" title="訪談技能等級（探問、情境感知取較高）">Lv' + lvOf(it.sid) + '</span> 在 ' + esc(it.room) + (it.recent ? '，問 ' + esc(it.recent.who) + '：「' + esc(String(it.recent.text).slice(0, 24)) + '」' : '，還沒訪談') + '</div>'; }).join('') + '<div class="muted" style="font-size:.8em">🟡＝5 分鐘內有提問。點名字看逐字稿。</div>' : '<span class="muted">還沒有人進房。</span>';
-    bindChatLinks($('liveList'));
+    $('liveList').innerHTML = list.length ? list.slice(0, 30).map(function (it) { return '<div style="margin:4px 0">' + (it.active ? '🟡 ' : '⚪ ') + '<a href="#" data-chat="' + esc(it.code) + '|' + esc(it.sid) + '"><b>' + esc(aliasOf(it.sid)) + '</b></a> ' + SKB.badge(lvOf(it.sid), 'Lv.' + lvOf(it.sid), '訪談技能等級（探問、情境感知取較高）') + ' 在 ' + esc(it.room) + (it.recent ? '，問 ' + esc(it.recent.who) + '：「' + esc(String(it.recent.text).slice(0, 24)) + '」' : '，還沒訪談') + '</div>'; }).join('') + '<div class="muted" style="font-size:.8em">🟡＝5 分鐘內有提問。點名字看逐字稿。</div>' : '<span class="muted">還沒有人進房。</span>';
+    bindChatLinks($('liveList')); bindChatLinks($('liveMap')); bindLiveMap();
   }
   function bindChatLinks(el) { Array.prototype.forEach.call(el.querySelectorAll('[data-chat]'), function (a) { a.onclick = function (e) { e.preventDefault(); rdFrom = a; var p = a.dataset.chat.split('|'); showChats(p[0], p[1] || undefined); }; }); }
   function renderAnalysis() {
@@ -710,7 +772,7 @@ var CLASS_WINDOWS = [].concat(
     bindChatLinks($('students'));
     Array.prototype.forEach.call($('students').querySelectorAll('[data-guide]'), function (a) { a.onclick = function (e) { e.preventDefault(); var k = a.dataset.guide; gOpen[k] = !gOpen[k]; renderStudents(); }; });
   }
-  function skCell(sid) { var x = (scores || {})[sid] || {}; return x.skAsk || x.skCtx || x.badgeIds ? '探' + (x.skAsk || 1) + '・境' + (x.skCtx || 1) + '・🏅' + ((x.badgeIds || []).length) : '<span class="muted">—</span>'; }
+  function skCell(sid) { var x = (scores || {})[sid] || {}; return x.skAsk || x.skCtx || x.badgeIds ? SKB.badge(x.skAsk || 1, '探 Lv.' + (x.skAsk || 1)) + ' ' + SKB.badge(x.skCtx || 1, '境 Lv.' + (x.skCtx || 1)) + ' 🏅' + ((x.badgeIds || []).length) : '<span class="muted">—</span>'; }
   function respState(r) { if (!r || !r.t) return ['未送', 'muted']; if (r.rev && Number(r.rev.at) >= Number(r.t)) return r.rev.ok ? ['通過', 'ok'] : ['需補強', 'bad']; return [r.passed ? '通過（又送審）' : '審核中', r.passed ? 'ok' : '']; }
   function guideCell(sid) {
     var g = guides[sid]; if (!g || !g.items) return '<span class="muted">沒有指引</span>';
@@ -1059,13 +1121,14 @@ var CLASS_WINDOWS = [].concat(
     var cs = $('stCls'), want = stOut.funnel.map(function (f) { return f.cls; }).join('|'); if (cs.dataset.o !== want) { cs.dataset.o = want; cs.innerHTML = '<option value="">全部班級</option>' + stOut.funnel.map(function (f) { return '<option>' + esc(f.cls) + '</option>'; }).join(''); }
     syncTool();
     var rows = stRows(), scope = WEEK ? '本週' : '累計';
+    if ($('stSkLg') && !$('stSkLg').firstChild) $('stSkLg').innerHTML = skLegend();
     $('stCount').textContent = rows.length === stOut.rows.length ? ('共 ' + rows.length + ' 人') : ('顯示 ' + rows.length + ' / ' + stOut.rows.length + ' 人');
     var fx = []; if (stF.cls) fx.push(['cls', '班級：' + stF.cls]); if (stF.stage) fx.push(['stage', '狀態：' + ST_NAME[stF.stage]]); if (stF.hint) fx.push(['hint', '引導：' + ((TMODEL.HINT_DEFS[stF.hint] || {}).label || stF.hint)]); if (stF.cp) fx.push(['cp', '卡在第 ' + stF.cp + ' 點']); if (stF.online) fx.push(['online', '只看在線']); if (stF.q) fx.push(['q', '找：' + stF.q]);
     $('stFx').innerHTML = fx.length ? '生效中的篩選：' + fx.map(function (x) { return '<button class="sm" data-fx="' + x[0] + '" aria-label="取消 ' + esc(x[1]) + '">' + esc(x[1]) + ' ✕</button>'; }).join('') + '<button class="sm ghost" data-fx="*">全部清除</button>' : '';
     Array.prototype.forEach.call($('stFx').querySelectorAll('[data-fx]'), function (b) { b.onclick = function () { var k = b.dataset.fx; if (k === '*') { stF.cls = stF.stage = stF.hint = stF.cp = stF.q = ''; stF.online = false; } else stF[k] = (k === 'online' ? false : ''); if (k === '*' || k === 'cls') { stManual = true; stAll(); } else renderStList(); }; });
     $('stList').innerHTML = rows.length ? '<table><thead><tr><th>狀態</th><th>學生</th><th>進度 <small>（累計）</small></th><th>提問 <small>（' + scope + '）</small></th><th class="hm">技能・成就 <small>（累計）</small></th><th class="hm">最近</th><th>引導</th></tr></thead><tbody>' + rows.map(function (r) {
       var f = r.cp.first, yn = r.ask.n >= 5 ? '・是非 ' + Math.round(r.ask.ynRatio * 100) + '%' : '';
-      return '<tr data-sid="' + esc(r.sid) + '"><td data-l="狀態">' + stChip(r.stage, r.sub) + '</td><td data-l="學生"><button class="lk" data-open="' + esc(r.sid) + '">' + esc(stName(r.sid)) + '</button> ' + (r.online ? '<span class="ok" title="在線">●</span>' : '') + ' <span class="muted small">' + esc(r.cls) + '</span></td><td class="pr" data-l="進度"><span class="dots">' + r.cp.dots.map(function (o) { return '<i class="' + (o ? 'lit' : '') + '"></i>'; }).join('') + '</span> <span class="muted">' + r.cp.lit + '/6' + (f && r.stage !== 'S4' && r.stage !== 'S1' ? '　卡在' + CIRC[f.id - 1] : '') + '</span></td><td data-l="提問">' + r.ask.n + ' 題' + yn + '</td><td class="hm pr" title="探問 Lv.' + r.skill.ask + '、情境感知 Lv.' + r.skill.ctx + '、成就 ' + r.badges.n + ' 枚">探' + r.skill.ask + ' 情' + r.skill.ctx + ' 🏅' + r.badges.n + '</td><td class="hm pr muted">' + (r.lastSeen ? ago(r.lastSeen) : '—') + '</td><td data-l="引導">' + hintChip(r) + '</td></tr>';
+      return '<tr data-sid="' + esc(r.sid) + '"><td data-l="狀態">' + stChip(r.stage, r.sub) + '</td><td data-l="學生"><button class="lk" data-open="' + esc(r.sid) + '">' + esc(stName(r.sid)) + '</button> ' + (r.online ? '<span class="ok" title="在線">●</span>' : '') + ' <span class="muted small">' + esc(r.cls) + '</span></td><td class="pr" data-l="進度"><span class="dots">' + r.cp.dots.map(function (o) { return '<i class="' + (o ? 'lit' : '') + '"></i>'; }).join('') + '</span> <span class="muted">' + r.cp.lit + '/6' + (f && r.stage !== 'S4' && r.stage !== 'S1' ? '　卡在' + CIRC[f.id - 1] : '') + '</span></td><td data-l="提問">' + r.ask.n + ' 題' + yn + '</td><td class="hm pr" title="探問 Lv.' + r.skill.ask + '、情境感知 Lv.' + r.skill.ctx + '、成就 ' + r.badges.n + ' 枚">' + SKB.badge(r.skill.ask, '探 Lv.' + r.skill.ask) + ' ' + SKB.badge(r.skill.ctx, '情 Lv.' + r.skill.ctx) + ' 🏅' + r.badges.n + '</td><td class="hm pr muted">' + (r.lastSeen ? ago(r.lastSeen) : '—') + '</td><td data-l="引導">' + hintChip(r) + '</td></tr>';
     }).join('') + '</tbody></table>' : '<span class="muted">沒有符合條件的學生。</span>';
     bindOpen($('stList'));
     Array.prototype.forEach.call($('stList').querySelectorAll('tbody tr'), function (tr) { tr.onclick = function (e) { if (e.target.closest && e.target.closest('button,a')) return; openDrawer(tr.dataset.sid, tr.querySelector('.lk')); }; });

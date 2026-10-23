@@ -533,6 +533,7 @@ function syncActors(dt) {
   if (actors.me && actors.me.meSig !== meSig()) removeActor(actors.me);      /* 造型畫面換了角色／顏色 */
   if (!actors.me) { const l = meLook(); makeActor('me', l, true); }
   /* 目標位置：坐著的人吸附到長椅／椅子上；其他人互相保持最小距離（只動 3D 呈現，不改 world 資料） */
+  if (!cur.me) return;   /* 10-23：位置還沒還原就先畫（重新整理後人物消失的 reading 'x'） */
   const sitters = {}, list = [];
   Object.keys(want).concat(['me']).forEach(id => {
     const a = actors[id], pos = id === 'me' ? { x: cur.me.x, y: cur.me.y, state: cur.walk ? 'move' : 'idle', wp: '' } : want[id].pos;

@@ -136,8 +136,8 @@
         if (compact) {
           /* 小地圖：大圖示＋短名稱，遠看也認得 */
           /* 10-18 UI 方案 5：房名固定在房間上緣（區域色條下），圖示在中偏下，下緣兩個角留給「去過」與「線索」徽章，「你在這裡」牌就不會蓋住房名 */
-          var isz = Math.min(r.w * .38, r.h * .34, 76), sh = SHORT[r.id] || r.name, nfs = Math.min(58, (r.w - 10) / Math.max(2, sh.length));
-          out.push(glyph(icon, r.x + r.w / 2, r.y + r.h * .62 + isz * .35, isz, 'middle'));
+          var isz = Math.min(r.w * .38, r.h * .34, 76), sh = SHORT[r.id] || r.name, nfs = Math.min(opts.nameMax || 58, (r.w - 10) / Math.max(2, sh.length));
+          if (!opts.hideRoomIcon) out.push(glyph(icon, r.x + r.w / 2, r.y + r.h * .62 + isz * .35, isz, 'middle'));
           out.push('<text data-name="1" x="' + (r.x + r.w / 2) + '" y="' + num(r.y + 42 + nfs * .82) + '" font-size="' + num(nfs) + '" font-weight="900" text-anchor="middle" fill="#1e1e1e" stroke="#fff" stroke-width="9" paint-order="stroke">' + esc(sh) + '</text>');
         } else {
           /* 標題列：小圖示＋名稱靠左上，不佔房間中央，家具與人點才看得清楚 */

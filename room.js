@@ -432,6 +432,7 @@
     Object.keys(cur.tokens).forEach(function (id) { if (!seen[id] && id !== 'me') { cur.tokens[id].remove(); delete cur.tokens[id]; } });
     cur._dirty = true;
     /* 玩家自己 */
+    if (!cur.me) cur.me = spotIn(cur.player.loc || 'entrance') || { x: 850, y: 500 };   /* 10-23：重新整理後位置還沒還原就先畫（10-22 回報「人物消失、畫面全白」的 reading 'x'） */
     var me = cur.tokens.me;
     if (!me) { me = cur.tokens.me = document.createElement('div'); me.className = 'tok me'; ov.appendChild(me); }
     var look = AV.toCharLook(APP.me.profile.avatar.look), msig = lookKey(look) + size;

@@ -57,6 +57,12 @@
     ['links', 'confirms', 'seenEv'].forEach(function (k) { if (!p[k] || typeof p[k] !== 'object') p[k] = {}; });
     Object.keys(p.links).forEach(function (k) { var s = linkKey(k); if (s !== k) { if (!p.links[s]) p.links[s] = p.links[k]; delete p.links[k]; } });   /* 舊資料的鍵轉成安全的 */
     var d = p.discussion || {}; p.discussion = { partners: Array.isArray(d.partners) ? d.partners : [], checks: d.checks || { read: false, diff: false, complement: false, outcome: false }, notes: d.notes || { diff: '', complement: '', outcome: '' } };
+    /* 10-23：Firebase 不存空陣列，結論的「根據」(refs) 還沒點任何編號時讀回來整欄消失，結論面板 c.refs.map 直接丟錯（10-22 三位同學回報「結論空白／無法結束／無法提交」都帶這條錯誤）。補回預設。 */
+    p.conclusions = p.conclusions.filter(function (c) { return c && typeof c === 'object'; });
+    p.conclusions.forEach(function (c) {
+      if (!Array.isArray(c.refs)) c.refs = c.refs && typeof c.refs === 'object' ? Object.keys(c.refs).map(function (i) { return c.refs[i]; }) : [];
+      ['text', 'tradeoff', 'direction'].forEach(function (k) { if (typeof c[k] !== 'string') c[k] = c[k] == null ? '' : String(c[k]); });
+    });
     p.interviews.forEach(function (r) { if (r && r.items) Object.keys(r.items).forEach(function (k) { if (r.items[k] && !Array.isArray(r.items[k].tags)) r.items[k].tags = []; if (r.items[k] && r.items[k].note === undefined) r.items[k].note = ''; }); });
     return p;
   }

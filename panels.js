@@ -16,10 +16,11 @@
   P.renderAll = function () { ['clue', 'intv', 'cards', 'concl', 'disc', 'cp', 'events'].forEach(P.render); };
   P.render = function (t) { ({ clue: renderClue, intv: renderIntv, cards: renderCards, concl: renderConcl, disc: renderDisc, cp: renderCp, events: renderEvents, ach: renderAch })[t](); };
   /* 成就分頁：自己的指標與徽章＋班級「誰最多」（線上模式讀 er/{sess}/score；本機版只有自己） */
-  function achCtx() { var c = cur(); var cp = (window.ERG_CORE && window.ERG_CP && c) ? (function () { try { var st = window.ERG_CORE.checkpointState(c, me()); return window.ERG_CP.evaluate(st).every(function (x) { return x.ok; }); } catch (e) { return false; } })() : false; return { cpAllOk: cp, shift: c && c.world && c.world.shift, cases: casesTried(), keep: keptBadges() }; }
+  function achCtx() { var c = cur(); var cp = (window.ERG_CORE && window.ERG_CP && c) ? (function () { try { var st = window.ERG_CORE.checkpointState(c, me()); return window.ERG_CP.evaluate(st).every(function (x) { return x.ok; }); } catch (e) { return false; } })() : false; return { cpAllOk: cp, shift: c && c.world && c.world.shift, cases: casesTried(), reports: reportsMade(), keep: keptBadges() }; }
   /* 10-15：成就是照『現在這間房』的紀錄算的，換案例開新房間會歸零；把之前已發布的成就帶回來，已拿到的不收回 */
   function keptBadges() { try { var s = (window.ERG_SCORES || {})[String(me())] || window.ERG_MY_SCORE; return (s && s.badgeIds) ? s.badgeIds.slice() : []; } catch (e) { return []; } }
   /* 10-15：自己進過幾種不同案例的房間（從大廳索引算：成員有我的房間，不同的 case 數） */
+  function reportsMade() { try { return window.ERG_FEEDBACK.mine(APP.storage, me()).filter(function (e) { return e.kind === 'bug'; }).length; } catch (e) { return 0; } }
   function casesTried() { try { var sid = String(me()), seen = {}; DB.listRooms(APP.SESS).forEach(function (r) { var x = (r && r.members !== undefined) ? r : (DB.getRoom(r.code) || {}); if (x.members && x.members[sid]) seen[x.case || 'sms'] = 1; }); return Object.keys(seen).length; } catch (e) { return 0; } }
   P.achCtx = achCtx;
   /* 10-13 技能等級：從自己這個房間的訪談逐字稿算（一次讀自己的一個節點，90 秒內不重讀；送出提問後立刻作廢） */
@@ -349,6 +350,7 @@
       });
       player().chatTurns = (Number(player().chatTurns) || 0) + 1;   /* 成就用：即時訪談送出幾題 */
       P.skInvalidate();
+      try { if (window.ERG_ACH && window.ERG_ACH.noteOffHours) window.ERG_ACH.noteOffHours(player(), now); } catch (e) {}   /* 10-23 課外時間成就 */
       try { if (window.ERG_ACH && window.ERG_ACH.noteQuestion) { var us = lastTurns.filter(function (t) { return t.role === 'u'; }), as = lastTurns.filter(function (t) { return t.role !== 'u'; }); window.ERG_ACH.noteQuestion(player(), { text: text, pid: ent.pid, prev: as.length ? as[as.length - 1].text : '', first: us.length === 0, n: us.length + 1 }); } } catch (e) {}
       save();
       if ($('chatIn')) { $('chatIn').value = ''; $('chatIn').focus(); }
@@ -444,7 +446,7 @@
     cs.forEach(function (c, i) {
       html += '<div class="card" style="box-shadow:var(--sh) var(--sh) 0 var(--ink)"><b>結論 ' + (i + 1) + '</b> <button class="ghost" data-del="' + i + '" style="float:right;padding:0 8px">刪除</button>' +
         '<label>發現<textarea data-ci="' + i + '" data-f="text">' + esc(c.text) + '</textarea></label>' +
-        '<div style="margin-top:4px">根據：' + (c.refs.map(function (r) { return '<span class="ref ' + (ids.indexOf(r) >= 0 ? '' : 'bad') + '">' + esc(r) + '</span>'; }).join('') || '<span class="muted">（點下面的編號加入）</span>') + '</div>' +
+        '<div style="margin-top:4px">根據：' + ((c.refs || []).map(function (r) { return '<span class="ref ' + (ids.indexOf(r) >= 0 ? '' : 'bad') + '">' + esc(r) + '</span>'; }).join('') || '<span class="muted">（點下面的編號加入）</span>') + '</div>' +
         '<div>' + ids.map(function (id) { return '<button class="pill ' + (c.refs.indexOf(id) >= 0 ? 'on' : '') + '" data-ref="' + i + '|' + esc(id) + '">' + esc(id) + '</button>'; }).join('') + '</div>' +
         '<label>取捨<input data-ci="' + i + '" data-f="tradeoff" value="' + esc(c.tradeoff) + '" placeholder="在什麼前提下這樣選、放棄了什麼"></label>' +
         '<label>再設計方向<select data-ci="' + i + '" data-f="direction"><option value="">（請選）</option>' + dirs.map(function (d) { return '<option' + (c.direction === d ? ' selected' : '') + '>' + esc(d) + '</option>'; }).join('') + '</select></label></div>';
@@ -515,7 +517,7 @@
     else if (e.ev.passed) html += passedBlock(e);
     else html += '<div class="card" style="border-color:var(--bad)"><b>已經按過提交，但還有打叉的項目</b><div class="muted" style="font-size:var(--fs-2)">把上面打叉的補完，這裡就會變成綠色的「已通過」。</div></div>';
     p.innerHTML = html + '</details>';
-    var w1d = $('cpW1'); if (w1d) w1d.addEventListener('toggle', function () { cur().cpW1Open = w1d.open; });   /* 記住這間房開過，重畫時不會又收起來 */
+    var w1d = $('cpW1'); if (w1d) w1d.addEventListener('toggle', function () { var cc = cur(); if (cc) cc.cpW1Open = w1d.open; });   /* 記住這間房開過，重畫時不會又收起來 */
     var sb = $('submitBtn'); if (sb) sb.onclick = doSubmit;
     var rb = $('reportBtn'); if (rb) rb.onclick = function () { showReport(e); };
   }

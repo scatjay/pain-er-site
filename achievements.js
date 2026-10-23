@@ -31,6 +31,21 @@
     for (var i = 0; i + 3 <= q.length; i++) { var g = q.substr(i, 3); if (/^[一-鿿]{3}$/.test(g) && prev.indexOf(g) >= 0) return true; }
     return false;
   }
+  /* 10-23 楊老師：非上課時間登入的人也要有成就。每送出一題即時訪談呼叫一次（panels.js），只記次數：
+     n＝上課前後各 60 分鐘以外的題數、rest＝其中發生在「沒有任何班上課的日子」（週一三五六日）的題數、late＝其中 22:00–06:00 的題數。
+     課表與 tools/er_chat_daemon.py 的 CLASS_WINDOWS、teacher_model.js 的 SCHEDULE 一致（test_achievements.js 有對照）。時區固定 UTC+8。 */
+  var SCHED = [{ dow: 2, a: 8 * 60 + 10, b: 10 * 60 }, { dow: 2, a: 12 * 60 + 50, b: 14 * 60 + 40 }, { dow: 4, a: 12 * 60 + 50, b: 14 * 60 + 40 }], OFF_PAD = 60;
+  function offHours(now) {
+    var d = new Date(Number(now) + 8 * 3600000), dow = d.getUTCDay(), m = d.getUTCHours() * 60 + d.getUTCMinutes();
+    var inWin = SCHED.some(function (c) { return c.dow === dow && m >= c.a - OFF_PAD && m <= c.b + OFF_PAD; });
+    return { off: !inWin, rest: !inWin && dow !== 2 && dow !== 4, late: !inWin && (m >= 22 * 60 || m < 6 * 60) };
+  }
+  function noteOffHours(player, now) {
+    var h = offHours(now == null ? Date.now() : now); if (!h.off) return h;
+    var o = player.off && typeof player.off === 'object' ? player.off : (player.off = {});
+    o.n = (o.n || 0) + 1; if (h.rest) o.rest = (o.rest || 0) + 1; if (h.late) o.late = (o.late || 0) + 1;
+    return h;
+  }
   function noteQuestion(player, info) {
     var q = player.q && typeof player.q === 'object' ? player.q : (player.q = {}), t = String(info.text || ''), b = bareQ(t);
     q.n = (q.n || 0) + 1;
@@ -117,10 +132,12 @@
       coreDone: CORE_IDS.filter(function (id) { return who[id]; }).length, coreTotal: CORE_IDS.length,
       rooms: arr(player.visited).length, cards: arr(player.cards).length, events: keys(player.seenEv).length,
       keep: arr(ctx.keep),   /* 10-15：之前在別間房已經解開的成就（從 score/{學號} 讀回來）；換案例開新房間時，已拿到的不會不見 */
+      reports: Number(ctx.reports) || 0,   /* 10-23：回報過遊戲問題幾次（panels.js 的 achCtx 從本機回報紀錄算；過去的回報者由老師端補寫進 score） */
       cases: Number(ctx.cases) || 0,   /* 10-15：進過幾種不同案例的房間（大廳『開一間』的案例選單；由 panels.js 的 achCtx 從大廳索引算） */
       replays: arr(player.replays).length, partners: arr(player.discussion && player.discussion.partners).length,
       conclusions: arr(player.conclusions).length, chatTurns: Number(player.chatTurns || 0), playMin: Number(player.playMin || 0),
       night: !!(player.nightSeen || ctx.shift === 'night'), cpAllOk: !!ctx.cpAllOk,
+      offTurns: Number((player.off || {}).n || 0), offRest: Number((player.off || {}).rest || 0), offLate: Number((player.off || {}).late || 0),
       qEvent: Number((player.q || {}).ev || 0), qWhy: Number((player.q || {}).why || 0), qEcho: Number((player.q || {}).echo || 0), qIntro: Number((player.q || {}).intro || 0), qChain: Number((player.q || {}).chain || 0),
       qKey3: KEY3.filter(function (id) { return Number((((player.q || {}).who) || {})[id] || 0) >= 3; }).length,
       qOpen10: (function (s) { s = String(s || ''); return s.length >= 10 && s.split('y').length - 1 <= 2 && s.split('g').length - 1 === 0; })((player.q || {}).last)
@@ -158,6 +175,13 @@
     { id: 'half_hour', icon: '⏱️', name: '待了半小時', desc: '在急診室裡累計 30 分鐘', test: function (m) { return m.playMin >= 30; } },
     { id: 'marathon', icon: '🛋️', name: '久坐急診', desc: '在急診室裡累計 60 分鐘', test: function (m) { return m.playMin >= 60; } },
     { id: 'night_owl', icon: '🌙', name: '夜班', desc: '進過夜班的急診', test: function (m) { return m.night; } },
+    { id: 'after_hours', icon: '🌆', name: '課後加班', desc: '不是上課時間，也回來訪談（5 題）', test: function (m) { return m.offTurns >= 5; } },
+    { id: 'revisit', icon: '🔁', name: '回頭複習', desc: '沒有課的日子又回來訪談（3 題）', test: function (m) { return m.offRest >= 3; } },
+    { id: 'late_night', icon: '🦉', name: '深夜研究員', desc: '晚上 10 點到清晨 6 點還在訪談（3 題）——研究很重要，也要睡覺', test: function (m) { return m.offLate >= 3; } },
+    { id: 'bug_hunter', icon: '🐞', name: '抓蟲小幫手', desc: '回報過遊戲的問題，幫大家把它修好', test: function (m) { return m.reports >= 1; } },
+    /* 10-23：這兩枚由每晚的審核程式（tools/er_guide_review.py）確認「真的照著做、數字有動」後寫進 score，學生端當作已拿到的成就保留；畫面上自己算不出來，所以 test 一律 false。 */
+    { id: 'guide_followed', icon: '🎯', name: '照著指引做', desc: '回應指引通過審核，而且指引裡至少一件事真的做完了', test: function () { return false; } },
+    { id: 'guide_effect', icon: '📈', name: '調整有效', desc: '回應指引通過審核，兩件以上有進步，或探問、情境感知升級', test: function () { return false; } },
     { id: 'vip', icon: '🎩', name: '見到院長', desc: '在院長巡視的十分鐘裡跟他講到話', test: function (m) { return m.interviewIds.indexOf('superintendent') >= 0; } },
     { id: 'boss', icon: '📋', name: '被主任交辦', desc: '訪談過陳主任', test: function (m) { return m.interviewIds.indexOf('er_director') >= 0; } },
     { id: 'kid_whisperer', icon: '🧒', name: '哄小孩', desc: '從小米口中問到一件真的事', test: function (m) { return m.interviewIds.indexOf('kid') >= 0; } },
@@ -210,5 +234,5 @@
     var grid = '<div class="achGrid">' + bs.map(function (b) { return '<div class="ach ' + (b.ok ? 'on' : '') + '" title="' + esc(b.desc) + '"><div class="achIcon">' + b.icon + '</div><div class="achName">' + esc(b.name) + '</div><div class="achDesc">' + esc(b.desc) + '</div></div>'; }).join('') + '</div>';
     return '<p class="muted" style="font-size:var(--fs-1);margin:4px 0">徽章 ' + got + ' / ' + bs.length + '。這不是分數，只是記錄你在急診室裡做過的事。</p>' + stat + grid;
   }
-  return { DEFS: DEFS, BOARD: BOARD, CORE_IDS: CORE_IDS, SPECIAL: SPECIAL, metrics: metrics, noteQuestion: noteQuestion, chatStats: chatStats, skills: skills, skillsHtml: skillsHtml, badges: badges, earned: earned, summary: summary, leaderboard: leaderboard, html: html, scoreSig: scoreSig, scoreDecide: scoreDecide, makeScoreWatch: makeScoreWatch, PLAYMIN_EVERY: PLAYMIN_EVERY };
+  return { DEFS: DEFS, BOARD: BOARD, CORE_IDS: CORE_IDS, SPECIAL: SPECIAL, metrics: metrics, noteQuestion: noteQuestion, noteOffHours: noteOffHours, offHours: offHours, SCHED: SCHED, chatStats: chatStats, skills: skills, skillsHtml: skillsHtml, badges: badges, earned: earned, summary: summary, leaderboard: leaderboard, html: html, scoreSig: scoreSig, scoreDecide: scoreDecide, makeScoreWatch: makeScoreWatch, PLAYMIN_EVERY: PLAYMIN_EVERY };
 });

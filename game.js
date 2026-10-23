@@ -309,12 +309,12 @@
   /* ───── 第 2 週（2/3）：檢核點＋給你的指引＋回應指引（10-19 楊老師；檢核規則在 week2.js） ─────
      指引：er/{場次}/guide/{學號}（tools/er_guide_publish.py 發布，不含姓名）；回應：er/{場次}/guideResp/{學號} = { a, b, c, t }。
      兩個都只在進大廳時各讀一次（不訂閱），送出時寫一次。 */
-  var GUIDE = { loaded: false, busy: false, g: null, r: null, sid: '' };
+  var GUIDE = { loaded: false, busy: false, g: null, r: null, h: null, sid: '' };
   function loadGuide() {
     var sid = APP.me.sid; if (!sid || !ONLINE || GUIDE.busy || (GUIDE.loaded && GUIDE.sid === sid)) return;
     GUIDE.busy = true; var fdb = firebase.database(), base = 'er/' + APP.SESS + '/';
-    Promise.all([fdb.ref(base + 'guide/' + sid).once('value'), fdb.ref(base + 'guideResp/' + sid).once('value')]).then(function (v) {
-      GUIDE.g = v[0].val(); GUIDE.r = v[1].val(); GUIDE.sid = sid;
+    Promise.all([fdb.ref(base + 'guide/' + sid).once('value'), fdb.ref(base + 'guideResp/' + sid).once('value'), fdb.ref(base + 'guideHist/' + sid).once('value').catch(function () { return { val: function () { return null; } }; })]).then(function (v) {
+      GUIDE.g = v[0].val(); GUIDE.r = v[1].val(); GUIDE.h = v[2].val(); GUIDE.sid = sid;
       /* 老師帳號沒有自己的指引：讀一份去識別的示範（guide/_demo），上課可以直接展示學生看到的樣子 */
       if (!GUIDE.g && multiLoginOk()) return fdb.ref(base + 'guide/_demo').once('value').then(function (d) { GUIDE.g = d.val(); if (GUIDE.g) GUIDE.g.demo = true; GUIDE.loaded = true; GUIDE.busy = false; if ($('lobby').classList.contains('on')) renderLobby(); });
       GUIDE.loaded = true; GUIDE.busy = false;
@@ -372,7 +372,19 @@
     if (!r || !r.t) return '';
     var rev = r.rev, when = new Date(r.t).toLocaleString('zh-TW', { hour12: false });
     if (!rev || Number(rev.at || 0) < Number(r.t)) return '<div id="grReview" style="margin-top:6px;padding:6px 10px;border:var(--bw-s) solid var(--ink);border-radius:var(--r-m);font-size:var(--fs-2)">🕓 <b>審核中</b>　' + esc(when) + ' 送出。每天晚上審一次，明天進大廳會看到結果。</div>';
-    return '<div id="grReview" style="margin-top:6px;padding:6px 10px;border:var(--bw) solid ' + (rev.ok ? 'var(--ok)' : 'var(--bad)') + ';border-radius:var(--r-m);font-size:var(--fs-2)">' + (rev.ok ? '✅ <b>通過</b>' : '↩️ <b>需要補強</b>') + '　' + esc(rev.fb || '') + (rev.ok ? '' : '<div class="muted">照上面的建議改好，明天可以再送一次。</div>') + '</div>';
+    return '<div id="grReview" style="margin-top:6px;padding:6px 10px;border:var(--bw) solid ' + (rev.ok ? 'var(--ok)' : 'var(--bad)') + ';border-radius:var(--r-m);font-size:var(--fs-2)">' + (rev.ok ? '✅ <b>通過</b>' : '↩️ <b>需要補強</b>') + '　' + esc(rev.fb || '') + (rev.ok ? '' : '<div class="muted">照上面的建議改好，明天可以再送一次。</div>') + '</div>' + histHtml();
+  }
+  /* 10-23 楊老師：審核結果要能在自己的頁面備查。每次審核（含重新送出的舊紀錄）都留在 guideHist/{學號}/{送出時間}，只讀、不訂閱。 */
+  function histHtml() {
+    var h = GUIDE.h; if (!h || typeof h !== 'object') return '';
+    var ks = Object.keys(h).sort(function (a, b) { return Number(b) - Number(a); }); if (!ks.length) return '';
+    var rows = ks.map(function (k) {
+      var x = h[k] || {}, e = x.eff || {}, when = new Date(Number(x.t || k)).toLocaleString('zh-TW', { hour12: false });
+      return '<div style="padding:6px 0;border-top:1px solid var(--line,#ccc)"><b>' + (x.ok ? '✅ 通過' : '↩️ 需要補強') + '</b>　' + esc(when) + ' 送出' + (e.total ? '　<span class="muted">指引 ' + esc(e.total) + ' 項：完成 ' + esc(e.done) + '、有進步 ' + esc(e.moved) + '</span>' : '') +
+        '<div style="margin-top:2px">' + esc(x.fb || '') + '</div>' +
+        '<details style="margin-top:2px"><summary class="muted">我當時寫的</summary><div class="muted" style="white-space:pre-wrap">1. ' + esc(x.a || '') + '\n2. ' + esc(x.b || '') + '\n3. ' + esc(x.c || '') + '</div></details></div>';
+    }).join('');
+    return '<details id="grHist" style="margin-top:8px;font-size:var(--fs-2)"><summary><b>📒 我的審核紀錄</b>（' + ks.length + ' 次，也會寄到學校信箱）</summary>' + rows + '</details>';
   }
   /* 房間裡的「檢核」分頁也顯示第 2 週（不含指引全文與回應表單：那兩個在大廳） */
   APP.week2Summary = function () {
