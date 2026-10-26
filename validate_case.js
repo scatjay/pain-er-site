@@ -156,6 +156,8 @@ function validate(c, fileTag) {
   Object.keys(c.layersOverride || {}).forEach(function (k) {
     if (!existing[k]) e('layersOverride 角色不存在：' + k);
     var ly = c.layersOverride[k]; if (len(ly.surface) < 4 || !Array.isArray(ly.events) || ly.events.length < 2 || len(ly.need) < 40) e('layersOverride[' + k + '] 欄位不完整（surface、events≥2、need≥40 字）');
+    /* 10-26：選填 knows／unknown／rules（取代該角色在這個案例裡的同名欄位；不填就沿用簡訊案的）。給了就要是非空字串陣列 */
+    ['knows', 'unknown', 'rules'].forEach(function (f) { if (ly[f] !== undefined && (!Array.isArray(ly[f]) || !ly[f].length || ly[f].some(function (x) { return len(x) < 4; }))) e('layersOverride[' + k + '].' + f + ' 要是非空的字串陣列（每句至少 4 字）'); });
   });
   if (Object.keys(c.layersOverride || {}).length < 4) e('layersOverride 至少給 4 位既有角色（讓他們在這個案例裡有不同的說法）');
 

@@ -614,7 +614,7 @@
   function onNpcClick(id) {
     var d = VC.npcPopup(cur.world, LAYOUT, popState(), id, S.simMin()); if (!d) return;
     var ent = d.ent, pos = d.pos, m = d.mutter, av = d.av, here = d.here, onHall = d.onHall;
-    var html = '<b>' + esc(ent.name) + '</b> <span class="muted">' + esc((ent.persona && ent.persona.title) || ent.kind || '') + '</span>' +
+    var html = '<b>' + esc(ent.name) + '</b> <span class="muted">' + esc((ent.persona && ent.persona.title) || ent.kind || '') + '</span>' + (window.ERG_TYPE_UI ? window.ERG_TYPE_UI.badge(ent.pid) : '') +
       '<div class="popLine">正在：' + esc(pos.act || '待著') + (av.fatigue && av.fatigue.level >= 2 ? '　看起來很累' : '') + '</div>' +
       (m ? '<div class="popLine muted">「' + esc(m.text) + '」</div>' : '') +
       '<div class="popLine">' + (here ? esc(d.levelText) : '在' + esc(d.roomName) + '，要走過去才問得到') + '</div><div class="row popBtns">' +

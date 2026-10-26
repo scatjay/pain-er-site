@@ -16,7 +16,9 @@
   P.renderAll = function () { ['clue', 'intv', 'cards', 'concl', 'disc', 'cp', 'events'].forEach(P.render); };
   P.render = function (t) { ({ clue: renderClue, intv: renderIntv, cards: renderCards, concl: renderConcl, disc: renderDisc, cp: renderCp, events: renderEvents, ach: renderAch })[t](); };
   /* 成就分頁：自己的指標與徽章＋班級「誰最多」（線上模式讀 er/{sess}/score；本機版只有自己） */
-  function achCtx() { var c = cur(); var cp = (window.ERG_CORE && window.ERG_CP && c) ? (function () { try { var st = window.ERG_CORE.checkpointState(c, me()); return window.ERG_CP.evaluate(st).every(function (x) { return x.ok; }); } catch (e) { return false; } })() : false; return { cpAllOk: cp, shift: c && c.world && c.world.shift, cases: casesTried(), reports: reportsMade(), keep: keptBadges() }; }
+  function achCtx() { var c = cur(); var cp = (window.ERG_CORE && window.ERG_CP && c) ? (function () { try { var st = window.ERG_CORE.checkpointState(c, me()); return window.ERG_CP.evaluate(st).every(function (x) { return x.ok; }); } catch (e) { return false; } })() : false; return { cpAllOk: cp, shift: c && c.world && c.world.shift, cases: casesTried(), reports: reportsMade(), keep: keptBadges(), sb: window.ERG_MY_SBD || null, prevSk: prevW8Sk() }; }
+  /* 10-27 W8 技能：上次已發布的等級（等級不倒退） */
+  function prevW8Sk() { try { var s = window.ERG_MY_SCORE || {}; return { story: s.skStory, source: s.skSource }; } catch (e) { return {}; } }
   /* 10-15：成就是照『現在這間房』的紀錄算的，換案例開新房間會歸零；把之前已發布的成就帶回來，已拿到的不收回 */
   function keptBadges() { try { var s = (window.ERG_SCORES || {})[String(me())] || window.ERG_MY_SCORE; return (s && s.badgeIds) ? s.badgeIds.slice() : []; } catch (e) { return []; } }
   /* 10-15：自己進過幾種不同案例的房間（從大廳索引算：成員有我的房間，不同的 case 數） */
@@ -54,7 +56,7 @@
     if (prev.ctx && sk.ctx.lv > prev.ctx) up['情境感知'] = true;
     if (!prev.ask || !prev.ctx || sk.ask.lv !== prev.ask || sk.ctx.lv !== prev.ctx) { pl.skillLv = { ask: sk.ask.lv, ctx: sk.ctx.lv }; save(); }
     if (up['探問'] || up['情境感知']) P._lvUp = Object.assign(P._lvUp || {}, up);
-    return A.skillsHtml(sk, esc, P._lvUp);
+    return sk;
   }
   function renderAch() {
     var p = $('p-ach'), A = window.ERG_ACH; if (!p || !A || !cur()) return;
@@ -62,7 +64,9 @@
     var m = A.metrics(player(), achCtx());
     var board = window.ERG_SCORES ? A.leaderboard(window.ERG_SCORES, 3) : null;
     var bh = board ? '<h2>班上誰最多</h2><div class="board">' + board.map(function (b) { return '<div class="b"><b>' + esc(b.label) + '</b>' + (b.rows.length ? '<ol style="margin:4px 0 0 18px;padding:0;font-size:var(--fs-2)">' + b.rows.map(function (r) { return '<li>' + esc(r.name) + '　' + r.v + ' ' + esc(b.unit) + '</li>'; }).join('') + '</ol>' : '<div class="muted" style="font-size:var(--fs-1)">還沒有人</div>') + '</div>'; }).join('') + '</div>' : (APP.online ? '<p class="muted" style="font-size:var(--fs-1)">正在讀取班級排行…</p>' : '<p class="muted" style="font-size:var(--fs-1)">本機版沒有班級排行；線上版會列出班上誰最多。</p>');
-    p.innerHTML = '<h2>我的技能</h2>' + skillBlock(A, player()) + '<h2>我的成就</h2>' + A.html(m, esc) + bh;
+    var open = {}; Array.prototype.forEach.call(p.querySelectorAll('details.unitGrp'), function (d) { open[d.getAttribute('data-unit')] = d.open; });   /* 重畫前記住哪幾組是展開的 */
+    var sk = skillBlock(A, player()), cu = (window.ERG_W8_ON && window.ERG_W8_ON()) ? 'W8' : 'W7';
+    p.innerHTML = '<h2>我的技能與成就</h2>' + A.html(m, esc, { current: cu, sk: sk, fresh: P._lvUp, open: open }) + bh;
     if (window.ERG_PUBLISH_SCORE) window.ERG_PUBLISH_SCORE();
   }
   /* 10-18：成就／升級通知、「成就」分頁紅點、頂列固定顯示技能等級（訪談技能三級不用打開成就分頁也看得到） */
@@ -176,7 +180,7 @@
     /* 選了現場的人在訪談時，急診室的時間先暫停（不然問到一半他就照班表走掉了） */
     c0.intvHold = !!sel;
     var html = goNote() + watchNote() + '<div class="muted" style="font-size:var(--fs-2)">這間房裡的人（只有在同一房間才問得到）：</div><div class="row" style="margin:6px 0">' +
-      (here.length ? here.map(function (h) { return '<button class="pill ' + (sel && sel.ent.id === h.ent.id ? 'on' : '') + '" data-npc="' + esc(h.ent.id) + '">' + esc(h.ent.name) + '・' + ({ free: '可聊', short: '簡短', blocked: '正忙' })[h.av.level] + '</button>'; }).join('') : '<span class="muted">現在這間房沒有人。</span>') + '</div>';
+      (here.length ? here.map(function (h) { return '<button class="pill ' + (sel && sel.ent.id === h.ent.id ? 'on' : '') + '" data-npc="' + esc(h.ent.id) + '">' + esc(h.ent.name) + '・' + ({ free: '可聊', short: '簡短', blocked: '正忙' })[h.av.level] + (window.ERG_TYPE_UI ? window.ERG_TYPE_UI.badge(h.ent.pid, true) : '') + '</button>'; }).join('') : '<span class="muted">現在這間房沒有人。</span>') + '</div>';
     /* 其他房間的人：灰色、不能選，後面標在哪間房（10-12 楊老師）。要訪談就先走過去——用地圖或下方的房間按鈕。 */
     html += '<div class="muted" style="font-size:var(--fs-2);margin-top:8px">其他房間的人（點一下，直接過去找他）：</div><div id="allNpc" style="font-size:var(--fs-2);margin:4px 0 6px">' + allNpcHtml() + '</div>';
     if (recs.length) html += '<div class="muted" style="font-size:var(--fs-2);margin-top:8px">我問過的人（人不在也可以回來打勾）：</div><div class="row" id="myRecs" style="margin:4px 0 6px">' + recs.map(function (r) { var pr = CL.progress(r); return '<button class="pill ' + (recPid === r.personaId ? 'on' : '') + '" data-rec="' + esc(r.personaId) + '">' + esc(nameOf(r.personaId)) + '　' + pr.done + '/' + pr.total + (pr.complete ? ' ✔' : '') + '</button>'; }).join('') + '</div>';
@@ -184,7 +188,7 @@
     var ent = sel ? sel.ent : null, pid = recPid, ix = recFor(pid), rec = ix >= 0 ? recs[ix] : null;
     if (sel) {
       var persona = ent.persona;
-      html += '<div class="card" style="margin-top:6px"><b>' + esc(ent.name) + '</b>　<span class="tag ' + (persona.material === '模擬' ? 'warn' : '') + '">素材：' + esc(persona.material || '模擬') + '</span><div class="muted" style="font-size:var(--fs-1)">' + esc(persona.title || '') + '</div>' +
+      html += '<div class="card" style="margin-top:6px"><b>' + esc(ent.name) + '</b>　<span class="tag ' + (persona.material === '模擬' ? 'warn' : '') + '">素材：' + esc(persona.material || '模擬') + '</span><div class="muted" style="font-size:var(--fs-1)">' + esc(persona.title || '') + '</div>' + (window.ERG_TYPE_UI ? window.ERG_TYPE_UI.badge(ent.pid) : '') + (window.ERG_TYPE_UI ? window.ERG_TYPE_UI.ice(ent.pid) : '') +
         '<div style="font-size:var(--fs-2)">' + ({ free: '現在可以好好聊。', short: '正在忙，只能簡短回答（' + esc(sel.av.reason) + '）。', blocked: '現在不方便（' + esc(sel.av.reason) + '），晚一點再來。' })[sel.av.level] + '</div>' +
         '<div class="muted" id="holdNote" style="font-size:var(--fs-1)">⏸ 你在訪談，急診室的時間先暫停；切到別的分頁或走開就會繼續。</div></div>';
       var live = liveReady();

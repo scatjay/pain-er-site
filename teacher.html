@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>痛點急診室 老師後台</title>
+<title>痛點急診室 老師後台・訪談監看</title>
 <style>
 :root{--bg:#fbf7ee;--panel:#fff;--panel2:#f4eedf;--ink:#1e1e1e;--muted:#6b6b6b;--line:#d9d2c0;--ok:#2b8a3e;--okbg:#d3f9d8;--bad:#c92a2a;--badbg:#ffe3e3;--yellow:#ffe066;--onyellow:#1e1e1e;--info:#1864ab;--infobg:#d0ebff;--fs:15px}
 @media (prefers-color-scheme:dark){:root{--bg:#10191f;--panel:#18262e;--panel2:#21343f;--ink:#e8eff2;--muted:#9fb0b9;--line:#2c3f4a;--ok:#69db7c;--okbg:#173b22;--bad:#ff8787;--badbg:#4a1c1c;--yellow:#e0b82a;--onyellow:#1e1e1e;--info:#74c0fc;--infobg:#14344f;color-scheme:dark}}
@@ -116,6 +116,7 @@ details.sysbox{margin-top:4px}details.sysbox>summary{cursor:pointer;min-height:3
 .skdot{display:inline-block;position:relative;width:24px;height:24px;line-height:20px;text-align:center;border-radius:50%;font-weight:900;box-sizing:border-box;color:#1e1e1e;border:1.5px solid #1e1e1e}
 .skdot.sk-lv1{background:#b7c6d4}.skdot.sk-lv2{background:#e3e9ed;box-shadow:0 0 0 2px #7f929d}.skdot.sk-lv3{background:#ffd24d;box-shadow:0 0 0 2px #c98f0a}.skdot.sk-lv3::after{content:"★";position:absolute;right:-8px;top:-9px;font-size:12px;line-height:1;color:#f5c542;-webkit-text-stroke:.7px #8a5a00}
 .skdot.ring{border:3px solid #e8590c}
+.skw8{margin-top:10px;display:flex;gap:6px 24px;flex-wrap:wrap;align-items:flex-start}.skw8>b{flex:1 0 100%}.skw8-col{flex:1;min-width:240px}.skw8-row{display:flex;align-items:center;gap:6px;margin:3px 0}.skw8-nm{width:110px;flex:none}.skw8-tr{flex:1;height:14px;background:var(--panel2);border:1px solid var(--line);border-radius:7px;overflow:hidden}.skw8-tr>i{display:block;height:100%;background:var(--info)}.skw8-n{width:56px;text-align:right;font-variant-numeric:tabular-nums}
 /* 每位學生的審核建議（10-22 分色版面） */
 :root{--ctA-bg:#dbe9ff;--ctA-fg:#17407a;--ctA-bd:#6b9be0;--ctB-bg:#dcf5e0;--ctB-fg:#14541f;--ctB-bd:#5eb272;--ctC-bg:#f1e1ff;--ctC-fg:#55267f;--ctC-bd:#b27fe0;--rvg-bg:#eef9f0;--rvg-bg2:#e3f3e7;--rvg-bar:#2b8a3e;--rvf-bg:#fff4e8;--rvf-bg2:#ffead2;--rvf-bar:#e8590c;--rvz:#f6f1e4}
 @media (prefers-color-scheme:dark){:root{--ctA-bg:#1c3a5e;--ctA-fg:#c9e0ff;--ctA-bd:#5b86c4;--ctB-bg:#1d4a2b;--ctB-fg:#c6f3d1;--ctB-bd:#4f9c63;--ctC-bg:#43285f;--ctC-fg:#e9d6fb;--ctC-bd:#9b6cc8;--rvg-bg:#16301f;--rvg-bg2:#1b3a26;--rvg-bar:#69db7c;--rvf-bg:#3a2713;--rvf-bg2:#44301a;--rvf-bar:#ffa94d;--rvz:#1d2c35}}
@@ -132,6 +133,27 @@ details.sysbox{margin-top:4px}details.sysbox>summary{cursor:pointer;min-height:3
 #revRows td.rvn{min-width:10.5em;white-space:nowrap}.rvid{font-family:ui-monospace,Consolas,'Courier New',monospace;font-variant-numeric:tabular-nums;font-weight:800;margin-right:6px}
 #revRows td.rvg,#revRows td.rvf,#revRows td.rve{min-width:13em}
 [hidden]{display:none!important}
+/* SHARED-DASH-CSS:BEGIN（teacher.html 與 sb_dashboard.html 這一段必須一模一樣；test_sb_dashboard.js 逐字比對） */
+:root{--warn:#7a5200;--warnbg:#fff3bf}
+@media (prefers-color-scheme:dark){:root{--warn:#ffd43b;--warnbg:#4a3a10}}
+.dnav{display:inline-flex;gap:4px;flex-wrap:wrap;align-items:center}
+.dnav a{display:inline-flex;align-items:center;min-height:36px;padding:3px 12px;border:2px solid var(--ink);border-radius:8px;background:var(--panel);color:var(--ink);font-weight:700;text-decoration:none}
+.dnav a:hover{background:var(--panel2)}
+.dnav a[aria-current=page]{background:var(--yellow);color:var(--onyellow)}
+@media (max-width:760px){.dnav a{min-height:44px}}
+.tl{display:inline-flex;align-items:center;gap:4px;padding:0 8px;border-radius:999px;border:1px solid currentColor;font-size:.82em;font-weight:800;white-space:nowrap}
+.tl::before{content:"";width:.65em;height:.65em;border-radius:50%;background:currentColor}
+.tl.ok{background:var(--okbg);color:var(--ok)}.tl.warn{background:var(--warnbg);color:var(--warn)}.tl.bad{background:var(--badbg);color:var(--bad)}.tl.info{background:var(--infobg);color:var(--info)}
+.tl3{margin-top:6px}.tl3 .tl{margin:0 2px}
+.sg{border:2px solid var(--ink);border-left-width:8px;border-radius:10px;padding:8px 10px;margin:8px 0;background:var(--panel)}
+.sg.lv-bad{border-left-color:var(--bad)}.sg.lv-warn{border-left-color:var(--warn)}.sg.lv-info{border-left-color:var(--info)}
+.sg-h{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.sg-w{font-size:.88em;color:var(--muted);margin-top:4px}.sg-a{margin-top:4px}
+.sg .say{margin:4px 0;padding-left:8px;border-left:3px solid var(--info)}
+.sg-n,.sg-more,.sg-doc{margin-top:6px}.sg-n>summary,.sg-more>summary,.sg-doc>summary{cursor:pointer;min-height:32px;display:flex;align-items:center;color:var(--muted);font-size:.9em}
+.sg-n>div{padding:2px 0 4px;font-size:.92em;overflow-wrap:anywhere}
+.sg-empty{padding:6px 0}
+body.proj .priv{display:none!important}
+/* SHARED-DASH-CSS:END */
 </style>
 </head>
 <body>
@@ -151,10 +173,10 @@ details.sysbox{margin-top:4px}details.sysbox>summary{cursor:pointer;min-height:3
   </div>
 </div>
 <div id="dashboard" hidden>
-<div class="top"><h1>痛點急診室 老師後台</h1>
+<div class="top"><h1>痛點急診室 老師後台</h1><span id="dnavBox"></span>
   <label class="muted">週次・班級 <select id="sessSel"></select></label> <span class="muted small" id="weekNote"></span>
   <button id="deidBtn" title="學號、姓名、信箱換成代號，投影時用">去識別化：關</button><button id="projBtn" title="字放大、藏掉次要資訊">投影模式：關</button>
-  <span class="small muted" id="whoami" style="font-size:.85em"></span><a id="sbLink" href="sb_dashboard.html" style="font-weight:700">故事板儀表板 →</a><button id="logoutBtn" class="ghost">登出</button></div>
+  <span class="small muted" id="whoami" style="font-size:.85em"></span><button id="logoutBtn" class="ghost">登出</button></div>
 
 <div class="clsbar" id="clsBar" role="status" aria-live="polite"><span id="clsOnline" class="onlbig" title="現在有幾位學生在線上（5 分鐘內有心跳）"></span><span id="clsNow">讀取中…</span><span id="clsNext" class="muted"></span><span class="grow"></span><span id="clsUpd" class="muted"></span><button id="clsAuto" class="sm ghost" hidden>回到自動</button><button id="clsRefresh" class="sm" title="重新讀取個人指引，並重算狀態、漏斗、介入清單與所有分頁">立即更新</button></div>
 
@@ -179,6 +201,7 @@ details.sysbox{margin-top:4px}details.sysbox>summary{cursor:pointer;min-height:3
 <section class="pane" data-pane="st">
   <div class="kpi pk" id="kp_st" role="group" aria-label="學生狀態關鍵數字"></div>
   <div class="projNote muted card">投影模式：個別學生的名單與引導建議不顯示（只留全班的人數與共同問題）。</div>
+  <div class="card stPriv" id="stAct"></div>
   <div class="st2">
     <div class="stL">
       <div class="card" id="stFunnel">載入中…</div>
@@ -288,7 +311,7 @@ details.sysbox{margin-top:4px}details.sysbox>summary{cursor:pointer;min-height:3
   <div class="card scroll" id="usage"></div>
 </section>
 
-<div class="ftnote"><p><b>要調整設定或處理資料，請在 Claude Code 跟助理說。</b></p><p>資料來自 Firebase 專案 gen-lang-client-0556836042（Spark 免費方案，沒有綁帳單）。檢核點用遊戲同一套規則計算。去識別化：學號、姓名、信箱換成當場次的固定代號（學生01、02…）。</p></div>
+<div class="ftnote"><p><b>要調整設定或處理資料，請在 Claude Code 跟助理說。</b></p><p>資料來自 Firebase 專案 gen-lang-client-0556836042（Spark 免費方案，沒有綁帳單）。檢核點用遊戲同一套規則計算。去識別化：學號、姓名、信箱換成當場次的固定代號（學生01、02…）。</p><div id="legend"></div></div>
 </div>
 </div>
 <aside id="stDrawer" role="dialog" aria-modal="true" aria-labelledby="stDrawerT" hidden></aside>
@@ -299,17 +322,17 @@ details.sysbox{margin-top:4px}details.sysbox>summary{cursor:pointer;min-height:3
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-<script src="er_firebase.js?v=202610270013"></script>
-<script src="checklist.js?v=202610270013"></script>
-<script src="checkpoints.js?v=202610270013"></script>
-<script src="avatar.js?v=202610270013"></script>
-<script src="local_db.js?v=202610270013"></script>
-<script src="app_core.js?v=202610270013"></script>
-<script src="achievements.js?v=202610270013"></script><script src="remote_db.js?v=202610270013"></script><script src="summary_render.js?v=202610270013"></script>
-<script src="layout.js?v=202610270013"></script>
-<script src="minimap.js?v=202610270013"></script><script src="map_layout.js?v=202610270013"></script><script src="skill_badge.js?v=202610270013"></script>
-<script src="personas_inclusive.js?v=202610270013"></script><script src="er_data.js?v=202610270013"></script><script src="npc_voice.js?v=202610270013"></script><script src="personas.js?v=202610270013"></script>
-<script src="week2.js?v=202610270013"></script><script src="teacher_model.js?v=202610270013"></script>
+<script src="er_firebase.js?v=202610270243"></script>
+<script src="checklist.js?v=202610270243"></script>
+<script src="checkpoints.js?v=202610270243"></script>
+<script src="avatar.js?v=202610270243"></script>
+<script src="local_db.js?v=202610270243"></script>
+<script src="app_core.js?v=202610270243"></script>
+<script src="achievements.js?v=202610270243"></script><script src="remote_db.js?v=202610270243"></script><script src="summary_render.js?v=202610270243"></script>
+<script src="layout.js?v=202610270243"></script>
+<script src="minimap.js?v=202610270243"></script><script src="map_layout.js?v=202610270243"></script><script src="skill_badge.js?v=202610270243"></script>
+<script src="personas_inclusive.js?v=202610270243"></script><script src="er_data.js?v=202610270243"></script><script src="npc_voice.js?v=202610270243"></script><script src="personas.js?v=202610270243"></script>
+<script src="week2.js?v=202610270243"></script><script src="teacher_model.js?v=202610270243"></script>
 <script>
 /* 教師名單：只有這裡的 Google 帳號能進。要加人就加在這裡（改完重新部署；資料庫規則 tools/er_after_google_enabled.py 也要加）。 */
 var TEACHER_EMAILS = ['scatjay@gmail.com', 'prof.chwu@mx.nthu.edu.tw', 'nthuchwu@gapp.nthu.edu.tw'];   /* 10-16 楊老師：清大吳智鴻老師（觀摩用，含後台） */
@@ -507,12 +530,11 @@ var CLASS_WINDOWS = [].concat(
     auth.currentUser.getIdToken().then(function (tok) { return fetch(window.ERG_FB.databaseURL + '/er.json?shallow=true&auth=' + encodeURIComponent(tok)); }).then(function (r) { return r.ok ? r.json() : {}; }).then(function (v) { fill(Object.keys(v || {})); }).catch(function () {});
     /* 10-19 楊老師：「後台還是沒有看到上週四的選單」「應該是分成週次來分析和呈現」「選單也更新一下」。
        三班三週共用一個場次（ER-20261013），選單改成「週次 × 班級」：value＝場次|週次|班級；週次 0＝三週累計、班級空＝全部班級。 */
-    var MENU = [['0', '', '全部（三週累計，三班）']];
-    [['1', ['10/13', '10/13', '10/15（上週四）']], ['2', ['10/20', '10/20', '10/22']], ['3', ['10/27', '10/27', '10/29']]].forEach(function (w) {
-      MENU.push([w[0], '', w[0] + '/3（W' + (5 + Number(w[0])) + '）三班']);
-      [['二丙', 0], ['二乙', 1], ['二甲', 2]].forEach(function (c) { MENU.push([w[0], c[0], '　└ ' + w[0] + '/3（W' + (5 + Number(w[0])) + '）' + c[0] + '（' + w[1][c[1]] + ' 上課）']); });
-    });
-    var fillMenu = function () { var sel = $('sessSel'), cur = sel.value; sel.innerHTML = MENU.map(function (m) { var v = 'ER-20261013|' + m[0] + '|' + m[1]; return '<option value="' + esc(v) + '">' + esc(m[2]) + '</option>'; }).join(''); sel.value = cur && sel.querySelector('option[value="' + cur + '"]') ? cur : 'ER-20261013|' + (Date.now() >= Date.parse('2026-10-20T07:10:00+08:00') ? '2' : '1') + '|'; };
+    /* 10-27：選單、預設值、記住的選擇都改用 teacher_model.js 的共用函式（故事板儀表板同一套）；預設＝今天或最近一堂課，手動選過的記在 sessionStorage 'erg_t_rm' */
+    var fillMenu = function () {
+      var sel = $('sessSel'); sel.innerHTML = TMODEL.menuOptions(clk()).map(function (o) { return '<option value="' + esc(o.value) + '">' + esc(o.label) + '</option>'; }).join('');
+      var v = TMODEL.filterValue({ week: F0.week, cls: F0.cls }); sel.value = sel.querySelector('option[value="' + v + '"]') ? v : TMODEL.UNIT_SESS + '|0|';
+    };
     fill = function () { fillMenu(); };   /* 場次清單固定，不再列其他日期的舊場次（10-13 之前的每日場次已停用） */
     fillMenu();
     var firstMenu = true;
@@ -1033,7 +1055,10 @@ var CLASS_WINDOWS = [].concat(
   var stManual = false, stCC = null, stPrevCls = '', stLoading = false, stReadMs = 300000, stGuideBytes = 0, LOAD_KEYS = ['profiles', 'presence', 'chat', 'score', 'guideResp', 'guide'];
   var LOAD_NAME = { profiles: '名單', presence: '在線', chat: '逐字稿', score: '分數', guideResp: '指引回應', guide: '個人指引' };
   stCC = TMODEL.currentClass(clk()); stF.cls = stCC.cls;
-  try { var rs0 = JSON.parse(sessionStorage.getItem('erg_t_rm') || '{}'); rmWeek = Number(rs0.week) || 0; if (rs0.manual && typeof rs0.cls === 'string') { stF.cls = rs0.cls; stManual = true; } } catch (e) {}
+  /* 10-27：起點＝網址 ?f=週|班（從故事板儀表板連過來時帶著）＞同一分頁記住的手動選擇＞今天或最近一堂課；週次也一起還原（以前只還原班級，重新整理會跳回預設週次） */
+  var F0 = TMODEL.resolveFilter(clk(), location.search, sessionStorage); rmWeek = F0.week; stF.cls = F0.cls; stManual = F0.manual;
+  function navDraw() { var el = $('dnavBox'); if (el) el.innerHTML = TMODEL.navHtml('talk', { week: WEEK, cls: stF.cls, manual: stManual }, location.search, isLocal); }
+  navDraw(); if ($('legend')) $('legend').innerHTML = TMODEL.legendHtml();
   function loadedN() { return LOAD_KEYS.filter(function (k) { return loaded[k]; }).length; }
   function loadedAll() { return loadedN() >= LOAD_KEYS.length; }
   function stMark(k, failed) { if (!loaded[k]) loaded[k] = failed ? 'fail' : 'ok'; if (loadedAll() && !stUpd) stUpd = Date.now(); drawClsBar(); stSchedule(); }
@@ -1052,13 +1077,8 @@ var CLASS_WINDOWS = [].concat(
   }
   function drawClsBar() {
     try { drawOnline(); } catch (e) {}
-    var bar = $('clsBar'); if (!bar || !stCC) return; var c = stCC, now = '', pf = c.phase;
-    if (pf === 'during') now = '<b>現在：' + esc(c.cls) + '・上課中</b>（' + c.start + '–' + c.end + '，還有 ' + c.minsToEnd + ' 分）';
-    else if (pf === 'before') now = '<b>現在：' + esc(c.cls) + '・上課前</b>（' + c.start + ' 開始，還有 ' + c.minsToStart + ' 分）';
-    else if (pf === 'after') now = '<b>現在：' + esc(c.cls) + '・剛下課</b>（' + c.end + ' 下課，已過 ' + Math.max(0, -c.minsToEnd) + ' 分）';
-    else now = '<b>現在：不在上課時段</b>（預設看最近一堂：' + esc(c.cls) + ' ' + c.dowName + ' ' + c.start + '–' + c.end + '）';
-    var nx = c.next; $('clsNext').textContent = nx ? '下一堂：' + nx.cls + ' ' + nx.dowName + ' ' + nx.start + (pf === 'idle' ? '（還有 ' + fmtIn(nx.minsToStart) + '）' : '') : '';
-    $('clsNow').innerHTML = now; bar.classList.toggle('during', pf === 'during');
+    var bar = $('clsBar'); if (!bar || !stCC) return; var c = stCC, pf = c.phase, cb = TMODEL.classBar(c);
+    $('clsNext').textContent = cb.nextText; $('clsNow').innerHTML = cb.nowHtml; bar.classList.toggle('during', cb.during);
     var u = $('clsUpd');
     if (stLoading) u.innerHTML = '<span class="ld" aria-hidden="true"></span>更新中…';
     else if (!loadedAll()) u.innerHTML = '<span class="ld" aria-hidden="true"></span>讀取中 ' + loadedN() + '／' + LOAD_KEYS.length + '（' + esc(LOAD_KEYS.filter(function (k) { return !loaded[k]; }).map(function (k) { return LOAD_NAME[k]; }).join('、')) + ' 還沒到）';
@@ -1081,7 +1101,14 @@ var CLASS_WINDOWS = [].concat(
   setInterval(stTick, 60000);
   $('clsRefresh').onclick = function () { stRefresh(false); };
   $('clsAuto').onclick = function () { stManual = false; stCC = TMODEL.currentClass(clk()); stF.cls = stCC.cls; stF.stage = stF.hint = stF.cp = ''; stAll(); toast('已回到自動：' + stCC.cls); };
-  function stAll() { try { renderRoomList(); } catch (e) { console.error(e); } if (!stOut) return; stV = TMODEL.scope(stOut, stF.cls); renderFunnel(); renderIntervene(); renderNear(); renderCommons(); renderStList(); drawClsBar(); }
+  function stAll() { try { renderRoomList(); } catch (e) { console.error(e); } if (!stOut) return; stV = TMODEL.scope(stOut, stF.cls); renderAct(); renderFunnel(); renderIntervene(); renderNear(); renderCommons(); renderStList(); drawClsBar(); }
+  /* 10-27 楊老師：「要有介入的建議」——班級層級的「現在可以怎麼做」（規則與門檻在 teacher_model.js 的 suggestInterview，有單元測試；故事板儀表板同一個呈現） */
+  function renderAct() {
+    var box = $('stAct'); if (!box) return; var list = TMODEL.suggestInterview(stOut, stF.cls), w8 = WEEK === 3, sk = w8 ? stOut.rows.filter(function (r) { return !stF.cls || r.cls === stF.cls; }).map(function (r) { return Object.assign({ sid: r.sid, cls: r.cls }, TMODEL.skW8Of((scores || {})[r.sid])); }) : [];
+    if (w8) list = TMODEL.sgSort(list.concat(TMODEL.suggestSkillW8(sk, stF.cls)));
+    box.innerHTML = '<h3>現在可以怎麼做（' + esc(TMODEL.filterLabel({ week: WEEK, cls: stF.cls })) + '）</h3><div class="muted small">依據是可以對照的數字；動作與話術只給老師看，不會自動送給學生。名單點開才看得到，預設用代號。</div>' +
+      TMODEL.suggestHtml(list, { nameOf: stName, empty: '目前沒有達到門檻的事項。' }) + (w8 ? TMODEL.skW8Html(TMODEL.skW8Dist(sk), SKB.badge) : '') + TMODEL.sgDocHtml(w8 ? TMODEL.SG_TALK_DOC.concat([TMODEL.SG_SKW8_DOC]) : TMODEL.SG_TALK_DOC);
+  }
   var ST_GLYPH = { S0: '○', S1: '◔', S2: '⚠', S3: '▶', S4: '✔' }, ST_NAME = { S0: '未綁定', S1: '沒開口', S2: '卡住', S3: '進行中', S4: '完成' }, CIRC = ['①', '②', '③', '④', '⑤', '⑥'];
   var ST_SUB = { noroom: '沒進房', noask: '進房沒開口', start: '剛開始', run: '', time: '花時間沒進展' };
   function stSchedule() { clearTimeout(stT); stT = setTimeout(function () { try { renderStatus(); } catch (e) { console.error(e); } }, 400); }
@@ -1161,7 +1188,7 @@ var CLASS_WINDOWS = [].concat(
 
   /* 列表 */
   /* 頁首選單與各分頁（含隱藏的舊班級下拉）的班級保持同一個值 */
-  function syncMenu() { var sel = $('sessSel'); if (!sel || !sel.options.length) return; var v = 'ER-20261013|' + WEEK + '|' + (stF.cls || ''); if (sel.value !== v && sel.querySelector('option[value="' + v + '"]')) sel.value = v; }
+  function syncMenu() { navDraw(); var sel = $('sessSel'); if (!sel || !sel.options.length) return; var v = 'ER-20261013|' + WEEK + '|' + (stF.cls || ''); if (sel.value !== v && sel.querySelector('option[value="' + v + '"]')) sel.value = v; }
   function setClsAll(cls) {
     var ch = []; cls = cls || '';
     ['fCls', 'qCls', 'rvCls'].forEach(function (id) { var el = $(id); if (!el) return; if (cls && !Array.prototype.some.call(el.options, function (o) { return o.value === cls; })) { var o = document.createElement('option'); o.value = cls; o.textContent = cls; el.appendChild(o); } if (el.value !== cls) { el.value = cls; ch.push(id); } });
@@ -1196,7 +1223,7 @@ var CLASS_WINDOWS = [].concat(
     Array.prototype.forEach.call($('stFx').querySelectorAll('[data-fx]'), function (b) { b.onclick = function () { var k = b.dataset.fx; if (k === '*') { stF.cls = stF.stage = stF.hint = stF.cp = stF.q = ''; stF.online = false; } else stF[k] = (k === 'online' ? false : ''); if (k === '*' || k === 'cls') { stManual = true; stAll(); } else renderStList(); }; });
     $('stList').innerHTML = rows.length ? '<table><thead><tr><th>狀態</th><th>學生</th><th>進度 <small>（累計）</small></th><th>提問 <small>（' + scope + '）</small></th><th class="hm">技能・成就 <small>（累計）</small></th><th class="hm">最近</th><th>引導</th></tr></thead><tbody>' + rows.map(function (r) {
       var f = r.cp.first, yn = r.ask.n >= 5 ? '・是非 ' + Math.round(r.ask.ynRatio * 100) + '%' : '';
-      return '<tr data-sid="' + esc(r.sid) + '"><td data-l="狀態">' + stChip(r.stage, r.sub) + '</td><td data-l="學生"><button class="lk" data-open="' + esc(r.sid) + '">' + esc(stName(r.sid)) + '</button> ' + (r.online ? '<span class="ok" title="在線">●</span>' : '') + ' <span class="muted small">' + esc(r.cls) + '</span></td><td class="pr" data-l="進度"><span class="dots">' + r.cp.dots.map(function (o) { return '<i class="' + (o ? 'lit' : '') + '"></i>'; }).join('') + '</span> <span class="muted">' + r.cp.lit + '/6' + (f && r.stage !== 'S4' && r.stage !== 'S1' ? '　卡在' + CIRC[f.id - 1] : '') + '</span></td><td data-l="提問">' + r.ask.n + ' 題' + yn + '</td><td class="hm pr" title="探問 Lv.' + r.skill.ask + '、情境感知 Lv.' + r.skill.ctx + '、成就 ' + r.badges.n + ' 枚">' + SKB.badge(r.skill.ask, '探 Lv.' + r.skill.ask) + ' ' + SKB.badge(r.skill.ctx, '情 Lv.' + r.skill.ctx) + ' 🏅' + r.badges.n + '</td><td class="hm pr muted">' + (r.lastSeen ? ago(r.lastSeen) : '—') + '</td><td data-l="引導">' + hintChip(r) + '</td></tr>';
+      return '<tr data-sid="' + esc(r.sid) + '"><td data-l="狀態">' + stChip(r.stage, r.sub) + '</td><td data-l="學生"><button class="lk" data-open="' + esc(r.sid) + '">' + esc(stName(r.sid)) + '</button> ' + (r.online ? '<span class="ok" title="在線">●</span>' : '') + ' <span class="muted small">' + esc(r.cls) + '</span></td><td class="pr" data-l="進度"><span class="dots">' + r.cp.dots.map(function (o) { return '<i class="' + (o ? 'lit' : '') + '"></i>'; }).join('') + '</span> <span class="muted">' + r.cp.lit + '/6' + (f && r.stage !== 'S4' && r.stage !== 'S1' ? '　卡在' + CIRC[f.id - 1] : '') + '</span></td><td data-l="提問">' + r.ask.n + ' 題' + yn + '</td><td class="hm pr" title="探問 Lv.' + r.skill.ask + '、情境感知 Lv.' + r.skill.ctx + '、成就 ' + r.badges.n + ' 枚">' + SKB.badge(r.skill.ask, '探 Lv.' + r.skill.ask) + ' ' + SKB.badge(r.skill.ctx, '情 Lv.' + r.skill.ctx) + ' 🏅' + r.badges.n + (WEEK === 3 ? '<div>' + TMODEL.skW8Cell(TMODEL.skW8Of((scores || {})[r.sid]), SKB.badge) + '</div>' : '') + '</td><td class="hm pr muted">' + (r.lastSeen ? ago(r.lastSeen) : '—') + '</td><td data-l="引導">' + hintChip(r) + '</td></tr>';
     }).join('') + '</tbody></table>' : '<span class="muted">沒有符合條件的學生。</span>';
     bindOpen($('stList'));
     Array.prototype.forEach.call($('stList').querySelectorAll('tbody tr'), function (tr) { tr.onclick = function (e) { if (e.target.closest && e.target.closest('button,a')) return; openDrawer(tr.dataset.sid, tr.querySelector('.lk')); }; });

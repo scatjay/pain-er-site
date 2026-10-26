@@ -27,7 +27,7 @@
     { t: '列 10–15 個故事片段', d: '從報告最後面的「故事片段清單」挑，保留 S 編號和出處。' },
     { t: '照樣板排 6 格', d: '每一格寫四件事：誰、在哪、發生什麼、他怎麼想。痛點那一句標成紅色。' },
     { t: '找出關鍵時刻', d: '用一句話寫出主角在哪一刻最卡、為什麼。' },
-    { t: '用 Gemini 生成圖片', d: '故事板開放之後，把圖拖進格子。先用右邊三個 AI 圖片生成指令，把空格填成自己的內容。先生成主角設定圖，再一格一格生成。' },
+    { t: '用 Gemini 生成圖片', d: '先用這頁的「三個 AI 圖片生成指令」，把黃色的地方換成自己的內容。先生成主角設定圖，再一格一格生成；做好的圖在故事板每一格按「選圖」放進去（電腦也可以直接拖進格子）。' },
     { t: '看缺口回去補訪', d: '回到報告看覆蓋表和「離下一級還差」，哪一格寫不出來，就回去問那個人。' }
   ];
 
@@ -66,8 +66,8 @@
   function need(row) {
     row = row || {}; var cards = Number(row.cards) || 0, started = Number(row.started) || 0;
     if (cards >= 1) return { ok: true, text: '', short: '' };
-    if (started > 0) return { ok: false, short: '還缺：訪談卡打勾', text: '還缺：訪談卡打勾——你已經開始跟 ' + started + ' 位聊了，但「訪談」分頁的檢核表還沒有打勾。到房間右側的「訪談」分頁，把問到的事打勾（「他一開始怎麼說」「那天發生了什麼事」「他真正需要什麼」，至少勾一項）。' };
-    return { ok: false, short: '還缺：1 張訪談卡', text: '還缺：1 張訪談卡——先到這間房跟人物聊（點人物開始訪談），再到房間右側「訪談」分頁的檢核表，把問到的事打勾（至少勾一項）。' };
+    if (started > 0) return { ok: false, short: '還缺：訪談卡打勾', text: '還缺：訪談卡打勾——你已經開始跟 ' + started + ' 位聊了，但「訪談」分頁的檢核表還沒有打勾。到房間裡的「訪談」分頁，把問到的事打勾（「他一開始怎麼說」「那天發生了什麼事」「他真正需要什麼」，至少勾一項）。' };
+    return { ok: false, short: '還缺：1 張訪談卡', text: '還缺：1 張訪談卡——先到這間房跟人物聊（點人物開始訪談），再到房間裡的「訪談」分頁的檢核表，把問到的事打勾（至少勾一項）。' };
   }
   /* W8 卡頂端的完成列。p：{ steps: [{ label, ok: true | false | null（讀不到）}] } */
   function progHtml(p) {
@@ -125,7 +125,7 @@
       '<div class="box"><h4>三個常見的錯</h4><ol style="margin:0;padding-left:1.3em">' + ERRORS.map(function (e) { return '<li><b>' + esc(e.t) + '</b>：' + esc(e.d) + '</li>'; }).join('') + '</ol></div>' +
       '<div class="box"><h4>三個 AI 圖片生成指令（黃色的地方換成你自己的）</h4>' + PROMPTS.map(function (p, i) { return '<div class="ph"><b>' + esc(p.name) + '</b> <button type="button" class="ghost" data-cp="' + i + '">複製</button><span class="cpmsg" data-cpmsg="' + i + '"></span><br>' + marked(p.text) + '<textarea class="cpfb" data-cpfb="' + i + '" readonly>' + esc(p.text) + '</textarea></div>'; }).join('') + '</div>';
     return '<div class="sbGuide" data-case-now="' + id + '"><div class="row"><b style="flex:1;font-size:var(--fs-4)">第 8 週　UX 故事板：基本教學</b><button type="button" class="ghost" data-close="1">關閉</button></div>' +
-      '<div class="muted" style="font-size:var(--fs-2)">故事板只能從有訪談紀錄的房間開：回大廳「我進過的房間」那一列按「開故事板」，或在房間頂列按「故事板」。</div>' +
+      '<div class="muted" style="font-size:var(--fs-2)">故事板只能從有訪談紀錄的房間開（訪談分頁至少勾一項）：在大廳 W8 卡的房間那一列按「📖 故事板」，或在房間頂列按 📖。</div>' +
       '<div class="cases" role="group" aria-label="案例">' + cases + '</div>' +
       '<div class="cols"><div><h4 style="margin:0 0 var(--s2)">七個步驟</h4><ol class="steps">' + steps + '</ol></div><div>' + right + '</div></div></div>';
   }

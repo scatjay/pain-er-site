@@ -394,6 +394,7 @@
   /* 10-26 楊老師「W7 已經不是本週了」：10/27 07:10 起大廳最上方換成 W8（故事板卡），W7 收成預設摺起來的「上週」，回應指引仍可補送 */
   var W8_START = Date.parse('2026-10-27T07:10:00+08:00'), week2Open = false;
   function w8Started() { var q = location.search.match(/[?&]w8=(0|1)/); if (q) return q[1] === '1'; return Date.now() >= W8_START; }
+  window.ERG_W8_ON = w8Started;   /* 10-27：成就分頁用它決定哪一組單元排最前面、展開 */
   /* 10-19 楊老師：送出後顯示「審核中」，一天只能送一次（每天晚上用 Claude 批次審一次，tools/er_guide_review.py 寫回 guideResp/{學號}/rev） */
   function dayKey(t) { var d = new Date(t); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
   function sentToday(r) { return !!(r && r.t && dayKey(r.t) === dayKey(Date.now())); }
@@ -478,16 +479,18 @@
   function loadW8P(codes) {
     var key = codes.join(','), sid = APP.me.sid; if (!ONLINE || !codes.length || W8P.busy || (W8P.sid === sid && W8P.codes === key)) return;
     W8P.busy = true; var fdb = firebase.database(), base = 'sbx/' + APP.SESS + '/', got = { personas: 0, filled: 0, moment: false, img: false }, bad = false;
-    var jobs = [];
+    var jobs = [], sbd = {};   /* sbd：10-27 W8 技能／成就用的原始資料（achievements.js skillsW8），同一批讀取，不多讀 */
     codes.forEach(function (code) {
-      jobs.push(fdb.ref(base + 'sbm/' + code + '/' + sid + '/personaCount').once('value').then(function (s) { got.personas = Math.max(got.personas, Number(s.val()) || 0); }));
-      ['wall', 'u_' + sid].forEach(function (b) {
+      var rm = sbd[code] = { code: code, wall: null, mine: null, meta: null };
+      jobs.push(fdb.ref(base + 'sbm/' + code + '/' + sid).once('value').then(function (s) { var mv = s.val() || {}; rm.meta = mv; got.personas = Math.max(got.personas, Number(mv.personaCount) || 0); }));
+      [['wall', 'wall'], ['u_' + sid, 'mine']].forEach(function (bb) {
+        var b = bb[0];
         jobs.push(fdb.ref(base + 'sb/' + code + '/' + b + '/cells').once('value').then(function (s) {
-          var v = s.val() || {}, ks = Object.keys(v), n = 0; ks.forEach(function (k) { var c = v[k] || {}; if (String(c.what || '').trim() || String(c.think || '').trim()) { n += 1; if (c.moment) got.moment = true; } if (c.img) got.img = true; }); got.filled = Math.max(got.filled, n);
+          var v = s.val() || {}; rm[bb[1]] = v; var ks = Object.keys(v), n = 0; ks.forEach(function (k) { var c = v[k] || {}; if (String(c.what || '').trim() || String(c.think || '').trim()) { n += 1; if (c.moment) got.moment = true; } if (c.img) got.img = true; }); got.filled = Math.max(got.filled, n);
         }));
       });
     });
-    Promise.all(jobs).catch(function () { bad = true; }).then(function () { W8P.busy = false; W8P.sid = sid; W8P.codes = key; W8P.data = bad ? null : got; if ($('lobby').classList.contains('on')) { try { renderStoryboardEntry(); } catch (x) {} } });
+    Promise.all(jobs).catch(function () { bad = true; }).then(function () { W8P.busy = false; W8P.sid = sid; W8P.codes = key; W8P.data = bad ? null : got; if (!bad) { window.ERG_MY_SBD = { sid: sid, rooms: Object.keys(sbd).map(function (k) { return sbd[k]; }) }; try { if (window.ERG_PUBLISH_SCORE) window.ERG_PUBLISH_SCORE(); } catch (x) {} } if ($('lobby').classList.contains('on')) { try { renderStoryboardEntry(); } catch (x) {} } });
   }
   function w8Steps(rows) {
     var P = W8P.sid === APP.me.sid ? W8P.data : null;

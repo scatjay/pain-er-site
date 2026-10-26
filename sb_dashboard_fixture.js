@@ -79,6 +79,9 @@
     });
     students.forEach(function (s) { if (s.arch === 0) raw.sbach[s.sid] = { ids: 'together,relay,premiere,allsourced,nofill,askthenwrite', n: 6, t: now - H }; else if (s.arch === 7) raw.sbach[s.sid] = { ids: 'relay', n: 1, t: now - H }; else if (s.arch === 9) raw.sbach[s.sid] = { ids: 'nofill,fill', n: 2, t: now - H }; });
 
+    /* W8 技能（說故事、有根據）：只有部分類型有資料，其餘留空（畫面顯示「—」） */
+    raw.score = {}; var SKW = { 0: [3, 3], 9: [2, 2], 4: [1, 1], 3: [1, 1], 7: [2, 1], 8: [2, 2] };
+    students.forEach(function (s) { if (SKW[s.arch]) raw.score[s.sid] = { skStory: SKW[s.arch][0], skSource: SKW[s.arch][1], skAsk: 2, skCtx: 2 }; });
     raw.usage = { downloadGB: bad ? 8.7 : 3.31, storageGB: 0.0143, peakConn: bad ? 96 : 51, updatedAt: bad ? now - 5 * H : now - 20 * M };
     raw.config = { coachPerDay: 30, fillPerBoard: 2, rewriteThreshold: 0.6, uploadPerUserDay: 20, uploadSiteDay: 600, coachDayUsd: 1 };
     raw.worker = { heartbeat: bad ? now - 45 * M : now - 12 * 1000, pid: 4242, mode: 'daemon', version: 'fixture' };
@@ -103,7 +106,7 @@
   function wrapD(t) { var o = {}; Object.keys(t).forEach(function (bk) { o[bk] = {}; Object.keys(t[bk]).forEach(function (slot) { o[bk][slot] = { d: t[bk][slot] }; }); }); return o; }
   /* 假資料庫：只實作 ref(path).once('value')，並記下被讀的路徑（測試用來證明只讀、而且沒有多讀） */
   function fakeDb(raw) {
-    var map = { 'er/ER-20261013/profiles': raw.profiles, 'er/ER-20261013/rooms': raw.rooms, 'sbx/ER-20261013/sb': raw.sb, 'sbx/ER-20261013/sbm': raw.sbm, 'sbx/ER-20261013/sbach': raw.sbach, 'sbx/ER-20261013/sbq': raw.sbq, sbops: { usage: raw.usage, config: raw.config, coachUsage: raw.coachUsage, coachWorker: raw.worker } };
+    var map = { 'er/ER-20261013/profiles': raw.profiles, 'er/ER-20261013/rooms': raw.rooms, 'sbx/ER-20261013/sb': raw.sb, 'sbx/ER-20261013/sbm': raw.sbm, 'sbx/ER-20261013/sbach': raw.sbach, 'sbx/ER-20261013/sbq': raw.sbq, 'er/ER-20261013/score': raw.score, sbops: { usage: raw.usage, config: raw.config, coachUsage: raw.coachUsage, coachWorker: raw.worker } };
     var reads = [];
     return { reads: reads, ref: function (path) {
       return { once: function (ev) { reads.push(path); var m = /^sbx\/ER-20261013\/sbth\/(.+)$/.exec(path), v = m ? wrapD(thumbsFor(raw, m[1])) : map[path]; (raw.__deny || []).forEach(function (d) { if (path === d) v = Symbol.for('deny'); }); if (v === Symbol.for('deny')) return Promise.reject(new Error('PERMISSION_DENIED')); var j = v === undefined ? null : JSON.parse(JSON.stringify(v)); return Promise.resolve({ val: function () { return j; } }); } };

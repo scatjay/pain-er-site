@@ -35,11 +35,11 @@
     if (!st.interviews || st.interviews < 1) return { step: 1, title: STEP_TITLES[1], slot: 0, why: '你還沒有訪談紀錄，故事板要用你問來的內容。先回急診室問一個人。' };
     if (!st.keyDone) return { step: 1, title: STEP_TITLES[1], slot: 0, why: '病人或家屬還沒問過。故事的主角是他們，先回去問。' };
     if ((Number(st.personas) || 0) < 2) return { step: 2, title: STEP_TITLES[2], slot: 0, why: '人物誌還沒還原 2 位（至少 1 位是病人或家屬）。在訪談報告裡按「複製 Persona 框架」貼到 Gemini，還原好後在助教面板記下人數。' };
-    if (filled.length === 0) return { step: 3, title: STEP_TITLES[3], slot: 1, why: '還沒有任何一格有內容。先從左邊的素材挑一個最有畫面的片段放進第 1 格。' };
+    if (filled.length === 0) return { step: 3, title: STEP_TITLES[3], slot: 1, why: '還沒有任何一格有內容。先從「素材（我的訪談）」挑一個最有畫面的片段放進第 1 格。' };
     if (filled.length < min) return { step: 4, title: STEP_TITLES[4], slot: firstEmptySlot(), why: '已經寫了 ' + filled.length + ' 格，樣板要 ' + min + ' 格。接著寫第 ' + firstEmptySlot() + ' 格：誰、在哪、發生什麼、他怎麼想。' };
     if (!filled.some(function (c) { return c.moment; })) return { step: 5, title: STEP_TITLES[5], slot: cells.length ? cells[cells.length - 1].n : min, why: '還沒標出關鍵時刻。用一句話寫出主角在哪一刻最卡、為什麼，並勾選「這格是關鍵時刻」。' };
     var noImg = filled.filter(function (c) { return !c.img; })[0];
-    if (noImg) return { step: 6, title: STEP_TITLES[6], slot: noImg.n, why: '第 ' + noImg.n + ' 格還沒有圖。先用指令①做主角設定圖，再一格一格生成並拖進來。' };
+    if (noImg) return { step: 6, title: STEP_TITLES[6], slot: noImg.n, why: '第 ' + noImg.n + ' 格還沒有圖。先用指令①做主角設定圖，再一格一格生成，放進格子（按「選圖」，電腦也可以直接拖進去）。' };
     var gap = filled.filter(SB.needsSource)[0];
     if (gap) return { step: 7, title: STEP_TITLES[7], slot: gap.n, why: '第 ' + gap.n + ' 格沒有出處。回去再問一個人，或把訪談卡編號放進來。' };
     return { step: 8, title: '都做完了', slot: 0, why: '七步驟都有了。交出去之前，對照「五個坑」逐格檢查一次。' };
@@ -64,11 +64,11 @@
   var TOUR = [
     { sel: ['.cell .title'], title: '1／8　開一格', text: '每一格有自己的名字（例如「看完診」）。樣板已經幫你排好 6 格，名字可以改；最後一格留給關鍵時刻。' },
     { sel: ['.cell textarea[data-k="what"]'], title: '2／8　寫四欄', text: '每格寫四件事：誰、在哪、發生什麼、他怎麼想。「發生什麼」先寫事實，「他怎麼想」才寫心裡話。打字會自動儲存。' },
-    { sel: ['.cell button[data-act="pain"]'], title: '3／8　標紅痛點', text: '在「發生什麼」或「他怎麼想」裡用滑鼠選一段字，再按這顆鈕，那一句會變紅，代表這是他卡住的地方。' },
+    { sel: ['.cell button[data-act="pain"]'], title: '3／8　標紅痛點', text: '在「發生什麼」或「他怎麼想」裡用滑鼠選一段字，再按這顆鈕，那一句會變紅，代表這是他卡住的地方。', mtext: '在「發生什麼」或「他怎麼想」裡長按選一段字（拉兩端的把手調整範圍），再按這顆鈕，那一句會變紅，代表這是他卡住的地方。' },
     { sel: ['.cell select[data-act="addref"]', '.cell .refs'], title: '4／8　填出處', text: '每一格都要對得回你的訪談卡。從這裡選訪談卡編號；沒有出處的格子是猜的，要回去再問。' },
-    { sel: ['.cell .img'], title: '5／8　放圖片', text: '把 Gemini 生成的圖拖進格子，或按「選圖」。橫的、方的、直的都可以，會照原比例放。每天有上傳張數上限。' },
+    { sel: ['.cell .imgbar label.btn', '.cell .img'], title: '5／8　放圖片', text: '把 Gemini 生成的圖拖進格子，或按「選圖」。橫的、方的、直的都可以，會照原比例放。每天有上傳張數上限。', mtext: '按格子下面的「選圖」，從相簿挑一張（Gemini 的圖：在 Gemini 長按圖片 → 儲存到相簿）。橫的、方的、直的都可以，會照原比例放。每天有上傳張數上限。' },
     { sel: ['.cell button[data-act="fit"]', '.cell .imgbar'], title: '6／8　換顯示比例', text: '放了圖之後，這顆鈕可以在「完整顯示」和「填滿裁切」之間切換；也可以按「看原圖」。' },
-    { sel: ['.cell .gap', '#stats'], title: '7／8　看缺口', text: '格子沒內容或沒出處，會出現粉紅色的提醒和「回去再問一個人」。右邊會列出這面板的進度和成就。' },
+    { sel: ['.cell .gap', '#stats'], title: '7／8　看缺口', text: '格子沒內容或沒出處，會出現粉紅色的提醒和「回去再問一個人」。「這面牆」那一欄會列出這面板的進度和成就。' },
     { sel: ['#printBtn', '#pngBtn'], title: '8／8　交作業', text: '寫好之後：電腦按「另存 PDF 交作業」，在列印視窗選「另存為 PDF」；手機按「下載成圖片」，長按或下載後把圖片交到 flipclass。' }
   ];
 
@@ -97,7 +97,7 @@
     { title: '標紅痛點', text: '把「不知道哪一張是領藥用的」選起來，標成紅色。', why: '一格只標最關鍵的一句，紅色才有意義；標太多就看不出重點。', cards: 3, cells: 1, pain: true },
     { title: '寫其他格', text: '依樣板接著寫第 2 到第 5 格：走廊分岔、坐下來等、錯過叫號、回去問。每格都附出處。', why: '每一格只推進一小步，故事才有因果；每格都對得回訪談卡。', cards: 3, cells: 5, pain: true },
     { title: '寫關鍵時刻', text: '第 6 格用一句話寫他最卡的一刻，並接一句「所以可以改的是…」。', why: '關鍵時刻不是「他很無奈」，而是可以動手改的地方：叫號螢幕的大字和聲音。', cards: 3, cells: 6, pain: true },
-    { title: '貼主角設定指令、放圖', text: '先用指令①做主角設定圖，之後每一格都貼同一段人物描述再生成，最後拖進格子。（這裡的圖是事先做好的示意圖。）', why: '同一段人物描述貼在每一格，畫風和人物才不會一格一個樣；圖裡不放文字。', cards: 3, cells: 6, pain: true, imgs: true, prompt: '畫一位【70 歲、微胖、戴毛帽、穿深藍夾克】的人物，正面與側面各一，【簡單的繪本風】，白底，不要任何文字。' },
+    { title: '貼主角設定指令、放圖', text: '先用指令①做主角設定圖，之後每一格都貼同一段人物描述再生成，最後放進格子。（這裡的圖是事先做好的示意圖。）', why: '同一段人物描述貼在每一格，畫風和人物才不會一格一個樣；圖裡不放文字。', cards: 3, cells: 6, pain: true, imgs: true, prompt: '畫一位【70 歲、微胖、戴毛帽、穿深藍夾克】的人物，正面與側面各一，【簡單的繪本風】，白底，不要任何文字。' },
     { title: '檢查五個坑', text: '助教對照五個坑逐一檢查，這張板都有過關。', why: '交出去之前自己先檢查一次，比交出去被指出來好。', cards: 3, cells: 6, pain: true, imgs: true, check: [['結局不是「努力就成功」', true], ['關鍵時刻後面接了「所以可以改的是…」', true], ['每格貼同一段人物描述', true], ['圖裡沒有交給 AI 的文字', true], ['人物與場景跟人物誌對得上', true]] }
   ];
   /* 第 i 步當下的畫面資料（純函式；示範板只讀這個） */
@@ -152,7 +152,7 @@
       '<label>我已經還原的人物誌：<select id="cPersonas" style="width:auto"><option value="0">0 位</option><option value="1">1 位</option><option value="2">2 位以上</option></select></label>' +
       '<label>問整門課（≤' + ASK_MAX + ' 字）<textarea id="cAsk" maxlength="' + ASK_MAX + '" placeholder="例如：嚴重性評分怎麼打？人物誌和故事板差在哪？"></textarea></label><div class="row"><button class="mini" id="cCourse">問</button></div>' +
       '<div id="cLog">' + LOG.slice(-8).map(bubble).join('') + '</div>';
-    if (box.dataset.sig !== html) { var ta = $('cAsk'), keep = ta ? ta.value : ''; box.innerHTML = html; box.dataset.sig = html; if ($('cAsk')) $('cAsk').value = keep; if ($('cPersonas')) $('cPersonas').value = String(Math.min(2, Number(S.personas) || 0)); bind(); }
+    if (box.dataset.sig !== html) { var ta = $('cAsk'), keep = ta ? ta.value : '', st0 = box.scrollTop, atEnd = st0 > 0 && st0 + box.clientHeight >= box.scrollHeight - 8; box.innerHTML = html; box.scrollTop = atEnd ? box.scrollHeight : st0;   /* 換內容會把抽屜捲回最上面：保留原本位置（原本在最底就留在最底） */ box.dataset.sig = html; if ($('cAsk')) $('cAsk').value = keep; if ($('cPersonas')) $('cPersonas').value = String(Math.min(2, Number(S.personas) || 0)); bind(); }
   }
   function bubble(m) {
     if (m.q) return '<div class="bub q"><div class="meta">我問（' + esc(m.label) + (m.slot ? '・第 ' + m.slot + ' 格' : '') + '）</div>' + esc(m.ask || '') + '</div>';
@@ -197,7 +197,7 @@
     pushLog(m); tryApply(); revealDrawer();
   }
   /* 手機：答案到了而抽屜是收起的，就自動打開（不然學生看不到答案） */
-  function revealDrawer() { try { if (window.matchMedia && window.matchMedia('(max-width:860px)').matches && !document.body.classList.contains('coach-open')) { document.body.classList.add('coach-open'); } } catch (e) {} }
+  function revealDrawer() { try { if (window.matchMedia && window.matchMedia('(max-width:860px)').matches) { if (!document.body.classList.contains('coach-open')) document.body.classList.add('coach-open'); var b = $('coachBox'); if (b) b.scrollTop = b.scrollHeight; } } catch (e) {} }   /* 小螢幕抽屜裝不下整個面板：捲到最底，讓剛到的答案在畫面上 */
   /* 代填答案套進格子：只套「十分鐘內、這間房、目前看的這面板、這格還是空的而且沒代填過」的答案（重新整理後答案才到、或切了面板，也都不會重複或套錯地方） */
   function tryApply() {
     var S = A.S, board = S.boardName === 'me' ? 'u_' + S.sid : 'wall';
@@ -256,7 +256,8 @@
     var mask = $('tourMask') || document.body.appendChild(Object.assign(document.createElement('div'), { id: 'tourMask' }));
     mask.style.cssText = 'left:' + (r.left - 6) + 'px;top:' + (r.top - 6) + 'px;width:' + (r.width + 12) + 'px;height:' + (r.height + 12) + 'px';
     var tip = $('tourTip') || document.body.appendChild(Object.assign(document.createElement('div'), { id: 'tourTip' }));
-    tip.innerHTML = '<b>' + esc(st.title) + '</b><div style="margin:6px 0">' + esc(st.text) + '</div><div class="row" style="display:flex;gap:6px"><button class="mini" id="tPrev"' + (tour.i === 0 ? ' disabled' : '') + '>上一步</button><button class="mini" id="tNext">' + (tour.i === TOUR.length - 1 ? '完成' : '下一步') + '</button><button class="mini" id="tEnd">離開</button></div>' + (el ? '' : '<div class="meta">（這一步的按鈕現在畫面上還沒有，先看說明就好）</div>');
+    var touch = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);   /* 手機版說法（長按、選圖），跟 sb_ui 判斷手機的方式一樣 */
+    tip.innerHTML = '<b>' + esc(st.title) + '</b><div style="margin:6px 0">' + esc(touch && st.mtext ? st.mtext : st.text) + '</div><div class="row" style="display:flex;gap:6px"><button class="mini" id="tPrev"' + (tour.i === 0 ? ' disabled' : '') + '>上一步</button><button class="mini" id="tNext">' + (tour.i === TOUR.length - 1 ? '完成' : '下一步') + '</button><button class="mini" id="tEnd">離開</button></div>' + (el ? '' : '<div class="meta">（這一步的按鈕現在畫面上還沒有，先看說明就好）</div>');
     var top = r.top + r.height + 16; if (top + 160 > window.innerHeight) top = Math.max(8, r.top - 170);
     tip.style.top = top + 'px'; tip.style.left = Math.max(8, Math.min(window.innerWidth - 360, r.left)) + 'px';
     $('tNext').onclick = function () { tour.i += 1; showTour(); }; $('tPrev').onclick = function () { tour.i = Math.max(0, tour.i - 1); showTour(); }; $('tEnd').onclick = endTour;

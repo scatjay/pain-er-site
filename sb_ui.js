@@ -122,7 +122,7 @@
         (f.tags.length ? ' <span class="tg">' + esc(f.tags.join('、')) + '</span>' : '') + '<div class="src">出處 ' + esc(f.recId) + ' <button class="mini" data-fi="' + i + '" data-use="1">放進第 ' + S.sel + ' 格</button></div></div>';
     }).join('');
     $('side1').innerHTML = html; S.frags = fr;
-    $('prompts').innerHTML = '<h2>三則指令（複製後，把【　】填成自己的內容）</h2>' + SB.PROMPTS.map(function (p, i) {
+    $('prompts').innerHTML = '<h2>三個 AI 圖片生成指令（複製後，把【　】換成自己的內容）</h2>' + SB.PROMPTS.map(function (p, i) {
       return '<div class="pr"><b>' + esc(p.name) + '</b><div class="pt">' + esc(p.text) + '</div><button class="mini" data-copy="' + i + '">複製</button></div>';
     }).join('');
   }
@@ -166,7 +166,7 @@
       html += '<article class="cell' + (c.moment ? ' moment' : '') + ' s-' + st + (S.sel === i ? ' sel' : '') + '" data-n="' + i + '" style="--ct:' + t.color + '">' +
         '<header><span class="no">' + i + '</span><input class="f title" data-n="' + i + '" data-k="title" maxlength="24" value="' + esc(c.title) + '" placeholder="這一格叫什麼" ' + (ro ? 'disabled' : '') + '>' +
         (c.moment ? '<span class="mom">★ 關鍵時刻</span>' : '') + '</header>' +
-        '<div class="img ' + (c.fit === 'cover' ? 'cover' : 'contain') + '" data-n="' + i + '" tabindex="0">' + (th ? '<img alt="第 ' + i + ' 格的圖" src="' + esc(th) + '">' : '<div class="ph">拖一張圖進來，或按下面「選圖」<br><span class="muted">橫幅、方形、直式都可以，會照原比例放</span></div>') + '</div>' +
+        '<div class="img ' + (c.fit === 'cover' ? 'cover' : 'contain') + '" data-n="' + i + '" tabindex="0">' + (th ? '<img alt="第 ' + i + ' 格的圖" src="' + esc(th) + '">' : (MOBILE_UA ? '<div class="ph">按下面「選圖」，從相簿挑一張或直接拍照<br><span class="muted">用 Gemini 做的圖：在 Gemini 長按圖片 → 儲存到相簿，再回來按「選圖」</span></div>' : '<div class="ph">拖一張圖進來，或按下面「選圖」<br><span class="muted">橫幅、方形、直式都可以，會照原比例放</span></div>')) + '</div>' +
         '<div class="imgbar"><label class="btn mini ' + (q.canUpload && !ro ? '' : 'dis') + '">選圖<input type="file" accept="image/*" data-n="' + i + '" ' + (q.canUpload && !ro ? '' : 'disabled') + ' class="fileinp"></label>' +
         (th ? ' <button class="mini" data-n="' + i + '" data-act="full" ' + (SB.loadFull(S.mode) ? '' : 'disabled title="系統現在只提供縮圖"') + '>看原圖</button> <button class="mini" data-n="' + i + '" data-act="fit">' + (c.fit === 'cover' ? '完整顯示' : '填滿裁切') + '</button> <button class="mini" data-n="' + i + '" data-act="rmimg" ' + (ro ? 'disabled' : '') + '>拿掉圖</button>' : '') +
         (c.img ? ' <span class="muted">' + c.img.w + '×' + c.img.h + '</span>' : '') + '</div>' +
@@ -234,7 +234,7 @@
   function loadImg(file) {
     return new Promise(function (res, rej) {
       var u = URL.createObjectURL(file), im = new Image();
-      im.onload = function () { URL.revokeObjectURL(u); res(im); }; im.onerror = function () { URL.revokeObjectURL(u); rej(new Error('這個檔案打不開，請換一張圖（jpg、png、webp）')); }; im.src = u;
+      im.onload = function () { URL.revokeObjectURL(u); res(im); }; im.onerror = function () { URL.revokeObjectURL(u); rej(new Error('這個檔案打不開，請換一張圖（jpg、png、webp、gif 都可以；截圖也可以）')); }; im.src = u;
     });
   }
   function encodeTo(im, maxLong, maxBytes) {
@@ -249,7 +249,8 @@
   function uploadFile(n, file) {
     var q = qv(); if (!canWrite()) return;
     if (!q.canUpload) { toast(SB.WHY_TEXT[q.why] || '現在不能上傳'); return; }
-    if (!file || !/^image\//.test(file.type)) { toast('請選一張圖片檔'); return; }
+    if (file && (/\.(heic|heif)$/i.test(file.name || '') || /heic|heif/i.test(file.type || ''))) { toast('這是 iPhone 的 HEIC 照片，這裡打不開。請先把照片截圖，再選那張截圖；或在 iPhone「設定 → 相機 → 格式」改成「最相容」。', 8000); return; }
+    if (!file || !/^image\//.test(file.type)) { toast('這不是圖片檔，請選一張圖（jpg、png、webp、gif 都可以）', 5000); return; }
     if (file.size > 25 * 1024 * 1024) { toast('這張圖太大了（超過 25 MB），請先縮小再選'); return; }
     toast('處理圖片中…', 8000);
     loadImg(file).then(function (im) {
@@ -264,7 +265,7 @@
           S.full[bkey(S.boardName) + n] = full.url; S.saved = NOW(); toast('圖片放好了（' + Math.round(full.bytes / 1024) + ' KB）'); renderTop();
         }, function (e) { S.store.refund(S.sid); throw e; });
       });
-    }).catch(function (e) { toast(e && e.message || '圖片上傳失敗'); });
+    }).catch(function (e) { toast(e && e.message || '圖片上傳失敗', 6000); });
   }
   function showFull(n) {
     if (!SB.loadFull(S.mode)) { toast('系統現在只提供縮圖'); return; }

@@ -110,15 +110,86 @@
     }
     return { ask: pack(SK_ASK, a2, a3), ctx: pack(SK_CTX, c2, c3) };
   }
+  function skCard(title, s, desc, esc, fresh) {
+    var stars = '★'.repeat(s.lv) + '☆'.repeat(3 - s.lv), todo = s.next ? s.next.items.filter(function (i) { return !i.ok; }) : [];
+    return '<div class="skCard"><div class="skHead"><b>' + esc(title) + '</b><span class="skStars" aria-label="第 ' + s.lv + ' 級">' + stars + '</span></div>' +
+      '<div class="skLv">' + (s.lv ? 'Lv.' + s.lv + '「' + esc(s.name) + '」' : '還沒開始') + (fresh && fresh[title] ? ' <span class="skNew">🎉 剛升級</span>' : '') + '</div><div class="muted" style="font-size:var(--fs-1)">' + esc(desc) + '</div>' +
+      (s.next ? '<div style="margin-top:6px;font-size:var(--fs-2)"><b>升到 Lv.' + s.next.lv + '「' + esc(s.next.name) + '」還差：</b><ul class="skTodo">' + (todo.length ? todo.map(function (i) { return '<li>' + esc(i.text) + '</li>'; }).join('') : '<li>都達到了，再動一下就會升級</li>') + '</ul></div>' : '<div style="margin-top:6px;font-size:var(--fs-2)">🏆 已經是最高級。</div>') + '</div>';
+  }
+  var DESC_ASK = '怎麼問，才問得出對方遇到的事和真正的需要', DESC_CTX = '找對人、看對地方，把不同人說的話對起來';
+  var DESC_STORY = '把訪談到的事排成一格一格的故事，讓人看得到他最卡的那一刻', DESC_SOURCE = '每一格都說得出是誰說的、來自哪一張訪談卡；猜的地方寫「推測」';
   function skillsHtml(sk, esc, fresh) {
     esc = esc || function (s) { return String(s); };
-    function card(title, s, desc) {
-      var stars = '★'.repeat(s.lv) + '☆'.repeat(3 - s.lv), todo = s.next ? s.next.items.filter(function (i) { return !i.ok; }) : [];
-      return '<div class="skCard"><div class="skHead"><b>' + esc(title) + '</b><span class="skStars" aria-label="第 ' + s.lv + ' 級">' + stars + '</span></div>' +
-        '<div class="skLv">Lv.' + s.lv + '「' + esc(s.name) + '」' + (fresh && fresh[title] ? ' <span class="skNew">🎉 剛升級</span>' : '') + '</div><div class="muted" style="font-size:var(--fs-1)">' + esc(desc) + '</div>' +
-        (s.next ? '<div style="margin-top:6px;font-size:var(--fs-2)"><b>升到 Lv.' + s.next.lv + '「' + esc(s.next.name) + '」還差：</b><ul class="skTodo">' + (todo.length ? todo.map(function (i) { return '<li>' + esc(i.text) + '</li>'; }).join('') : '<li>都達到了，再問一題就會升級</li>') + '</ul></div>' : '<div style="margin-top:6px;font-size:var(--fs-2)">🏆 已經是最高級。</div>') + '</div>';
+    return '<div class="skRow">' + skCard('探問', sk.ask, DESC_ASK, esc, fresh) + skCard('情境感知', sk.ctx, DESC_CTX, esc, fresh) + '</div>';
+  }
+
+  /* ───── W8 技能（10-27 楊老師：W8 的技能也要有三級）─────
+     資料來源（Firebase，學生本人讀得到的節點）：
+       sbx/{場次}/sb/{房間代碼}/wall/cells          這面牆的格子
+       sbx/{場次}/sb/{房間代碼}/u_{學號}/cells      我自己的故事板的格子
+       sbx/{場次}/sbm/{房間代碼}/{學號}             { personaCount（人物誌做了幾位）, recIds（第一次開故事板時已有的訪談卡）, personas }
+     sbData 長相：{ sid, rooms: [ { code, wall, mine, meta } ] }（wall／mine 是 cells 節點原樣，陣列或物件都可以；meta 是 sbm 那一筆）。
+     player＝玩家紀錄（要用 interviews 對出「引用的訪談卡是誰的話」）。多間房時每一項指標取各房最大值（只看對自己有利的那一間）。
+     只列做到什麼，不扣分；沒資料（還沒開過故事板、或資料還沒讀回來）＝Lv.0「還沒開始」。 */
+  var SK_STORY = ['排進格子', '串成故事', '說到痛點'], SK_SOURCE = ['附上出處', '引到不同人', '說自己的話'];
+  var KEYP = { patient: 1, family: 1 };
+  function cellHas(c) { return !!(c && (String(c.what || '').trim() || String(c.think || '').trim())); }
+  function cellRefs(c) { return arr(c && c.refs).map(String).filter(Boolean); }
+  function w8Metrics(sb, player) {
+    var m = { cells: 0, moment: 0, pain: 0, personas: 0, keyPersona: 0, sourced: 0, distinct: 0, own: 0, guess: 0, momentFull: 0, oldCited: 0, keyCited: 0, thread: 0 };
+    player = player || {};
+    var sid = String((sb && sb.sid) || ''), recs = arr(player.interviews).filter(function (r) { return r && r.id; }), recPid = {};
+    recs.forEach(function (r) { recPid[r.id] = r.personaId; });
+    m.keyPersona = recs.filter(function (r) { return KEYP[r.personaId] && filledItems(r) > 0; }).length;
+    arr(sb && sb.rooms).forEach(function (rm) {
+      var wall = arr(rm && rm.wall).filter(cellHas), mine = arr(rm && rm.mine).filter(cellHas), meta = (rm && rm.meta) || {};
+      var wallMine = wall.filter(function (c) { return String(c.by) === sid; }), my = mine.concat(wallMine);
+      var base = {}; arr(meta.recIds).forEach(function (id) { base[id] = 1; });
+      var r = { cells: Math.max(wall.length, mine.length), personas: Number(meta.personaCount) || 0, pain: 0, sourced: 0, own: 0, guess: 0, momentFull: 0, oldCited: 0, keyCited: 0 }, ds = {}, byP = {};
+      r.moment = (mine.some(function (c) { return c.moment; }) || (wallMine.length && wall.some(function (c) { return c.moment; }))) ? 1 : 0;
+      my.forEach(function (c) {
+        var rf = cellRefs(c), pc = String(c.pain || '').trim();
+        if (pc) r.pain++;
+        if (rf.length) r.sourced++;
+        rf.forEach(function (id) { ds[id] = 1; });
+        if (c.er && (c.er.band === 'rewrite' || c.er.band === 'own')) r.own++;
+        if (/推測/.test(String(c.what || '') + String(c.think || ''))) r.guess++;
+        if (c.moment && pc && rf.length) r.momentFull = 1;
+        if (rf.some(function (id) { return base[id]; })) r.oldCited++;
+        var seenP = {}; rf.forEach(function (id) { var pid = recPid[id]; if (pid) seenP[pid] = 1; });
+        if (Object.keys(seenP).some(function (pid) { return KEYP[pid]; })) r.keyCited++;
+        Object.keys(seenP).forEach(function (pid) { byP[pid] = (byP[pid] || 0) + 1; });
+      });
+      r.distinct = keys(ds).length; r.thread = Math.max.apply(null, [0].concat(keys(byP).map(function (k) { return byP[k]; })));
+      keys(r).forEach(function (k) { if (r[k] > m[k]) m[k] = r[k]; });
+    });
+    return m;
+  }
+  function skillsW8(sb, player) {
+    var m = w8Metrics(sb, player);
+    function item(ok, text) { return { ok: !!ok, text: text }; }
+    function c(n, t) { return Math.min(m[n], t); }
+    function pack(names, l1, l2, l3) {
+      var all = function (l) { return l.every(function (i) { return i.ok; }); }, L = all(l3) ? 3 : (all(l2) ? 2 : (all(l1) ? 1 : 0)), lists = [l1, l2, l3];
+      return { lv: L, name: L ? names[L - 1] : '還沒開始', next: L >= 3 ? null : { lv: L + 1, name: names[L], items: lists[L] } };
     }
-    return '<div class="skRow">' + card('探問', sk.ask, '怎麼問，才問得出對方遇到的事和真正的需要') + card('情境感知', sk.ctx, '找對人、看對地方，把不同人說的話對起來') + '</div>';
+    var s1 = [item(m.cells >= 1, '故事板有內容的格子 ' + c('cells', 1) + '／1 格')];
+    var s2 = [item(m.cells >= 3, '故事板有內容的格子 ' + c('cells', 3) + '／3 格'), item(m.moment >= 1, '標出「關鍵時刻」 ' + c('moment', 1) + '／1 格'), item(m.pain >= 1, '把最卡的那一句標成痛點句（紅字） ' + c('pain', 1) + '／1 句')];
+    var s3 = s2.concat([item(m.cells >= 6, '故事板有內容的格子 ' + c('cells', 6) + '／6 格'), item(m.pain >= 3, '標紅的痛點句 ' + c('pain', 3) + '／3 句'), item(m.personas >= 2, '人物誌 ' + c('personas', 2) + '／2 位'), item(m.keyPersona >= 1, '病人或家屬，至少訪談過 ' + c('keyPersona', 1) + '／1 位')]);
+    var r1 = [item(m.sourced >= 1, '有出處的格子 ' + c('sourced', 1) + '／1 格')];
+    var r2 = [item(m.sourced >= 3, '有出處的格子 ' + c('sourced', 3) + '／3 格'), item(m.distinct >= 2, '引用不同的訪談卡 ' + c('distinct', 2) + '／2 張'), item(m.own >= 1, '改寫或自己寫的格子 ' + c('own', 1) + '／1 格')];
+    var r3 = r2.concat([item(m.sourced >= 6, '有出處的格子 ' + c('sourced', 6) + '／6 格'), item(m.distinct >= 4, '引用不同的訪談卡 ' + c('distinct', 4) + '／4 張'), item(m.guess >= 1, '自己猜的地方標上「推測」 ' + c('guess', 1) + '／1 格'), item(m.own >= 3, '改寫或自己寫的格子 ' + c('own', 3) + '／3 格')]);
+    var story = pack(SK_STORY, s1, s2, s3), source = pack(SK_SOURCE, r1, r2, r3);
+    var pl = player || {}, askLv = Number((pl.skillLv || {}).ask) || 1;
+    var ids = [];
+    if (m.personas >= 2 && m.keyPersona >= 1) ids.push('w8_people');
+    if (m.momentFull) ids.push('w8_moment');
+    if (m.guess >= 2) ids.push('w8_guess');
+    if (m.oldCited >= 3) ids.push('x_bring_old');
+    if (m.thread >= 3) ids.push('x_thread');
+    if (m.keyCited >= 2) ids.push('x_keyperson');
+    if (askLv >= 2 && source.lv >= 2) ids.push('x_ask_write');
+    return { story: story, source: source, m: m, ids: ids };
   }
 
   /* ctx：{ now, cpAllOk（六個檢核點全亮）, shift（'day'|'night'） } */
@@ -140,6 +211,7 @@
       offTurns: Number((player.off || {}).n || 0), offRest: Number((player.off || {}).rest || 0), offLate: Number((player.off || {}).late || 0),
       qEvent: Number((player.q || {}).ev || 0), qWhy: Number((player.q || {}).why || 0), qEcho: Number((player.q || {}).echo || 0), qIntro: Number((player.q || {}).intro || 0), qChain: Number((player.q || {}).chain || 0),
       qKey3: KEY3.filter(function (id) { return Number((((player.q || {}).who) || {})[id] || 0) >= 3; }).length,
+      w8: skillsW8(ctx.sb, player),
       qOpen10: (function (s) { s = String(s || ''); return s.length >= 10 && s.split('y').length - 1 <= 2 && s.split('g').length - 1 === 0; })((player.q || {}).last)
     };
   }
@@ -197,21 +269,43 @@
     { id: 'w8_askthenwrite', icon: '💬', name: '問了助教，自己寫完', desc: '第 8 週故事板：問過助教提示、檢查或句型，最後自己寫完且有出處', test: function () { return sbHas('askthenwrite'); } },
     { id: 'w8_allsourced', icon: '🔗', name: '整張每格都有出處', desc: '第 8 週故事板：一面故事板至少 6 格，每格都有內容也有出處', test: function () { return sbHas('allsourced'); } },
     { id: 'w8_nofill', icon: '✍️', name: '整張沒有代填', desc: '第 8 週故事板：一面故事板至少 6 格都有內容，沒有任何一格是助教代填', test: function () { return sbHas('nofill'); } },
-    { id: 'w8_reclaim', icon: '♻️', name: '把示範改成自己的', desc: '第 8 週故事板：助教代填的格子，你改寫超過六成', test: function () { return sbHas('reclaim'); } }
+    { id: 'w8_reclaim', icon: '♻️', name: '把示範改成自己的', desc: '第 8 週故事板：助教代填的格子，你改寫超過六成', test: function () { return sbHas('reclaim'); } },
+    /* 10-27：W8 自己的成就（人物誌、關鍵時刻、猜測有標明）；判準在 skillsW8，資料來源見該處註解 */
+    { id: 'w8_people', icon: '🧑‍🤝‍🧑', name: '兩位人物立起來', desc: '第 8 週：人物誌做了 2 位，而且你訪談過病人或家屬', test: function (m) { return hasW8(m, 'w8_people'); } },
+    { id: 'w8_moment', icon: '⭐', name: '最卡的那一刻', desc: '第 8 週：標出關鍵時刻，那一格有內容、有紅字痛點句、有出處', test: function (m) { return hasW8(m, 'w8_moment'); } },
+    { id: 'w8_guess', icon: '🤔', name: '猜的我有說', desc: '第 8 週：至少 2 格把自己猜的地方標上「推測」', test: function (m) { return hasW8(m, 'w8_guess'); } },
+    /* 10-27：跨單元銜接（W6 訪談、W7 指引 → W8 故事板）。訪談卡沒有週次欄位，所以用「第一次開故事板時已經有的訪談卡」代表 W6／W7 做的；W8 才訪談的算 w8_revisit。 */
+    { id: 'x_bring_old', icon: '🔗', name: '舊訪談派上用場', desc: '故事板至少 3 格，引用你開故事板之前就訪談好的卡片（W6、W7 的功夫沒有白做）', test: function (m) { return hasW8(m, 'x_bring_old'); } },
+    { id: 'x_thread', icon: '🧵', name: '同一個人串到底', desc: '同一位人物的訪談卡，在故事板至少 3 格被引用', test: function (m) { return hasW8(m, 'x_thread'); } },
+    { id: 'x_keyperson', icon: '🩺', name: '從病人或家屬說起', desc: '故事板至少 2 格，引用你訪談病人或家屬的卡片', test: function (m) { return hasW8(m, 'x_keyperson'); } },
+    { id: 'x_ask_write', icon: '✒️', name: '會問也會寫', desc: '探問 Lv.2 以上，而且「有根據」也到 Lv.2 以上', test: function (m) { return hasW8(m, 'x_ask_write'); } }
   ];
+  function hasW8(m, id) { return !!(m.w8 && m.w8.ids.indexOf(id) >= 0); }
+  /* 單元分組（10-27 楊老師：成就要區分單元）。W6＝第一輪訪談、W7＝依指引再推進、W8＝人物誌＋故事板、x＝前後單元銜接、all＝不屬於哪一週。
+     沒列在這裡的成就一律歸 all（通用）。 */
+  var UNIT_NAME = { W8: 'W8　人物誌＋UX 故事板', x: '跨單元銜接（W6／W7 → W8）', W7: 'W7　依指引再推進', W6: 'W6　第一輪訪談', all: '通用（任何時候都算）' };
+  var UNIT_OF = {};
+  ['first_talk', 'pry_open', 'five_talks', 'ten_talks', 'all_core', 'deep_dig', 'chatty', 'q_intro', 'q_event', 'q_why', 'q_echo', 'q_chain', 'q_key3', 'q_open10', 'explorer', 'mapper', 'notes', 'witness', 'replay', 'partner', 'thinker', 'all_cp', 'vip', 'boss', 'kid_whisperer', 'translator', 'inclusive', 'case_two', 'case_four', 'case_all'].forEach(function (id) { UNIT_OF[id] = 'W6'; });
+  ['guide_followed', 'guide_effect'].forEach(function (id) { UNIT_OF[id] = 'W7'; });
+  ['w8_together', 'w8_relay', 'w8_fill', 'w8_premiere', 'w8_askthenwrite', 'w8_allsourced', 'w8_nofill', 'w8_reclaim', 'w8_people', 'w8_moment', 'w8_guess'].forEach(function (id) { UNIT_OF[id] = 'W8'; });
+  ['w8_revisit', 'x_bring_old', 'x_thread', 'x_keyperson', 'x_ask_write'].forEach(function (id) { UNIT_OF[id] = 'x'; });
+  DEFS.forEach(function (d) { d.unit = UNIT_OF[d.id] || 'all'; });
   function sbHas(k) { try { return ((typeof window !== 'undefined' && window.ERG_MY_SB_ACH) || []).indexOf(k) >= 0; } catch (e) { return false; } }
-  function badges(m) { return DEFS.map(function (d) { return { id: d.id, icon: d.icon, name: d.name, desc: d.desc, ok: !!d.test(m) || (m.keep || []).indexOf(d.id) >= 0 }; }); }
+  function badges(m) { return DEFS.map(function (d) { return { id: d.id, unit: d.unit, icon: d.icon, name: d.name, desc: d.desc, ok: !!d.test(m) || (m.keep || []).indexOf(d.id) >= 0 }; }); }
   function earned(m) { return badges(m).filter(function (b) { return b.ok; }); }
 
   /* 給班級排行的小物件（不含名字；名字由呼叫端補） */
   function summary(player, ctx) {
     var m = metrics(player, ctx);
-    return { interviewees: m.interviewees, rooms: m.rooms, cards: m.cards, events: m.events, chatTurns: m.chatTurns, playMin: m.playMin, partners: m.partners, conclusions: m.conclusions, badges: earned(m).length, skAsk: Number(((player || {}).skillLv || {}).ask) || 1, skCtx: Number(((player || {}).skillLv || {}).ctx) || 1, badgeIds: earned(m).map(function (b) { return b.id; }) };
+    var o = { interviewees: m.interviewees, rooms: m.rooms, cards: m.cards, events: m.events, chatTurns: m.chatTurns, playMin: m.playMin, partners: m.partners, conclusions: m.conclusions, badges: earned(m).length, skAsk: Number(((player || {}).skillLv || {}).ask) || 1, skCtx: Number(((player || {}).skillLv || {}).ctx) || 1, badgeIds: earned(m).map(function (b) { return b.id; }) };
+    /* 10-27 W8 技能：有讀到故事板資料（ctx.sb）才寫；寫之前跟上次已發布的（ctx.prevSk）取大，等級不會倒退。Firebase 不收 undefined，所以沒資料就不加欄位。 */
+    if (ctx && ctx.sb) { var ps = ctx.prevSk || {}; o.skStory = Math.max(m.w8.story.lv, Number(ps.story) || 0); o.skSource = Math.max(m.w8.source.lv, Number(ps.source) || 0); }
+    return o;
   }
   /* 10-19 降流量：成就摘要的「變動判斷」不含 playMin（它每分鐘 +1，會讓每位前景學生每分鐘寫一次，全班人人收到）；
      playMin 改成累計滿 PLAYMIN_EVERY 分鐘才跟著寫一次，或離開頁面（force）時補寫。其他欄位一變就寫。 */
   var PLAYMIN_EVERY = 5;
-  function scoreSig(s) { return JSON.stringify([s.interviewees, s.rooms, s.cards, s.events, s.chatTurns, s.partners, s.conclusions, s.badges, s.skAsk, s.skCtx]); }
+  function scoreSig(s) { return JSON.stringify([s.interviewees, s.rooms, s.cards, s.events, s.chatTurns, s.partners, s.conclusions, s.badges, s.skAsk, s.skCtx, s.skStory, s.skSource]); }
   /* st = { sig, playMin }（上次寫出去的）；回傳 { write, sig }。force＝離開頁面時，playMin 只要有差就補寫 */
   function scoreDecide(st, s, force) {
     var sig = scoreSig(s), pm = Number(s.playMin) || 0, last = Number(st && st.playMin) || 0;
@@ -238,12 +332,23 @@
       return { key: b[0], label: b[1], unit: b[2], rows: rows };
     });
   }
-  function html(m, esc) {
+  function html(m, esc, o) {
     esc = esc || function (s) { return String(s); };
     var bs = badges(m), got = bs.filter(function (b) { return b.ok; }).length;
     var stat = '<div class="row" style="gap:10px;flex-wrap:wrap;font-size:var(--fs-2)">' + [['訪談過', m.interviewees + ' 人'], ['房間', m.rooms + ' 間'], ['便利貼', m.cards + ' 張'], ['事件', m.events + ' 件'], ['即時提問', m.chatTurns + ' 題'], ['累計', m.playMin + ' 分鐘']].map(function (x) { return '<span><b>' + x[0] + '</b> ' + x[1] + '</span>'; }).join('') + '</div>';
-    var grid = '<div class="achGrid">' + bs.map(function (b) { return '<div class="ach ' + (b.ok ? 'on' : '') + '" title="' + esc(b.desc) + '"><div class="achIcon">' + b.icon + '</div><div class="achName">' + esc(b.name) + '</div><div class="achDesc">' + esc(b.desc) + '</div></div>'; }).join('') + '</div>';
-    return '<p class="muted" style="font-size:var(--fs-1);margin:4px 0">徽章 ' + got + ' / ' + bs.length + '。這不是分數，只是記錄你在急診室裡做過的事。</p>' + stat + grid;
+    function gridOf(list) { return '<div class="achGrid">' + list.map(function (b) { return '<div class="ach ' + (b.ok ? 'on' : '') + '" title="' + esc(b.desc) + '"><div class="achIcon">' + b.icon + '</div><div class="achName">' + esc(b.name) + '</div><div class="achDesc">' + esc(b.desc) + '</div></div>'; }).join('') + '</div>'; }
+    var head = '<p class="muted" style="font-size:var(--fs-1);margin:4px 0">徽章 ' + got + ' / ' + bs.length + '。這不是分數，只是記錄你在急診室裡做過的事。</p>' + stat;
+    if (!o) return head + gridOf(bs);
+    /* 10-27 依單元分組：本週單元排最前面並展開，前幾週收合（和大廳 W8 置頂、前週收合一致）。o：{ current:'W8'|'W7', sk:{ask,ctx}, fresh, open:{單元:true/false}（重畫前的展開狀態） } */
+    var cur = o.current === 'W7' ? 'W7' : 'W8', order = cur === 'W8' ? ['W8', 'x', 'W7', 'W6', 'all'] : ['W7', 'W6', 'x', 'W8', 'all'], w8 = m.w8;
+    var groups = order.map(function (u, i) {
+      var list = bs.filter(function (b) { return b.unit === u; }), g = list.filter(function (b) { return b.ok; }).length, skh = '', skn = '';
+      if (u === 'W7' && o.sk) { skh = '<div class="skRow">' + skCard('探問', o.sk.ask, DESC_ASK, esc, o.fresh) + skCard('情境感知', o.sk.ctx, DESC_CTX, esc, o.fresh) + '</div>'; skn = '　技能 探問 Lv.' + o.sk.ask.lv + '・情境感知 Lv.' + o.sk.ctx.lv; }
+      if (u === 'W8' && w8) { skh = '<div class="skRow">' + skCard('說故事', w8.story, DESC_STORY, esc, o.fresh) + skCard('有根據', w8.source, DESC_SOURCE, esc, o.fresh) + '</div>'; skn = '　技能 說故事 Lv.' + w8.story.lv + '・有根據 Lv.' + w8.source.lv; }
+      var open = o.open && o.open[u] !== undefined ? o.open[u] : i === 0;
+      return '<details class="unitGrp" data-unit="' + u + '"' + (open ? ' open' : '') + '><summary><b>' + esc(UNIT_NAME[u]) + '</b>' + (i === 0 ? ' <span class="tag ok">本週</span>' : '') + '　成就 ' + g + ' / ' + list.length + esc(skn) + '</summary>' + skh + gridOf(list) + '</details>';
+    }).join('');
+    return head + groups;
   }
-  return { DEFS: DEFS, BOARD: BOARD, CORE_IDS: CORE_IDS, SPECIAL: SPECIAL, metrics: metrics, noteQuestion: noteQuestion, noteOffHours: noteOffHours, offHours: offHours, SCHED: SCHED, chatStats: chatStats, skills: skills, skillsHtml: skillsHtml, badges: badges, earned: earned, summary: summary, leaderboard: leaderboard, html: html, scoreSig: scoreSig, scoreDecide: scoreDecide, makeScoreWatch: makeScoreWatch, PLAYMIN_EVERY: PLAYMIN_EVERY };
+  return { DEFS: DEFS, BOARD: BOARD, CORE_IDS: CORE_IDS, SPECIAL: SPECIAL, metrics: metrics, noteQuestion: noteQuestion, noteOffHours: noteOffHours, offHours: offHours, SCHED: SCHED, chatStats: chatStats, skills: skills, skillsHtml: skillsHtml, skillsW8: skillsW8, UNIT_NAME: UNIT_NAME, SK_STORY: SK_STORY, SK_SOURCE: SK_SOURCE, badges: badges, earned: earned, summary: summary, leaderboard: leaderboard, html: html, scoreSig: scoreSig, scoreDecide: scoreDecide, makeScoreWatch: makeScoreWatch, PLAYMIN_EVERY: PLAYMIN_EVERY };
 });
