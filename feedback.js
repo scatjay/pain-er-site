@@ -92,7 +92,7 @@
             }).join('') + '</ul></div>';
         }
       } catch (x) { repHtml = ''; }
-      repHtml += '<p class="muted" style="font-size:var(--fs-1);margin:0 0 6px">要附截圖，請到 flipclass 的作業區上傳（這裡只收文字）。</p>';
+      repHtml += '<p class="muted" style="font-size:var(--fs-1);margin:0 0 6px">要附截圖，請附在 flipclass 當週的作業進度裡一起交（這裡只收文字）。</p>';
       var html = '<div class="row"><b style="flex:1">🐛 回報問題或建議</b><button class="ghost" id="fbClose">關閉</button></div>' + repHtml +
         '<div class="row" style="margin:8px 0" id="fbKinds">' + Object.keys(KINDS).map(function (k, i) { return '<button class="pill ' + (i === 0 ? 'on' : '') + '" data-k="' + k + '">' + KINDS[k] + '</button>'; }).join('') + '</div>' +
         '<label>寫下來（最多 ' + MAX + ' 字）<textarea id="fbText" maxlength="' + MAX + '" placeholder="例如：點牌子沒反應、走到一半卡住、這句話看不懂、希望可以……"></textarea></label>' +
