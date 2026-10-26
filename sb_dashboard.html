@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>故事板儀表板</title>
+<!-- 痛點急診室 W8「UX 故事板」老師儀表板（唯讀）。規劃：docs/SB_DASHBOARD_PLAN.md。
+     只有老師名單裡的 Google 帳號能進；資料庫規則本來就只讓楊老師的帳號讀 sbx 底下的故事板資料。
+     測試：只在本機（127.0.0.1／localhost）網址帶 ?test=1 會用假資料（&variant=bad 看出事的樣子、&tab=st&cls=二乙&open=QA10&deid=0）。 -->
+<style>
+:root{--bg:#eaf4fb;--dot:#cfe3f1;--panel:#fff;--fg:#1e1e1e;--muted:#59656d;--ink:#1e1e1e;--yellow:#ffd43b;--sky:#a5d8ff}
+@media (prefers-color-scheme:dark){:root{--bg:#10191f;--dot:#1b2a33;--panel:#18262e;--fg:#e8eff2;--muted:#9fb0b9;--ink:#e8eff2;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);background-image:radial-gradient(var(--dot) 1.5px,transparent 1.5px);background-size:18px 18px;color:var(--fg);font:15px/1.6 "Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif}
+button{font:inherit;background:var(--yellow);color:#1e1e1e;border:3px solid var(--ink);border-radius:10px;padding:6px 14px;min-height:40px;font-weight:700;cursor:pointer;box-shadow:3px 3px 0 var(--ink)}
+button.ghost{background:var(--panel);color:var(--fg)}
+.muted{color:var(--muted)}
+#gate{max-width:420px;margin:12vh auto;background:var(--panel);border:3px solid var(--ink);border-radius:10px;padding:20px;box-shadow:6px 6px 0 var(--ink)}
+#gate h1{margin:0 0 8px;font-size:20px}
+#gateStatus{margin-top:10px;min-height:1.6em;font-size:13px}
+.top{max-width:1100px;margin:0 auto;padding:10px 16px 0;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.top b{font-size:17px;flex:1 1 220px}
+.top a{color:var(--fg)}
+@media (max-width:560px){.top{padding:8px 10px 0}}
+</style>
+</head>
+<body>
+<div id="gate" hidden>
+  <h1>故事板儀表板</h1>
+  <div class="muted">痛點急診室 W8。只有教師名單裡的 Google 帳號能進，這一頁只能看、不能改。</div>
+  <p><button id="gGoogle">用 Google 登入</button></p>
+  <div id="gateStatus" role="status"></div>
+</div>
+<div id="app" hidden>
+  <div class="top"><b>痛點急診室・W8 故事板儀表板</b><span class="muted" id="whoami"></span><a href="teacher.html">訪談監看（老師後台）</a><button class="ghost" id="logoutBtn">登出</button></div>
+  <div id="root"></div>
+</div>
+<script src="sb_core_dash.js?v=202610262300"></script>
+<script src="report_level.js?v=202610262300"></script>
+<script src="sb_dashboard.js?v=202610262300"></script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  var qs = new URLSearchParams(location.search), isLocal = /^(127\.0\.0\.1|localhost)$/.test(location.hostname);
+  var SESS = /^ER-\d{8}$/.test(qs.get('sess') || '') ? qs.get('sess') : window.ERG_SBDASH.DEFAULT_SESS;
+  var deid = true; try { if (localStorage.getItem('erg_t_deid') === '0') deid = false; } catch (e) {}
+  if (qs.get('deid') === '0') deid = false;
+  var TEACHER_EMAILS = ['scatjay@gmail.com', 'prof.chwu@mx.nthu.edu.tw', 'nthuchwu@gapp.nthu.edu.tw'];   /* 與 teacher.html 同一份名單；資料庫規則只讓第一個帳號讀 sbx，其他人會看到「讀不到」 */
+  function loadScript(src) { return new Promise(function (ok, no) { var s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = function () { no(new Error('載入失敗：' + src)); }; document.head.appendChild(s); }); }
+  function start(loader, who) {
+    $('gate').hidden = true; $('app').hidden = false; $('whoami').textContent = who;
+    window.__sbdash = window.ERG_SBDASH.mount($('root'), { loader: loader, deid: deid, tab: qs.get('tab') || 'ov', autoMs: 10 * 60 * 1000 });
+    var h = window.__sbdash; h.ready.then(function () { if (qs.get('cls')) { h.ui.cls = qs.get('cls'); } if (qs.get('open')) { h.ui.open[qs.get('open')] = true; loader.thumbs(qs.get('open')).then(function (t) { h.ui.thumbs[qs.get('open')] = t; h.draw(); }); } else if (qs.get('cls')) h.draw(); });
+  }
+  if (isLocal && qs.get('test') === '1') {
+    loadScript('sb_dashboard_fixture.js?v=202610262300').then(function () {
+      var F = window.ERG_SBDASH_FIXTURE, raw = F.make({ variant: qs.get('variant') || 'ok' }), db = F.fakeDb(raw);
+      window.__sbraw = raw; window.__sbdb = db;
+      start(window.ERG_SBDASH.liveLoader(db, SESS, function () { return raw.now; }), '（本機測試・假資料）');
+    }).catch(function (e) { document.body.textContent = String(e && e.message || e); });
+    return;
+  }
+  /* ———— 正式：Google 登入（與 teacher.html 相同做法） ———— */
+  $('gate').hidden = false;
+  var say = function (m) { $('gateStatus').innerHTML = m; };
+  var INAPP = /Line\/|FBAN|FBAV|FB_IAB|Instagram|MicroMessenger|; wv\)/i.test(navigator.userAgent), redirBack = false;
+  var inappMsg = '這是 App 內建的瀏覽器（例如 LINE、FB），Google 不允許在這裡登入。請點右上角選單「用預設瀏覽器開啟」，或把網址貼到 Chrome／Safari。';
+  try { redirBack = sessionStorage.getItem('ergSbd_redir') === '1'; sessionStorage.removeItem('ergSbd_redir'); } catch (e) {}
+  if (INAPP) say(inappMsg);
+  Promise.all(['https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js', 'https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js', 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js', 'er_firebase.js?v=202610262300'].reduce(function (p, s) { return p.then(function () { return loadScript(s); }); }, Promise.resolve())).then(function () {
+    firebase.initializeApp(window.ERG_FB); var fdb = firebase.database(), auth = firebase.auth();
+    function provider() { var p = new firebase.auth.GoogleAuthProvider(); p.setCustomParameters({ prompt: 'select_account' }); return p; }
+    function explain(e) { var c = (e && e.code) || ''; say(c === 'auth/operation-not-allowed' ? '這個 Firebase 專案還沒啟用 Google 登入。' : c === 'auth/unauthorized-domain' ? '這個網域還沒加進授權網域。' : '登入沒完成（' + esc(c || e) + '）。再按一次試試。'); }
+    function goRedirect() { try { sessionStorage.setItem('ergSbd_redir', '1'); } catch (e) {} auth.signInWithRedirect(provider()).catch(explain); }
+    $('gGoogle').onclick = function () { if (INAPP) { say(inappMsg); return; } say('登入中…（會跳出 Google 的視窗）'); auth.signInWithPopup(provider()).catch(function (e) { var c = (e && e.code) || ''; if (c === 'auth/popup-blocked' || c === 'auth/operation-not-supported-in-this-environment') goRedirect(); else explain(e); }); };
+    auth.getRedirectResult().then(function (r) { if (redirBack && !(r && r.user) && !auth.currentUser) say('跳轉登入在這個瀏覽器沒有成功。請再按一次登入並允許彈出視窗；還是不行就改用 Chrome 或 Safari。'); }).catch(explain);
+    $('logoutBtn').onclick = function () { $('logoutBtn').disabled = true; auth.signOut().then(function () { location.href = location.pathname; }, function () { $('logoutBtn').disabled = false; }); };
+    var started = false;
+    auth.onAuthStateChanged(function (u) {
+      if (!u) { $('gate').hidden = false; $('app').hidden = true; return; }
+      var email = (u.email || '').toLowerCase();
+      if (TEACHER_EMAILS.indexOf(email) < 0) { say('這個帳號（' + esc(email) + '）不在教師名單裡。請換一個帳號登入。'); auth.signOut(); return; }
+      if (started) return; started = true; start(window.ERG_SBDASH.liveLoader(fdb, SESS), email);
+    });
+  }).catch(function (e) { say('載入失敗：' + esc(e && e.message || e)); });
+})();
+</script>
+</body>
+</html>
