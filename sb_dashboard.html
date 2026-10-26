@@ -69,7 +69,7 @@ button.ghost{background:var(--panel);color:var(--fg)}
   var inappMsg = '這是 App 內建的瀏覽器（例如 LINE、FB），Google 不允許在這裡登入。請點右上角選單「用預設瀏覽器開啟」，或把網址貼到 Chrome／Safari。';
   try { redirBack = sessionStorage.getItem('ergSbd_redir') === '1'; sessionStorage.removeItem('ergSbd_redir'); } catch (e) {}
   if (INAPP) say(inappMsg);
-  Promise.all(['https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js', 'https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js', 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js', 'er_firebase.js?v=202610262300'].reduce(function (p, s) { return p.then(function () { return loadScript(s); }); }, Promise.resolve())).then(function () {
+  (['https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js', 'https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js', 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js', 'er_firebase.js?v=202610262300'].reduce(function (p, s) { return p.then(function () { return loadScript(s); }); }, Promise.resolve())).then(function () {   /* 10-27 修：原本外面包了 Promise.all(一個 Promise) ⇒ 「object is not iterable」 */
     firebase.initializeApp(window.ERG_FB); var fdb = firebase.database(), auth = firebase.auth();
     function provider() { var p = new firebase.auth.GoogleAuthProvider(); p.setCustomParameters({ prompt: 'select_account' }); return p; }
     function explain(e) { var c = (e && e.code) || ''; say(c === 'auth/operation-not-allowed' ? '這個 Firebase 專案還沒啟用 Google 登入。' : c === 'auth/unauthorized-domain' ? '這個網域還沒加進授權網域。' : '登入沒完成（' + esc(c || e) + '）。再按一次試試。'); }
