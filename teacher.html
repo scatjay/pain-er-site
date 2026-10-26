@@ -43,9 +43,13 @@ a{color:var(--info)}
 .tabs button{white-space:nowrap;flex:none}.tabs .n{display:inline-block;min-width:1.5em;margin-left:4px;padding:0 5px;border-radius:999px;background:var(--ink);color:var(--bg);font-size:.78em;text-align:center}
 .tabs .n.alert{background:var(--bad);color:#fff}
 .pane{display:none}.pane.cur{display:block}
+/* 10-26 唯讀儀表板：每個分頁最上方一列關鍵數字卡；介入清單改成可捲動區塊（不再用「顯示幾位」下拉） */
+.kpi.pk{margin:6px 0 10px}.kpi.pk .big{font-size:1.7em}.kpi.pk>div.bad{border-color:var(--bad);background:var(--badbg)}.kpi.pk>div.bad .big{color:var(--bad)}.kpi.pk>div.good{border-color:var(--ok);background:var(--okbg)}
+.kpi.pk>div.txt .big{font-size:1.05em;line-height:1.5;padding-top:.35em}.ivlist{max-height:62vh;overflow:auto;padding-right:2px}.ftnote{font-size:.85em;margin-top:16px;color:var(--muted)}.ftnote p{margin:2px 0}
 .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px}
 .barrow{display:flex;gap:6px;margin:3px 0;align-items:center}.barrow .k{width:7em;flex:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.barrow .t{flex:1;height:.9em;border:1px solid var(--ink);border-radius:4px;overflow:hidden}.barrow .t>div{height:100%;background:var(--yellow)}.barrow .v{width:3em;text-align:right;flex:none;color:var(--muted);font-variant-numeric:tabular-nums}
-.livegrid{display:grid;grid-template-columns:minmax(0,2fr) minmax(220px,1fr);gap:12px}@media (max-width:760px){.livegrid{grid-template-columns:1fr}}
+/* 10-26 地圖與名單重疊：地圖 svg 原本固定 1240px 寬、放進較窄的欄只能橫捲，右半被名單欄切掉（提示框也跟著被壓住）。改成地圖整幅在上、縮放到欄寬（viewBox 本來就有），名單在下分欄 */
+.livegrid{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}#liveMap{min-width:0;position:relative;z-index:2}#liveMap svg{display:block;width:100%;max-width:100%;height:auto}#liveList{min-width:0;position:relative;z-index:1;columns:260px;column-gap:18px}#liveList>div{break-inside:avoid}
 .fb{border-bottom:1px solid var(--line);padding:6px 0}.fb:last-child{border-bottom:0}
 /* QR：白底黑碼固定不跟主題（掃描器要高對比） */
 .qrcard{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
@@ -143,36 +147,37 @@ details.sysbox{margin-top:4px}details.sysbox>summary{cursor:pointer;min-height:3
     <div class="qr" id="qrSmall"></div>
     <div style="flex:1;min-width:12em"><b>用手機開老師後台</b><div class="muted" style="font-size:.9em">掃這個 QR，用同一個 Google 帳號登入。</div>
       <div class="qrurl" id="qrUrl"></div>
-      <div class="row" style="margin-top:6px"><button id="qrBigBtn">放大</button><button id="qrCopy" class="ghost">複製網址</button></div></div>
+      <div class="row" style="margin-top:6px"><button id="qrBigBtn">放大</button><button id="qrCopy" class="ghost" hidden>複製網址</button></div></div>
   </div>
 </div>
 <div id="dashboard" hidden>
 <div class="top"><h1>痛點急診室 老師後台</h1>
-  <label class="muted">看哪一週、哪一班 <select id="sessSel"></select></label> <span class="muted small" id="weekNote"></span>
+  <label class="muted">週次・班級 <select id="sessSel"></select></label> <span class="muted small" id="weekNote"></span>
   <button id="deidBtn" title="學號、姓名、信箱換成代號，投影時用">去識別化：關</button><button id="projBtn" title="字放大、藏掉次要資訊">投影模式：關</button>
-  <span class="small muted" id="whoami" style="font-size:.85em"></span><button id="logoutBtn" class="ghost">登出</button></div>
+  <span class="small muted" id="whoami" style="font-size:.85em"></span><a id="sbLink" href="sb_dashboard.html" style="font-weight:700">故事板儀表板 →</a><button id="logoutBtn" class="ghost">登出</button></div>
 
 <div class="clsbar" id="clsBar" role="status" aria-live="polite"><span id="clsOnline" class="onlbig" title="現在有幾位學生在線上（5 分鐘內有心跳）"></span><span id="clsNow">讀取中…</span><span id="clsNext" class="muted"></span><span class="grow"></span><span id="clsUpd" class="muted"></span><button id="clsAuto" class="sm ghost" hidden>回到自動</button><button id="clsRefresh" class="sm" title="重新讀取個人指引，並重算狀態、漏斗、介入清單與所有分頁">立即更新</button></div>
 
-<div class="sysbar" id="sysBar"><span id="sysTxt" class="muted">讀取中…</span><button id="liveCloseQuick" class="sm warn" title="上課中緊急把人物對話關掉（按兩次，12 小時）">關閉人物對話</button></div>
-<details id="sysBox" class="sysbox"><summary>系統與場次狀態（代理程式、開關、用量、人數）</summary>
-<div class="status">
+<div class="sysbar" id="sysBar"><span id="sysTxt" class="muted">讀取中…</span><button id="liveCloseQuick" class="sm warn" title="上課中緊急把人物對話關掉（按兩次，12 小時）" hidden>關閉人物對話</button></div>
+<div id="legacyHold" hidden><div id="sysBox">
+<div class="status" id="sysCardsSrc">
   <div class="stat" id="stDaemon"><div class="lab">即時訪談代理程式</div><div class="val" id="daemon">讀取中…</div><div class="lab small" id="daemonSub"></div></div>
   <div class="stat" id="stLive"><div class="lab">人物即時對話</div><div class="val" id="liveState">讀取中…</div>
-    <div class="row" style="margin-top:6px;gap:6px"><button id="liveOpen" class="sm">開放 2 小時</button><button id="liveClose" class="sm warn">關閉</button><button id="liveAuto" class="sm ghost">照課表</button></div>
+    <div class="row" style="margin-top:6px;gap:6px" hidden><button id="liveOpen" class="sm">開放 2 小時</button><button id="liveClose" class="sm warn">關閉</button><button id="liveAuto" class="sm ghost">照課表</button></div>
     <div class="lab small" id="liveNext" style="margin-top:4px"></div></div>
   <div class="stat"><div class="lab">這個場次用量（每人每天 <span id="capSid">150</span> 題）</div><div class="val" id="usageSum">讀取中…</div><div class="lab" id="usageCum"></div><div class="lab small" id="updated"></div></div>
 </div>
-<details class="small muted" style="font-size:.85em;margin-top:4px"><summary style="cursor:pointer">開關怎麼運作</summary><div id="liveHelp"></div></details>
+<details class="small muted" style="font-size:.85em;margin-top:4px" hidden><summary style="cursor:pointer">開關怎麼運作</summary><div id="liveHelp"></div></details>
 
-<div class="kpi"><div><div class="big" id="kOnline">0</div><div class="muted">人在線</div></div><div><div class="big" id="kStudents">0</div><div class="muted">人進過本場次</div></div><div><div class="big" id="kRooms">0</div><div class="muted">間房</div></div><div><div class="big" id="kIv">0</div><div class="muted">次訪談</div></div><div><div class="big" id="kQ">0</div><div class="muted">個提問</div></div><div><div class="big" id="kLit">0</div><div class="muted">人六點全亮</div></div></div>
-</details>
+<div class="kpi" id="kpiLegacy"><div><div class="big" id="kOnline">0</div><div class="muted">人在線</div></div><div><div class="big" id="kStudents">0</div><div class="muted">人進過本場次</div></div><div><div class="big" id="kRooms">0</div><div class="muted">間房</div></div><div><div class="big" id="kIv">0</div><div class="muted">次訪談</div></div><div><div class="big" id="kQ">0</div><div class="muted">個提問</div></div><div><div class="big" id="kLit">0</div><div class="muted">人六點全亮</div></div></div>
+</div></div>
 
 <nav class="tabs" id="tabs">
-  <button data-tab="st">學生狀態</button><button data-tab="live">現場</button><button data-tab="ask">提問與啟示</button><button data-tab="stu">學生（原表） <span class="n" id="nStu">0</span></button><button data-tab="room">房間與逐字稿 <span class="n" id="nRoom">0</span></button><button data-tab="board">成就排行</button><button data-tab="fb">回報 <span class="n" id="nFb">0</span></button><button data-tab="rev">審核建議</button><button data-tab="use">用量與花費</button><button data-tab="sb">故事板與用量</button>
+  <button data-tab="st">學生狀態</button><button data-tab="live">現場</button><button data-tab="ask">提問與啟示</button><button data-tab="stu" hidden>學生（原表） <span class="n" id="nStu">0</span></button><button data-tab="room">房間與逐字稿 <span class="n" id="nRoom">0</span></button><button data-tab="board">成就排行</button><button data-tab="fb">回報 <span class="n" id="nFb">0</span></button><button data-tab="rev">審核建議</button><button data-tab="use">用量與花費</button>
 </nav>
 
 <section class="pane" data-pane="st">
+  <div class="kpi pk" id="kp_st" role="group" aria-label="學生狀態關鍵數字"></div>
   <div class="projNote muted card">投影模式：個別學生的名單與引導建議不顯示（只留全班的人數與共同問題）。</div>
   <div class="st2">
     <div class="stL">
@@ -186,9 +191,9 @@ details.sysbox{margin-top:4px}details.sysbox>summary{cursor:pointer;min-height:3
   </div>
   <div class="card stPriv" id="stListCard">
     <div class="stool"><b>學生列表</b>
-      <select id="stCls" aria-label="班級"><option value="">全部班級</option></select>
-      <select id="stStage" aria-label="狀態"><option value="">全部狀態</option><option value="S1">◔ 沒開口</option><option value="S2">⚠ 卡住</option><option value="S3">▶ 進行中</option><option value="S4">✔ 完成</option></select>
-      <select id="stHint" aria-label="引導類型"><option value="">全部引導類型</option></select>
+      <select id="stCls" aria-label="班級" hidden><option value="">全部班級</option></select>
+      <select id="stStage" aria-label="狀態" hidden><option value="">全部狀態</option><option value="S1">◔ 沒開口</option><option value="S2">⚠ 卡住</option><option value="S3">▶ 進行中</option><option value="S4">✔ 完成</option></select>
+      <select id="stHint" aria-label="引導類型" hidden><option value="">全部引導類型</option></select>
       <label><input type="checkbox" id="stOnl"> 只看在線</label>
       <input id="stQ" placeholder="找代號" aria-label="找代號" style="min-width:7em;flex:1">
       <select id="stSort" aria-label="排序"><option value="pri">排序：需要介入的優先</option><option value="sid">學號／代號</option><option value="lit">檢核點少的在前</option><option value="ask">提問多的在前</option><option value="idle">最久沒動的在前</option><option value="lv">技能等級低的在前</option></select>
@@ -200,24 +205,26 @@ details.sysbox{margin-top:4px}details.sysbox>summary{cursor:pointer;min-height:3
 </section>
 
 <section class="pane" data-pane="live">
+  <div class="kpi pk" id="kp_live" role="group" aria-label="現場關鍵數字"></div>
   <h2>現在在哪裡、在訪談誰</h2>
   <div class="card" id="achFeedCard"><b>🏅 成就即時通知</b> <span class="muted" style="font-size:.85em">學生一解開成就就會出現在這裡（只留這次打開頁面之後的）</span><div id="achFeed" style="font-size:.95em;margin-top:4px"><span class="muted">等學生解開成就…</span></div></div>
   <div class="card livegrid"><div id="liveMap" class="scroll"></div><div id="liveList" style="font-size:.95em"></div></div>
 </section>
 
 <section class="pane" data-pane="ask">
+  <div class="kpi pk" id="kp_ask" role="group" aria-label="提問關鍵數字"></div>
   <h2>大家怎麼問、在關注什麼</h2>
-  <div class="card"><div style="margin-bottom:6px">只看：<select id="qCls"><option value="">全部班級</option></select> <span id="qClsNote" class="muted" style="font-size:.85em"></span></div><div id="skillDist" style="margin:4px 0 10px"></div><div id="qTips" class="tips"></div><div class="muted" style="font-size:.85em;margin:4px 0 6px">點任何一條橫條，下面會列出那一類的原句（一句話可能同時算在好幾類）。</div><div class="cols"><div><b>提問方式</b><div id="qStyle"></div></div><div><b>關注主題</b><div id="qTopic"></div></div><div><b>訪談對象</b><div id="qWho"></div></div></div><div id="qDrill" hidden></div>
-  <details style="margin-top:8px"><summary class="muted" style="cursor:pointer">最近 30 個問題</summary><div id="qRecent" style="font-size:.9em"></div></details></div>
+  <div class="card"><div style="margin-bottom:6px"><select id="qCls" hidden><option value="">全部班級</option></select><span id="qClsNote" class="muted" style="font-size:.85em"></span></div><div id="skillDist" style="margin:4px 0 10px"></div><div id="qTips" class="tips"></div><div class="muted" style="font-size:.85em;margin:4px 0 6px">點任何一條橫條，下面會列出那一類的原句（一句話可能同時算在好幾類）。</div><div class="cols"><div><b>提問方式</b><div id="qStyle"></div></div><div><b>關注主題</b><div id="qTopic"></div></div><div><b>訪談對象</b><div id="qWho"></div></div></div><div id="qDrill" hidden></div>
+  <div style="margin-top:8px"><b class="muted">最近 30 個問題</b><div id="qRecent" style="font-size:.9em"></div></div></div>
   <h2>對「衛教簡訊再設計」的啟示</h2>
   <div class="card"><div class="cols"><div><b>訪談檢核標到的問題</b><div id="iTags"></div></div><div><b>結論裡的方向</b><div id="iConcl"></div></div></div>
-  <div class="row" style="margin-top:10px"><button id="sumBtn">請 Vertex 做主題摘要</button><span id="sumStat" class="muted small"></span></div><div id="sumBox" style="margin-top:6px"></div></div>
+  <div class="row" style="margin-top:10px"><button id="sumBtn" hidden>請 Vertex 做主題摘要</button><span id="sumStat" class="muted small"></span></div><div id="sumBox" style="margin-top:6px"></div></div>
 </section>
 
 <section class="pane" data-pane="stu">
   <h2>學生進度（六個檢核點）</h2>
   <div class="card"><div class="row" style="margin-bottom:6px">
-    <select id="fCls"><option value="">全部班級</option></select>
+    <select id="fCls" hidden><option value="">全部班級</option></select>
     <select id="fSort"><option value="sid">依學號</option><option value="lit">檢核點少的在前</option><option value="iv">訪談多的在前</option><option value="q">提問多的在前</option><option value="idle">最久沒提問的在前</option><option value="lvlo">技能等級低的在前</option><option value="lvhi">技能等級高的在前</option><option value="bdg">成就多的在前</option></select>
     <select id="fLv" title="訪談技能等級（探問、情境感知取較高）"><option value="">全部技能等級</option><option value="1">Lv.1</option><option value="2">Lv.2</option><option value="3">Lv.3</option></select>
     <select id="fCp" title="1/3（W6）六個檢核點"><option value="">1/3 檢核點：全部</option><option value="none">還沒進來／0 項</option><option value="part">做了一部分</option><option value="all">六項全亮</option></select>
@@ -231,38 +238,44 @@ details.sysbox{margin-top:4px}details.sysbox>summary{cursor:pointer;min-height:3
 </section>
 
 <section class="pane" data-pane="room">
+  <div class="kpi pk" id="kp_room" role="group" aria-label="房間關鍵數字"></div>
   <h2>房間</h2>
   <div class="card rmtool" id="rmTool"><div class="row" style="gap:8px;align-items:center;flex-wrap:wrap">
-    <label for="rmCls"><b>班級</b></label><select id="rmCls"><option value="">全部班級</option><option>二丙</option><option>二乙</option><option>二甲</option></select>
-    <label for="rmWeek"><b>波次</b></label><select id="rmWeek"><option value="0">全部週次</option><option value="1">第 1 週（W6）</option><option value="2">第 2 週（W7）</option><option value="3">第 3 週（W8）</option></select>
-    <button id="rmClear" class="sm" title="班級與波次都回到「全部」">全部班級・全部週次</button></div>
+    <select id="rmCls" hidden aria-label="班級"><option value="">全部班級</option><option>二丙</option><option>二乙</option><option>二甲</option></select>
+    <select id="rmWeek" hidden aria-label="波次"><option value="0">全部週次</option><option value="1">第 1 週（W6）</option><option value="2">第 2 週（W7）</option><option value="3">第 3 週（W8）</option></select>
+    <button id="rmClear" class="sm" title="班級與波次都回到「全部」" hidden>全部班級・全部週次</button></div>
     <div id="rmSum" class="muted" role="status" aria-live="polite" style="margin-top:6px"></div>
-    <div class="muted small">班級＝房主的班級（房間成員來自不同班會標「混班」）。波次＝房間建立時間落在該班的第幾週（各班上課前一小時起算，二丙二乙 10/13、二甲 10/15 為第 1 週起點）；班級選擇與「學生狀態」分頁共用。</div></div>
+    <div class="muted small">班級＝房主的班級（房間成員來自不同班會標「混班」）。波次＝房間建立時間落在該班的第幾週（各班上課前一小時起算，二丙二乙 10/13、二甲 10/15 為第 1 週起點）；班級與週次跟頁首「週次・班級」選單同步。</div></div>
   <div class="card scroll" id="rooms"></div>
 </section>
 
-<section class="pane" data-pane="sb"><div id="sbTeacher" class="muted">載入中…</div></section>
 <section class="pane" data-pane="board">
+  <div class="kpi pk" id="kp_board" role="group" aria-label="成就關鍵數字"></div>
   <h2>成就排行（學生端「成就」分頁也看得到）</h2>
   <div class="card" id="board">載入中…</div>
 </section>
 
 <section class="pane" data-pane="fb">
+  <div class="kpi pk" id="kp_fb" role="group" aria-label="回報關鍵數字"></div>
   <h2>回報與建議（學生按「🐛 回報」送來的，最近 100 則）</h2>
   <div class="card"><div class="row" id="fbFilter" style="margin-bottom:6px"></div><div id="fbBox">載入中…</div></div>
 </section>
 
 <section class="pane" data-pane="rev">
+  <div class="kpi pk" id="kp_rev" role="group" aria-label="審核關鍵數字"></div>
   <h2>上週訪談審核（AI 建議，給你確認用）</h2>
   <div class="card" id="revSum">讀取中…</div>
   <h2>每位學生的審核建議</h2>
-  <div class="card"><div class="row" style="margin-bottom:6px"><select id="rvLv"><option value="">全部等級</option><option>起步</option><option>進步中</option><option>很好</option></select><select id="rvCls"><option value="">全部班級</option><option>二丙</option><option>二乙</option><option>二甲</option></select><select id="rvTh" title="依要改的方向分類"><option value="">全部要改的方向</option><option value="open">開場介紹／目的</option><option value="yn">是非題、封閉式</option><option value="adv">急著給建議或解法</option><option value="off">偏題、閒聊</option><option value="dig">追問、深入細節</option></select><select id="rvSort"><option value="sid">依學號</option><option value="nlo">題數少的在前</option><option value="nhi">題數多的在前</option><option value="lv">等級（起步在前）</option></select><input id="rvQ" placeholder="找學號、姓名或關鍵字" style="flex:1;min-width:8em"><span class="muted" id="rvCount"></span></div><div class="scroll" id="revRows">讀取中…</div></div>
+  <div class="card"><div class="row" style="margin-bottom:6px"><select id="rvLv"><option value="">全部等級</option><option>起步</option><option>進步中</option><option>很好</option></select><select id="rvCls" hidden><option value="">全部班級</option><option>二丙</option><option>二乙</option><option>二甲</option></select><select id="rvTh" title="依要改的方向分類"><option value="">全部要改的方向</option><option value="open">開場介紹／目的</option><option value="yn">是非題、封閉式</option><option value="adv">急著給建議或解法</option><option value="off">偏題、閒聊</option><option value="dig">追問、深入細節</option></select><select id="rvSort" hidden><option value="sid">依學號</option><option value="nlo">題數少的在前</option><option value="nhi">題數多的在前</option><option value="lv">等級（起步在前）</option></select><input id="rvQ" placeholder="找學號、姓名或關鍵字" style="flex:1;min-width:8em"><span class="muted" id="rvCount"></span></div><div class="scroll" id="revRows">讀取中…</div></div>
   <h2>2/3（W7）回應指引審核</h2>
   <div class="card" id="respSum">讀取中…</div>
   <h2>審核用量</h2>
   <div class="card scroll" id="revUse">讀取中…</div>
 </section>
 <section class="pane" data-pane="use">
+  <div class="kpi pk" id="kp_use" role="group" aria-label="用量關鍵數字"></div>
+  <h2>系統狀態</h2>
+  <div class="status" id="sysCards"></div>
   <h2>各型號試用比較</h2>
   <div class="card"><div id="modelStats" class="scroll"><span class="muted">還沒有資料。</span></div><div class="muted" style="font-size:.85em;margin-top:6px">每段對話（一位學生問一位人物）固定分到一個型號。「出錯」＝被限流或 10 秒沒回，那一題會自動改用基本型號重問，學生不會看到忙碌。價錢依官方牌價計算。</div></div>
   <h2>本遊戲的累積用量與花費（代理程式逐題記錄）</h2>
@@ -275,7 +288,7 @@ details.sysbox{margin-top:4px}details.sysbox>summary{cursor:pointer;min-height:3
   <div class="card scroll" id="usage"></div>
 </section>
 
-<p class="muted small" style="font-size:.8em;margin-top:16px">只讀（除了即時對話的三顆開關與主題摘要）。資料來自 Firebase 專案 gen-lang-client-0556836042（Spark 免費方案，沒有綁帳單）。檢核點用遊戲同一套規則計算。去識別化：學號、姓名、信箱換成當場次的固定代號（學生01、02…）。</p>
+<div class="ftnote"><p><b>要調整設定或處理資料，請在 Claude Code 跟助理說。</b></p><p>資料來自 Firebase 專案 gen-lang-client-0556836042（Spark 免費方案，沒有綁帳單）。檢核點用遊戲同一套規則計算。去識別化：學號、姓名、信箱換成當場次的固定代號（學生01、02…）。</p></div>
 </div>
 </div>
 <aside id="stDrawer" role="dialog" aria-modal="true" aria-labelledby="stDrawerT" hidden></aside>
@@ -296,7 +309,7 @@ details.sysbox{margin-top:4px}details.sysbox>summary{cursor:pointer;min-height:3
 <script src="layout.js?v=202610262202"></script>
 <script src="minimap.js?v=202610262202"></script><script src="map_layout.js?v=202610262202"></script><script src="skill_badge.js?v=202610262202"></script>
 <script src="personas_inclusive.js?v=202610262202"></script><script src="er_data.js?v=202610262202"></script><script src="npc_voice.js?v=202610262202"></script><script src="personas.js?v=202610262202"></script>
-<script src="week2.js?v=202610262202"></script><script src="teacher_model.js?v=202610262202"></script><script src="sb_core.js?v=202610262202"></script><script src="sb_store.js?v=202610262202"></script><script src="sb_teacher.js?v=202610262202"></script>
+<script src="week2.js?v=202610262202"></script><script src="teacher_model.js?v=202610262202"></script>
 <script>
 /* 教師名單：只有這裡的 Google 帳號能進。要加人就加在這裡（改完重新部署；資料庫規則 tools/er_after_google_enabled.py 也要加）。 */
 var TEACHER_EMAILS = ['scatjay@gmail.com', 'prof.chwu@mx.nthu.edu.tw', 'nthuchwu@gapp.nthu.edu.tw'];   /* 10-16 楊老師：清大吳智鴻老師（觀摩用，含後台） */
@@ -340,9 +353,12 @@ var CLASS_WINDOWS = [].concat(
   /* 登出：登出後整頁重新載入，清掉所有監聽與畫面上的學生資料（共用電腦時不留東西） */
   $('logoutBtn').onclick = function () { $('logoutBtn').disabled = true; auth.signOut().then(function () { location.href = location.pathname; }, function (e) { $('logoutBtn').disabled = false; toast('登出沒成功：' + ((e && e.code) || e)); }); };
 
+  /* 10-26：頁首三張系統狀態卡（代理程式／人物對話／用量）搬到「用量與花費」頂端，id 不變；頁首只留一行狀態（sysTxt） */
+  (function () { var src = $('sysCardsSrc'), dst = $('sysCards'); if (src && dst) while (src.firstChild) dst.appendChild(src.firstChild); })();
   /* ───── 分頁 ───── */
   var TAB = 'st';
   function setTab(t) {
+    if (t === 'stu') t = 'st';   /* 10-26：「學生（原表）」併入「學生狀態」，舊的記憶落點改回第一個分頁 */
     if (!document.querySelector('[data-pane="' + t + '"]')) t = 'st'; TAB = t;
     Array.prototype.forEach.call(document.querySelectorAll('[data-pane]'), function (p) { p.classList.toggle('cur', p.dataset.pane === t); });
     Array.prototype.forEach.call(document.querySelectorAll('#tabs [data-tab]'), function (b) { b.classList.toggle('on', b.dataset.tab === t); });
@@ -450,8 +466,8 @@ var CLASS_WINDOWS = [].concat(
     if ($('respSum')) {
       var R = gResp || {}, ks = Object.keys(R), c = { '審核中': 0, '通過': 0, '需補強': 0 }, fbs = [];
       ks.forEach(function (k) { var st = respState(R[k])[0].replace(/（.*）/, ''); c[st] = (c[st] || 0) + 1; if (R[k].rev && !R[k].rev.ok) fbs.push([k, R[k].rev.fb]); });
-      $('respSum').innerHTML = '送出過 <b>' + ks.length + '</b> 位：' + Object.keys(c).filter(function (k) { return k !== '未送'; }).map(function (k) { return esc(k) + ' ' + c[k]; }).join('、') + '（學生表「第 2 週指引」欄點開可看每人回應與審核意見）' +
-        (fbs.length ? '<details style="margin-top:6px"><summary>需補強的審核意見（' + fbs.length + '）</summary><ul>' + fbs.map(function (x) { return '<li><b>' + esc(DEID ? aliasOf(x[0]) : x[0]) + '</b>　' + esc(x[1] || '') + '</li>'; }).join('') + '</ul></details>' : '');
+      $('respSum').innerHTML = '送出過 <b>' + ks.length + '</b> 位：' + Object.keys(c).filter(function (k) { return k !== '未送'; }).map(function (k) { return esc(k) + ' ' + c[k]; }).join('、') + '（每人的回應與審核意見：在「學生狀態」點學生看詳情）' +
+        (fbs.length ? '<div style="margin-top:6px"><b>需補強的審核意見（' + fbs.length + '）</b><ul>' + fbs.map(function (x) { return '<li><b>' + esc(DEID ? aliasOf(x[0]) : x[0]) + '</b>　' + esc(x[1] || '') + '</li>'; }).join('') + '</ul></div>' : '');
     }
     if ($('revUse')) {
       var days = Object.keys(ru).sort().reverse(), NAME = { interview: '上週訪談審核（Vertex Gemini）', resp: '回應指引審核（Claude 批次）' }, tot = 0;
@@ -499,12 +515,18 @@ var CLASS_WINDOWS = [].concat(
     var fillMenu = function () { var sel = $('sessSel'), cur = sel.value; sel.innerHTML = MENU.map(function (m) { var v = 'ER-20261013|' + m[0] + '|' + m[1]; return '<option value="' + esc(v) + '">' + esc(m[2]) + '</option>'; }).join(''); sel.value = cur && sel.querySelector('option[value="' + cur + '"]') ? cur : 'ER-20261013|' + (Date.now() >= Date.parse('2026-10-20T07:10:00+08:00') ? '2' : '1') + '|'; };
     fill = function () { fillMenu(); };   /* 場次清單固定，不再列其他日期的舊場次（10-13 之前的每日場次已停用） */
     fillMenu();
+    var firstMenu = true;
     var applyMenu = function () {
       var v = $('sessSel').value.split('|'), cls = v[2] || '';
-      WEEK = Number(v[1]) || 0; chats = weekFilter(chatsAll); weekNote();
-      ['fCls', 'qCls'].forEach(function (id) { var el = $(id); if (!el) return; if (cls && !Array.prototype.some.call(el.options, function (o) { return o.value === cls; })) { var o = document.createElement('option'); o.value = cls; o.textContent = cls; el.appendChild(o); } el.value = cls; });
+      WEEK = Number(v[1]) || 0; rmWeek = WEEK; chats = weekFilter(chatsAll); weekNote();
+      /* 10-26：頁首「週次・班級」是全後台唯一的班級／週次入口；第一次載入保留依課表自動選的班，之後選什麼班就是什麼班（視為手動） */
+      if (!firstMenu) { stF.cls = cls; stManual = true; }
+      firstMenu = false; setClsAll(stF.cls);
       var tgt = (isLocal && qs0) ? SESS : v[0];   /* 本機測試帶 ?sess= 時不被選單蓋回正式場次 */
       if (SESS !== tgt) { SESS = tgt; attach(); } else { try { render(); } catch (e) {} }
+      try { renderReview(); } catch (e) {}
+      try { if (stOut) stAll(); } catch (e) {}
+      syncMenu();
     };
     $('sessSel').onchange = applyMenu; applyMenu();
     /* 10-19：老師後台仍聽整個 er/_daemon（含 admin/）；學生端已改成只聽四個小欄位 */ try { fdb.ref('.info/serverTimeOffset').on('value', function (o) { SKEW = Number(o.val()) || 0; }); } catch (e) {} fdb.ref('er/_daemon').on('value', function (s) { daemon = s.val() || {}; renderDaemon(); renderSysTxt(); });
@@ -539,7 +561,6 @@ var CLASS_WINDOWS = [].concat(
       offs.push(function () { ref.off('value', w); });
     }
     DB = window.ERG_REMOTE.makeRemoteDb({ root: root, sess: SESS, watchAll: true, notify: function (t) { if (/^(room:|lobby|scene:)/.test(t)) schedule(); } });
-    try { if (window.ERG_SB_TEACHER) window.ERG_SB_TEACHER.mount(document.getElementById('sbTeacher'), { root: fdb.ref('sbx/' + SESS), opsRoot: fdb.ref(), rooms: function () { return DB.listRooms(SESS); } }); } catch (e) { console.error('故事板面板', e); }   /* 第 8 週：故事板與 Firebase 用量（sbx／sbops） */
     on(root.child('profiles'), function (s) { profiles = s.val() || {}; if (WEEK) chats = weekFilter(chatsAll); schedule(); renderUsageAll(); });
     on(root.child('presence'), function (s) { presence = s.val() || {}; schedule(); try { drawOnline(); } catch (e) {} });
     on(root.child('chat'), function (s) { chatsAll = s.val() || {}; chats = weekFilter(chatsAll); schedule(); });
@@ -733,6 +754,7 @@ var CLASS_WINDOWS = [].concat(
     Object.keys(chats).forEach(function (code) { Object.keys(chats[code]).forEach(function (sid) { if (qcls && ((profiles[sid] || {}).cls || '') !== qcls) return; Object.keys(chats[code][sid]).forEach(function (rec) { var c = chats[code][sid][rec], pn = c.personaName || personaName(c.personaId), nq = 0; Object.keys(c.turns || {}).forEach(function (k) { var t = c.turns[k]; if (t.role === 'u') { nq += 1; qs.push({ t: t.t, sid: sid, who: pn, pid: c.personaId || '', text: String(t.text || '') }); } }); if (nq) { who[pn] = (who[pn] || 0) + nq; convs.push(nq); (byPid[c.personaId || pn] = byPid[c.personaId || pn] || {})[sid] = 1; } }); }); });
     var st = {}, tp = {}; qs.forEach(function (q) { classify(q.text, STYLE_RULES, true).forEach(function (k) { st[k] = (st[k] || 0) + 1; }); classify(q.text, TOPIC_RULES, true).forEach(function (k) { tp[k] = (tp[k] || 0) + 1; }); });
     try { renderSkillDist(); } catch (e) {}
+    try { var topTp = Object.keys(tp).filter(function (k) { return k !== '其他'; }).sort(function (a, b) { return tp[b] - tp[a]; })[0]; lastAskSum = { n: qs.length, ppl: Object.keys(qs.reduce(function (m, q) { m[q.sid] = 1; return m; }, {})).length, yn: st['是非題'] || 0, ev: st['追問具體事件'] || 0, why: st['追問原因或需求'] || 0, top: topTp || '' }; } catch (e) {}
     lastQs = qs; $('qStyle').innerHTML = bar(st, qs.length, 'style'); $('qTopic').innerHTML = bar(tp, qs.length, 'topic'); $('qWho').innerHTML = bar(who, qs.length, 'who'); bindDrill(); renderDrill(); renderTips(qs, st, convs, byPid, tp);
     $('qClsNote').textContent = (qcls ? qcls + '：' : '') + qs.length + ' 題、' + Object.keys(qs.reduce(function (m, q) { m[q.sid] = 1; return m; }, {})).length + ' 人有提問';
     qs.sort(function (a, b) { return b.t - a.t; });
@@ -747,8 +769,8 @@ var CLASS_WINDOWS = [].concat(
   function renderFb() {
     var v = fbData, keys = Object.keys(v).sort(function (a, b) { return Number(v[b].t) - Number(v[a].t); }), cnt = {}; keys.forEach(function (k) { var kd = v[k].kind || ''; cnt[kd] = (cnt[kd] || 0) + 1; });
     var nb = $('nFb'); nb.textContent = keys.length; nb.classList.toggle('alert', !!cnt.bug); nb.title = cnt.bug ? (cnt.bug + ' 則「有問題」') : '';
-    $('fbFilter').innerHTML = [['', '全部', keys.length]].concat(Object.keys(KINDS).map(function (k) { return [k, KINDS[k], cnt[k] || 0]; })).map(function (f) { return '<button class="sm' + (fbKind === f[0] ? ' on' : '') + '" data-k="' + f[0] + '">' + esc(f[1]) + ' ' + f[2] + '</button>'; }).join('');
-    Array.prototype.forEach.call($('fbFilter').querySelectorAll('[data-k]'), function (b) { b.onclick = function () { fbKind = b.dataset.k; renderFb(); }; });
+    $('fbFilter').innerHTML = '<label class="muted">類別 <select id="fbKindSel" aria-label="回報類別">' + [['', '全部', keys.length]].concat(Object.keys(KINDS).map(function (k) { return [k, KINDS[k], cnt[k] || 0]; })).map(function (f) { return '<option value="' + f[0] + '"' + (fbKind === f[0] ? ' selected' : '') + '>' + esc(f[1]) + ' ' + f[2] + '</option>'; }).join('') + '</select></label>';
+    $('fbKindSel').onchange = function () { fbKind = this.value; renderFb(); $('fbKindSel').focus(); };
     var show = keys.filter(function (k) { return !fbKind || v[k].kind === fbKind; });
     $('fbBox').innerHTML = show.length ? show.map(function (k) { var e = v[k], c = e.ctx || {}, vs = e.state || c, vw = vs.view === '3d' ? '3D' + (vs.q ? '/' + vs.q : '') + (vs.err3 ? '・3D錯誤 ' + vs.err3 : '') : '2D' + (vs.fb3 ? '（3D退回：' + vs.fb3 + '）' : ''); return '<div class="fb"><span class="pill ' + (KCLS[e.kind] || '') + '">' + esc(KINDS[e.kind] || e.kind) + '</span> <b>' + esc(DEID ? aliasOf(String(e.sid)) : (e.sid + (e.name ? '　' + e.name : ''))) + '</b> <span class="muted" style="font-size:.85em">' + new Date(e.t).toLocaleString('zh-TW', { hour12: false }) + '・' + esc(vw) + (c.room ? '・房 ' + esc(c.room) : '') + (c.loc ? '・' + esc(c.loc) : '') + (c.simTime ? '・' + esc(c.simTime) : '') + '</span><div>' + esc(e.text) + '</div>' + (c.errors && c.errors.length ? '<div class="muted small" style="font-size:.8em">錯誤：' + esc(c.errors.join(' ｜ ')) + '</div>' : '') + '</div>'; }).join('') : '<span class="muted">' + (keys.length ? '這一類沒有回報。' : '還沒有回報。') + '</span>';
   }
@@ -884,6 +906,36 @@ var CLASS_WINDOWS = [].concat(
     $('usageSum').innerHTML = num(tot.turns) + ' 題・' + rows.length + ' 人' + (capped ? ' <span class="pill bad">' + capped + ' 人到上限</span>' : '');
     $('usage').innerHTML = rows.length ? '<table><thead><tr><th>學生</th><th class="num">題數</th><th class="num">tokens（入/出）</th><th class="num">花費</th><th>最後</th></tr></thead><tbody>' + rows.map(function (k) { return '<tr><td>' + esc(aliasOf(k)) + '</td><td class="num">' + (u[k].turns || 0) + (u[k].turns >= CAP ? ' <span class="pill bad">已達上限</span>' : '') + '</td><td class="num">' + num(u[k].tokIn) + ' / ' + num(u[k].tokOut) + '</td><td class="num">' + fUsd(costUsd(u[k])) + '</td><td class="muted">' + (u[k].last ? hm(u[k].last) : '') + '</td></tr>'; }).join('') + '</tbody></table>' + (others.length ? '<div class="muted" style="font-size:.85em;margin-top:6px">另有 ' + others.length + ' 個不是這個場次學生的帳號（系統測試用）共 ' + otherTurns + ' 題，沒有列在表裡。</div>' : '') : '<span class="muted">這個場次還沒有人用即時訪談。</span>';
   }
+  /* ───── 10-26 各分頁頂端的關鍵數字卡（只重畫文字有變的那一列；全部讀記憶體內已有的資料，不新增 Firebase 讀取） ───── */
+  var lastAskSum = null, lastRoomSum = null;
+  function kp(id, items) {
+    var el = $(id); if (!el) return;
+    var h = items.map(function (x) { return '<div' + (x[2] ? ' class="' + x[2] + '"' : '') + '><div class="big">' + esc(x[0]) + '</div><div class="muted">' + esc(x[1]) + '</div></div>'; }).join('');
+    if (el.__h !== h) { el.__h = h; el.innerHTML = h; }
+  }
+  function pctOf(a, n) { return n ? Math.round(a / n * 100) + '%' : '—'; }
+  function renderKpis() {
+    try {
+      var V = stV, T = V && V.totals, now = Date.now();
+      var cnt = function (g) { return V ? V.rows.filter(function (r) { return r.stage === g; }).length : 0; };
+      if (V) kp('kp_st', [[T.bound, '人已綁定'], [T.online, '人在線'], [cnt('S1'), '人沒開口'], [cnt('S2'), '人卡住', cnt('S2') ? 'bad' : ''], [cnt('S3'), '人進行中'], [cnt('S4'), '人完成', 'good']]); else kp('kp_st', [['—', '資料載入中']]);
+      var seen = {}, act = 0; (rooms || []).forEach(function (r) { Object.keys(r.players || {}).forEach(function (sid) { if (!seen[sid]) { seen[sid] = 1; var rc = (lastAsk[sid] || {}).last; if (rc && now - rc.t < 300000) act += 1; } }); });
+      kp('kp_live', [[Object.keys(seen).length, '人在地圖上'], [act, '人 5 分鐘內有提問'], [(rooms || []).length, '間房（累計）'], [achEvents.length, '則成就通知（開頁後）']]);
+      var A = lastAskSum; if (A) kp('kp_ask', [[A.n, '個提問'], [A.ppl, '人有提問'], [pctOf(A.yn, A.n), '是非題'], [pctOf(A.ev, A.n), '追問具體事件'], [pctOf(A.why, A.n), '追問原因或需求'], [A.top || '—', '最多人關注的主題', 'txt']]); else kp('kp_ask', [['—', '資料載入中']]);
+      var R = lastRoomSum; if (R) kp('kp_room', [[R.rooms, '間房（目前篩選）'], [R.withChat, '間有逐字稿'], [R.turns, '句發言'], [R.asks, '題人物對話'], [R.mix, '間混班']]); else kp('kp_room', [['—', '資料載入中']]);
+      var sc = scores || {}, ids = Object.keys(sc), nb = 0, mx = 0, l3 = 0; ids.forEach(function (k) { var b = ((sc[k] || {}).badgeIds || []).length; nb += b; if (b > mx) mx = b; if (lvOf(k) >= 3) l3 += 1; });
+      kp('kp_board', [[ids.length, '人有成就資料'], [nb, '枚成就已解開'], [mx, '枚＝最多一人解開'], [l3, '人技能 Lv.3']]);
+      var fk = Object.keys(fbData || {}), fc = { bug: 0, idea: 0, confused: 0 }; fk.forEach(function (k) { var kd = fbData[k].kind; if (fc[kd] != null) fc[kd] += 1; });
+      kp('kp_fb', [[fk.length, '則回報（最近 100 則）'], [fc.bug, '則有問題', fc.bug ? 'bad' : ''], [fc.idea, '則建議'], [fc.confused, '則看不懂']]);
+      var iv = (((daemon || {}).admin || {}).ivReview || {}).summary, L = (iv && iv.levels) || {}, gr = gResp || {}, gk = Object.keys(gr), fix = gk.filter(function (k) { return gr[k].rev && !gr[k].rev.ok; }).length;
+      kp('kp_rev', [[iv ? iv.n : '—', '位上週訪談已審'], [L['起步'] || 0, '起步'], [L['進步中'] || 0, '進步中'], [L['很好'] || 0, '很好'], [gk.length, '位送出回應指引'], [fix, '位需補強', fix ? 'bad' : '']]);
+      var day = SESS.replace('ER-', ''), u = (usageAll || {})[day] || {}, ut = u._total || {}, CAP = Number((daemon || {}).maxSid) || 150, uk = Object.keys(u).filter(function (k) { return k.charAt(0) !== '_'; }), cap = uk.filter(function (k) { return (u[k].turns || 0) >= CAP; }).length, cum = 0;
+      Object.keys(usageAll || {}).filter(function (k) { return /^\d{8}$/.test(k); }).forEach(function (d) { var x = usageAll[d] || {}; cum += costUsd(x._total || {}) + ((x._summary || {}).nusd ? x._summary.nusd / 1e9 : 0); });
+      var vc = ((usageAll || {})._vertex || {}).credits, cr = vc && vc.ok && vc.rows && vc.rows[0];
+      kp('kp_use', [[num(ut.turns), '題（本場次）'], [uk.length, '人用過'], [cap, '人到上限', cap ? 'bad' : ''], [fUsd(cum), '累積花費'], [cr ? twd(cr.left) : '—', 'EDU 抵免額餘額', 'txt']]);
+    } catch (e) { console.error(e); }
+  }
+  setInterval(renderKpis, 1500);
   /* ───── 房間與逐字稿的班級、波次篩選（10-20）─────
      算法在 teacher_model.js（indexRooms／filterRooms／sumRooms／chatNeighbors，有單元測試）；這裡只負責畫。
      班級與「學生狀態」共用 stF.cls／stManual（同一個選擇狀態）；波次 rmWeek 只在這個分頁。兩者記在 sessionStorage，重新整理後保留。
@@ -899,6 +951,7 @@ var CLASS_WINDOWS = [].concat(
     $('rmCls').value = stF.cls; $('rmWeek').value = String(rmWeek);
     rmShown = TMODEL.filterRooms(rmIdx, { cls: stF.cls, week: rmWeek });
     var sm = TMODEL.sumRooms(rmShown), mixN = rmShown.filter(function (x) { return x.mixed; }).length;
+    lastRoomSum = { rooms: sm.rooms, withChat: sm.withChat, turns: sm.turns, asks: sm.asks, mix: mixN };
     $('rmSum').innerHTML = '<b>' + (stF.cls || '全部班級') + '・' + (rmWeek ? TMODEL.WAVES[rmWeek - 1].label : '全部週次') + '</b>：<b>' + sm.rooms + '</b> 間房（全部 ' + rmIdx.length + ' 間' + (mixN ? '，其中混班 ' + mixN + ' 間' : '') + '）・發言 <b>' + sm.turns + '</b> 句・人物對話 <b>' + sm.asks + '</b> 題（' + sm.withChat + ' 間有逐字稿）';
     $('rmSum').title = '發言＝學生問與人物答的所有句子；人物對話題數＝其中學生問的題數';
     box.innerHTML = rmShown.length ? '<table><thead><tr><th>代碼</th><th>班級・週次</th><th>案例・班別</th><th>主持</th><th>成員</th><th>即時訪談</th></tr></thead><tbody>' + rmShown.map(function (x) {
@@ -970,7 +1023,7 @@ var CLASS_WINDOWS = [].concat(
     if (e.key === 'Tab') { var f = Array.prototype.filter.call(box.querySelectorAll('button,a[href],input,select'), function (x) { return !x.disabled; }); if (!f.length) return; var a = f[0], z = f[f.length - 1]; if (e.shiftKey && document.activeElement === a) { e.preventDefault(); z.focus(); } else if (!e.shiftKey && document.activeElement === z) { e.preventDefault(); a.focus(); } else if (!box.contains(document.activeElement)) { e.preventDefault(); a.focus(); } }
   });
   /* ───── 學生狀態（10-20 改版）：畫面只負責呈現，算法在 teacher_model.js（ERG_TMODEL）。設計稿 ui/teacher_redesign_1020.md ───── */
-  var TMODEL = window.ERG_TMODEL, stV = null, stMb = {}, stOut = null, stT = null, stOpen = '', stOpener = null, stShow = 8;
+  var TMODEL = window.ERG_TMODEL, stV = null, stMb = {}, stOut = null, stT = null, stOpen = '', stOpener = null, stShow = 0;   /* 10-26：0＝全部列出（清單區塊自己捲動），不再用「顯示幾位」下拉 */
   var stF = { cls: '', stage: '', hint: '', cp: '', online: false, q: '', sort: 'pri' };
   /* ───── 依上課時間顯示對應班級（10-20 楊老師：「教師後台要依照上課時間，顯示對應班級目前的現狀，後臺可以直接更新」）─────
      課表在 teacher_model.js 的 currentClass（單一來源、有單元測試）。預設選該班；老師手動改過班級就尊重，並出現「回到自動」。
@@ -1035,13 +1088,15 @@ var CLASS_WINDOWS = [].concat(
   function stName(sid) { var p = profiles[sid] || {}; return DEID ? aliasOf(sid) : sid + (p.name ? '　' + p.name : ''); }
   function stChip(stage, sub) { return '<span class="stc ' + stage.toLowerCase() + '">' + ST_GLYPH[stage] + ' ' + ST_NAME[stage] + (sub && ST_SUB[sub] ? '・' + ST_SUB[sub] : '') + '</span>'; }
   var SNZ = {}; try { SNZ = JSON.parse(localStorage.getItem('ergT_snz') || '{}'); } catch (e) {}
-  function snoozed(sid) { var k = SESS + ':' + sid; return SNZ[k] && SNZ[k] > Date.now(); }
+  var SNOOZE_ON = false;   /* 10-26 唯讀儀表板：「先觀察」鈕不顯示，所以也不套用舊的暫時隱藏紀錄；要恢復把這裡改 true、並拿掉 data-snz 鈕的 hidden */
+  function snoozed(sid) { if (!SNOOZE_ON) return false; var k = SESS + ':' + sid; return SNZ[k] && SNZ[k] > Date.now(); }
   function snooze(sid) { SNZ[SESS + ':' + sid] = Date.now() + 3 * 3600000; Object.keys(SNZ).forEach(function (k) { if (SNZ[k] < Date.now()) delete SNZ[k]; }); try { localStorage.setItem('ergT_snz', JSON.stringify(SNZ)); } catch (e) {} }
 
   /* 系統狀態一行（常駐）＋兩段式「關閉人物對話」 */
   function renderSysTxt() {
     var d = daemon || {}, age = d.heartbeat ? srvNow() - d.heartbeat : Infinity, fresh = age < 90000, open = !!d.liveNow && fresh, el = $('sysTxt'); if (!el) return;
-    el.innerHTML = '<span class="' + (fresh ? 'ok' : 'bad') + '">● ' + (fresh ? '代理程式連線中' : '代理程式離線') + '</span>　<span class="' + (open ? 'ok' : 'bad') + '">● ' + (open ? '人物對話開放中' : '人物對話暫停') + '</span>　<span class="muted">' + esc($('usageSum') ? $('usageSum').textContent : '') + '</span>';
+    var lv = d.live || {}, manual = (lv.mode === 'open' || lv.mode === 'closed') && Number(lv.until || 0) > Date.now();
+    el.innerHTML = '<span class="' + (fresh ? 'ok' : 'bad') + '">● ' + (fresh ? '代理程式連線中' : '代理程式離線') + '</span>　<span class="' + (open ? 'ok' : 'bad') + '">● ' + (open ? '人物對話開放中' : '人物對話暫停') + '（' + (manual ? '手動' + (lv.mode === 'open' ? '開放' : '關閉') + '到 ' + hm(lv.until) : '照課表') + '）</span>　<span class="muted">' + esc($('usageSum') ? $('usageSum').textContent : '') + '</span>';
   }
   (function () {
     var b = $('liveCloseQuick'), tm = null; if (!b) return;
@@ -1060,26 +1115,27 @@ var CLASS_WINDOWS = [].concat(
 
   function renderFunnel() {
     var T = stV.totals, scope = WEEK ? '這週' : '累計';
-    $('stFunnel').innerHTML = (loadedAll() ? '' : '<div class="ldnote"><span class="ld" aria-hidden="true"></span>讀取中 ' + loadedN() + '／' + LOAD_KEYS.length + '，人數還沒算齊（逐字稿約 4 MB，第一次要幾秒）</div>') + '<div class="stlegend">' + ['S0', 'S1', 'S2', 'S3', 'S4'].map(function (g) { return stChip(g); }).join('') + '<span class="muted hint" style="font-size:.85em">點一段＝只看那一類；再點一次取消。「未綁定」只有人數、沒有名單。</span></div><div class="fnl">' +
+    $('stFunnel').innerHTML = (loadedAll() ? '' : '<div class="ldnote"><span class="ld" aria-hidden="true"></span>讀取中 ' + loadedN() + '／' + LOAD_KEYS.length + '，人數還沒算齊（逐字稿約 4 MB，第一次要幾秒）</div>') + '<div class="stlegend">' + ['S0', 'S1', 'S2', 'S3', 'S4'].map(function (g) { return stChip(g); }).join('') + '<span class="muted hint" style="font-size:.85em">點一段＝只看那一類；再點一次取消。「未綁定」只有人數、沒有名單。班級在頁首選。</span></div><div class="fnl">' +
       stV.funnel.filter(function (f) { return f.size > 0; }).map(function (f) {
         return '<div class="cn"><b>' + esc(f.cls) + '</b> <small>' + f.size + '</small></div><div class="bar">' + ['S0', 'S1', 'S2', 'S3', 'S4'].map(function (g) {
           var c = f[g]; if (!c) return '';
           var on = stF.cls === f.cls && stF.stage === g;
-          return '<button class="seg ' + g.toLowerCase() + (on ? ' sel' : '') + '" style="flex-grow:' + c + '" data-cls="' + esc(f.cls) + '" data-g="' + g + '"' + (g === 'S0' ? ' disabled' : '') + ' aria-label="' + esc(f.cls + ' ' + ST_NAME[g] + ' ' + c + ' 人') + '" title="' + esc(f.cls + ' ' + ST_NAME[g] + ' ' + c + ' 人') + '">' + ST_GLYPH[g] + ' ' + c + '</button>';
+          var tg = g === 'S0' ? 'span' : 'button';   /* 未綁定只有人數沒有名單，不能點，就不用鈕的外觀與角色 */
+          return '<' + tg + ' class="seg ' + g.toLowerCase() + (on ? ' sel' : '') + '" style="flex-grow:' + c + '" data-cls="' + esc(f.cls) + '" data-g="' + g + '"' + (g === 'S0' ? ' disabled role="img"' : '') + ' aria-label="' + esc(f.cls + ' ' + ST_NAME[g] + ' ' + c + ' 人') + '" title="' + esc(f.cls + ' ' + ST_NAME[g] + ' ' + c + ' 人') + '">' + ST_GLYPH[g] + ' ' + c + '</' + tg + '>';
         }).join('') + '</div>';
-      }).join('') + '</div><div class="defs"><span>名冊 <b>' + T.roster + '</b></span><span>已綁定 <b>' + T.bound + '</b></span><span>進過房 <b>' + T.entered + '</b></span><span>有提問（' + scope + '） <b>' + T.asked + '</b></span><span>在線 <b>' + T.online + '</b></span><span>完成六點（累計） <b>' + T.passed + '</b></span></div><details class="defn"><summary>人數怎麼算？</summary>名冊＝' + (stF.cls ? esc(stF.cls) + '的' : '三班') + '選課人數；已綁定＝有登入並選了班；進過房＝進過任何一間房。班級是學生自己選的，各班「未綁定」是約數' + (stF.cls ? '；要看三班合計請把班級改成「全部班級」。' : '，三班合計 <b>' + T.S0 + '</b> 人是準確的。') + '</details>';
+      }).join('') + '</div><div class="defs"><span>名冊 <b>' + T.roster + '</b></span><span>已綁定 <b>' + T.bound + '</b></span><span>進過房 <b>' + T.entered + '</b></span><span>有提問（' + scope + '） <b>' + T.asked + '</b></span><span>在線 <b>' + T.online + '</b></span><span>完成六點（累計） <b>' + T.passed + '</b></span></div><div class="defn"><b>人數怎麼算？</b>　名冊＝' + (stF.cls ? esc(stF.cls) + '的' : '三班') + '選課人數；已綁定＝有登入並選了班；進過房＝進過任何一間房。班級是學生自己選的，各班「未綁定」是約數' + (stF.cls ? '；要看三班合計請把班級改成「全部班級」。' : '，三班合計 <b>' + T.S0 + '</b> 人是準確的。') + '</div>';
     Array.prototype.forEach.call($('stFunnel').querySelectorAll('.seg:not([disabled])'), function (b) { b.onclick = function () { var same = stF.cls === b.dataset.cls && stF.stage === b.dataset.g; if (!same && !stF.stage) stPrevCls = stF.cls; applyFilter({ cls: same ? stPrevCls : b.dataset.cls, stage: same ? '' : b.dataset.g, cp: '', hint: '' }); }; });
   }
 
   function hintHtml(h) { return '<div class="why">依據：' + esc(h.basis) + '</div><div class="say">「' + esc(h.say) + '」</div>'; }
   function renderIntervene() {
     var list = stOut.interventions.filter(function (i) { return (!stF.cls || i.cls === stF.cls) && !snoozed(i.sid); }), shown = stShow ? list.slice(0, stShow) : list;
-    $('stIntervene').innerHTML = '<h3>需要我介入（' + shown.length + '／' + list.length + '）　<select id="stShowN" aria-label="顯示幾位"><option value="5">顯示 5 位</option><option value="8">顯示 8 位</option><option value="0">全部</option></select></h3><div class="muted" style="font-size:.85em">依據是可以對照的數字；建議的話只給你看，不會自動送給學生。排序：在線的卡住者優先。</div>' +
+    $('stIntervene').innerHTML = '<h3>需要我介入（' + list.length + ' 位）　<select id="stShowN" aria-label="顯示幾位" hidden><option value="5">顯示 5 位</option><option value="8">顯示 8 位</option><option value="0">全部</option></select></h3><div class="muted" style="font-size:.85em">依據是可以對照的數字；建議的話只給你看，不會自動送給學生。排序：在線的卡住者優先。</div><div class="ivlist">' +
       (shown.map(function (i) {
         var r = stOut.rows.filter(function (x) { return x.sid === i.sid; })[0];
         return '<div class="ivc" data-sid="' + esc(i.sid) + '"><div class="h">' + stChip(i.stage, r && r.sub) + ' <b>' + esc(stName(i.sid)) + '</b> <span class="muted">' + esc(i.cls) + '</span>' + (i.online ? ' <span class="ok">● 在線</span>' : '') + '</div>' + hintHtml(i.hints[0]) + (i.hints.length > 1 ? '<div class="muted small" style="font-size:.85em">另外：' + i.hints.slice(1).map(function (h) { return esc(h.label); }).join('、') + '（點「看詳情」）</div>' : '') +
-          '<div class="row"><button class="sm" data-open="' + esc(i.sid) + '">看詳情</button><button class="sm ghost" data-snz="' + esc(i.sid) + '" title="這台瀏覽器 3 小時內不再列出">先觀察</button></div></div>';
-      }).join('') || '<div class="muted" style="margin-top:6px">目前沒有需要介入的人。</div>');
+          '<div class="row"><button class="sm" data-open="' + esc(i.sid) + '">看詳情</button><button class="sm ghost" data-snz="' + esc(i.sid) + '" title="這台瀏覽器 3 小時內不再列出" hidden>先觀察</button></div></div>';
+      }).join('') || '<div class="muted" style="margin-top:6px">目前沒有需要介入的人。</div>') + '</div>';
     $('stShowN').value = String(stShow); $('stShowN').onchange = function () { stShow = Number(this.value) || 0; renderIntervene(); };
     bindOpen($('stIntervene'));
     Array.prototype.forEach.call($('stIntervene').querySelectorAll('[data-snz]'), function (b) { b.onclick = function (e) { e.stopPropagation(); snooze(b.dataset.snz); toast('已先觀察：這台瀏覽器 3 小時內不再列出'); renderIntervene(); }; });
@@ -1097,14 +1153,24 @@ var CLASS_WINDOWS = [].concat(
     var hk = Object.keys(C.hits).filter(function (k) { return C.hits[k] > 0; }).sort(function (a, b) { return C.hits[b] - C.hits[a]; });
     $('stCommons').innerHTML = '<h3>全班共同問題</h3><b style="font-size:.9em">卡在哪一個檢核點（進行中＋卡住 ' + tot + ' 人）</b>' + (fu.map(function (k) { var d = CPD[Number(k) - 1] || {}; return '<div class="cbar"><button class="k" data-cp="' + k + '" title="只看卡在這一點的人">' + CIRC[Number(k) - 1] + ' ' + esc(d.label || '第' + k + '點') + '</button><div class="t"><div style="width:' + Math.round(C.firstUnlit[k] / (tot || 1) * 100) + '%"></div></div><span class="v">' + C.firstUnlit[k] + '</span></div>'; }).join('') || '<div class="muted">沒有。</div>') +
       '<b style="font-size:.9em;display:block;margin-top:8px">提問與引導的共同現象</b>' + (hk.map(function (k) { var def = TMODEL.HINT_DEFS[k] || {}; return '<div class="cbar"><button class="k" data-hint="' + k + '" title="只看這一類的人">' + esc(def.label || k) + '</button><div class="t"><div style="width:' + Math.min(100, Math.round(C.hits[k] / (DEN[k] || stV.totals.bound || 1) * 100)) + '%"></div></div><span class="v">' + C.hits[k] + (DEN[k] ? '／' + DEN[k] : '') + '</span></div>'; }).join('') || '<div class="muted">沒有。</div>') +
-      '<div class="row" style="margin-top:8px"><button class="sm" id="stToSum">看主題摘要（提問與啟示）▸</button></div>';
+      '<div class="row" style="margin-top:8px" hidden><button class="sm" id="stToSum">看主題摘要（提問與啟示）▸</button></div>';
     Array.prototype.forEach.call($('stCommons').querySelectorAll('[data-cp]'), function (b) { b.onclick = function () { applyFilter({ cp: stF.cp === b.dataset.cp ? '' : b.dataset.cp, stage: '', hint: '', cls: stF.cls }); }; });
     Array.prototype.forEach.call($('stCommons').querySelectorAll('[data-hint]'), function (b) { b.onclick = function () { applyFilter({ hint: stF.hint === b.dataset.hint ? '' : b.dataset.hint, stage: '', cp: '' }); }; });
     $('stToSum').onclick = function () { setTab('ask'); try { $('sumBox').scrollIntoView({ block: 'start' }); } catch (e) {} };
   }
 
   /* 列表 */
-  function syncTool() { $('stCls').value = stF.cls; if ($('rmCls')) $('rmCls').value = stF.cls; $('stStage').value = stF.stage; $('stHint').value = stF.hint; $('stOnl').checked = stF.online; $('stSort').value = stF.sort; if ($('stQ').value !== stF.q) $('stQ').value = stF.q; }
+  /* 頁首選單與各分頁（含隱藏的舊班級下拉）的班級保持同一個值 */
+  function syncMenu() { var sel = $('sessSel'); if (!sel || !sel.options.length) return; var v = 'ER-20261013|' + WEEK + '|' + (stF.cls || ''); if (sel.value !== v && sel.querySelector('option[value="' + v + '"]')) sel.value = v; }
+  function setClsAll(cls) {
+    var ch = []; cls = cls || '';
+    ['fCls', 'qCls', 'rvCls'].forEach(function (id) { var el = $(id); if (!el) return; if (cls && !Array.prototype.some.call(el.options, function (o) { return o.value === cls; })) { var o = document.createElement('option'); o.value = cls; o.textContent = cls; el.appendChild(o); } if (el.value !== cls) { el.value = cls; ch.push(id); } });
+    return ch;
+  }
+  function syncTool() {
+    var ch = setClsAll(stF.cls); syncMenu();
+    if (ch.length) { try { if (ch.indexOf('qCls') >= 0) { drill = null; renderAnalysis(); } if (ch.indexOf('fCls') >= 0) renderStudents(); if (ch.indexOf('rvCls') >= 0) renderReview(); } catch (e) {} }
+    $('stCls').value = stF.cls; if ($('rmCls')) $('rmCls').value = stF.cls; $('stStage').value = stF.stage; $('stHint').value = stF.hint; $('stOnl').checked = stF.online; $('stSort').value = stF.sort; if ($('stQ').value !== stF.q) $('stQ').value = stF.q; }
   function stRows() {
     var f = stF, q = f.q.trim().toLowerCase();
     var rows = stOut.rows.filter(function (r) {
@@ -1155,7 +1221,7 @@ var CLASS_WINDOWS = [].concat(
     box.innerHTML = '<div class="dh"><h2 id="stDrawerT">' + esc(stName(r.sid)) + ' <span class="muted small">' + esc(r.cls) + '</span></h2>' + stChip(r.stage, r.sub) + '<button id="stDrawerX" aria-label="關閉">✕</button></div>' +
       '<div class="muted" style="margin-top:6px">' + (r.online ? '<span class="ok">● 在線</span>' : '不在線') + '　最近動靜：' + (r.lastSeen ? ago(r.lastSeen) : '—') + '　累計 ' + r.playMin + ' 分鐘</div>' +
       '<h3>建議的一句引導（只給老師看，不會自動送出）</h3>' + (hints.slice(0, 5).map(function (h, i) { return '<div class="dsay"><div><b>' + (i + 1) + ' ' + esc(h.label) + '</b><div class="why muted" style="font-size:.88em">依據：' + esc(h.basis) + '</div><div class="say" style="border-left:3px solid var(--info);padding-left:8px;margin:3px 0">「' + esc(h.say) + '」</div></div><button class="sm ghost" data-cpy="' + i + '" style="min-height:36px">複製</button></div>'; }).join('') || '<span class="muted">目前沒有建議。</span>') +
-      '<div class="row" style="margin-top:6px"><button class="sm ghost" id="stDrawerSnz">先觀察</button></div>' + (praise.length ? '<h3>可以稱讚的地方</h3>' + praise.map(function (h) { return '<div class="dsay"><div><b>' + esc(h.label) + '</b><div class="why muted" style="font-size:.88em">依據：' + esc(h.basis) + '</div><div class="say" style="border-left:3px solid var(--ok);padding-left:8px;margin:3px 0">「' + esc(h.say) + '」</div></div></div>'; }).join('') : '') +
+      '<div class="row" style="margin-top:6px" hidden><button class="sm ghost" id="stDrawerSnz">先觀察</button></div>' + (praise.length ? '<h3>可以稱讚的地方</h3>' + praise.map(function (h) { return '<div class="dsay"><div><b>' + esc(h.label) + '</b><div class="why muted" style="font-size:.88em">依據：' + esc(h.basis) + '</div><div class="say" style="border-left:3px solid var(--ok);padding-left:8px;margin:3px 0">「' + esc(h.say) + '」</div></div></div>'; }).join('') : '') +
       '<h3>檢核點（累計）　' + r.cp.lit + '／6</h3><ul>' + cpl.map(function (x) { var undone = (x.items || []).filter(function (i) { return !i.ok; }); return '<li>' + CIRC[x.id - 1] + ' ' + esc(x.label) + ' ' + (x.ok ? '<b class="ok">✔</b>' : '<b class="bad">✘</b>') + (undone.length ? '<ul>' + undone.map(function (i) { return '<li>' + esc(i.text) + ' <b class="bad">✘</b></li>'; }).join('') + '</ul>' : '') + '</li>'; }).join('') + '</ul>' +
       '<h3>提問樣態（' + (WEEK ? '本週' : '累計') + '，來自逐字稿）</h3><div>' + r.ask.n + ' 題｜追問 ' + (r.ask.ev + r.ask.why) + '｜接話 ' + r.ask.echo + '｜是非 ' + Math.round(r.ask.ynRatio * 100) + '%｜重複貼 ' + Math.round(r.ask.dupRatio * 100) + '%｜問過 ' + r.ask.whoN + ' 位人物｜問到簡訊 ' + r.ask.sms + ' 題｜開場說明來意：' + (r.ask.intro == null ? '—' : (r.ask.intro > 0 ? '有' : '沒有')) + '</div>' +
       '<div style="margin-top:4px">' + stRecent(r.sid, 3).map(function (q) { return '<div class="q" style="font-size:.92em"><span class="muted">' + hm(q.t) + '</span> → ' + esc(q.who) + '：' + esc(q.text) + '</div>'; }).join('') + '</div>' +
