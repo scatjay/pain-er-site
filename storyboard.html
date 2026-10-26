@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>故事板</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap">
+<style>
+/* 風格沿用 index.html 的 :root：粗黑框、手繪圓角、網點背景；顏色全用變數，亮暗兩套 */
+:root{--bg:#eaf4fb;--dot:#cfe3f1;--panel:#fff;--fg:#1e1e1e;--muted:#59656d;--ink:#1e1e1e;--pop:#ff6b4a;--yellow:#ffd43b;--mint:#b2f2bb;--sky:#a5d8ff;--bad:#c92a2a;--ok:#1b5e2c;--line:#cfd8de;--bw:3px;--bw-s:2px;--r-m:10px;--r-hand:5px 7px 2px 2px;--sh:3px;--sh-l:6px;--ct:#3d6fe0;--soft-y:color-mix(in srgb,var(--yellow) 26%,var(--panel));--soft-r:color-mix(in srgb,var(--pop) 16%,var(--panel))}
+@media (prefers-color-scheme:dark){:root{--bg:#10191f;--dot:#1b2a33;--panel:#18262e;--fg:#e8eff2;--muted:#9fb0b9;--ink:#e8eff2;--pop:#ff8a70;--yellow:#e0b82a;--mint:#2f6b3f;--sky:#2a557a;--bad:#ff8787;--ok:#69db7c;--line:#2c3f4a;color-scheme:dark}}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);background-image:radial-gradient(var(--dot) 1.5px,transparent 1.5px);background-size:18px 18px;color:var(--fg);font:15px/1.6 "Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif}
+button,.btn{background:var(--yellow);color:#1e1e1e;border:var(--bw) solid var(--ink);border-radius:var(--r-m);padding:6px 14px;font:inherit;font-weight:700;cursor:pointer;box-shadow:var(--sh) var(--sh) 0 var(--ink);text-decoration:none;display:inline-block}
+button.mini,.btn.mini{padding:1px 8px;font-size:12px;border-width:2px;box-shadow:2px 2px 0 var(--ink);margin:2px 0}
+button.armed{background:var(--pop)}
+button:disabled,.btn.dis{opacity:.45;cursor:not-allowed;box-shadow:none}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,.img:focus-visible{outline:var(--bw) solid var(--pop);outline-offset:2px}
+input,select,textarea{font:inherit;color:inherit;background:var(--panel);border:var(--bw-s) solid var(--ink);border-radius:var(--r-m);padding:4px 8px;width:100%}
+textarea{resize:vertical;min-height:54px}
+h1{font-size:22px;margin:0;font-weight:900}h2{font-size:15px;margin:14px 0 6px;font-weight:900}h3{font-size:13px;margin:12px 0 4px;font-weight:900}
+.muted{color:var(--muted);font-size:13px}
+.card{background:var(--panel);border:var(--bw) solid var(--ink);border-radius:var(--r-m);padding:14px 16px;box-shadow:var(--sh-l) var(--sh-l) 0 var(--ink)}
+#gate{max-width:560px;margin:60px auto;padding:0 16px}
+#top{position:sticky;top:0;z-index:5;background:var(--panel);border-bottom:var(--bw) solid var(--ink);border-top:8px solid var(--ct);padding:8px 16px}
+#top .line{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.cl{display:inline-block;color:#fff;border:2px solid var(--ink);border-radius:6px;min-width:24px;text-align:center;font-weight:900;margin-right:6px;padding:0 4px}
+.quota{background:var(--soft-y);border:var(--bw-s) solid var(--ink);border-radius:var(--r-m);padding:2px 12px;font-size:15px}
+.quota.off{background:var(--soft-r)}.quota .why{font-size:12px;font-weight:400}
+#modeNote{background:var(--soft-r);border:var(--bw-s) solid var(--ink);border-radius:var(--r-m);padding:2px 10px;font-size:13px}
+.tabs button{box-shadow:none;background:var(--panel)}.tabs button.on{background:var(--ink);color:var(--bg)}
+#layout{display:grid;grid-template-columns:290px minmax(0,1fr);gap:16px;max-width:1400px;margin:0 auto;padding:16px}
+aside .card{margin-bottom:14px}
+.frag{border:var(--bw-s) solid var(--ink);border-radius:var(--r-hand);background:var(--panel);padding:6px 8px;margin:6px 0;cursor:grab;font-size:13px}
+.frag .who{font-weight:900;color:var(--ct)}.frag .src{font-size:11px;color:var(--muted)}.tg{background:var(--soft-r);padding:0 4px;border-radius:4px;font-size:11px}
+.pr{margin:8px 0}.pr .pt{background:var(--soft-y);border:var(--bw-s) dashed var(--ink);border-radius:var(--r-m);padding:6px 8px;font-size:12px}
+#cells{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:16px}
+.cell{background:var(--panel);border:var(--bw) solid var(--ink);border-radius:var(--r-m);padding:10px 12px;box-shadow:var(--sh-l) var(--sh-l) 0 var(--ink);border-top:8px solid var(--ct)}
+.cell.sel{outline:var(--bw-s) dashed var(--ct);outline-offset:3px}
+.cell.moment{background:var(--soft-r)}
+.cell header{display:flex;gap:8px;align-items:center}.cell .no{background:var(--ct);color:#fff;border:2px solid var(--ink);border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:900;flex:none}
+.cell .title{font-weight:900}.mom{white-space:nowrap;font-weight:900;color:var(--bad)}
+.img{margin:8px 0 2px;height:190px;border:var(--bw-s) dashed var(--ink);border-radius:var(--r-m);display:flex;align-items:center;justify-content:center;background:color-mix(in srgb,var(--sky) 20%,var(--panel));overflow:hidden;cursor:pointer}
+.img img{max-width:100%;max-height:100%;object-fit:contain}.img.cover img{width:100%;height:100%;object-fit:cover;max-width:none;max-height:none}
+.img .ph{text-align:center;padding:8px;font-size:13px}
+.imgbar{margin-bottom:6px;font-size:12px}
+.ask{font-size:12px;color:var(--muted);margin:4px 0}
+.row2{display:grid;grid-template-columns:1fr 1.4fr;gap:8px}
+label{display:block;font-size:12px;font-weight:700;margin-top:4px}
+.ck{display:inline-block;font-weight:400;margin-left:6px}.ck input{width:auto}
+mark.pain{background:none;color:var(--bad);font-weight:900;text-decoration:underline wavy}
+.painline{font-size:13px}
+.refs{font-size:12px;margin-top:6px}.refs select{width:auto;max-width:180px;padding:1px 4px;font-size:12px}
+.chip{display:inline-block;border:var(--bw-s) solid var(--ink);border-radius:99px;padding:0 8px;margin:1px 2px;background:var(--mint);color:#1e1e1e;font-size:12px}.chip .x{background:none;border:0;box-shadow:none;padding:0 2px;cursor:pointer;color:#1e1e1e}
+.gap{background:var(--soft-r);border:var(--bw-s) solid var(--ink);border-radius:var(--r-m);padding:3px 8px;font-size:12px;margin-top:6px}
+.need{color:var(--bad);font-weight:700}.ok{color:var(--ok);font-weight:700}.warn{color:var(--bad)}
+.cell footer{display:flex;justify-content:space-between;gap:6px;flex-wrap:wrap;font-size:11px;margin-top:8px;color:var(--muted)}
+.chk i{font-style:normal;margin-right:5px}.chk i.y{color:var(--ok);font-weight:700}
+.ach{padding:3px 0;font-size:13px}.ach.got{font-weight:700}.ach:not(.got){opacity:.75}
+#toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 16px;border-radius:99px;font-weight:700;opacity:0;pointer-events:none;transition:opacity .2s;z-index:20;max-width:90vw}
+#toast.on{opacity:1}
+#lb{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px}#lb[hidden]{display:none}#lb img{max-width:92vw;max-height:80vh}
+#printSheet{display:none}
+@media (max-width:860px){#layout{grid-template-columns:1fr;padding:10px}#cells{grid-template-columns:1fr}}
+@media print{
+  body{background:#fff;color:#000}body.printing #gate,body.printing #top,body.printing #layout,body.printing #toast,body.printing #lb{display:none!important}
+  body.printing #printSheet{display:block}
+  #printSheet header h2{margin:0}#printSheet .pc{break-inside:avoid;border:1px solid #000;border-top:6px solid var(--ct);padding:6px 10px;margin:8px 0;font-size:12px}
+  #printSheet .pc.moment{background:#ffeceb}#printSheet h3{margin:0 0 4px;font-size:13px}#printSheet .pi{height:200px;display:flex;align-items:center;justify-content:center;border:1px dashed #666;margin:4px 0}
+  #printSheet .pi img{max-width:100%;max-height:100%;object-fit:contain}#printSheet p{margin:2px 0}#printSheet .src{color:#444;font-size:11px}#printSheet mark.pain{color:#c00}
+}
+</style>
+</head>
+<body>
+<div id="gate"><div class="card"><h1>載入中…</h1></div></div>
+<div id="app" hidden>
+  <div id="top">
+    <div class="line">
+      <h1>故事板編輯器</h1><span id="caseBadge"></span><span id="roomLine" class="muted"></span><span id="modeTag" class="muted"></span><span id="saved" class="muted"></span>
+      <span class="tabs"><button id="tabWall" class="on">房間故事板牆</button> <button id="tabMe">我的故事板</button></span>
+      <span style="flex:1"></span>
+      <a id="backLink" class="btn mini" href="index.html">回到急診室</a>
+      <button id="printBtn">另存 PDF 交作業</button>
+    </div>
+    <div class="line" style="margin-top:6px"><div id="quota" class="quota"></div><div id="modeNote" hidden></div>
+      <button id="draftBtn" class="mini">幫我排一份草稿</button><span class="muted">只會填空格；沒有訪談素材的格子會留空，提醒你回去再問。</span></div>
+  </div>
+  <div id="layout">
+    <aside><div class="card" id="side1"></div><div class="card" id="prompts"></div><div class="card" id="stats"></div></aside>
+    <main><div id="cells"></div><p><button id="addCell">＋ 新增一格</button> <span class="muted">每面板最多 8 格，預設 6 格；最後一格留給關鍵時刻。</span></p></main>
+  </div>
+</div>
+<div id="lb" hidden></div>
+<div id="toast" role="status" aria-live="polite"></div>
+<div id="printSheet"></div>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="er_firebase.js?v=202610262202"></script>
+<script src="local_db.js?v=202610262202"></script>
+<script src="remote_db.js?v=202610262202"></script>
+<script src="sb_core.js?v=202610262202"></script>
+<script src="sb_store.js?v=202610262202"></script>
+<script src="sb_ui.js?v=202610262202"></script>
+</body>
+</html>

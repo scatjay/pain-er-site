@@ -44,6 +44,7 @@
       musicOn: APP.me.profile.music === true,   /* 10-12 楊老師：背景音樂有點干擾 ⇒ 預設關，想聽的人自己按 🎵 開 */
       stageMode: 'room' };
     APP.show('game');
+    var sbj = $('sbJump'); if (sbj) { sbj.href = 'storyboard.html?room=' + encodeURIComponent(code); sbj.hidden = false; }   /* 第 8 週：房間頂列跳到這間房的故事板 */
     $('roomLabel').textContent = '房間 ' + code + '・' + world.day.short + '・' + (shift === 'night' ? '夜班' : '日班') + '・' + world.meta.name;
     if (window.ERG_CASE_TONE) window.ERG_CASE_TONE.apply(document, world.meta.id);   /* 10-19 案例色調：進房間依案例套色票（case_tone.js，桌機與手機共用） */
     buildTabs(); if(window.ERG_ROTATION_UI)window.ERG_ROTATION_UI.bind(S); buildSpeed(); buildDots();

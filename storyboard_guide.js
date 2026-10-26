@@ -102,7 +102,7 @@
       '<div class="box"><h4>三個常見的錯</h4><ol style="margin:0;padding-left:1.3em">' + ERRORS.map(function (e) { return '<li><b>' + esc(e.t) + '</b>：' + esc(e.d) + '</li>'; }).join('') + '</ol></div>' +
       '<div class="box"><h4>三個 AI 圖片生成指令（黃色的地方換成你自己的）</h4>' + PROMPTS.map(function (p, i) { return '<div class="ph"><b>' + esc(p.name) + '</b> <button type="button" class="ghost" data-cp="' + i + '">複製</button><span class="cpmsg" data-cpmsg="' + i + '"></span><br>' + marked(p.text) + '<textarea class="cpfb" data-cpfb="' + i + '" readonly>' + esc(p.text) + '</textarea></div>'; }).join('') + '</div>';
     return '<div class="sbGuide" data-case-now="' + id + '"><div class="row"><b style="flex:1;font-size:var(--fs-4)">第 8 週　UX 故事板：基本教學</b><button type="button" class="ghost" data-close="1">關閉</button></div>' +
-      '<div class="muted" style="font-size:var(--fs-2)">故事板編輯器這週稍後開放。現在先學做法，並且把「訪談報告」準備好；故事板只能從有訪談紀錄的房間開。</div>' +
+      '<div class="muted" style="font-size:var(--fs-2)">故事板只能從有訪談紀錄的房間開：回大廳「我進過的房間」那一列按「開故事板」，或在房間頂列按「故事板」。</div>' +
       '<div class="cases" role="group" aria-label="案例">' + cases + '</div>' +
       '<div class="cols"><div><h4 style="margin:0 0 var(--s2)">七個步驟</h4><ol class="steps">' + steps + '</ol></div><div>' + right + '</div></div></div>';
   }
@@ -112,11 +112,11 @@
     var e1 = m.entry1 || { done: [], todo: [], caseName: '' };
     var t1 = '<div class="tile"><h3>入口 1　進急診室</h3><div style="font-size:var(--fs-2)">先去問人。' + esc(e1.caseName) + '：已訪談 <b>' + e1.done.length + '</b> 位（重要人物共 ' + (e1.done.length + e1.todo.length) + ' 位）' + (e1.todo.length ? '<br><span class="muted">還沒問過：' + esc(e1.todo.join('、')) + '</span>' : '，重要人物都問過了') + '</div>' +
       '<div style="margin-top:var(--s2)"><button type="button" id="sbEnter1">進急診室（開房間或加入）</button></div></div>';
-    var t2 = '<div class="tile"><h3>入口 2　第 8 週 UX 故事板</h3><div style="font-size:var(--fs-2)">故事板編輯器這週稍後開放。現在可以看基本教學、匯出我的訪談報告。</div>' +
+    var t2 = '<div class="tile"><h3>入口 2　第 8 週 UX 故事板</h3><div style="font-size:var(--fs-2)">可以開故事板了：先去房間訪談，再從下面「我進過的房間」那一列開。</div>' +
       (m.mobile ? '<div class="muted" style="margin-top:var(--s2)">故事板請用電腦開。</div>' : '<div style="margin-top:var(--s2)"><button type="button" id="sbEnter2">基本教學</button></div>') + '</div>';
     var rows = (m.rooms || []).length ? '<ul class="rooms">' + m.rooms.map(function (r) {
       return '<li><span class="sbDot" style="background:' + r.ct + ';color:' + r.on + '" title="案例' + esc(r.letter) + '">' + esc(r.letter) + '</span><b>' + esc(r.name) + '</b><span class="muted">房號 ' + esc(r.code) + '</span><span>訪談卡 ' + r.cards + ' 張</span>' +
-        (r.open ? '<span class="tag ok" title="' + esc(RL.nextLine(r.level)) + '">' + esc(RL.label(r.level)) + '</span>' + (m.mobile ? '' : '<button type="button" class="ghost" data-export="' + esc(r.code) + '">匯出訪談報告</button>') : '<span class="tag warn">先訪談 1 位才能開故事板</span>') +
+        (r.open ? '<span class="tag ok" title="' + esc(RL.nextLine(r.level)) + '">' + esc(RL.label(r.level)) + '</span>' + (m.mobile ? '' : '<button type="button" class="ghost" data-export="' + esc(r.code) + '">匯出訪談報告</button><a class="btn" href="storyboard.html?room=' + encodeURIComponent(r.code) + '">開故事板</a>') : '<span class="tag warn">先訪談 1 位才能開故事板</span>') +
         '</li>';
     }).join('') + '</ul>' : '<div class="muted" style="margin-top:var(--s2)">還沒有進過的房間。先到入口 1 開一間，去問人。</div>';
     return '<div class="sbBox"><div class="tiles">' + t1 + t2 + '</div><h3 style="margin:var(--s3) 0 0;font-size:var(--fs-3)">我進過的房間</h3>' + rows + '</div>';
