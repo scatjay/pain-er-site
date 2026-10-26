@@ -392,7 +392,7 @@
       (w8 ? '</details>' : '</div>');
   }
   /* 10-26 楊老師「W7 已經不是本週了」：10/27 07:10 起大廳最上方換成 W8（故事板卡），W7 收成預設摺起來的「上週」，回應指引仍可補送 */
-  var W8_START = Date.parse('2026-10-27T07:10:00+08:00'), week2Open = false;
+  var W8_START = Date.parse('2026-10-26T20:00:00+08:00'), week2Open = false;   /* 10-27 楊老師：新單元前一晚就切（原本上課前 1 小時），讓老師先確認 */
   function w8Started() { var q = location.search.match(/[?&]w8=(0|1)/); if (q) return q[1] === '1'; return Date.now() >= W8_START; }
   window.ERG_W8_ON = w8Started;   /* 10-27：成就分頁用它決定哪一組單元排最前面、展開 */
   /* 10-19 楊老師：送出後顯示「審核中」，一天只能送一次（每天晚上用 Claude 批次審一次，tools/er_guide_review.py 寫回 guideResp/{學號}/rev） */
@@ -503,12 +503,13 @@
     if (!card) { card = document.createElement('div'); card.id = 'sbCard'; card.className = 'card'; var pb = w8Started() && $('progressBox') && $('progressBox').closest('.card'), anchorCard = $('createBtn').closest('.card'); if (pb) pb.parentNode.insertBefore(card, pb); else anchorCard.parentNode.insertBefore(card, anchorCard.nextSibling); }
     SB.injectCss(document);
     var sid = String(APP.me.sid), pr = (APP.me.profile && APP.me.profile.progress) || {}, mobile = /Mobi|Android|iPhone/i.test(navigator.userAgent) || location.pathname.indexOf('m.html') >= 0;
-    var mine = [];
+    var mine = [], seenMap = {}; try { seenMap = JSON.parse(localStorage.getItem('erg_room_seen_' + sid) || '{}') || {}; } catch (x) {}
     DB.listRooms(APP.SESS).forEach(function (r) {
       var full = DB.getRoom(r.code); if (!full || !full.members || !full.members[sid]) return;
       var pl = CORE.getPlayer(full, sid) || { interviews: [], conclusions: [] }, mk = [];
       try { mk = L.listMarkers((DB.getScene && DB.getScene(r.code) || []).concat(CORE.mcardEls(full))).filter(function (m) { return String(m.author) === sid; }); } catch (x) {}
-      mine.push({ code: r.code, caseId: full.case || 'sms', interviews: pl.interviews, conclusions: pl.conclusions, markers: mk, mainPersona: caseMeta(full.case || 'sms').mainPersona });
+      var mem = full.members[sid] || {}, seen = Number(seenMap[r.code]) || 0;
+      mine.push({ code: r.code, caseId: full.case || 'sms', interviews: pl.interviews, conclusions: pl.conclusions, markers: mk, mainPersona: caseMeta(full.case || 'sms').mainPersona, seenAt: seen || Number(mem.joinedAt) || 0, seenKind: seen ? 'last' : 'join' });
     });
     var skill = { ask: pr.ask || 1, ctx: pr.ctx || 1 }, caseNames = {};
     CASELIST.forEach(function (c) { caseNames[c.meta.id] = c.meta.short || c.meta.name; });
@@ -550,6 +551,7 @@
   var openT = null;
   function openRoom(code) {
     try { if (code && APP.me.sid) localStorage.setItem('erg_last_room_' + APP.me.sid, code); } catch (x) {}   /* 故事板的主按鈕要開「最近進過的那間」 */
+    try { if (code && APP.me.sid) { var sk = 'erg_room_seen_' + APP.me.sid, sm = JSON.parse(localStorage.getItem(sk) || '{}'); sm[code] = Date.now(); localStorage.setItem(sk, JSON.stringify(sm)); } } catch (x) {}   /* 10-27 楊老師：大廳房間列顯示上次進入時間（伺服器只存加入時間，這裡記在這台裝置） */
     if (ONLINE && DB.watchRoom) {
       if (!code || !DB.hasRoom(code)) throw new Error(DB.ready() ? '找不到這個房間代碼' : '資料還在載入，請再試一次');
       DB.watchRoom(code);

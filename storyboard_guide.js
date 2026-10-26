@@ -76,12 +76,13 @@
     var head = got === p.steps.length ? '<span class="wkDone ok">✅ 故事板全部完成（' + got + '/' + p.steps.length + '）</span>' : '<span class="wkDone todo">⬜ 完成 ' + got + '/' + p.steps.length + (next ? '｜下一步：' + esc(next.label) : '') + '</span>';
     return '<div class="sbProg">' + head + '<ul>' + p.steps.map(function (s) { return '<li class="' + (s.ok === true ? 'ok' : '') + '">' + (s.ok === true ? '✅ ' : '⬜ ') + esc(s.label) + (s.ok === null ? '<span class="muted">（打開故事板後更新）</span>' : '') + '</li>'; }).join('') + '</ul></div>';
   }
+  function fmtSeen(t) { var d = new Date(t), p = function (n) { return (n < 10 ? '0' : '') + n; }; return (d.getMonth() + 1) + '/' + d.getDate() + ' ' + p(d.getHours()) + ':' + p(d.getMinutes()); }
   function roomRows(rooms, skill, caseNames) {
     skill = skill || {};
     return (rooms || []).map(function (r) {
       var ev = RL.evaluate({ interviews: r.interviews, askLv: skill.ask, ctxLv: skill.ctx, conclusions: r.conclusions, markers: r.markers, mainPersona: r.mainPersona });
       var tone = TONE.get(r.caseId);
-      return { code: r.code, caseId: r.caseId, letter: tone.letter, ct: tone.ct, on: tone.on, name: (caseNames && caseNames[r.caseId]) || tone.name, cards: RL.interviewed(r.interviews).length, started: (Array.isArray(r.interviews) ? r.interviews : Object.keys(r.interviews || {}).map(function (k) { return r.interviews[k]; })).filter(function (x) { return x && x.personaId; }).length, level: ev, open: RL.interviewed(r.interviews).length > 0 };
+      return { code: r.code, caseId: r.caseId, letter: tone.letter, ct: tone.ct, on: tone.on, name: (caseNames && caseNames[r.caseId]) || tone.name, cards: RL.interviewed(r.interviews).length, started: (Array.isArray(r.interviews) ? r.interviews : Object.keys(r.interviews || {}).map(function (k) { return r.interviews[k]; })).filter(function (x) { return x && x.personaId; }).length, level: ev, open: RL.interviewed(r.interviews).length > 0, seenAt: Number(r.seenAt) || 0, seenKind: r.seenKind || '' };
     });
   }
 
@@ -98,7 +99,7 @@
     '.sbGuide .cpmsg{font-size:var(--fs-1);color:var(--muted);margin-left:6px}.sbGuide textarea.cpfb{display:none;margin-top:4px;min-height:70px}' +
     '.sbBox a.btn.sbOpen,.sbBox a.btn.sbMain{display:inline-flex;align-items:center;justify-content:center;text-decoration:none}' +
     '.sbBox .sbMainRow{display:flex;align-items:center;gap:var(--s3);flex-wrap:wrap;margin:0 0 var(--s3)}.sbBox .sbMain{font-size:var(--fs-4);font-weight:900;padding:12px 22px;min-height:52px;background:var(--pop);color:var(--ink-fixed);border:var(--bw) solid var(--ink);border-radius:var(--r-m);box-shadow:var(--sh) var(--sh) 0 var(--ink);cursor:pointer}' +
-    '.sbBox .sbAct{display:inline-flex;gap:var(--s2);flex-wrap:wrap}.sbBox .dis,.sbAct .dis{opacity:.5;filter:grayscale(1);cursor:not-allowed;background:var(--line);box-shadow:none}.sbBox .sbNeed{flex:1 1 100%;font-size:var(--fs-2);color:var(--bad);margin-top:2px}' +
+    '.sbBox .sbAct{display:inline-flex;gap:var(--s2);flex-wrap:wrap}.sbBox .dis,.sbAct .sbOpen{border-width:var(--bw-t);box-shadow:none;padding:8px 16px;font-weight:700;border-radius:var(--r-m)}.sbAct .dis{opacity:.5;filter:grayscale(1);cursor:not-allowed;background:var(--panel);color:var(--fg);box-shadow:none}.sbBox .sbNeed{flex:1 1 100%;font-size:var(--fs-2);color:var(--bad);margin-top:2px}' +
     '.sbBox .sbMain2{font-weight:900;padding:12px 18px;min-height:52px;background:var(--yellow);color:var(--ink-fixed);border:var(--bw) solid var(--ink);border-radius:var(--r-m);box-shadow:var(--sh) var(--sh) 0 var(--ink);cursor:pointer}' +
     '.sbProg{margin:0 0 var(--s3);padding:var(--s2) var(--s3);border:var(--bw-s) solid var(--ink);border-radius:var(--r-m);background:var(--panel)}.sbProg ul{display:flex;flex-wrap:wrap;gap:4px 14px;margin:6px 0 0;padding:0;list-style:none;font-size:var(--fs-2)}.sbProg li.ok{color:var(--ok);font-weight:700}' +
     '.wkBox{border-top:var(--bw-s) dashed var(--ink);padding:8px 0}.wkBox>details>summary{cursor:pointer;list-style-position:inside}.wkDone{display:inline-block;font-size:var(--fs-2);font-weight:900;padding:2px 10px;border-radius:10px;border:var(--bw-s) solid var(--ink);line-height:1.5}.wkBox>details>summary .wkDone{display:block;margin-top:4px}.wkDone.ok{background:var(--mint);color:var(--ink-fixed)}.wkDone.todo{background:var(--soft-y,#fff3bf);color:var(--ink-fixed)}' +
@@ -138,7 +139,7 @@
     var t2 = '<div class="tile"><h3>入口 2　第 8 週 UX 故事板</h3><div style="font-size:var(--fs-2)">下面「我進過的房間」每一列都有兩顆鈕：<b>📖 故事板</b>開這間房的故事板，<b>🩺 回去訪談</b>回到這間房再問人。訪談卡打勾之後，灰色的 📖 就會變成可以點。</div>' +
       '<div style="margin-top:var(--s2)"><button type="button" id="sbEnter2">基本教學</button></div></div>';   /* 10-26 二丙全班只有手機：手機也有基本教學與開故事板 */
     var rows = (m.rooms || []).length ? '<ul class="rooms">' + m.rooms.map(function (r) {
-      return '<li><span class="sbDot" style="background:' + r.ct + ';color:' + r.on + '" title="案例' + esc(r.letter) + '">' + esc(r.letter) + '</span><b>' + esc(r.name) + '</b><span class="muted">房號 ' + esc(r.code) + '</span><span>訪談卡 ' + r.cards + ' 張</span>' +
+      return '<li><span class="sbDot" style="background:' + r.ct + ';color:' + r.on + '" title="案例' + esc(r.letter) + '">' + esc(r.letter) + '</span><b>' + esc(r.name) + '</b><span class="muted">房號 ' + esc(r.code) + '</span>' + (r.seenAt ? '<span class="muted">' + (r.seenKind === 'last' ? '上次進入 ' : '加入於 ') + esc(fmtSeen(r.seenAt)) + '</span>' : '') + '<span>訪談卡 ' + r.cards + ' 張</span>' +
         (r.open ? '<span class="tag ok" title="' + esc(RL.nextLine(r.level)) + '">' + esc(RL.label(r.level)) + '</span>' : '<span class="tag warn">還沒有訪談卡</span>') +
         '<span class="sbAct">' + (r.open ? '<a class="btn sbOpen" href="storyboard.html?room=' + encodeURIComponent(r.code) + '">📖 故事板</a>' : '<span class="btn sbOpen dis" role="button" aria-disabled="true" title="' + esc(need(r).text) + '">📖 故事板</span>') + '<button type="button" class="ghost sbRevisit" data-revisit="' + esc(r.code) + '">🩺 回去訪談</button>' + (r.open && !m.mobile ? '<button type="button" class="ghost" data-export="' + esc(r.code) + '">匯出訪談報告</button>' : '') + '</span>' + (r.open ? '' : '<span class="sbNeed">' + esc(need(r).text) + '</span>') +
         '</li>';
