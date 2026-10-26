@@ -78,7 +78,22 @@
     }
     function open() {
       var mineList = APP.me.sid ? mine(APP.storage, APP.me.sid) : [];
-      var html = '<div class="row"><b style="flex:1">🐛 回報問題或建議</b><button class="ghost" id="fbClose">關閉</button></div>' +
+      /* 10-27 楊老師：回報面板顯示回報技能（三級）與相關成就，已拿到的打勾 */
+      var A = win.ERG_ACH, repHtml = '';
+      try {
+        if (A && A.fbStats && APP.me.sid) {
+          var st = A.fbStats(mineList), rp = A.skillReport(st), sc = win.ERG_MY_SCORE || {}, kept = (sc.badgeIds || []);
+          var mm = { reports: st.bugs, fb: st, keep: kept };
+          var rel = A.DEFS.filter(function (d) { return ['bug_hunter', 'idea_giver', 'clear_report'].indexOf(d.id) >= 0; });
+          repHtml = '<div style="margin:8px 0">' + A.skCard('回報', rp, A.DESC_REP, esc) + '</div>' +
+            '<div style="font-size:var(--fs-2)"><b>回報相關的成就</b><ul style="margin:4px 0 8px;padding-left:1.2em">' + rel.map(function (d) {
+              var ok = !!d.test(mm) || kept.indexOf(d.id) >= 0;
+              return '<li>' + d.icon + ' <b>' + esc(d.name) + '</b>　' + (ok ? '<span class="ok">✅ 已拿到</span>' : '<span class="muted">' + esc(d.desc) + '</span>') + '</li>';
+            }).join('') + '</ul></div>';
+        }
+      } catch (x) { repHtml = ''; }
+      repHtml += '<p class="muted" style="font-size:var(--fs-1);margin:0 0 6px">要附截圖，請到 flipclass 的作業區上傳（這裡只收文字）。</p>';
+      var html = '<div class="row"><b style="flex:1">🐛 回報問題或建議</b><button class="ghost" id="fbClose">關閉</button></div>' + repHtml +
         '<div class="row" style="margin:8px 0" id="fbKinds">' + Object.keys(KINDS).map(function (k, i) { return '<button class="pill ' + (i === 0 ? 'on' : '') + '" data-k="' + k + '">' + KINDS[k] + '</button>'; }).join('') + '</div>' +
         '<label>寫下來（最多 ' + MAX + ' 字）<textarea id="fbText" maxlength="' + MAX + '" placeholder="例如：點牌子沒反應、走到一半卡住、這句話看不懂、希望可以……"></textarea></label>' +
         '<label style="display:flex;gap:8px;align-items:center;margin-top:6px"><input type="checkbox" id="fbState" checked style="width:auto"> 附上目前的畫面狀態（房間、位置、時間，方便老師重現）</label>' +

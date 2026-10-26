@@ -65,6 +65,25 @@
      等級從學生自己這個房間的訪談逐字稿算（一位學生一次讀自己的一個節點），所以今天上午已經問過的也算。
      門檻是 10-13 用二丙、二乙兩班 79 人的實際提問試算定的（探問 63／15／1 人，情境感知 65／14／0 人），每堂課後依全班表現重算。 */
   var SK_ASK = ['開口問', '會追問', '追到底'], SK_CTX = ['到處看', '找對人', '對得起來'];
+  /* 10-27 楊老師：回報也是一種技能，分三級（正向表列：只列做到什麼）。資料＝這位學生自己送過的回報（feedback.js 的本機紀錄） */
+  var SK_REP = ['說出來', '說清楚', '幫大家修好'], DESC_REP = '遇到問題或有想法，說清楚，老師才修得好';
+  function fbStats(list) {
+    list = Array.isArray(list) ? list : []; var k = {};
+    list.forEach(function (e) { if (e && e.kind) k[e.kind] = 1; });
+    function clear(e) { return String((e && e.text) || '').replace(/\s/g, '').length >= 20; }
+    return { n: list.length, kinds: Object.keys(k).length, clear: list.filter(clear).length, state: list.filter(function (e) { return !!(e && e.state); }).length,
+      clearState: list.filter(function (e) { return clear(e) && !!e.state; }).length, ideas: list.filter(function (e) { return e && e.kind === 'idea'; }).length, bugs: list.filter(function (e) { return e && e.kind === 'bug'; }).length };
+  }
+  function skillReport(fb) {
+    fb = fb || {}; var n = Number(fb.n) || 0, kinds = Number(fb.kinds) || 0, clear = Number(fb.clear) || 0, state = Number(fb.state) || 0;
+    function item(ok, text) { return { ok: !!ok, text: text }; }
+    var l2 = [item(n >= 2, '送出的回報 ' + Math.min(n, 2) + '／2 則'), item(clear >= 1, '寫得具體（20 字以上） ' + Math.min(clear, 1) + '／1 則'), item(state >= 1, '附上目前的畫面狀態 ' + Math.min(state, 1) + '／1 則')];
+    var l3 = l2.concat([item(n >= 5, '送出的回報 ' + Math.min(n, 5) + '／5 則'), item(kinds >= 2, '有問題、建議、看不懂，至少兩種 ' + Math.min(kinds, 2) + '／2 種'), item(clear >= 3, '寫得具體（20 字以上） ' + Math.min(clear, 3) + '／3 則')]);
+    function all(a) { return a.every(function (i) { return i.ok; }); }
+    var lv = n < 1 ? 0 : (all(l3) ? 3 : (all(l2) ? 2 : 1));
+    return { lv: lv, name: lv ? SK_REP[lv - 1] : '', next: lv >= 3 ? null : { lv: lv + 1, name: SK_REP[lv], items: lv === 0 ? [item(false, '送出第 1 則回報（問題、建議、看不懂都算）')] : (lv === 1 ? l2 : l3) } };
+  }
+
   var Q_SMS = /(簡訊|訊息|手機|衛教|連結|通知)/, Q_PASTE = /(問到這三件事|點畫面上的人物開始訪談)/;
   var KEYKIND = { patient: 'patient', family: 'family', nurse: 'nurse', triage_nurse: 'nurse' };
   /* chat：{ 記錄鍵: { personaId, turns:{ 鍵: {role,text,t} } } }（er/場次/chat/房間代碼/學號 底下的樣子） */
@@ -203,7 +222,8 @@
       coreDone: CORE_IDS.filter(function (id) { return who[id]; }).length, coreTotal: CORE_IDS.length,
       rooms: arr(player.visited).length, cards: arr(player.cards).length, events: keys(player.seenEv).length,
       keep: arr(ctx.keep),   /* 10-15：之前在別間房已經解開的成就（從 score/{學號} 讀回來）；換案例開新房間時，已拿到的不會不見 */
-      reports: Number(ctx.reports) || 0,   /* 10-23：回報過遊戲問題幾次（panels.js 的 achCtx 從本機回報紀錄算；過去的回報者由老師端補寫進 score） */
+      reports: Number(ctx.reports) || 0, fb: ctx.fb || null,   /* 10-27：回報技能與回報成就用（fbStats 的結果） */
+        /* 10-23：回報過遊戲問題幾次（panels.js 的 achCtx 從本機回報紀錄算；過去的回報者由老師端補寫進 score） */
       cases: Number(ctx.cases) || 0,   /* 10-15：進過幾種不同案例的房間（大廳『開一間』的案例選單；由 panels.js 的 achCtx 從大廳索引算） */
       replays: arr(player.replays).length, partners: arr(player.discussion && player.discussion.partners).length,
       conclusions: arr(player.conclusions).length, chatTurns: Number(player.chatTurns || 0), playMin: Number(player.playMin || 0),
@@ -251,6 +271,8 @@
     { id: 'revisit', icon: '🔁', name: '回頭複習', desc: '沒有課的日子又回來訪談（3 題）', test: function (m) { return m.offRest >= 3; } },
     { id: 'late_night', icon: '🦉', name: '深夜研究員', desc: '晚上 10 點到清晨 6 點還在訪談（3 題）——研究很重要，也要睡覺', test: function (m) { return m.offLate >= 3; } },
     { id: 'bug_hunter', icon: '🐞', name: '抓蟲小幫手', desc: '回報過遊戲的問題，幫大家把它修好', test: function (m) { return m.reports >= 1; } },
+    { id: 'idea_giver', icon: '💡', name: '出點子', desc: '送出一則建議，讓遊戲更好用', test: function (m) { return !!(m.fb && m.fb.ideas >= 1); } },
+    { id: 'clear_report', icon: '📝', name: '說得清楚', desc: '一則回報寫了 20 字以上，還附上畫面狀態', test: function (m) { return !!(m.fb && m.fb.clearState >= 1); } },
     /* 10-23：這兩枚由每晚的審核程式（tools/er_guide_review.py）確認「真的照著做、數字有動」後寫進 score，學生端當作已拿到的成就保留；畫面上自己算不出來，所以 test 一律 false。 */
     { id: 'guide_followed', icon: '🎯', name: '照著指引做', desc: '回應指引通過審核，而且指引裡至少一件事真的做完了', test: function () { return false; } },
     { id: 'guide_effect', icon: '📈', name: '調整有效', desc: '回應指引通過審核，兩件以上有進步，或探問、情境感知升級', test: function () { return false; } },
@@ -288,7 +310,7 @@
   ['first_talk', 'pry_open', 'five_talks', 'ten_talks', 'all_core', 'deep_dig', 'chatty', 'q_intro', 'q_event', 'q_why', 'q_echo', 'q_chain', 'q_key3', 'q_open10', 'explorer', 'mapper', 'notes', 'witness', 'replay', 'partner', 'thinker', 'all_cp', 'vip', 'boss', 'kid_whisperer', 'translator', 'inclusive', 'case_two', 'case_four', 'case_all'].forEach(function (id) { UNIT_OF[id] = 'W6'; });
   ['guide_followed', 'guide_effect'].forEach(function (id) { UNIT_OF[id] = 'W7'; });
   ['w8_together', 'w8_relay', 'w8_fill', 'w8_premiere', 'w8_askthenwrite', 'w8_allsourced', 'w8_nofill', 'w8_reclaim', 'w8_people', 'w8_moment', 'w8_guess'].forEach(function (id) { UNIT_OF[id] = 'W8'; });
-  ['w8_revisit', 'x_bring_old', 'x_thread', 'x_keyperson', 'x_ask_write'].forEach(function (id) { UNIT_OF[id] = 'x'; });
+  ['w8_revisit', 'x_bring_old', 'x_thread', 'x_keyperson', 'x_ask_write', 'bug_hunter', 'idea_giver', 'clear_report'].forEach(function (id) { UNIT_OF[id] = 'x'; });   /* 10-27 楊老師：回報是跨作業的技能，回報成就歸跨單元 */
   DEFS.forEach(function (d) { d.unit = UNIT_OF[d.id] || 'all'; });
   function sbHas(k) { try { return ((typeof window !== 'undefined' && window.ERG_MY_SB_ACH) || []).indexOf(k) >= 0; } catch (e) { return false; } }
   function badges(m) { return DEFS.map(function (d) { return { id: d.id, unit: d.unit, icon: d.icon, name: d.name, desc: d.desc, ok: !!d.test(m) || (m.keep || []).indexOf(d.id) >= 0 }; }); }
@@ -345,10 +367,11 @@
       var list = bs.filter(function (b) { return b.unit === u; }), g = list.filter(function (b) { return b.ok; }).length, skh = '', skn = '';
       if (u === 'W7' && o.sk) { skh = '<div class="skRow">' + skCard('探問', o.sk.ask, DESC_ASK, esc, o.fresh) + skCard('情境感知', o.sk.ctx, DESC_CTX, esc, o.fresh) + '</div>'; skn = '　技能 探問 Lv.' + o.sk.ask.lv + '・情境感知 Lv.' + o.sk.ctx.lv; }
       if (u === 'W8' && w8) { skh = '<div class="skRow">' + skCard('說故事', w8.story, DESC_STORY, esc, o.fresh) + skCard('有根據', w8.source, DESC_SOURCE, esc, o.fresh) + '</div>'; skn = '　技能 說故事 Lv.' + w8.story.lv + '・有根據 Lv.' + w8.source.lv; }
+      if (u === 'x' && m.fb) { var rp = skillReport(m.fb); skh = '<div class="skRow">' + skCard('回報', rp, DESC_REP, esc, o.fresh) + '</div>'; skn = '　技能 回報 Lv.' + rp.lv; }
       var open = o.open && o.open[u] !== undefined ? o.open[u] : i === 0;
       return '<details class="unitGrp" data-unit="' + u + '"' + (open ? ' open' : '') + '><summary><b>' + esc(UNIT_NAME[u]) + '</b>' + (i === 0 ? ' <span class="tag ok">本週</span>' : '') + '　成就 ' + g + ' / ' + list.length + esc(skn) + '</summary>' + skh + gridOf(list) + '</details>';
     }).join('');
     return head + groups;
   }
-  return { DEFS: DEFS, BOARD: BOARD, CORE_IDS: CORE_IDS, SPECIAL: SPECIAL, metrics: metrics, noteQuestion: noteQuestion, noteOffHours: noteOffHours, offHours: offHours, SCHED: SCHED, chatStats: chatStats, skills: skills, skillsHtml: skillsHtml, skillsW8: skillsW8, UNIT_NAME: UNIT_NAME, SK_STORY: SK_STORY, SK_SOURCE: SK_SOURCE, badges: badges, earned: earned, summary: summary, leaderboard: leaderboard, html: html, scoreSig: scoreSig, scoreDecide: scoreDecide, makeScoreWatch: makeScoreWatch, PLAYMIN_EVERY: PLAYMIN_EVERY };
+  return { fbStats: fbStats, skillReport: skillReport, skCard: skCard, DESC_REP: DESC_REP, DEFS: DEFS, BOARD: BOARD, CORE_IDS: CORE_IDS, SPECIAL: SPECIAL, metrics: metrics, noteQuestion: noteQuestion, noteOffHours: noteOffHours, offHours: offHours, SCHED: SCHED, chatStats: chatStats, skills: skills, skillsHtml: skillsHtml, skillsW8: skillsW8, UNIT_NAME: UNIT_NAME, SK_STORY: SK_STORY, SK_SOURCE: SK_SOURCE, badges: badges, earned: earned, summary: summary, leaderboard: leaderboard, html: html, scoreSig: scoreSig, scoreDecide: scoreDecide, makeScoreWatch: makeScoreWatch, PLAYMIN_EVERY: PLAYMIN_EVERY };
 });

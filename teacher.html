@@ -287,6 +287,7 @@ body.proj .priv{display:none!important}
 <section class="pane" data-pane="rev">
   <div class="kpi pk" id="kp_rev" role="group" aria-label="審核關鍵數字"></div>
   <h2>上週訪談審核（AI 建議，給你確認用）</h2>
+  <div class="card" id="respSum">讀取中…</div>
   <div class="card" id="revSum">讀取中…</div>
   <h2>每位學生的審核建議</h2>
   <div class="card"><div class="row" style="margin-bottom:6px"><select id="rvLv"><option value="">全部等級</option><option>起步</option><option>進步中</option><option>很好</option></select><select id="rvCls" hidden><option value="">全部班級</option><option>二丙</option><option>二乙</option><option>二甲</option></select><select id="rvTh" title="依要改的方向分類"><option value="">全部要改的方向</option><option value="open">開場介紹／目的</option><option value="yn">是非題、封閉式</option><option value="adv">急著給建議或解法</option><option value="off">偏題、閒聊</option><option value="dig">追問、深入細節</option></select><select id="rvSort" hidden><option value="sid">依學號</option><option value="nlo">題數少的在前</option><option value="nhi">題數多的在前</option><option value="lv">等級（起步在前）</option></select><input id="rvQ" placeholder="找學號、姓名或關鍵字" style="flex:1;min-width:8em"><span class="muted" id="rvCount"></span></div><div class="scroll" id="revRows">讀取中…</div></div>
@@ -322,17 +323,17 @@ body.proj .priv{display:none!important}
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-<script src="er_firebase.js?v=202610270616"></script>
-<script src="checklist.js?v=202610270616"></script>
-<script src="checkpoints.js?v=202610270616"></script>
-<script src="avatar.js?v=202610270616"></script>
-<script src="local_db.js?v=202610270616"></script>
-<script src="app_core.js?v=202610270616"></script>
-<script src="achievements.js?v=202610270616"></script><script src="remote_db.js?v=202610270616"></script><script src="summary_render.js?v=202610270616"></script>
-<script src="layout.js?v=202610270616"></script>
-<script src="minimap.js?v=202610270616"></script><script src="map_layout.js?v=202610270616"></script><script src="skill_badge.js?v=202610270616"></script>
-<script src="personas_inclusive.js?v=202610270616"></script><script src="er_data.js?v=202610270616"></script><script src="npc_voice.js?v=202610270616"></script><script src="personas.js?v=202610270616"></script>
-<script src="week2.js?v=202610270616"></script><script src="teacher_model.js?v=202610270616"></script>
+<script src="er_firebase.js?v=202610270635"></script>
+<script src="checklist.js?v=202610270635"></script>
+<script src="checkpoints.js?v=202610270635"></script>
+<script src="avatar.js?v=202610270635"></script>
+<script src="local_db.js?v=202610270635"></script>
+<script src="app_core.js?v=202610270635"></script>
+<script src="achievements.js?v=202610270635"></script><script src="remote_db.js?v=202610270635"></script><script src="summary_render.js?v=202610270635"></script>
+<script src="layout.js?v=202610270635"></script>
+<script src="minimap.js?v=202610270635"></script><script src="map_layout.js?v=202610270635"></script><script src="skill_badge.js?v=202610270635"></script>
+<script src="personas_inclusive.js?v=202610270635"></script><script src="er_data.js?v=202610270635"></script><script src="npc_voice.js?v=202610270635"></script><script src="personas.js?v=202610270635"></script>
+<script src="week2.js?v=202610270635"></script><script src="teacher_model.js?v=202610270635"></script>
 <script>
 /* 教師名單：只有這裡的 Google 帳號能進。要加人就加在這裡（改完重新部署；資料庫規則 tools/er_after_google_enabled.py 也要加）。 */
 var TEACHER_EMAILS = ['scatjay@gmail.com', 'prof.chwu@mx.nthu.edu.tw', 'nthuchwu@gapp.nthu.edu.tw'];   /* 10-16 楊老師：清大吳智鴻老師（觀摩用，含後台） */
@@ -460,6 +461,19 @@ var CLASS_WINDOWS = [].concat(
   var IC_OK = '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M7.5 12.4l3 3 6-6.4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     IC_FIX = '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M7.5 12h8M12.5 8l4 4-4 4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     IC_EG = '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true" style="color:var(--info)"><path d="M4 5.5h16v10H10l-4.5 4v-4H4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>';
+  /* 10-27 楊老師：後台顯示「送交審核」的人數（指引回應 guideResp：送出、通過、需補強、等今晚審核） */
+  function renderRespSum() {
+    var el = $('respSum'); if (!el) return;
+    var n = 0, ok = 0, need = 0, wait = 0, byCls = {};
+    Object.keys(gResp || {}).forEach(function (sid) {
+      var v = gResp[sid]; if (!v || typeof v !== 'object') return; n++;
+      var rv = v.rev || null, rt = rv ? Number(rv.at || rv.t || 0) : 0, st = !rv || (rt && Number(v.t || 0) > rt) ? 'wait' : (rv.ok ? 'ok' : 'need');
+      if (st === 'wait') wait++; else if (st === 'ok') ok++; else need++;
+      var c = ((profiles || {})[sid] || {}).cls || '其他'; byCls[c] = (byCls[c] || 0) + 1;
+    });
+    el.innerHTML = '<b>送交審核（指引回應）</b>　共 <b>' + n + '</b> 人送出：通過 ' + ok + '、需補強 ' + need + '、等今晚審核 ' + wait +
+      '<div class="muted small">各班送出：' + Object.keys(byCls).sort().map(function (c) { return esc(c) + ' ' + byCls[c]; }).join('、') + '　（每晚 23:30 批次審核；同一人只算最新一次）</div>';
+  }
   function renderReview() {
     var a = (daemon && daemon.admin) || {}, iv = a.ivReview, ru = a.reviewUsage || {};
     if ($('revSum')) {
@@ -597,7 +611,7 @@ var CLASS_WINDOWS = [].concat(
     /* 10-19：第 2 週個人指引（一次讀，約 400 KB）與回應（訂閱，小）；學生表「第 2 週指引」欄用 */
     /* 個人指引是一次性讀取（不是即時監聽，約 460 KB），所以「立即更新」與上課視窗內的定時重讀就是重讀這一份；其餘五份都是即時監聽，資料一變就自動進來 */
     root.child('guide').once('value').then(function (g) { guides = g.val() || {}; stGuideKB(guides); stLastRead = Date.now(); renderStudents(); stSchedule(); stMark('guide'); }, function () { stMark('guide', true); });
-    on(root.child('guideResp'), function (r) { gResp = r.val() || {}; renderStudents(); stSchedule(); try { renderReview(); } catch (e) {} });
+    on(root.child('guideResp'), function (r) { gResp = r.val() || {}; renderStudents(); stSchedule(); try { renderReview(); } catch (e) {} try { renderRespSum(); } catch (e) {} });
     on(root.child('score'), function (s) { var prev = scores; var first = !achSeen; scores = s.val() || {}; achSeen = true; renderBoard(); stSchedule(); try { renderSkillDist(); } catch (e) {} try { if (!first) achNotify(prev || {}, scores); } catch (e) {} });
     schedule();
   }

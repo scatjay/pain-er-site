@@ -16,12 +16,13 @@
   P.renderAll = function () { ['clue', 'intv', 'cards', 'concl', 'disc', 'cp', 'events'].forEach(P.render); };
   P.render = function (t) { ({ clue: renderClue, intv: renderIntv, cards: renderCards, concl: renderConcl, disc: renderDisc, cp: renderCp, events: renderEvents, ach: renderAch })[t](); };
   /* 成就分頁：自己的指標與徽章＋班級「誰最多」（線上模式讀 er/{sess}/score；本機版只有自己） */
-  function achCtx() { var c = cur(); var cp = (window.ERG_CORE && window.ERG_CP && c) ? (function () { try { var st = window.ERG_CORE.checkpointState(c, me()); return window.ERG_CP.evaluate(st).every(function (x) { return x.ok; }); } catch (e) { return false; } })() : false; return { cpAllOk: cp, shift: c && c.world && c.world.shift, cases: casesTried(), reports: reportsMade(), keep: keptBadges(), sb: window.ERG_MY_SBD || null, prevSk: prevW8Sk() }; }
+  function achCtx() { var c = cur(); var cp = (window.ERG_CORE && window.ERG_CP && c) ? (function () { try { var st = window.ERG_CORE.checkpointState(c, me()); return window.ERG_CP.evaluate(st).every(function (x) { return x.ok; }); } catch (e) { return false; } })() : false; return { cpAllOk: cp, shift: c && c.world && c.world.shift, cases: casesTried(), reports: reportsMade(), fb: fbMine(), keep: keptBadges(), sb: window.ERG_MY_SBD || null, prevSk: prevW8Sk() }; }
   /* 10-27 W8 技能：上次已發布的等級（等級不倒退） */
   function prevW8Sk() { try { var s = window.ERG_MY_SCORE || {}; return { story: s.skStory, source: s.skSource }; } catch (e) { return {}; } }
   /* 10-15：成就是照『現在這間房』的紀錄算的，換案例開新房間會歸零；把之前已發布的成就帶回來，已拿到的不收回 */
   function keptBadges() { try { var s = (window.ERG_SCORES || {})[String(me())] || window.ERG_MY_SCORE; return (s && s.badgeIds) ? s.badgeIds.slice() : []; } catch (e) { return []; } }
   /* 10-15：自己進過幾種不同案例的房間（從大廳索引算：成員有我的房間，不同的 case 數） */
+  function fbMine() { try { return window.ERG_ACH.fbStats(window.ERG_FEEDBACK.mine(APP.storage, me())); } catch (e) { return null; } }   /* 10-27 回報技能 */
   function reportsMade() { try { return window.ERG_FEEDBACK.mine(APP.storage, me()).filter(function (e) { return e.kind === 'bug'; }).length; } catch (e) { return 0; } }
   function casesTried() { try { var sid = String(me()), seen = {}; DB.listRooms(APP.SESS).forEach(function (r) { var x = (r && r.members !== undefined) ? r : (DB.getRoom(r.code) || {}); if (x.members && x.members[sid]) seen[x.case || 'sms'] = 1; }); return Object.keys(seen).length; } catch (e) { return 0; } }
   P.achCtx = achCtx;
