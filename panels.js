@@ -533,15 +533,49 @@
     return '<div class="card" style="background:#b2f2bb;color:var(--ink-fixed)"><div style="font-size:40px;font-weight:900;line-height:1.1">已通過</div><div style="font-size:var(--fs-2)">' + esc(cur().world.meta.name) + '　六個檢核點全部完成。把這個綠色畫面截圖，上傳到 flipclass 的作業就完成了。</div>' +
       '<div style="font-size:var(--fs-2);margin-top:6px">' + esc(APP.me.cls) + '　學號 ' + esc(me()) + '</div><div style="font-size:var(--fs-1)">驗證碼：<b>' + code + '</b></div></div><button id="reportBtn" class="ghost">想留一份紀錄：匯出訪談報告</button>';
   }
-  function showReport(e) {
-    var w = cur().world, names = {}; Object.keys(w.personas).forEach(function (k) { names[k] = w.personas[k].name; });
-    var d = player().discussion, room = DB.getRoom(cur().code), vr = e.state.discussion.room;
-    var html = RP.html({ student: { id: me(), cls: APP.me.cls, name: '' }, caseName: w.meta.name, date: new Date().toISOString().slice(0, 10), passed: e.ev.passed, interviews: player().interviews,
-      personaNames: names, markers: L.listMarkers(RM.markerEls()).filter(function (m) { return m.author === me(); }), conclusions: player().conclusions,
-      discussion: { partnersText: (e.state.discussion.partners || []).map(function (x) { return x.id; }).join('、') + (vr ? '（房間 ' + vr + '）' : ''), diff: d.notes.diff, complement: d.notes.complement, outcome: d.notes.outcome } });
-    RM.openModal('<div class="row"><b style="flex:1">訪談報告</b><button id="rpPrint">列印／另存 PDF</button><button class="ghost" id="rpClose">關閉</button></div><iframe id="rpFrame" style="width:100%;height:70vh;border:var(--bw) solid var(--ink);background:#fff;margin-top:8px"></iframe>');
+  /* 第 8 週：報告要的對話逐字稿（我問了幾題、對方說過什麼）。只有線上版有；讀不到就當沒有，4 秒內不回來也不等 */
+  function fetchChat(code, cb) {
+    var done = false; function fin(v) { if (!done) { done = true; cb(v); } }
+    try { if (!window.firebase || !code || !me()) return fin(null); setTimeout(function () { fin(null); }, 4000);
+      window.firebase.database().ref('er/' + APP.SESS + '/chat/' + code + '/' + me()).once('value', function (s) { fin(s.val() || {}); }, function () { fin(null); });
+    } catch (x) { fin(null); }
+  }
+  function roomNameMap() { var o = {}; try { (window.ERG_LAYOUT.ROOMS || []).forEach(function (r) { o[r.id] = r.name; }); } catch (x) {} return o; }
+  /* 這個案例的重要人物（大廳與報告共用） */
+  function caseKeyIds(world) { var pl = Object.keys(world.personas).filter(function (k) { return (world.personas[k].cases || []).indexOf(world.meta.id) >= 0; }).map(function (id) { return { id: id }; }); return window.ERG_STORYBOARD.keyIds(world.meta.id, world.meta, pl); }
+  /* 組報告並開在視窗裡（iframe）。ctx：{ world, room, pl, markers, skill:{ask,ctx}, passed, partners, chat } */
+  function openReportModal(c) {
+    var w = c.world, names = {}; Object.keys(w.personas).forEach(function (k) { names[k] = w.personas[k].name; });
+    var d = c.pl.discussion, dg = window.ERG_REPORT_LEVEL ? window.ERG_REPORT_LEVEL.chatDigest(c.chat) : { counts: {}, quotes: {} };
+    var html = RP.html({ student: { id: me(), cls: APP.me.cls, name: '' }, caseName: w.meta.name, date: new Date().toISOString().slice(0, 10), passed: c.passed, interviews: c.pl.interviews,
+      personaNames: names, markers: c.markers, conclusions: c.pl.conclusions, skill: c.skill, mainPersona: w.meta.mainPersona, keyPersonaIds: caseKeyIds(w), chat: dg, clues: w.clues, roomNames: roomNameMap(),
+      discussion: { partnersText: c.partners, diff: d.notes.diff, complement: d.notes.complement, outcome: d.notes.outcome } });
+    RM.openModal('<div class="row"><b style="flex:1">訪談報告</b><button id="rpPrint">列印／另存 PDF</button><button class="ghost" id="rpClose">關閉</button></div><iframe id="rpFrame" allow="clipboard-write" style="width:100%;height:70vh;border:var(--bw) solid var(--ink);background:#fff;margin-top:8px"></iframe>');
     $('rpFrame').srcdoc = html;
     $('rpPrint').onclick = function () { try { $('rpFrame').contentWindow.focus(); $('rpFrame').contentWindow.print(); } catch (x) {} };
     $('rpClose').onclick = RM.closeModal;
   }
+  function showReport(e) {
+    var w = cur().world, code = cur().code, room = DB.getRoom(code), vr = e.state.discussion.room, sk = { ask: 1, ctx: 1 };
+    try { var s2 = computeSk(window.ERG_ACH, player()); sk = { ask: s2.ask.lv, ctx: s2.ctx.lv }; } catch (x) {}
+    var mk = L.listMarkers(RM.markerEls()).filter(function (m) { return m.author === me(); });
+    fetchChat(code, function (chat) {
+      openReportModal({ world: w, pl: player(), markers: mk, skill: sk, passed: e.ev.passed, chat: chat,
+        partners: (e.state.discussion.partners || []).map(function (x) { return x.id; }).join('、') + (vr ? '（房間 ' + vr + '）' : '') });
+    });
+  }
+  /* 從大廳匯出：不用進房間。世界用跟進房一樣的參數重建（約 0.3 秒）；技能等級用個人檔案裡記的最近一次 */
+  P.exportFromLobby = function (code, done) {
+    var room = DB.getRoom(code), world = window.ERG_WORLD.makeWorld({ caseId: room.case || 'sms', seed: room.code, dow: room.dow, shift: room.shift === 'night' ? 'night' : 'day' }), pl = CORE.getPlayer(room, me());
+    if (!pl) { if (done) done(false); return; }
+    var pr = (APP.me.profile && APP.me.profile.progress) || {}, mk = [];
+    try { mk = L.listMarkers((DB.getScene(code) || []).concat(CORE.mcardEls(room))).filter(function (m) { return m.author === me(); }); } catch (x) {}
+    var dm = pl.discussion || {};
+    fetchChat(code, function (chat) {
+      openReportModal({ world: world, pl: pl, markers: mk, skill: { ask: pr.ask || 1, ctx: pr.ctx || 1 }, passed: !!pl.submitted, chat: chat, partners: (dm.partners || []).map(function (x) { return x.id; }).join('、') });
+      if (done) done(true);
+    });
+  };
+  P.caseKeyIds = caseKeyIds;
+
 })();

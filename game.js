@@ -438,6 +438,45 @@
     var more = $('roomsMore'); if (!more) { more = document.createElement('div'); more.id = 'roomsMore'; more.className = 'muted'; more.style.cssText = 'font-size:var(--fs-2);margin-top:6px'; var nr = $('noRooms'); nr.parentNode.insertBefore(more, nr.nextSibling); }
     more.textContent = others.length > CAP ? ('另外還有 ' + (others.length - CAP) + ' 間沒有列出來。要進同學的房間，請他把四個字的房間代碼給你，在上面的「加入」輸入。') : '';
     $('noRooms').style.display = tb.children.length ? 'none' : 'block';
+    try { renderStoryboardEntry(); } catch (x) { console.error('故事板入口', x); }
+  }
+
+  /* 第 8 週：大廳兩個入口（進急診室／UX 故事板）＋我進過的房間。資料都來自我自己的房間（已經在監聽的），不另外讀資料庫 */
+  var sbBound = false, sbTouched = false;
+  function renderStoryboardEntry() {
+    var SB = window.ERG_STORYBOARD, RL = window.ERG_REPORT_LEVEL, PER = window.ERG_PERSONAS; if (!SB || !RL || !APP.me.sid) return;
+    var card = $('sbCard');
+    if (!card) { card = document.createElement('div'); card.id = 'sbCard'; card.className = 'card'; var anchorCard = $('createBtn').closest('.card'); anchorCard.parentNode.insertBefore(card, anchorCard.nextSibling); }
+    SB.injectCss(document);
+    var sid = String(APP.me.sid), pr = (APP.me.profile && APP.me.profile.progress) || {}, mobile = /Mobi|Android|iPhone/i.test(navigator.userAgent) || location.pathname.indexOf('m.html') >= 0;
+    var mine = [];
+    DB.listRooms(APP.SESS).forEach(function (r) {
+      var full = DB.getRoom(r.code); if (!full || !full.members || !full.members[sid]) return;
+      var pl = CORE.getPlayer(full, sid) || { interviews: [], conclusions: [] }, mk = [];
+      try { mk = L.listMarkers((DB.getScene && DB.getScene(r.code) || []).concat(CORE.mcardEls(full))).filter(function (m) { return String(m.author) === sid; }); } catch (x) {}
+      mine.push({ code: r.code, caseId: full.case || 'sms', interviews: pl.interviews, conclusions: pl.conclusions, markers: mk, mainPersona: caseMeta(full.case || 'sms').mainPersona });
+    });
+    var skill = { ask: pr.ask || 1, ctx: pr.ctx || 1 }, caseNames = {};
+    CASELIST.forEach(function (c) { caseNames[c.meta.id] = c.meta.short || c.meta.name; });
+    function personaNames(c) { var o = {}; (PER.PERSONAS || []).forEach(function (p) { o[p.id] = p.name; }); (c.personas || []).forEach(function (p) { o[p.id] = p.name; }); return o; }
+    var sel = ($('caseSel') && $('caseSel').value) || 'sms'; if (!sbTouched && mine.length) sel = mine[mine.length - 1].caseId;   /* 還沒動過案例選單：先看我最近進的那個案例 */
+    var cobj = CASELIST.filter(function (c) { return c.meta.id === sel; })[0] || CASELIST[0];
+    var keyIds = SB.keyIds(sel, cobj.meta, cobj.personas || []), recs = [];
+    mine.filter(function (x) { return x.caseId === sel; }).forEach(function (x) { recs = recs.concat(x.interviews || []); });
+    var e1 = SB.interviewedSummary(recs, keyIds, personaNames(cobj)); e1.caseName = cobj.meta.short || cobj.meta.name;
+    var rows = SB.roomRows(mine, skill, caseNames);
+    card.innerHTML = '<div class="row"><b style="flex:1">第 8 週　UX 故事板</b></div>' + SB.lobbyHtml({ mobile: mobile, entry1: e1, rooms: rows });
+    var b1 = $('sbEnter1'); if (b1) b1.onclick = function () { var t = $('createBtn'); t.scrollIntoView({ block: 'center' }); t.focus(); };
+    var b2 = $('sbEnter2'); if (b2) b2.onclick = function () {
+      var best = rows.slice().sort(function (a, b) { return b.cards - a.cards; })[0], def = best && best.cards ? best.caseId : sel, ctx = { cases: {} };
+      CASELIST.forEach(function (c) { var nm = personaNames(c); ctx.cases[c.meta.id] = { mainName: nm[c.meta.mainPersona] || '主角', goal: c.meta.goal, focus: c.meta.focus, caseName: c.meta.name }; });
+      window.ERG_ROOM.openModal('<div id="sbHost"></div>'); $('modalBox').style.maxWidth = '1000px';
+      SB.mountGuide($('sbHost'), { caseId: def, ctx: ctx, onClose: function () { window.ERG_ROOM.closeModal(); $('modalBox').style.maxWidth = ''; } });
+    };
+    Array.prototype.forEach.call(card.querySelectorAll('[data-export]'), function (b) {
+      b.onclick = function () { b.disabled = true; var old = b.textContent; b.textContent = '整理中…'; window.ERG_PANELS.exportFromLobby(b.getAttribute('data-export'), function () { b.disabled = false; b.textContent = old; }); };
+    });
+    if (!sbBound && $('caseSel')) { sbBound = true; $('caseSel').addEventListener('change', function () { sbTouched = true; try { renderStoryboardEntry(); } catch (x) {} }); }
   }
   $('createBtn').onclick = function () {
     var r = DB.createRoom(APP.SESS, APP.me.sid); DB.patchRoom(r.code, { case: $('caseSel').value, dow: Number($('dowSel').value), shift: $('shiftSel').value || 'day', cls: APP.me.cls || '', hostName: APP.me.name || APP.me.sid }); openRoom(r.code);
