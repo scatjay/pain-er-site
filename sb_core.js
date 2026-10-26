@@ -15,6 +15,16 @@
     field: { who: 24, where: 40, what: 140, think: 140 }
   };
   /* 全站保護：本月下載量（GB，1 GB＝1e9 位元組，與 fb_month_usage.py 相同）超過依序進入下列模式；儲存量另有安全線 */
+  /* 後台可調參數（sbops/config）：每次都讀、有預設值；只接受合理範圍內的數字 */
+  var CONFIG_DEFAULTS = { coachPerDay: 30, fillPerBoard: 2, rewriteThreshold: 0.6, uploadPerUserDay: 20, uploadSiteDay: 600, coachDayUsd: 1, modelLite: 'gemini-2.5-flash-lite', modelFill: 'gemini-2.5-flash' };
+  function config(raw) {
+    var o = {}, r = raw && typeof raw === 'object' ? raw : {};
+    function num(k, lo, hi, int) { var v = Number(r[k]); if (r[k] === undefined || r[k] === null || r[k] === '' || !isFinite(v) || v < lo || v > hi) return CONFIG_DEFAULTS[k]; return int ? Math.round(v) : v; }
+    o.coachPerDay = num('coachPerDay', 0, 500, true); o.fillPerBoard = num('fillPerBoard', 0, 8, true); o.rewriteThreshold = num('rewriteThreshold', 0.2, 0.95);
+    o.uploadPerUserDay = num('uploadPerUserDay', 0, 200, true); o.uploadSiteDay = num('uploadSiteDay', 0, 5000, true); o.coachDayUsd = num('coachDayUsd', 0, 50);
+    ['modelLite', 'modelFill'].forEach(function (k) { o[k] = typeof r[k] === 'string' && /^gemini-[a-z0-9.\-]{3,40}$/.test(r[k]) ? r[k] : CONFIG_DEFAULTS[k]; });
+    return o;
+  }
   var TIERS = [{ gb: 9.5, mode: 'readonly' }, { gb: 8.5, mode: 'noupload' }, { gb: 7, mode: 'thumb' }];
   var STORAGE_STOP_GB = 0.9;       /* 免費方案儲存上限 1 GB；到 0.9 GB 先停止上傳 */
   var MODE_RANK = { normal: 0, thumb: 1, noupload: 2, readonly: 3 };
@@ -90,14 +100,14 @@
     var members = room.members || {};
     if (!Object.prototype.hasOwnProperty.call(members, String(o.sid))) return { ok: false, reason: 'not-member', msg: '你不是這間房的成員，不能開它的故事板。', count: 0 };
     var n = interviewCount(o.player);
-    if (n < 1) return { ok: false, reason: 'no-interview', msg: '先去這間房訪談：故事板要用你訪談來的內容，不能憑空寫。至少要有 1 筆訪談紀錄。', count: 0 };
+    if (n < 1) return { ok: false, reason: 'no-interview', msg: '這間還沒有訪談，先回去訪談：故事板要用你訪談來的內容，不能憑空寫。至少要有 1 筆訪談紀錄。', count: 0 };
     return { ok: true, reason: 'ok', msg: '', count: n };
   }
 
   /* ———— 格子 ———— */
   function emptyCell(n) {
     return { n: n, title: '', who: '', where: '', what: '', think: '', pain: '', moment: false, refs: [], by: '', createdAt: 0, updatedAt: 0, updatedBy: '',
-      editors: {}, needHelp: false, helpAsk: '', helped: '', draft: null, er: null, img: null, fit: 'contain' };
+      editors: {}, needHelp: false, helpAsk: '', helped: '', draft: null, er: null, img: null, fit: 'contain', cl: 0, aiText: null };
   }
   function normCell(c, n) {
     var o = emptyCell(Number(c && c.n) || n || 1);
@@ -108,6 +118,8 @@
     o.refs = arr(c.refs).map(String).filter(Boolean);
     o.editors = c.editors && typeof c.editors === 'object' ? copy(c.editors) : {};
     o.draft = c.draft && typeof c.draft === 'object' ? { who: str(c.draft.who), where: str(c.draft.where), what: str(c.draft.what), think: str(c.draft.think) } : null;
+    o.cl = Math.max(0, Math.min(4, Number(c.cl) || 0));
+    o.aiText = c.aiText && typeof c.aiText === 'object' ? { who: str(c.aiText.who), where: str(c.aiText.where), what: str(c.aiText.what), think: str(c.aiText.think) } : null;
     o.er = c.er && typeof c.er === 'object' ? { r: Number(c.er.r), band: String(c.er.band || '') } : null;
     o.img = c.img && typeof c.img === 'object' ? { ar: Number(c.img.ar) || 1, w: Number(c.img.w) || 0, h: Number(c.img.h) || 0, ts: Number(c.img.ts) || 0 } : null;
     return o;
@@ -169,21 +181,22 @@
     return denom ? Math.min(1, levenshtein(a, b) / denom) : null;
   }
   function band(r) { if (r === null || r === undefined || isNaN(r)) return ''; return r < 0.2 ? 'copy' : (r <= 0.6 ? 'rewrite' : 'own'); }
-  var BAND_TEXT = { copy: '照抄草稿', rewrite: '改寫', own: '自己寫', '': '還沒寫' };
+  var BAND_TEXT = { ai: '助教代填', copy: '照抄草稿', rewrite: '改寫', own: '自己寫', '': '還沒寫' };
   function bandText(b) { return BAND_TEXT[b] || BAND_TEXT['']; }
   /* 一個人在一面板上的編輯比例摘要：只算他當作者（by）的格子 */
   function authorSummary(cells) {
     var by = {};
     cells.forEach(function (c) {
       if (!c.by || !c.er || isNaN(c.er.r)) return;
-      var a = by[c.by] = by[c.by] || { sid: c.by, cells: 0, sum: 0, copy: 0, rewrite: 0, own: 0 };
-      a.cells += 1; a.sum += c.er.r; a[band(c.er.r)] += 1;
+      var a = by[c.by] = by[c.by] || { sid: c.by, cells: 0, sum: 0, ai: 0, copy: 0, rewrite: 0, own: 0 };
+      var bd = c.er.band || band(c.er.r); a.cells += 1; a.sum += (bd === 'ai' ? 0 : c.er.r); a[bd] += 1;
     });
-    return Object.keys(by).map(function (k) { var a = by[k]; a.avg = a.cells ? a.sum / a.cells : 0; a.band = band(a.avg); return a; }).sort(function (x, y) { return x.sid < y.sid ? -1 : 1; });
+    return Object.keys(by).map(function (k) { var a = by[k]; a.avg = a.cells ? a.sum / a.cells : 0; a.band = band(a.avg); a.fills = a.ai; return a; }).sort(function (x, y) { return x.sid < y.sid ? -1 : 1; });
   }
 
   /* ———— 套用一次編輯：回傳新格子（不改原物件），並記作者、接力、補位、編輯比例 ———— */
-  function applyEdit(cell, patch, sid, now) {
+  function applyEdit(cell, patch, sid, now, cfg) {
+    cfg = cfg || CONFIG_DEFAULTS;
     var prev = normCell(cell, cell && cell.n), next = copy(prev), had = hasContent(prev), before = contentOf(prev);
     patch = patch || {};
     ['title', 'who', 'where', 'what', 'think'].forEach(function (k) { if (patch[k] !== undefined) next[k] = clip(patch[k], k === 'title' ? 24 : LIMITS.field[k]); });
@@ -191,6 +204,12 @@
     if (patch.moment !== undefined) next.moment = !!patch.moment;
     if (patch.fit !== undefined) next.fit = patch.fit === 'cover' ? 'cover' : 'contain';
     if (patch.refs !== undefined) next.refs = arr(patch.refs).map(String).filter(Boolean).slice(0, 12);
+    if (patch.aiFill) {   /* 助教代填：整格換成助教寫的，記下原文（aiText），這格自己寫的程度先算 0 */
+      var f = patch.aiFill; ['who', 'where', 'what', 'think'].forEach(function (k) { if (f[k] !== undefined) next[k] = clip(f[k], LIMITS.field[k]); });
+      next.refs = arr(f.refs !== undefined ? f.refs : next.refs).map(String).filter(Boolean).slice(0, 12);
+      next.aiText = { who: next.who, where: next.where, what: next.what, think: next.think }; next.cl = 4; next.pain = '';
+    }
+    if (patch.cl !== undefined) next.cl = Math.max(next.cl, Math.min(4, Number(patch.cl) || 0));
     if (next.pain && (next.what + '\n' + next.think).indexOf(next.pain) < 0) next.pain = '';   /* 句子被改掉了，紅標跟著拿掉 */
     var changed = contentOf(next) !== before;
     if (!next.createdAt) next.createdAt = now;
@@ -202,10 +221,25 @@
     }
     if (next.needHelp && String(sid) !== next.helpAsk && changed && hasContent(next) && next.refs.length > 0) { next.helped = String(sid); next.needHelp = false; }
     next.updatedAt = now; next.updatedBy = String(sid);
-    var r = editRatio(next.draft, next);
-    next.er = r === null ? null : { r: Math.round(r * 1000) / 1000, band: band(r) };
+    next.er = erFor(next, cfg);
     return next;
   }
+
+  /* 這格「自己寫的程度」：草稿與助教代填兩個來源都比，取較嚴的；助教代填在改寫比例還沒到門檻前算 0（band＝ai），到了門檻最高只算「改寫」 */
+  function erFor(cell, cfg) {
+    cfg = cfg || CONFIG_DEFAULTS;
+    var r = editRatio(cell.draft, cell); if (r === null) return null;
+    if (cell.aiText) {
+      var ar = editRatio(cell.aiText, cell), thr = cfg.rewriteThreshold;
+      if (ar === null) return null;
+      if (ar < thr) return { r: Math.round(ar * 1000) / 1000, band: 'ai' };
+      return { r: Math.round(Math.min(r, ar) * 1000) / 1000, band: 'rewrite' };
+    }
+    return { r: Math.round(r * 1000) / 1000, band: band(r) };
+  }
+  function aiFillCount(cells) { return (cells || []).filter(function (c) { return !!c.aiText; }).length; }
+  /* 訪談卡編號 #學號-NN 的學號部分（學號本身可以有 - 或 _） */
+  function refAuthor(id) { var s = String(id || ''), i = s.lastIndexOf('-'); return s.charAt(0) === '#' && i > 1 ? s.slice(1, i) : ''; }
 
   /* 要寫進資料庫的差異路徑（只寫變動的欄位，兩個人改同一格的不同欄位不會互蓋） */
   function diffPaths(prev, next) {
@@ -215,7 +249,8 @@
     ['n', 'createdAt', 'updatedAt'].forEach(function (k) { if (next[k] !== p[k]) out[k] = next[k] || null; });
     if (!prev) out.n = next.n;   /* 第一次寫這格一定要帶序號 */
     if (JSON.stringify(next.refs) !== JSON.stringify(p.refs)) out.refs = next.refs.length ? next.refs : null;
-    ['draft', 'er', 'img'].forEach(function (k) { if (JSON.stringify(next[k]) !== JSON.stringify(p[k])) out[k] = next[k] || null; });
+    if (next.cl !== p.cl) out.cl = next.cl || null;
+    ['draft', 'aiText', 'er', 'img'].forEach(function (k) { if (JSON.stringify(next[k]) !== JSON.stringify(p[k])) out[k] = next[k] || null; });
     Object.keys(next.editors || {}).forEach(function (s) { if (!(p.editors || {})[s]) out['editors/' + s] = 1; });
     return out;
   }
@@ -264,7 +299,8 @@
   function dropFn() { return function (cur) { cur = Number(cur) || 0; return cur > 0 ? cur - 1 : 0; }; }
   function quotaView(o) {
     o = o || {}; var mode = o.mode || 'normal';
-    var userLeft = Math.max(0, LIMITS.perUserPerDay - (Number(o.userUsed) || 0)), siteLeft = Math.max(0, LIMITS.sitePerDay - (Number(o.siteUsed) || 0));
+    var cf = o.cfg || CONFIG_DEFAULTS;
+    var userLeft = Math.max(0, cf.uploadPerUserDay - (Number(o.userUsed) || 0)), siteLeft = Math.max(0, cf.uploadSiteDay - (Number(o.siteUsed) || 0));
     var left = Math.min(userLeft, siteLeft), why = 'ok';
     if (mode === 'readonly') { left = 0; why = 'readonly'; }
     else if (mode === 'noupload') { left = 0; why = 'mode-noupload'; }
@@ -272,7 +308,7 @@
     return { userLeft: userLeft, siteLeft: siteLeft, left: left, canUpload: left > 0, why: why };
   }
   function banner(left) { return '今天還能上傳 ' + left + ' 張・下次重置 ' + resetLabel(); }
-  var WHY_TEXT = { ok: '', 'user-limit': '你今天的 ' + LIMITS.perUserPerDay + ' 張用完了，文字還能繼續改，明天 00:00 再傳。', 'site-limit': '全班今天的圖片名額用完了，明天 00:00 再傳。',
+  var WHY_TEXT = { ok: '', 'user-limit': '你今天的上傳名額用完了，文字還能繼續改，明天 00:00 再傳。', 'site-limit': '全班今天的圖片名額用完了，明天 00:00 再傳。',
     'mode-noupload': '系統為了保護資料庫，暫時停止上傳圖片，文字還能改。', readonly: '系統為了保護資料庫，今天先唯讀，只能看不能改。' };
 
   /* ———— 全站保護 ———— */
@@ -320,32 +356,53 @@
     return { w: Math.round(w), h: Math.round(h) };
   }
 
-  /* ———— 合作成就（判準寫在這裡） ———— */
-  /* ctx：{ sid, wall: 牆上的格子, mine: 我的故事板格子, interviews: 我現在的訪談紀錄, baseline: { recIds, personas }（第一次開故事板當下的快照） } */
+  /* ———— W8 成就（判準寫在這裡；與學習單 W8 頁「合作」那一節一致） ———— */
+  /* ctx：{ sid, wall: 牆上的格子, mine: 我的故事板格子, interviews: 我現在的訪談紀錄, baseline: { recIds, personas }（第一次開故事板當下的快照）, cfg } */
+  var ACH_META = [
+    { id: 'together', group: 'coop', icon: '🤝', name: '一起說故事', how: '同一面牆至少 3 位成員各補 1 格以上，其中有你。' },
+    { id: 'relay', group: 'coop', icon: '🧩', name: '接力一格', how: '你寫的那一格，引用了另一位同學的訪談卡。' },
+    { id: 'fill', group: 'coop', icon: '🩹', name: '補位', how: '別人把格子標成「這格寫不出來」，你補上內容並附出處。' },
+    { id: 'revisit', group: 'coop', icon: '🔁', name: '回頭再問', how: '開了故事板之後，回去訪談一位新的人，並把他的話放進故事板。' },
+    { id: 'premiere', group: 'coop', icon: '🎬', name: '首映', how: '牆上至少 ' + LIMITS.defaultCells + ' 格全部有圖、有內容、有出處，並標出關鍵時刻（至少 2 人共編）。' },
+    { id: 'askthenwrite', group: 'coach', icon: '💬', name: '問了助教，自己寫完', how: '某一格你問過助教（提示、檢查或句型），最後是你自己寫完、有出處。' },
+    { id: 'allsourced', group: 'coach', icon: '🔗', name: '整張每格都有出處', how: '一面故事板至少 ' + LIMITS.defaultCells + ' 格，每一格都有內容也都有出處。' },
+    { id: 'nofill', group: 'coach', icon: '✍️', name: '整張沒有代填', how: '一面故事板至少 ' + LIMITS.defaultCells + ' 格都有內容，沒有任何一格是助教代填。' },
+    { id: 'reclaim', group: 'coach', icon: '♻️', name: '把示範改成自己的', how: '助教代填的格子，你改寫超過六成，變回自己的。' }
+  ];
+  function fullBoardOf(cells, minCells) { return cells.length >= minCells && cells.every(hasContent); }
   function achievements(ctx) {
-    ctx = ctx || {}; var me = String(ctx.sid || ''), wall = (ctx.wall || []).map(function (c) { return normCell(c, c && c.n); }), mine = (ctx.mine || []).map(function (c) { return normCell(c, c && c.n); });
+    ctx = ctx || {}; var cfg = ctx.cfg || CONFIG_DEFAULTS, me = String(ctx.sid || ''), wall = (ctx.wall || []).map(function (c) { return normCell(c, c && c.n); }), mine = (ctx.mine || []).map(function (c) { return normCell(c, c && c.n); });
     var filledWall = wall.filter(hasContent), authors = {};
     filledWall.forEach(function (c) { if (c.by) authors[c.by] = (authors[c.by] || 0) + 1; });
-    var together = Object.keys(authors).length >= 2 && !!authors[me];
-    var relay = wall.some(function (c) { return hasContent(c) && c.by && c.by !== me && c.editors[me]; });
-    var fill = wall.some(function (c) { return c.helped === me && c.helpAsk && c.helpAsk !== me; });
+    var mineCells = wall.concat(mine).filter(function (c) { return c.by === me && hasContent(c); });
+    var got = {};
+    got.together = Object.keys(authors).length >= 3 && !!authors[me];
+    got.relay = mineCells.some(function (c) { return c.refs.some(function (id) { var a = refAuthor(id); return a && a !== me; }); });
+    got.fill = wall.some(function (c) { return c.helped === me && c.helpAsk && c.helpAsk !== me; });
     var revisit = false, base = ctx.baseline;
     if (base && arr(base.recIds).length) {
       var baseRecs = {}, basePers = {}; arr(base.recIds).forEach(function (r) { baseRecs[r] = 1; }); arr(base.personas).forEach(function (p) { basePers[p] = 1; });
       var mineRecs = {}; arr(ctx.interviews).forEach(function (r) { if (r && r.id && filled(r)) mineRecs[r.id] = r; });
-      revisit = wall.concat(mine).some(function (c) {
-        return c.by === me && c.refs.some(function (id) { var r = mineRecs[id]; return r && !baseRecs[id] && r.personaId && !basePers[r.personaId]; });
-      });
+      revisit = mineCells.some(function (c) { return c.refs.some(function (id) { var r = mineRecs[id]; return r && !baseRecs[id] && r.personaId && !basePers[r.personaId]; }); });
     }
+    got.revisit = revisit;
     var full = filledWall.length >= LIMITS.defaultCells && wall.every(function (c) { return hasContent(c) && c.img && c.refs.length > 0; }) && wall.some(function (c) { return c.moment; }) && Object.keys(authors).length >= 2;
-    var premiere = full && !!authors[me];
-    return [
-      { id: 'together', icon: '🤝', name: '一起說故事', got: together, desc: '牆上至少有 2 個人各寫了格子，其中有你的。' },
-      { id: 'relay', icon: '🧩', name: '接力一格', got: relay, desc: '接著改別人寫的格子，把故事往下接。' },
-      { id: 'fill', icon: '🩹', name: '補位', got: fill, desc: '別人標「這格寫不出來」，你補上內容和出處。' },
-      { id: 'revisit', icon: '🔁', name: '回頭再問', got: revisit, desc: '開了故事板之後，回去訪談一位新的人，並把他的話放進故事板。' },
-      { id: 'premiere', icon: '🎬', name: '首映', got: premiere, desc: '牆上至少 ' + LIMITS.defaultCells + ' 格全部有圖、有內容、有出處，並標出關鍵時刻。' }
-    ];
+    got.premiere = full && !!authors[me];
+    got.askthenwrite = mineCells.some(function (c) { return c.cl >= 1 && c.cl <= 3 && !c.aiText && c.refs.length > 0 && c.er && (c.er.band === 'own' || c.er.band === 'rewrite'); });
+    /* 整張：我的個人板（每格都是我寫的），或房間牆（我至少寫了 1 格）；至少 6 格 */
+    var boards = [{ cells: mine, mineOnly: true }, { cells: wall, mineOnly: false }];
+    function boardOk(b, test) { return fullBoardOf(b.cells, LIMITS.defaultCells) && test(b.cells) && (b.mineOnly ? b.cells.every(function (c) { return c.by === me; }) : b.cells.some(function (c) { return c.by === me; })); }
+    got.allsourced = boards.some(function (b) { return boardOk(b, function (cs) { return cs.every(function (c) { return c.refs.length > 0; }); }); });
+    got.nofill = boards.some(function (b) { return boardOk(b, function (cs) { return aiFillCount(cs) === 0; }); });
+    got.reclaim = mineCells.some(function (c) { return !!c.aiText && c.er && c.er.band !== 'ai'; });
+    return ACH_META.map(function (m) { return { id: m.id, group: m.group, icon: m.icon, name: m.name, got: !!got[m.id], desc: m.how }; });
+  }
+
+  /* 依寬度逐字換行（中文逐字、英數字也逐字；measure(文字)→像素寬）。行與行串起來等於原文，所以紅字位置可以照原文索引對回去 */
+  function wrapText(measure, text, maxW) {
+    var lines = []; String(text === undefined || text === null ? '' : text).split('\n').forEach(function (para) {
+      var cur = ''; Array.from(para).forEach(function (ch) { if (cur && measure(cur + ch) > maxW) { lines.push(cur); cur = ch; } else cur += ch; }); lines.push(cur);
+    }); return lines;
   }
 
   /* ———— 可列印的一頁（給學生另存 PDF 交作業） ———— */
@@ -379,5 +436,6 @@
     dayKey: dayKey, nextResetTs: nextResetTs, resetLabel: resetLabel, bumpFn: bumpFn, dropFn: dropFn, quotaView: quotaView, banner: banner,
     protection: protection, opsState: opsState, canWrite: canWrite, canUploadMode: canUploadMode, loadFull: loadFull,
     fitSize: fitSize, fitToBudget: fitToBudget, dataUrlBytes: dataUrlBytes, containRect: containRect,
-    achievements: achievements, printHtml: printHtml, boardStats: boardStats };
+    CONFIG_DEFAULTS: CONFIG_DEFAULTS, config: config, erFor: erFor, aiFillCount: aiFillCount, refAuthor: refAuthor, ACH_META: ACH_META,
+    wrapText: wrapText, achievements: achievements, printHtml: printHtml, boardStats: boardStats };
 });

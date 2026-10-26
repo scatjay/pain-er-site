@@ -187,8 +187,19 @@
     { id: 'kid_whisperer', icon: '🧒', name: '哄小孩', desc: '從小米口中問到一件真的事', test: function (m) { return m.interviewIds.indexOf('kid') >= 0; } },
     { id: 'translator', icon: '🌏', name: '翻譯官', desc: '用短句問到 Siti 的需求', test: function (m) { return m.interviewIds.indexOf('migrant_caregiver') >= 0; } },
     { id: 'inclusive', icon: '🌈', name: '每個人都算數', desc: '訪談過小薇、恩哥、賴阿嬤、山哥其中三位', test: function (m) { return ['trans_woman', 'gay_partner', 'lonely_elder', 'street_man'].filter(function (id) { return m.interviewIds.indexOf(id) >= 0; }).length >= 3; } },
-    { id: 'all_cp', icon: '🏁', name: '六燈全亮', desc: '六個檢核點全部通過', test: function (m) { return m.cpAllOk; } }
+    { id: 'all_cp', icon: '🏁', name: '六燈全亮', desc: '六個檢核點全部通過', test: function (m) { return m.cpAllOk; } },
+    /* 10-26：W8 故事板成就（判準在 sb_core.js；故事板頁寫到 sbx/{場次}/sbach/{學號}，game.js 讀進 window.ERG_MY_SB_ACH） */
+    { id: 'w8_together', icon: '🤝', name: '一起說故事', desc: '第 8 週故事板：同一面牆至少 3 位成員各補 1 格以上，其中有你', test: function () { return sbHas('together'); } },
+    { id: 'w8_relay', icon: '🧩', name: '接力一格', desc: '第 8 週故事板：你寫的格子引用了另一位同學的訪談卡', test: function () { return sbHas('relay'); } },
+    { id: 'w8_fill', icon: '🩹', name: '補位', desc: '第 8 週故事板：別人把格子標成「這格寫不出來」，你補上內容並附出處', test: function () { return sbHas('fill'); } },
+    { id: 'w8_revisit', icon: '🔁', name: '回頭再問', desc: '第 8 週故事板：開了故事板之後回去訪談一位新的人，並把他的話放進故事板', test: function () { return sbHas('revisit'); } },
+    { id: 'w8_premiere', icon: '🎬', name: '首映', desc: '第 8 週故事板：牆上至少 6 格有圖、有內容、有出處，並標出關鍵時刻（至少 2 人一起編）', test: function () { return sbHas('premiere'); } },
+    { id: 'w8_askthenwrite', icon: '💬', name: '問了助教，自己寫完', desc: '第 8 週故事板：問過助教提示、檢查或句型，最後自己寫完且有出處', test: function () { return sbHas('askthenwrite'); } },
+    { id: 'w8_allsourced', icon: '🔗', name: '整張每格都有出處', desc: '第 8 週故事板：一面故事板至少 6 格，每格都有內容也有出處', test: function () { return sbHas('allsourced'); } },
+    { id: 'w8_nofill', icon: '✍️', name: '整張沒有代填', desc: '第 8 週故事板：一面故事板至少 6 格都有內容，沒有任何一格是助教代填', test: function () { return sbHas('nofill'); } },
+    { id: 'w8_reclaim', icon: '♻️', name: '把示範改成自己的', desc: '第 8 週故事板：助教代填的格子，你改寫超過六成', test: function () { return sbHas('reclaim'); } }
   ];
+  function sbHas(k) { try { return ((typeof window !== 'undefined' && window.ERG_MY_SB_ACH) || []).indexOf(k) >= 0; } catch (e) { return false; } }
   function badges(m) { return DEFS.map(function (d) { return { id: d.id, icon: d.icon, name: d.name, desc: d.desc, ok: !!d.test(m) || (m.keep || []).indexOf(d.id) >= 0 }; }); }
   function earned(m) { return badges(m).filter(function (b) { return b.ok; }); }
 

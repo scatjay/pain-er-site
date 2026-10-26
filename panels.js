@@ -152,7 +152,7 @@
     var persona = h.ent.persona, st = drawState(persona), w = cur().world;
     var fatigueLevel = h.av.fatigue ? h.av.fatigue.level : 0, promptLine = window.ERG_FATIGUE ? window.ERG_FATIGUE.promptLine(fatigueLevel, RM.simMin()) : '';
     return PER.buildPrompt(persona, { timeText: RM.simTime(), roomName: roomNameOf(player().loc), act: h.pos.act || '待著', state: st, level: h.av.level, promptLine: promptLine,
-      topic: w.meta.short, attitudeLabel: w.meta.id === 'sms' ? '對這套簡訊的態度' : '對這套做法的態度' });
+      topic: w.meta.short, referrals: w.meta.referrals, attitudeLabel: w.meta.id === 'sms' ? '對這套簡訊的態度' : '對這套做法的態度' });
   }
   /* 10-20 楊老師：輪播只換『觀看』的房間、不移動玩家，訪談只問得到玩家所在房的人。輪播正在看別間房時，面板上方講清楚，並列出那間房現在的人 */
   function watchNote() {
@@ -386,7 +386,7 @@
     var html = '<div class="card" style="margin-top:0"><b>記一筆</b><div class="row" style="margin-top:6px">' + CARD_TYPES.map(function (t) { return '<button class="pill ' + ((pre.type || P.cardType || '便利貼') === t ? 'on' : '') + '" data-ct="' + t + '">' + t + '</button>'; }).join('') + '</div>' +
       '<div id="cardForm" style="margin-top:6px"></div></div>' +
       (cur().mobile ? '' : '<div class="row"><button class="ghost" id="seeNb">看筆記本</button><button class="ghost" id="seeAll">回到全景</button></div>') + '<h2>筆記本裡的卡（' + mine.length + '）</h2>';
-    mine.forEach(function (m) { html += '<div class="card" style="padding:6px 10px;margin:6px 0;box-shadow:var(--sh) var(--sh) 0 var(--ink)"><b>' + esc(m.id) + '</b> <span class="tag">' + esc(m.type) + '</span> <span class="muted" style="font-size:var(--fs-1)">' + (m.author === me() ? '我' : esc(m.author)) + '</span><div style="font-size:var(--fs-2)">' + esc(String(m.text || '').split('\n').slice(1).join(' ')) + '</div></div>'; });
+    mine.forEach(function (m) { html += '<div class="card" data-cid="' + esc(m.id) + '" style="padding:6px 10px;margin:6px 0;box-shadow:var(--sh) var(--sh) 0 var(--ink)"><b>' + esc(m.id) + '</b> <span class="tag">' + esc(m.type) + '</span> <span class="muted" style="font-size:var(--fs-1)">' + (m.author === me() ? '我' : esc(m.author)) + '</span><div style="font-size:var(--fs-2)">' + esc(String(m.text || '').split('\n').slice(1).join(' ')) + '</div></div>'; });
     p.innerHTML = html;
     /* 10-18：場景一變（事件裡人物移動）onSceneChanged 就重畫這一頁；原本選的卡片種類只放在一次性的 prefill，
        重畫後一律回到「便利貼」⇒ 學生按了「勘查卡」表單會自己跳掉。改成記住目前選的種類。 */
@@ -410,7 +410,9 @@
       $('cf-add').onclick = function () {
         var fields = type === '勘查卡' ? { clue: $('cf-clue').value, saw: $('cf-saw').value.trim() } : { text: $('cf-text').value.trim() };
         if ($('cf-refs')) { fields.refs = $('cf-refs').value.split(/[,，\s]+/).filter(Boolean); if (!fields.refs.length) { $('cf-err').textContent = '請填它根據哪一張卡（點上面的編號）'; return; } }
-        try { makeCard(type, fields); ['cf-text', 'cf-saw', 'cf-refs'].forEach(function (k) { if ($(k)) $(k).value = ''; }); renderCards(); } catch (e) { $('cf-err').textContent = e.message; }
+        try { var nid = makeCard(type, fields); ['cf-text', 'cf-saw', 'cf-refs'].forEach(function (k) { if ($(k)) $(k).value = ''; }); renderCards();
+          /* 10-26：加完表單清空、新卡在下面清單裡，矮視窗要往下捲才看得到，同學以為卡片不見了（二丙 0216 回報）⇒ 出現提示（不自動捲動，才不會把表單捲走、連續記好幾張時要再捲回來） */
+          try { var nel = $('p-cards').querySelector('[data-cid="' + nid + '"]'); if (nel) { nel.style.outline = '3px solid var(--yellow, #f5c518)'; setTimeout(function () { nel.style.outline = ''; }, 2500); } RM.toast('已加到筆記本：' + nid + (nel ? '（往下捲，在「筆記本裡的卡」清單最後一張）' : '')); } catch (e2) {} } catch (e) { $('cf-err').textContent = e.message; }
       };
     }
     form();

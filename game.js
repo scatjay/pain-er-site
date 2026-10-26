@@ -305,6 +305,12 @@
       var h = $('caseHint'); if (!h) { h = document.createElement('div'); h.id = 'caseHint'; h.className = 'muted'; h.style.cssText = 'font-size:var(--fs-2);margin:2px 0 4px'; sel.parentNode.parentNode.insertBefore(h, sel.parentNode.nextSibling); }
       h.textContent = '案例共 ' + n + ' 種（每次進來先隨機選一種，可以自己換），每一種的人物、線索和結論都不一樣。'; })();
     renderLobby();
+    /* 故事板頂列的「🩺 回去訪談」連到 index.html#room=房號：進大廳後直接進那間房（等房間索引載入，最多 15 秒） */
+    var hm = /[#&]room=([A-Z0-9]{4})/.exec(location.hash || '');
+    if (hm && !window.__ergHashRoom) {
+      window.__ergHashRoom = hm[1]; try { history.replaceState(null, '', location.pathname + location.search); } catch (x) {}
+      (function tryHash(code, n) { if (!ONLINE || DB.hasRoom(code)) { joinCode(code); return; } if (n < 30) setTimeout(function () { tryHash(code, n + 1); }, 500); })(hm[1], 0);
+    }
   }
   /* ───── 第 2 週（2/3）：檢核點＋給你的指引＋回應指引（10-19 楊老師；檢核規則在 week2.js） ─────
      指引：er/{場次}/guide/{學號}（tools/er_guide_publish.py 發布，不含姓名）；回應：er/{場次}/guideResp/{學號} = { a, b, c, t }。
@@ -313,7 +319,15 @@
   function loadGuide() {
     var sid = APP.me.sid; if (!sid || !ONLINE || GUIDE.busy || (GUIDE.loaded && GUIDE.sid === sid)) return;
     GUIDE.busy = true; var fdb = firebase.database(), base = 'er/' + APP.SESS + '/';
-    Promise.all([fdb.ref(base + 'guide/' + sid).once('value'), fdb.ref(base + 'guideResp/' + sid).once('value'), fdb.ref(base + 'guideHist/' + sid).once('value').catch(function () { return { val: function () { return null; } }; })]).then(function (v) {
+    /* 10-26：學號大小寫。指引（guide）是老師端用小寫學號發布的，學生登入時打大寫（4B4K0216）就讀不到 → 沒有指引、沒有基準、追加成就永遠 0/3（約三成同學）。
+       先讀自己打的那一種，沒有再試小寫、大寫。 */
+    var variants = [sid]; [String(sid).toLowerCase(), String(sid).toUpperCase()].forEach(function (x) { if (variants.indexOf(x) < 0) variants.push(x); });
+    var readAny = function (node) {
+      var i = 0;
+      var step = function () { if (i >= variants.length) return Promise.resolve({ val: function () { return null; } }); return fdb.ref(base + node + '/' + variants[i++]).once('value').then(function (s) { return s.val() != null ? s : step(); }); };
+      return step();
+    };
+    Promise.all([readAny('guide'), readAny('guideResp'), readAny('guideHist').catch(function () { return { val: function () { return null; } }; })]).then(function (v) {
       GUIDE.g = v[0].val(); GUIDE.r = v[1].val(); GUIDE.h = v[2].val(); GUIDE.sid = sid;
       /* 老師帳號沒有自己的指引：讀一份去識別的示範（guide/_demo），上課可以直接展示學生看到的樣子 */
       if (!GUIDE.g && multiLoginOk()) return fdb.ref(base + 'guide/_demo').once('value').then(function (d) { GUIDE.g = d.val(); if (GUIDE.g) GUIDE.g.demo = true; GUIDE.loaded = true; GUIDE.busy = false; if ($('lobby').classList.contains('on')) renderLobby(); });
@@ -350,10 +364,22 @@
     return '<div id="ivBox" style="margin:8px 0 0;padding:8px 12px;border:var(--bw-s) solid var(--ink);border-radius:var(--r-m);font-size:var(--fs-2);line-height:1.6"><b>🗣️ 你上週的訪談</b>' +
       '<div>👍 ' + esc(iv.good) + '</div><div>🔧 ' + esc(iv.fix) + '</div><div>💬 下次可以這樣問：' + esc(iv.eg) + '</div></div>';
   }
+  /* 「自己完成了沒有」：每一週收合標題都用同一種標示（W6、W7 共用） */
+  function wkBadge(done, left, lit, total, nextText, extra) {
+    return done ? '<span class="wkDone ok">✅ 已完成（' + lit + '/' + total + '）' + esc(extra || '') + '</span>' : '<span class="wkDone todo">⬜ 還差 ' + left + ' 項（' + lit + '/' + total + '）' + esc(extra || '') + (nextText ? '｜下一步：' + esc(nextText) : '') + '</span>';
+  }
+  function reviewState(r) {
+    if (!GUIDE.loaded) return { k: 'load', t: '讀取中' };
+    if (!r || !r.t) return { k: 'none', t: '還沒送' };
+    var rev = r.rev; if (!rev || Number(rev.at || 0) < Number(r.t)) return { k: 'wait', t: '審核中' };
+    return rev.ok ? { k: 'ok', t: '通過' } : { k: 'fix', t: '需要補強' };
+  }
   function week2Html() {
     var c = week2Ctx(), ev = window.ERG_WEEK2.evaluate(c), r = c.resp || {}, MIN = window.ERG_WEEK2.RESP_MIN;
     var ta = function (k, label, ph) { return '<label style="display:block;margin:6px 0 2px;font-size:var(--fs-2)"><b>' + label + '</b></label><textarea id="gr_' + k + '" rows="2" maxlength="400" placeholder="' + esc(ph) + '" style="width:100%;box-sizing:border-box">' + esc(GUIDE.draft && GUIDE.draft[k] !== undefined ? GUIDE.draft[k] : (r[k] || '')) + '</textarea>'; };
-    return '<div id="week2Box"><div class="row"><b style="flex:1;font-size:var(--fs-4)">痛點急診室 2/3（W7）這週要做的事　' + ev.lit + ' / ' + ev.total + (ev.passed ? '　<span class="tag ok">全部完成</span>' : '') + '</b></div>' +
+    var w8 = w8Started(), rv = reviewState(GUIDE.r), rvOk = rv.k === 'ok', left = (ev.total - ev.lit) + (rvOk ? 0 : 1);
+    var head = '痛點急診室 2/3（W7）' + (w8 ? '上週的事' : '這週要做的事') + '　' + (w8 ? wkBadge(ev.passed && rvOk, left, ev.lit, ev.total, ev.next ? ev.next.text : (rvOk ? '' : '送出「回應指引」'), '｜回應指引：' + rv.t) : ev.lit + ' / ' + ev.total + (ev.passed ? '　<span class="tag ok">全部完成</span>' : ''));
+    return (w8 ? '<details id="week2Box"' + (week2Open ? ' open' : '') + '><summary style="cursor:pointer"><b style="font-size:var(--fs-3)">' + head + '</b></summary>' : '<div id="week2Box"><div class="row"><b style="flex:1;font-size:var(--fs-4)">' + head + '</b></div>') +
       '<div class="muted" style="font-size:var(--fs-2);margin:2px 0 6px">這週繼續升級技能、追加成就，<b>最重要的是照「給你的指引」去做，並寫下你做了什麼</b>。10/20 到 W8 結束全天都可以訪談。1/3（W6）還沒完成的，下面可以繼續做。</div>' +
       (ev.next ? '<div id="w2Next" style="margin:6px 0;padding:6px 10px;border:var(--bw) solid var(--ink);border-radius:var(--r-m);background:var(--yellow);color:var(--ink-fixed);font-size:var(--fs-3)"><b>這週下一步</b>　' + esc(ev.next.text) + '</div>' : '') +
       window.ERG_CHECKPOINTS.listHtml(ev, { compact: true }) +
@@ -363,8 +389,11 @@
         ta('b', '2. 我做了什麼、結果如何？', '每件一句，要具體，例如：追問了 5 次「那時候你怎麼做」，探問升到 Lv.2') +
         ta('c', '3. 還沒做到的、卡在哪、下一步？', '例如：還沒問到病人本人，因為找不到他在哪；下次先去候診區') +
         '<div class="row" style="margin-top:6px"><button id="grSend"' + (sentToday(r) ? ' disabled' : '') + '>' + (sentToday(r) ? '今天已送出' : (r.t ? '再次送審' : '送出審核')) + '</button><span id="grMsg" class="muted" style="font-size:var(--fs-2)">' + (sentToday(r) ? '一天只能送出一次審核，明天可以改好再送。' : '一天只能送出一次審核（每晚審一次），三格都寫好再送。') + '</span></div>' + reviewHtml(r) + '</div>' : '') +
-      '</div>';
+      (w8 ? '</details>' : '</div>');
   }
+  /* 10-26 楊老師「W7 已經不是本週了」：10/27 07:10 起大廳最上方換成 W8（故事板卡），W7 收成預設摺起來的「上週」，回應指引仍可補送 */
+  var W8_START = Date.parse('2026-10-27T07:10:00+08:00'), week2Open = false;
+  function w8Started() { var q = location.search.match(/[?&]w8=(0|1)/); if (q) return q[1] === '1'; return Date.now() >= W8_START; }
   /* 10-19 楊老師：送出後顯示「審核中」，一天只能送一次（每天晚上用 Claude 批次審一次，tools/er_guide_review.py 寫回 guideResp/{學號}/rev） */
   function dayKey(t) { var d = new Date(t); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
   function sentToday(r) { return !!(r && r.t && dayKey(r.t) === dayKey(Date.now())); }
@@ -413,13 +442,14 @@
     var e = evaluateAll(), box = $('progressBox');
     if (e) {
       var first = e.ev.list.filter(function (x) { return !x.ok; })[0];
-      var w1 = '<details id="w1Wrap"><summary style="cursor:pointer"><b>痛點急診室 1/3（W6）的檢核點　' + e.ev.lit + ' / ' + e.ev.total + '</b>' + (e.ev.passed ? '　<span class="tag ok">全部完成</span>' : '　<span class="muted" style="font-size:var(--fs-2)">還沒完成的可以繼續做' + (e.ev.next ? '｜下一步：' + esc(e.ev.next.text) : '') + '（點開看全部）</span>') + '</summary>' +
+      var w1 = '<details id="w1Wrap"><summary><b>痛點急診室 1/3（W6）的檢核點</b>　' + wkBadge(e.ev.passed, e.ev.total - e.ev.lit, e.ev.lit, e.ev.total, e.ev.next ? e.ev.next.text : '') + '</summary>' +
         '<div class="dots" style="margin:6px 0">' + e.ev.list.map(function (x) { return '<i class="' + (x.ok ? 'lit' : '') + '" title="' + esc(x.label) + '" style="width:20px;height:20px"></i>'; }).join('') + '</div>' +
         (e.ev.next ? '<div id="lobbyNext" style="margin:6px 0;padding:6px 10px;border:var(--bw) solid var(--ink);border-radius:var(--r-m);background:var(--yellow);color:var(--ink-fixed);font-size:var(--fs-3)"><b>下一步</b>　' + esc(e.ev.next.text) + '</div>' : '') +
         '<details id="lobbyCk"' + (window.innerWidth >= 900 && !e.ev.passed ? ' open' : '') + '><summary style="cursor:pointer;font-size:var(--fs-2)" class="muted">六個檢核點要做什麼（完成 ✔、還沒 ✘）</summary>' + window.ERG_CHECKPOINTS.listHtml(e.ev, { compact: true }) + '</details></details>';
       var ae = document.activeElement; if (ae && /^gr_[abc]$/.test(ae.id || '')) { /* 正在寫回應：不重畫，免得字被洗掉、游標跳走 */ }
-      else box.innerHTML = (window.ERG_WEEK2 ? week2Html() : '') + '<div style="margin-top:10px;padding-top:8px;border-top:var(--bw-s) dashed var(--ink)">' + w1 + '</div>';
+      else box.innerHTML = (window.ERG_WEEK2 ? '<div class="wkBox">' + week2Html() + '</div>' : '') + '<div class="wkBox">' + w1 + '</div>';   /* W7、W6 同一層、樣式一致、預設都收合（w8Started 之後） */
       bindWeek2();
+      var wb = $('week2Box'); if (wb && wb.tagName === 'DETAILS') wb.ontoggle = function () { week2Open = wb.open; };
     }
     /* 三個班共用一個場次，房間會有一兩百間：我的房間全列；別人的房間先列「房主在線」「同班」「比較新」的，最多 20 間，其餘請同學給代碼。 */
     var rooms = DB.listRooms(APP.SESS), tb = $('roomRows'); tb.innerHTML = '';
@@ -443,10 +473,31 @@
 
   /* 第 8 週：大廳兩個入口（進急診室／UX 故事板）＋我進過的房間。資料都來自我自己的房間（已經在監聽的），不另外讀資料庫 */
   var sbBound = false, sbTouched = false;
+  /* W8 卡頂端的完成列：訪談卡來自大廳的房間資料；人物誌人數、故事板格數、關鍵時刻、圖片讀 sbx（只讀自己房間的板，一次）。讀不到就寫「打開故事板後更新」，不假裝成 0 */
+  var W8P = { sid: '', codes: '', busy: false, data: null };
+  function loadW8P(codes) {
+    var key = codes.join(','), sid = APP.me.sid; if (!ONLINE || !codes.length || W8P.busy || (W8P.sid === sid && W8P.codes === key)) return;
+    W8P.busy = true; var fdb = firebase.database(), base = 'sbx/' + APP.SESS + '/', got = { personas: 0, filled: 0, moment: false, img: false }, bad = false;
+    var jobs = [];
+    codes.forEach(function (code) {
+      jobs.push(fdb.ref(base + 'sbm/' + code + '/' + sid + '/personaCount').once('value').then(function (s) { got.personas = Math.max(got.personas, Number(s.val()) || 0); }));
+      ['wall', 'u_' + sid].forEach(function (b) {
+        jobs.push(fdb.ref(base + 'sb/' + code + '/' + b + '/cells').once('value').then(function (s) {
+          var v = s.val() || {}, ks = Object.keys(v), n = 0; ks.forEach(function (k) { var c = v[k] || {}; if (String(c.what || '').trim() || String(c.think || '').trim()) { n += 1; if (c.moment) got.moment = true; } if (c.img) got.img = true; }); got.filled = Math.max(got.filled, n);
+        }));
+      });
+    });
+    Promise.all(jobs).catch(function () { bad = true; }).then(function () { W8P.busy = false; W8P.sid = sid; W8P.codes = key; W8P.data = bad ? null : got; if ($('lobby').classList.contains('on')) { try { renderStoryboardEntry(); } catch (x) {} } });
+  }
+  function w8Steps(rows) {
+    var P = W8P.sid === APP.me.sid ? W8P.data : null;
+    return [{ label: '有訪談卡的房間 ≥1', ok: rows.some(function (x) { return x.open; }) }, { label: '人物誌 2 位', ok: P ? P.personas >= 2 : null }, { label: '故事板 6 格有內容', ok: P ? P.filled >= 6 : null },
+      { label: '標出關鍵時刻', ok: P ? !!P.moment : null }, { label: '放了圖片', ok: P ? !!P.img : null }];
+  }
   function renderStoryboardEntry() {
     var SB = window.ERG_STORYBOARD, RL = window.ERG_REPORT_LEVEL, PER = window.ERG_PERSONAS; if (!SB || !RL || !APP.me.sid) return;
     var card = $('sbCard');
-    if (!card) { card = document.createElement('div'); card.id = 'sbCard'; card.className = 'card'; var anchorCard = $('createBtn').closest('.card'); anchorCard.parentNode.insertBefore(card, anchorCard.nextSibling); }
+    if (!card) { card = document.createElement('div'); card.id = 'sbCard'; card.className = 'card'; var pb = w8Started() && $('progressBox') && $('progressBox').closest('.card'), anchorCard = $('createBtn').closest('.card'); if (pb) pb.parentNode.insertBefore(card, pb); else anchorCard.parentNode.insertBefore(card, anchorCard.nextSibling); }
     SB.injectCss(document);
     var sid = String(APP.me.sid), pr = (APP.me.profile && APP.me.profile.progress) || {}, mobile = /Mobi|Android|iPhone/i.test(navigator.userAgent) || location.pathname.indexOf('m.html') >= 0;
     var mine = [];
@@ -465,8 +516,17 @@
     mine.filter(function (x) { return x.caseId === sel; }).forEach(function (x) { recs = recs.concat(x.interviews || []); });
     var e1 = SB.interviewedSummary(recs, keyIds, personaNames(cobj)); e1.caseName = cobj.meta.short || cobj.meta.name;
     var rows = SB.roomRows(mine, skill, caseNames);
-    card.innerHTML = '<div class="row"><b style="flex:1">第 8 週　UX 故事板</b></div>' + SB.lobbyHtml({ mobile: mobile, entry1: e1, rooms: rows });
+    var lastRoom = ''; try { lastRoom = localStorage.getItem('erg_last_room_' + sid) || ''; } catch (x) {}
+    /* 主按鈕開「能開故事板的房間（有 ≥1 張訪談卡）」裡最近進過的那間；沒有任何一間能開就灰掉，旁邊寫還缺什麼，並給「回去訪談」去補 */
+    var openRows = rows.filter(function (x) { return x.open; });
+    var mainRoom = openRows.length ? (openRows.some(function (x) { return x.code === lastRoom; }) ? lastRoom : openRows[0].code) : '';
+    var bestRow = rows.slice().sort(function (a, b) { return (b.started - a.started) || (b.code === lastRoom) - (a.code === lastRoom); })[0] || null;
+    var steps = w8Steps(rows);
+    card.innerHTML = '<div class="row"><b style="flex:1;font-size:var(--fs-4)">' + (w8Started() ? '痛點急診室 3/3（W8）這週要做的事：人物誌＋UX 故事板' : '第 8 週　UX 故事板') + '</b></div>' + (w8Started() ? '<div class="muted" style="font-size:var(--fs-2);margin:2px 0 6px">匯出訪談報告 → 還原 2 位人物誌 → 排 6 格故事板、標出關鍵時刻 → 生成圖片放進故事板。不夠的地方回房間再問一位。卡住了，故事板裡有 AI 助教。</div>' : '') + SB.lobbyHtml({ mobile: mobile, entry1: e1, rooms: rows, main: mainRoom ? { code: mainRoom } : null, mainRoom: bestRow ? bestRow.code : '', mainNeed: SB.need(bestRow || { cards: 0, started: 0 }), prog: { steps: steps } });
+    loadW8P(mine.map(function (x) { return x.code; }));
     var b1 = $('sbEnter1'); if (b1) b1.onclick = function () { var t = $('createBtn'); t.scrollIntoView({ block: 'center' }); t.focus(); };
+    var b0 = $('sbMain0'); if (b0) b0.onclick = function () { var t = $('createBtn'); t.scrollIntoView({ block: 'center' }); t.focus(); };   /* 還沒有房間：先去開房間或加入 */
+    Array.prototype.forEach.call(card.querySelectorAll('[data-revisit]'), function (b) { b.onclick = function () { joinCode(b.getAttribute('data-revisit')); }; });   /* 🩺 回去訪談＝進這間房（跟大廳原本進房同一個函式） */
     var b2 = $('sbEnter2'); if (b2) b2.onclick = function () {
       var best = rows.slice().sort(function (a, b) { return b.cards - a.cards; })[0], def = best && best.cards ? best.caseId : sel, ctx = { cases: {} };
       CASELIST.forEach(function (c) { var nm = personaNames(c); ctx.cases[c.meta.id] = { mainName: nm[c.meta.mainPersona] || '主角', goal: c.meta.goal, focus: c.meta.focus, caseName: c.meta.name }; });
@@ -486,6 +546,7 @@
   /* 線上模式：別人的房間平常只有索引，要先把整間房載進來才能進去（不然會用空白紀錄蓋掉原本的進度） */
   var openT = null;
   function openRoom(code) {
+    try { if (code && APP.me.sid) localStorage.setItem('erg_last_room_' + APP.me.sid, code); } catch (x) {}   /* 故事板的主按鈕要開「最近進過的那間」 */
     if (ONLINE && DB.watchRoom) {
       if (!code || !DB.hasRoom(code)) throw new Error(DB.ready() ? '找不到這個房間代碼' : '資料還在載入，請再試一次');
       DB.watchRoom(code);
@@ -518,6 +579,7 @@
     if (myScoreAsked || !ONLINE || !window.firebase || !APP.me.sid) return;
     myScoreAsked = true;
     window.firebase.database().ref('er/' + APP.SESS + '/score/' + APP.me.sid).once('value', function (snap) { window.ERG_MY_SCORE = snap.val() || {}; window.ERG_SCORES_READY = true; }, function () { myScoreAsked = false; });
+    try { window.firebase.database().ref('sbx/' + APP.SESS + '/sbach/' + APP.me.sid).once('value', function (snap) { var v = snap.val() || {}; window.ERG_MY_SB_ACH = String(v.ids || '').split(',').filter(Boolean); }, function () {}); } catch (e) {}   /* 10-26：W8 故事板成就 */
   }
   function publishScore(force) {
     var R = window.ERG_ROOM, c = R && R.cur, A = window.ERG_ACH, P = window.ERG_PANELS;

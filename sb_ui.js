@@ -3,7 +3,7 @@
    不用 alert／confirm／prompt：提示一律是頁內 toast，確認一律是兩段式按鈕。 */
 (function () {
   'use strict';
-  var SB = window.ERG_SB, ST = window.ERG_SB_STORE;
+  var SB = window.ERG_SB, ST = window.ERG_SB_STORE, CO = window.ERG_SB_COACH;
   var $ = function (id) { return document.getElementById(id); };
   var esc = SB.esc;
   var Q = new URLSearchParams(location.search);
@@ -18,16 +18,16 @@
 
   var S = { sid: '', code: CODE, caseId: 'sms', room: null, player: null, gate: null, boardName: Q.get('board') === 'me' ? 'me' : 'wall',
     cells: { wall: [], me: [] }, thumbs: { wall: {}, me: {} }, full: {}, quota: { userUsed: 0, siteUsed: 0, day: '' }, ops: null, mode: 'normal', baseline: null,
-    added: 0, sel: 1, lastField: null, saved: 0, dirty: false, timers: {}, pending: {}, armed: {}, offs: [], DB: null, store: null, started: false };
+    added: 0, sel: 1, cfg: SB.config(null), coachUsed: 0, personas: 0, lastField: null, saved: 0, dirty: false, timers: {}, pending: {}, armed: {}, offs: [], DB: null, store: null, started: false };
   var NOW = function () { return Date.now(); };
   function bkey(name) { return name === 'me' ? ST.boardKey(S.sid) : 'wall'; }
   function cur() { return S.cells[S.boardName]; }
   function tone() { return SB.caseInfo(S.caseId); }
 
   function toast(msg, ms) { var t = $('toast'); t.textContent = msg; t.className = 'on'; clearTimeout(toast.t); toast.t = setTimeout(function () { t.className = ''; }, ms || 3500); }
-  function twoStep(btn, label, run) {   /* 兩段式確認：第一次按變「再按一次確認」，6 秒自動復原 */
+  function twoStep(btn, label, run, armText) {   /* 兩段式確認：第一次按變「再按一次確認」，6 秒自動復原 */
     if (S.armed[label]) { clearTimeout(S.armed[label]); delete S.armed[label]; run(); return; }
-    var old = btn.textContent; btn.textContent = '再按一次確認'; btn.classList.add('armed');
+    var old = btn.textContent; btn.textContent = armText || '再按一次確認'; btn.classList.add('armed');
     S.armed[label] = setTimeout(function () { delete S.armed[label]; btn.textContent = old; btn.classList.remove('armed'); }, 6000);
   }
 
@@ -57,7 +57,10 @@
     try { S.DB.attach && S.DB.attach(); } catch (e) {}
     loadRoom();
   }
-  function backHref() { return 'index.html' + (CODE ? '#room=' + CODE : ''); }
+  var MOBILE_UA = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+  function gameHref() { return MOBILE_UA ? 'm.html' : 'index.html'; }   /* 手機的遊戲在 m.html */
+  function backHref() { return gameHref() + (CODE ? '#room=' + CODE : ''); }   /* 🩺 回去訪談：回到同一間房（遊戲進大廳後讀 #room= 自動進房） */
+  function lobbyHref() { return gameHref(); }   /* 🏠 回大廳 */
   function loadRoom() {
     if (!S.sid) return;
     var room = null; try { room = CODE ? S.DB.getRoom(CODE) : null; } catch (e) { room = null; }
@@ -74,9 +77,9 @@
   }
   function showGate(g) {
     $('app').hidden = true; $('gate').hidden = false;
-    var title = g.reason === 'loading' ? '載入中…' : (g.reason === 'no-interview' ? '先去這間房訪談' : '還不能開故事板');
+    var title = g.reason === 'loading' ? '載入中…' : (g.reason === 'no-interview' ? '這間還沒有訪談' : '還不能開故事板');
     $('gate').innerHTML = '<div class="card"><h1>' + esc(title) + '</h1><p>' + esc(g.msg) + '</p>' +
-      (g.reason === 'loading' ? '' : '<p><a class="btn" href="' + esc(backHref()) + '">' + (CODE && g.reason === 'no-interview' ? '回到這間房（' + esc(CODE) + '）' : '回到急診室') + '</a></p>') + '</div>';
+      (g.reason === 'loading' ? '' : '<p style="display:flex;gap:10px;flex-wrap:wrap">' + (CODE && g.reason === 'no-interview' ? '<a class="btn" id="gateRevise" href="' + esc(backHref()) + '">🩺 回去訪談（房間 ' + esc(CODE) + '）</a>' : '') + '<a class="btn" id="gateLobby" href="' + esc(lobbyHref()) + '">🏠 回大廳</a></p>') + '</div>';
   }
 
   function enter() {
@@ -85,18 +88,25 @@
     document.title = '故事板・' + t.name;
     $('caseBadge').innerHTML = '<span class="cl" style="background:' + t.color + '">' + esc(t.letter) + '</span>' + esc(t.icon) + ' ' + esc(t.name);
     $('roomLine').textContent = '房間 ' + CODE + '　學號 ' + S.sid;
-    $('backLink').href = backHref();
+    $('reviseLink').href = backHref(); $('lobbyLink').href = lobbyHref();
     var ids = (SB.arr(S.player.interviews).filter(SB.filled)).map(function (r) { return r.id; });
     var pers = {}; SB.arr(S.player.interviews).filter(SB.filled).forEach(function (r) { pers[r.personaId] = 1; });
-    S.store.ensureBaseline(CODE, S.sid, ids, Object.keys(pers)).then(function (b) { S.baseline = b; renderSide(); });
+    S.store.ensureBaseline(CODE, S.sid, ids, Object.keys(pers)).then(function (b) { S.baseline = b; S.baseDone = 1; renderSide(); renderAll(); }, function (e) { S.baseDone = 1; console.warn('[sb] 第一次開板的訪談快照寫不進去：', e && e.message); renderAll(); });
     var offs = S.offs;
     offs.push(S.store.watchBoard(CODE, 'wall', function (b) { S.cells.wall = b.cells; renderAll(); }));
     offs.push(S.store.watchBoard(CODE, ST.boardKey(S.sid), function (b) { S.cells.me = b.cells; renderAll(); }));
     offs.push(S.store.watchThumbs(CODE, 'wall', function (t) { S.thumbs.wall = t; renderAll(); }));
     offs.push(S.store.watchThumbs(CODE, ST.boardKey(S.sid), function (t) { S.thumbs.me = t; renderAll(); }));
     offs.push(S.store.watchOps(function (v) { var o = SB.opsState(v, NOW()); S.ops = o; S.mode = o.mode; renderTop(); renderAll(); }));
+    offs.push(S.store.watchConfig(function (c) { S.cfg = c; renderTop(); renderAll(); if (CO) CO.render(); }));
+    offs.push(S.store.watchCoachUsed(S.sid, function (n) { S.coachUsed = n; if (CO) CO.render(); }));
+    offs.push(S.store.watchMeta(CODE, S.sid, function (m) { S.personas = Number(m.personaCount) || 0; if (CO) CO.render(); }));
     watchQuota(); setInterval(function () { if (S.quota.day && S.quota.day !== SB.dayKey(NOW())) watchQuota(); }, 30000);
     refreshAside(); bindStatic(); renderAll(true);
+    if (CO) CO.mount({ S: S, SB: SB, store: S.store, local: LOCAL, code: CODE, cur: cur, cellFor: cellFor, toast: toast, twoStep: twoStep, pnames: pnames,
+      commitFill: function (n, fill) { return commit(n, { aiFill: fill }).then(function () { renderAll(true); }); },
+      commitCl: function (n, lv) { return commit(n, { cl: lv }).then(function () { renderAll(true); }); },
+      setPersonas: function (n) { return S.store.setPersonas(CODE, S.sid, n); } });
   }
   function watchQuota() { if (S.offQ) S.offQ(); S.offQ = S.store.watchQuota(S.sid, function (q) { S.quota = q; renderTop(); renderAll(); }); }
 
@@ -123,7 +133,7 @@
   }
 
   /* ———— 頂列：額度、模式、儲存狀態 ———— */
-  function qv() { return SB.quotaView({ userUsed: S.quota.userUsed, siteUsed: S.quota.siteUsed, mode: S.mode }); }
+  function qv() { return SB.quotaView({ userUsed: S.quota.userUsed, siteUsed: S.quota.siteUsed, mode: S.mode, cfg: S.cfg }); }
   function renderTop() {
     if (!S.active) return; var q = qv();
     $('quota').innerHTML = '<b>' + esc(SB.banner(q.left)) + '</b>' + (q.why !== 'ok' ? '<div class="why">' + esc(SB.WHY_TEXT[q.why]) + '</div>' : '');
@@ -152,12 +162,12 @@
       var o = cellFor(i), c = o.c, st = SB.cellStatus(c), th = thumbOf(i), chk = SB.cellChecks(c), mineCell = c.by === S.sid;
       var ask = (tpl[i - 1] && tpl[i - 1].ask) || '這一格要回答：誰、在哪、發生什麼、他怎麼想。';
       var refsHtml = c.refs.map(function (r) { return '<span class="chip">' + esc(r) + (ro ? '' : ' <button class="x" data-n="' + i + '" data-rm="' + esc(r) + '" title="拿掉">×</button>') + '</span>'; }).join('');
-      var opts = '<option value="">＋ 加入出處…</option>' + SB.arr(S.player.interviews).filter(SB.filled).map(function (r) { return '<option value="' + esc(r.id) + '">' + esc(r.id + '　' + pname(r.personaId)) + '</option>'; }).join('');
+      var opts = '<option value="">＋ 加入出處…</option>' + SB.arr(S.player.interviews).filter(SB.filled).map(function (r) { return '<option value="' + esc(r.id) + '">' + esc(r.id + '　' + pname(r.personaId)) + '</option>'; }).join('') + mateRefs().map(function (id) { return '<option value="' + esc(id) + '">' + esc(id + '　（隊友的訪談卡）') + '</option>'; }).join('');
       html += '<article class="cell' + (c.moment ? ' moment' : '') + ' s-' + st + (S.sel === i ? ' sel' : '') + '" data-n="' + i + '" style="--ct:' + t.color + '">' +
         '<header><span class="no">' + i + '</span><input class="f title" data-n="' + i + '" data-k="title" maxlength="24" value="' + esc(c.title) + '" placeholder="這一格叫什麼" ' + (ro ? 'disabled' : '') + '>' +
         (c.moment ? '<span class="mom">★ 關鍵時刻</span>' : '') + '</header>' +
         '<div class="img ' + (c.fit === 'cover' ? 'cover' : 'contain') + '" data-n="' + i + '" tabindex="0">' + (th ? '<img alt="第 ' + i + ' 格的圖" src="' + esc(th) + '">' : '<div class="ph">拖一張圖進來，或按下面「選圖」<br><span class="muted">橫幅、方形、直式都可以，會照原比例放</span></div>') + '</div>' +
-        '<div class="imgbar"><label class="btn mini ' + (q.canUpload && !ro ? '' : 'dis') + '">選圖<input type="file" accept="image/*" data-n="' + i + '" ' + (q.canUpload && !ro ? '' : 'disabled') + ' hidden></label>' +
+        '<div class="imgbar"><label class="btn mini ' + (q.canUpload && !ro ? '' : 'dis') + '">選圖<input type="file" accept="image/*" data-n="' + i + '" ' + (q.canUpload && !ro ? '' : 'disabled') + ' class="fileinp"></label>' +
         (th ? ' <button class="mini" data-n="' + i + '" data-act="full" ' + (SB.loadFull(S.mode) ? '' : 'disabled title="系統現在只提供縮圖"') + '>看原圖</button> <button class="mini" data-n="' + i + '" data-act="fit">' + (c.fit === 'cover' ? '完整顯示' : '填滿裁切') + '</button> <button class="mini" data-n="' + i + '" data-act="rmimg" ' + (ro ? 'disabled' : '') + '>拿掉圖</button>' : '') +
         (c.img ? ' <span class="muted">' + c.img.w + '×' + c.img.h + '</span>' : '') + '</div>' +
         '<div class="ask">' + esc(ask) + '</div>' +
@@ -165,11 +175,13 @@
         '<label>在哪<input class="f" data-n="' + i + '" data-k="where" maxlength="40" value="' + esc(c.where) + '" ' + (ro ? 'disabled' : '') + '></label></div>' +
         '<label>發生什麼<textarea class="f" data-n="' + i + '" data-k="what" maxlength="140" ' + (ro ? 'disabled' : '') + '>' + esc(c.what) + '</textarea></label>' +
         '<label>他怎麼想<textarea class="f" data-n="' + i + '" data-k="think" maxlength="140" ' + (ro ? 'disabled' : '') + '>' + esc(c.think) + '</textarea></label>' +
+        (c.aiText ? '<div><span class="ai-badge">' + (c.er && c.er.band === 'ai' ? '🤖 助教示範（這格幾乎不計分，改成你自己的話）' : '♻️ 助教示範，已改成自己的') + '</span></div>' : '') +
         (c.pain ? '<div class="painline">痛點句：<mark class="pain">' + esc(c.pain) + '</mark></div>' : '') +
         '<div class="bar"><button class="mini" data-n="' + i + '" data-act="pain" ' + (ro ? 'disabled' : '') + '>把選到的字標成痛點句（紅）</button> ' +
         '<label class="ck"><input type="checkbox" data-n="' + i + '" data-act="moment" ' + (c.moment ? 'checked' : '') + ' ' + (ro ? 'disabled' : '') + '> 這格是關鍵時刻</label></div>' +
         '<div class="refs">出處：' + (refsHtml || '<span class="muted">（還沒有）</span>') + ' <select data-n="' + i + '" data-act="addref" ' + (ro ? 'disabled' : '') + '>' + opts + '</select></div>' +
-        (st !== 'ok' ? '<div class="gap">' + esc(SB.gapMessage(c)) + ' <a href="' + esc(backHref()) + '">回去再問一個人</a></div>' : '') +
+        (st !== 'ok' ? '<div class="gap">' + esc(SB.gapMessage(c)) + ' <a href="' + esc(backHref()) + '">🩺 回去訪談</a></div>' : '') +
+        (CO ? '<div class="bar"><button class="mini cbtn" data-coach="' + i + '" ' + (ro || c.aiText ? 'disabled' : '') + '>' + esc(CO.cellBtnLabel(c)) + '</button></div>' : '') +
         (S.boardName === 'wall' ? '<div class="bar">' + (c.needHelp ? '<span class="need">🙋 ' + esc(c.helpAsk) + ' 請隊友補這格</span> ' : '') + (c.helped ? '<span class="ok">🩹 ' + esc(c.helped) + ' 補上了</span> ' : '') +
           '<button class="mini" data-n="' + i + '" data-act="help" ' + (ro ? 'disabled' : '') + '>' + (c.needHelp ? '不用補了' : '這格寫不出來，請隊友補') + '</button></div>' : '') +
         '<footer><span class="chk">' + chk.map(function (k) { return '<i class="' + (k.ok ? 'y' : 'n') + '">' + (k.ok ? '✓' : '·') + k.name + '</i>'; }).join('') + '</span>' +
@@ -181,16 +193,24 @@
     $('draftBtn').disabled = ro;
     renderSide2();
   }
+  /* 隊友（別人當作者的格子）用過、而且不是我的訪談卡的編號：可以拿來當出處（接力一格成就） */
+  function mateRefs() {
+    var mine = {}, out = []; SB.arr(S.player && S.player.interviews).forEach(function (r) { if (r && r.id) mine[r.id] = 1; });
+    S.cells.wall.forEach(function (c) { if (c.by && c.by !== S.sid) c.refs.forEach(function (id) { if (!mine[id] && SB.refAuthor(id) !== S.sid && out.indexOf(id) < 0) out.push(id); }); });
+    return out;
+  }
   function renderSide2() {
     var list = cur(), sum = SB.authorSummary(list), me = null; sum.forEach(function (a) { if (a.sid === S.sid) me = a; });
-    var cnt = { copy: 0, rewrite: 0, own: 0 }; list.forEach(function (c) { if (c.by === S.sid && c.er) cnt[c.er.band] = (cnt[c.er.band] || 0) + 1; });
+    var cnt = { ai: 0, copy: 0, rewrite: 0, own: 0 }; list.forEach(function (c) { if (c.by === S.sid && c.er) cnt[c.er.band] = (cnt[c.er.band] || 0) + 1; });
     var stt = SB.boardStats({ cells: list }), mom = stt.moments;
-    var ach = SB.achievements({ sid: S.sid, wall: S.cells.wall, mine: S.cells.me, interviews: SB.arr(S.player && S.player.interviews), baseline: S.baseline });
+    var ach = SB.achievements({ sid: S.sid, wall: S.cells.wall, mine: S.cells.me, interviews: SB.arr(S.player && S.player.interviews), baseline: S.baseline, cfg: S.cfg });
+    var gotIds = ach.filter(function (a) { return a.got; }).map(function (a) { return a.id; }), sig = gotIds.join(',');
+    if (S.achSig !== sig && S.baseDone) { S.achSig = sig; S.store.putAch(S.sid, gotIds).catch(function () {}); }
     $('stats').innerHTML = '<h2>' + (S.boardName === 'wall' ? '這面牆' : '我的故事板') + '</h2>' +
       '<div>' + stt.filled + ' 格有內容・' + stt.withImg + ' 格有圖・' + stt.withRefs + ' 格有出處</div>' +
       '<div class="' + (mom ? 'ok' : 'warn') + '">' + (mom ? '已標出 ' + mom + ' 個關鍵時刻' : '還沒標出關鍵時刻（用一句話寫他在哪一刻最卡）') + '</div>' +
-      '<h3>自己寫的程度（我當作者的格子）</h3><div id="ratio">自己寫 ' + cnt.own + ' 格・改寫 ' + cnt.rewrite + ' 格・照抄草稿 ' + cnt.copy + ' 格</div><div class="muted">草稿只是起點，改成你自己的話才算你的。</div>' +
-      '<h3>合作成就</h3>' + ach.map(function (a) { return '<div class="ach ' + (a.got ? 'got' : '') + '" title="' + esc(a.desc) + '"><span>' + a.icon + '</span> <b>' + esc(a.name) + '</b> ' + (a.got ? '已拿到' : '<span class="muted">' + esc(a.desc) + '</span>') + '</div>'; }).join('');
+      '<h3>自己寫的程度（我當作者的格子）</h3><div id="ratio">自己寫 ' + cnt.own + ' 格・改寫 ' + cnt.rewrite + ' 格・照抄草稿 ' + cnt.copy + ' 格・助教代填 ' + cnt.ai + ' 格</div><div class="muted">草稿只是起點，改成你自己的話才算你的。</div>' +
+      ['coop', 'coach'].map(function (g) { return '<h3>' + (g === 'coop' ? '合作成就' : '助教成就') + '</h3>' + ach.filter(function (a) { return a.group === g; }).map(function (a) { return '<div class="ach ' + (a.got ? 'got' : '') + '" title="' + esc(a.desc) + '"><span>' + a.icon + '</span> <b>' + esc(a.name) + '</b> ' + (a.got ? '已拿到' : '<span class="muted">' + esc(a.desc) + '</span>') + '</div>'; }).join(''); }).join('');
   }
 
   /* ———— 儲存 ———— */
@@ -199,7 +219,7 @@
   function commit(n, patch) {
     if (!canWrite()) return Promise.resolve();
     var o = cellFor(n), prev = o.virtual ? null : o.c, start = o.c;
-    var next = SB.applyEdit(start, patch, S.sid, NOW());
+    var next = SB.applyEdit(start, patch, S.sid, NOW(), S.cfg);
     var list = cur(), idx = -1; list.forEach(function (c, i) { if (c.n === n) idx = i; }); if (idx >= 0) list[idx] = next; else { list.push(next); list.sort(function (a, b) { return a.n - b.n; }); }
     return S.store.saveCell(CODE, bkey(S.boardName), prev, next).then(function () { S.saved = NOW(); renderTop(); }, function (e) { toast('存不進去：' + (e && e.message)); });
   }
@@ -236,7 +256,7 @@
       var full = encodeTo(im, SB.LIMITS.fullLong, SB.LIMITS.fullBytes), th = encodeTo(im, SB.LIMITS.thumbLong, SB.LIMITS.thumbBytes);
       if (!full.ok || !th.ok) throw new Error('這張圖壓不到可以存的大小，請換一張簡單一點的圖');
       var hadImg = !!cellFor(n).c.img;
-      return S.store.reserve(S.sid).then(function (r) {
+      return S.store.reserve(S.sid, S.cfg).then(function (r) {
         if (!r.ok) { toast(SB.WHY_TEXT[r.reason]); return; }
         /* 格子還不存在（只是樣板）就先建起來，再放圖 */
         var o = cellFor(n), pre = o.virtual ? commit(n, { title: o.c.title }) : Promise.resolve();
@@ -261,8 +281,8 @@
       var o = cellFor(dc.n); if (SB.hasContent(o.c)) return;
       if (!SB.hasContent(dc)) return; made += 1;
       chain = chain.then(function () {
-        var base = o.c; var next = SB.applyEdit(base, { title: dc.title, who: dc.who, where: dc.where, what: dc.what, think: dc.think, refs: dc.refs, moment: dc.moment }, S.sid, NOW());
-        next.draft = dc.draft; var r = SB.editRatio(next.draft, next); next.er = r === null ? null : { r: Math.round(r * 1000) / 1000, band: SB.band(r) };
+        var base = o.c; var next = SB.applyEdit(base, { title: dc.title, who: dc.who, where: dc.where, what: dc.what, think: dc.think, refs: dc.refs, moment: dc.moment }, S.sid, NOW(), S.cfg);
+        next.draft = dc.draft; next.er = SB.erFor(next, S.cfg);
         var list = cur(), idx = -1; list.forEach(function (c, i) { if (c.n === next.n) idx = i; }); if (idx >= 0) list[idx] = next; else list.push(next);
         return S.store.saveCell(CODE, bkey(S.boardName), o.virtual ? null : o.c, next);
       });
@@ -276,7 +296,7 @@
     $('tabMe').onclick = function () { S.boardName = 'me'; renderAll(true); };
     $('draftBtn').onclick = makeDraftNow;
     $('addCell').onclick = function () { var n = slotCount(); if (n < SB.LIMITS.maxCells) { S.added = n + 1; S.sel = S.added; renderAll(true); } };
-    $('printBtn').onclick = doPrint;
+    $('printBtn').onclick = doPrint; $('pngBtn').onclick = exportPng;
     document.addEventListener('focusout', function () { flushAll(); setTimeout(function () { if (S.dirty && !(document.activeElement && $('cells').contains(document.activeElement))) renderAll(true); }, 50); });
     window.addEventListener('beforeunload', flushAll);
     var cells = $('cells');
@@ -343,6 +363,56 @@
       if (!Q.get('keepprint')) setTimeout(function () { document.body.classList.remove('printing'); }, 500);
       toast('在列印視窗選「另存為 PDF」，再把檔案交到 flipclass', 6000);
     });
+  }
+
+  /* ———— 匯出成圖片（手機沒有好用的列印）：用 canvas 把這面故事板畫成一張 PNG，可下載、可分享、可長按存相簿 ———— */
+  function loadImage(u) { return new Promise(function (res) { if (!u) { res(null); return; } var im = new Image(); im.onload = function () { res(im); }; im.onerror = function () { res(null); }; im.src = u; }); }
+  function exportPng() {
+    flushAll(); var list = cur().filter(function (c) { return SB.hasContent(c) || c.img; });
+    if (!list.length) { toast('這面故事板還沒有內容可以存'); return; }
+    toast('產生圖片中…', 10000);
+    var key = bkey(S.boardName), imgs = {}, jobs = [];
+    list.forEach(function (c) { var sk = SB.slotKey(c.n), th = (S.thumbs[S.boardName] || {})[sk]; if (th) imgs[sk] = th; if (c.img && SB.loadFull(S.mode)) jobs.push(S.store.getFull(CODE, key, c.n).then(function (u) { if (u) imgs[sk] = u; })); });
+    Promise.all(jobs).then(function () { return Promise.all(list.map(function (c) { return loadImage(imgs[SB.slotKey(c.n)]); })); }).then(function (ims) {
+      var W = 1080, P = 36, IW = W - 2 * P, FS = 26, LH = 38, FONT = '"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif', t = tone();
+      var m = document.createElement('canvas').getContext('2d'); m.font = FS + 'px ' + FONT; var meas = function (x) { return m.measureText(x).width; };
+      function fieldLines(label, text, pain) {   /* 每個字帶一個「是不是痛點」旗標；換行後逐行對回去 */
+        var full = label + (text || ''), off = label.length, out = [], lines = SB.wrapText(meas, full, IW - 24), pos = 0, pi = pain && text ? text.indexOf(pain) : -1;
+        lines.forEach(function (ln) { var chs = Array.from(ln); out.push(chs.map(function (ch, k) { var idx = pos + k - off; return { ch: ch, red: pi >= 0 && idx >= pi && idx < pi + Array.from(pain).length }; })); pos += chs.length; if (pos < full.length && full.charAt(pos) === '\n') pos += 1; });
+        return out;
+      }
+      var blocks = list.map(function (c, i) {
+        var im = ims[i], ih = 0; if (im) { var ar = im.naturalWidth / im.naturalHeight; ih = Math.min(560, Math.round(IW / ar)); }
+        var f = [['誰：' , c.who + (c.where ? '　在哪：' + c.where : '')], ['發生什麼：', c.what], ['他怎麼想：', c.think]].map(function (a) { return fieldLines(a[0], a[1], a[0] === '發生什麼：' || a[0] === '他怎麼想：' ? c.pain : ''); });
+        var src = SB.wrapText(meas, '出處：' + (c.refs.length ? c.refs.join('、') : '（還沒有）') + (c.by ? '　作者 ' + c.by : ''), IW - 24);
+        var nl = f.reduce(function (n, x) { return n + x.length; }, 0) + src.length;
+        return { c: c, im: im, ih: ih, f: f, src: src, h: 64 + (ih ? ih + 16 : 0) + nl * LH + 28 };
+      });
+      var H = 150 + blocks.reduce(function (n, b) { return n + b.h + 20; }, 0) + 30;
+      var cv = document.createElement('canvas'); cv.width = W; cv.height = H; var x = cv.getContext('2d'); x.textBaseline = 'top';
+      x.fillStyle = '#ffffff'; x.fillRect(0, 0, W, H); x.fillStyle = t.color; x.fillRect(0, 0, W, 14);
+      x.fillStyle = '#1e1e1e'; x.font = '900 40px ' + FONT; x.fillText(t.icon + ' ' + t.name + '　UX 故事板', P, 34);
+      x.font = '24px ' + FONT; x.fillStyle = '#59656d'; var d = new Date(NOW()); x.fillText('房間 ' + CODE + '　' + (S.boardName === 'wall' ? '房間故事板牆' : '我的故事板') + '　學號 ' + S.sid + '　' + d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()), P, 92);
+      var y = 150;
+      blocks.forEach(function (b) {
+        var c = b.c; x.fillStyle = c.moment ? '#ffeceb' : '#f4f9fd'; x.fillRect(P - 12, y, IW + 24, b.h); x.strokeStyle = '#1e1e1e'; x.lineWidth = 3; x.strokeRect(P - 12, y, IW + 24, b.h);
+        x.fillStyle = t.color; x.fillRect(P - 12, y, IW + 24, 8);
+        x.fillStyle = '#1e1e1e'; x.font = '900 32px ' + FONT; x.fillText(c.n + '　' + (c.title || '') + (c.moment ? '　★關鍵時刻' : ''), P, y + 20); var yy = y + 64;
+        if (b.im) { var s = Math.min(IW / b.im.naturalWidth, b.ih / b.im.naturalHeight), w = b.im.naturalWidth * s, h = b.im.naturalHeight * s; x.fillStyle = '#eef'; x.fillRect(P, yy, IW, b.ih); x.drawImage(b.im, P + (IW - w) / 2, yy + (b.ih - h) / 2, w, h); yy += b.ih + 16; }
+        x.font = FS + 'px ' + FONT;
+        b.f.forEach(function (lines) { lines.forEach(function (chs) { var cx = P; chs.forEach(function (o) { x.fillStyle = o.red ? '#c92a2a' : '#1e1e1e'; x.fillText(o.ch, cx, yy); cx += x.measureText(o.ch).width; }); yy += LH; }); });
+        x.fillStyle = '#59656d'; x.font = '22px ' + FONT; b.src.forEach(function (ln) { x.fillText(ln, P, yy + 4); yy += LH; });
+        y += b.h + 20;
+      });
+      return new Promise(function (res, rej) { cv.toBlob(function (bl) { bl ? res({ blob: bl, w: W, h: H }) : rej(new Error('這台手機畫不出這麼大的圖')); }, 'image/png'); });
+    }).then(function (r) {
+      var url = URL.createObjectURL(r.blob), name = '故事板_' + CODE + '_' + (S.boardName === 'wall' ? '牆' : S.sid) + '.png', file = null;
+      try { file = new File([r.blob], name, { type: 'image/png' }); } catch (e) {}
+      var canShare = !!(file && navigator.canShare && navigator.canShare({ files: [file] }));
+      $('lb').innerHTML = '<div style="color:#fff;text-align:center;padding:0 12px">長按圖片可以存到相簿，或按下面的按鈕</div><img id="pngImg" alt="故事板圖片" src="' + url + '"><div class="row" style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center"><a id="pngDl" class="btn" href="' + url + '" download="' + esc(name) + '">下載圖片</a>' + (canShare ? '<button id="pngShare">分享</button>' : '') + '<button id="lbx">關閉</button></div>';
+      $('lb').hidden = false; $('lbx').onclick = function () { $('lb').hidden = true; }; if (canShare) $('pngShare').onclick = function () { navigator.share({ files: [file], title: name }).catch(function () {}); };
+      window.ERG_SB_LAST_PNG = { w: r.w, h: r.h, bytes: r.blob.size, name: name }; toast('圖片做好了（' + Math.round(r.blob.size / 1024) + ' KB）');
+    }).catch(function (e) { toast('做不出圖片：' + (e && e.message)); });
   }
 
   window.ERG_SB_UI = { state: S, boot: boot, renderAll: renderAll };

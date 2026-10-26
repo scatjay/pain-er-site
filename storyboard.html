@@ -62,7 +62,44 @@ mark.pain{background:none;color:var(--bad);font-weight:900;text-decoration:under
 #toast.on{opacity:1}
 #lb{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px}#lb[hidden]{display:none}#lb img{max-width:92vw;max-height:80vh}
 #printSheet{display:none}
-@media (max-width:860px){#layout{grid-template-columns:1fr;padding:10px}#cells{grid-template-columns:1fr}}
+#coachFab{display:none;position:fixed;right:14px;bottom:calc(14px + env(safe-area-inset-bottom));z-index:24;min-height:56px;padding:0 18px;align-items:center;gap:6px;border-radius:99px;font-size:16px}
+#coachFab.has-new::after{content:'';width:12px;height:12px;border-radius:50%;background:var(--pop);border:2px solid var(--ink);position:absolute;top:-4px;right:-2px}
+#pngBtn{display:none}.only-m{display:none}
+.fileinp{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;clip:rect(0 0 0 0)}
+@media (min-width:861px){#pngBtn{display:inline-block}}
+@media (max-width:860px){
+  html,body{overflow-x:hidden;max-width:100vw}
+  body{font-size:16px}
+  #top{position:static;padding:8px 10px}#top .line{gap:6px}h1{font-size:18px}
+  #roomLine,#modeTag{display:none}
+  #layout{grid-template-columns:minmax(0,1fr);padding:8px;gap:10px}main{order:1;min-width:0}aside{order:2;min-width:0}
+  #cells{grid-template-columns:minmax(0,1fr);gap:14px}
+  .cell{padding:10px;min-width:0}
+  button,.btn,select{min-height:44px}
+  button.mini,.btn.mini{min-height:44px;padding:8px 12px;font-size:14px;margin:4px 0}
+  input,select,textarea{font-size:16px;min-height:44px}textarea{min-height:76px}
+  .cell .title{font-size:16px}
+  .row2{grid-template-columns:minmax(0,1fr)}
+  .img{height:46vw;min-height:150px}
+  .ck{display:inline-flex;align-items:center;min-height:44px;gap:8px}.ck input{width:24px;height:24px;min-height:24px}
+  .chip{display:inline-flex;align-items:center;padding:2px 2px 2px 10px}.chip .x{min-width:44px;min-height:44px;margin:-8px -4px -8px 0;font-size:18px}
+  .refs select{max-width:100%;width:100%;font-size:14px}
+  .tabs{display:flex;width:100%;gap:6px}.tabs button{flex:1}
+  #printBtn{display:none}#pngBtn{display:inline-block}
+  #coachFab{display:flex}
+  #coachBox{position:fixed;left:0;right:0;bottom:0;max-height:72vh;overflow:auto;z-index:25;margin:0;border-radius:16px 16px 0 0;border-bottom:0;transform:translateY(110%);transition:transform .22s;box-shadow:0 -6px 0 var(--ink);padding-bottom:calc(14px + env(safe-area-inset-bottom))}
+  body.coach-open #coachBox{transform:none}
+  body.coach-open #coachFab{display:none}
+  #coachBox .only-m{display:inline-block}
+  #toast{bottom:84px;max-width:92vw}
+  #tourTip{max-width:calc(100vw - 16px)}
+  #demo{padding:8px}#demo .dc{grid-template-columns:minmax(0,1fr)}
+  .frag .mini{width:100%}
+  button.mini,.btn.mini{min-width:44px}
+  .gap a{display:inline-flex;align-items:center;min-height:44px;padding:0 6px}
+  .imgbar .mini,.bar .mini{margin-right:4px}
+  #lb img{max-width:96vw}
+}
 @media print{
   body{background:#fff;color:#000}body.printing #gate,body.printing #top,body.printing #layout,body.printing #toast,body.printing #lb{display:none!important}
   body.printing #printSheet{display:block}
@@ -80,28 +117,32 @@ mark.pain{background:none;color:var(--bad);font-weight:900;text-decoration:under
       <h1>故事板編輯器</h1><span id="caseBadge"></span><span id="roomLine" class="muted"></span><span id="modeTag" class="muted"></span><span id="saved" class="muted"></span>
       <span class="tabs"><button id="tabWall" class="on">房間故事板牆</button> <button id="tabMe">我的故事板</button></span>
       <span style="flex:1"></span>
-      <a id="backLink" class="btn mini" href="index.html">回到急診室</a>
+      <a id="reviseLink" class="btn mini" href="index.html" title="回到同一間房繼續訪談">🩺 回去訪談</a><a id="lobbyLink" class="btn mini" href="index.html" title="回大廳">🏠 回大廳</a>
+      <button id="pngBtn" title="把這面故事板存成一張圖片（手機用這個交作業）">下載成圖片</button>
       <button id="printBtn">另存 PDF 交作業</button>
     </div>
     <div class="line" style="margin-top:6px"><div id="quota" class="quota"></div><div id="modeNote" hidden></div>
       <button id="draftBtn" class="mini">幫我排一份草稿</button><span class="muted">只會填空格；沒有訪談素材的格子會留空，提醒你回去再問。</span></div>
   </div>
   <div id="layout">
-    <aside><div class="card" id="side1"></div><div class="card" id="prompts"></div><div class="card" id="stats"></div></aside>
+    <aside><div class="card" id="coachBox"></div><div class="card" id="side1"></div><div class="card" id="prompts"></div><div class="card" id="stats"></div></aside>
     <main><div id="cells"></div><p><button id="addCell">＋ 新增一格</button> <span class="muted">每面板最多 8 格，預設 6 格；最後一格留給關鍵時刻。</span></p></main>
   </div>
 </div>
 <div id="lb" hidden></div>
 <div id="toast" role="status" aria-live="polite"></div>
+<button id="coachFab" aria-label="開啟 AI 助教">🤖 助教</button>
 <div id="printSheet"></div>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-<script src="er_firebase.js?v=202610262202"></script>
-<script src="local_db.js?v=202610262202"></script>
-<script src="remote_db.js?v=202610262202"></script>
-<script src="sb_core.js?v=202610262202"></script>
-<script src="sb_store.js?v=202610262202"></script>
-<script src="sb_ui.js?v=202610262202"></script>
+<script src="er_firebase.js?v=202610270013"></script>
+<script src="local_db.js?v=202610270013"></script>
+<script src="remote_db.js?v=202610270013"></script>
+<script>document.addEventListener("click",function(e){var f=e.target.closest&&e.target.closest("#coachFab");if(f){document.body.classList.add("coach-open");f.classList.remove("has-new");}var c=e.target.closest&&e.target.closest("#cClose");if(c)document.body.classList.remove("coach-open");});</script>
+<script src="sb_core.js?v=202610270013"></script>
+<script src="sb_store.js?v=202610270013"></script>
+<script src="sb_coach.js?v=202610270013"></script>
+<script src="sb_ui.js?v=202610270013"></script>
 </body>
 </html>

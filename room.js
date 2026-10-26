@@ -40,11 +40,11 @@
     }
     cur = S.cur = { code: code, room: room, role: j.role, world: world, player: player, api: null, root: null, canon: [], applying: false, lastHash: '',
       clock: CLK.create({ speed: player.speed || APP.me.profile.speed || '標準', worldSec: player.worldSec || 0, shift: shift }), tab: 'clue', selClue: null, selNpc: null,
-      lastSave: 0, seenEv: {}, tickT: 0, tokens: {}, view: null, lastRoomForSound: null, amb: null, bgm: null, soundOn: APP.me.profile.sound !== false,
-      musicOn: APP.me.profile.music === true,   /* 10-12 楊老師：背景音樂有點干擾 ⇒ 預設關，想聽的人自己按 🎵 開 */
+      lastSave: 0, seenEv: {}, tickT: 0, tokens: {}, view: null, lastRoomForSound: null, amb: null, bgm: null, soundOn: false,   /* 10-26 楊老師：bgm 和配音的按鈕先隱藏 ⇒ 環境音一律關（按鈕留著，index.html 拿掉 hidden 才會回來；要回來時這裡改回 APP.me.profile.sound !== false） */
+      musicOn: false,   /* 10-26 同上：背景音樂一律關（原本是 APP.me.profile.music === true） */ /* 10-12 楊老師：背景音樂有點干擾 ⇒ 預設關，想聽的人自己按 🎵 開 */
       stageMode: 'room' };
     APP.show('game');
-    var sbj = $('sbJump'); if (sbj) { sbj.href = 'storyboard.html?room=' + encodeURIComponent(code); sbj.hidden = false; }   /* 第 8 週：房間頂列跳到這間房的故事板 */
+    updateSbJump(); clearInterval(S._sbT); S._sbT = setInterval(updateSbJump, 1500);   /* 第 8 週：房間頂列的 📖（沒有訪談卡時灰色，訪談卡打勾後自動變成可點） */
     $('roomLabel').textContent = '房間 ' + code + '・' + world.day.short + '・' + (shift === 'night' ? '夜班' : '日班') + '・' + world.meta.name;
     if (window.ERG_CASE_TONE) window.ERG_CASE_TONE.apply(document, world.meta.id);   /* 10-19 案例色調：進房間依案例套色票（case_tone.js，桌機與手機共用） */
     buildTabs(); if(window.ERG_ROTATION_UI)window.ERG_ROTATION_UI.bind(S); buildSpeed(); buildDots();
@@ -63,7 +63,8 @@
   };
   S.leave = function (silent) {
     if (!cur) return;
-    persist(true);
+    /* 10-26：存檔丟例外（網路、資料格式）不能擋住離開——二甲 0209 回報「回不了大廳」。存不成就記在 console，照樣回大廳。 */
+    try { persist(true); } catch (e) { try { console.error('離開房間時存檔失敗', e); } catch (e2) {} }
     clearInterval(cur.timer); clearInterval(cur.slow); clearInterval(cur.wstep); if (cur.raf) cancelAnimationFrame(cur.raf);
     if (cur.resizeObserver) cur.resizeObserver.disconnect(); window.removeEventListener('resize', onResize);
     if (cur.amb) { try { cur.amb.stop(); } catch (e) {} }
@@ -87,6 +88,15 @@
   S.persist = persist;
 
   /* ───── 頂端列 ───── */
+  /* 📖 故事板入口：這間房有 ≥1 張有填的訪談卡才能點；沒有就灰掉，title 與（寬螢幕）旁邊的小字寫還缺什麼 */
+  function updateSbJump() {
+    var sbj = $('sbJump'), RL = window.ERG_REPORT_LEVEL, SBG = window.ERG_STORYBOARD; if (!sbj || !cur || !RL || !SBG) return;
+    var iv = (cur.player && cur.player.interviews) || [], nd = SBG.need({ cards: RL.interviewed(iv).length, started: iv.filter(function (x) { return x && x.personaId; }).length }), sp = sbj.querySelector('.sbj-need');
+    sbj.hidden = false;
+    if (nd.ok) { sbj.classList.remove('dis'); sbj.removeAttribute('aria-disabled'); sbj.href = 'storyboard.html?room=' + encodeURIComponent(cur.code); sbj.title = '用這間房的訪談做故事板'; if (sp) sp.textContent = ''; }
+    else { sbj.classList.add('dis'); sbj.setAttribute('aria-disabled', 'true'); sbj.removeAttribute('href'); sbj.title = nd.text; if (sp) sp.textContent = '（' + nd.short + '）'; }
+  }
+  document.addEventListener('click', function (e) { var a = e.target.closest && e.target.closest('#sbJump.dis'); if (a) { e.preventDefault(); if (S.toast) S.toast(a.title); } });
   function buildTabs() {
     var tabs = [['clue', '線索'], ['intv', '訪談'], ['cards', '筆記卡'], ['events', '事件簿'], ['concl', '結論'], ['disc', '討論'], ['cp', '檢核點'], ['ach', '成就']];
     $('tabs').innerHTML = tabs.map(function (t) { return '<button data-t="' + t[0] + '" class="' + (t[0] === cur.tab ? 'on' : '') + '">' + t[1] + '</button>'; }).join('');

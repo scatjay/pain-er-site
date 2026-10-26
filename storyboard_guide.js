@@ -60,12 +60,28 @@
   }
 
   /* 大廳「我進過的房間」：rooms＝[{code, caseId, interviews, conclusions, markers, mainPersona}]，skill＝{ask,ctx} */
+  /* 故事板入口的條件＝這間房至少有 1 張「有填的訪談卡」（RL.interviewed：檢核表至少打勾一項或寫了一句話）。
+     光是跟人物聊天只會「開始訪談」（建立一張空的紀錄，started+1），不算訪談卡；要到房間右側「訪談」分頁的檢核表把問到的事打勾才算。
+     row：{ cards: 有填的訪談卡數, started: 已開始訪談的人數（有紀錄但可能沒打勾） }；回傳 { ok, text, short } */
+  function need(row) {
+    row = row || {}; var cards = Number(row.cards) || 0, started = Number(row.started) || 0;
+    if (cards >= 1) return { ok: true, text: '', short: '' };
+    if (started > 0) return { ok: false, short: '還缺：訪談卡打勾', text: '還缺：訪談卡打勾——你已經開始跟 ' + started + ' 位聊了，但「訪談」分頁的檢核表還沒有打勾。到房間右側的「訪談」分頁，把問到的事打勾（「他一開始怎麼說」「那天發生了什麼事」「他真正需要什麼」，至少勾一項）。' };
+    return { ok: false, short: '還缺：1 張訪談卡', text: '還缺：1 張訪談卡——先到這間房跟人物聊（點人物開始訪談），再到房間右側「訪談」分頁的檢核表，把問到的事打勾（至少勾一項）。' };
+  }
+  /* W8 卡頂端的完成列。p：{ steps: [{ label, ok: true | false | null（讀不到）}] } */
+  function progHtml(p) {
+    if (!p || !p.steps) return '';
+    var got = p.steps.filter(function (s) { return s.ok === true; }).length, next = p.steps.filter(function (s) { return s.ok !== true; })[0], unknown = p.steps.some(function (s) { return s.ok === null; });
+    var head = got === p.steps.length ? '<span class="wkDone ok">✅ 故事板全部完成（' + got + '/' + p.steps.length + '）</span>' : '<span class="wkDone todo">⬜ 完成 ' + got + '/' + p.steps.length + (next ? '｜下一步：' + esc(next.label) : '') + '</span>';
+    return '<div class="sbProg">' + head + '<ul>' + p.steps.map(function (s) { return '<li class="' + (s.ok === true ? 'ok' : '') + '">' + (s.ok === true ? '✅ ' : '⬜ ') + esc(s.label) + (s.ok === null ? '<span class="muted">（打開故事板後更新）</span>' : '') + '</li>'; }).join('') + '</ul></div>';
+  }
   function roomRows(rooms, skill, caseNames) {
     skill = skill || {};
     return (rooms || []).map(function (r) {
       var ev = RL.evaluate({ interviews: r.interviews, askLv: skill.ask, ctxLv: skill.ctx, conclusions: r.conclusions, markers: r.markers, mainPersona: r.mainPersona });
       var tone = TONE.get(r.caseId);
-      return { code: r.code, caseId: r.caseId, letter: tone.letter, ct: tone.ct, on: tone.on, name: (caseNames && caseNames[r.caseId]) || tone.name, cards: RL.interviewed(r.interviews).length, level: ev, open: RL.interviewed(r.interviews).length > 0 };
+      return { code: r.code, caseId: r.caseId, letter: tone.letter, ct: tone.ct, on: tone.on, name: (caseNames && caseNames[r.caseId]) || tone.name, cards: RL.interviewed(r.interviews).length, started: (Array.isArray(r.interviews) ? r.interviews : Object.keys(r.interviews || {}).map(function (k) { return r.interviews[k]; })).filter(function (x) { return x && x.personaId; }).length, level: ev, open: RL.interviewed(r.interviews).length > 0 };
     });
   }
 
@@ -79,7 +95,14 @@
     '.sbGuide .box{border:var(--bw-s) solid var(--ink);border-radius:var(--r-m);padding:var(--s2) var(--s3);margin:0 0 var(--s2);background:var(--panel)}.sbGuide .box h4{margin:0 0 4px;font-size:var(--fs-2)}' +
     '.sbGuide .cellList{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;margin:4px 0 0;padding:0;list-style:none;counter-reset:c}.sbGuide .cellList li{counter-increment:c;border:var(--bw-s) solid var(--line);border-radius:var(--r-s);padding:2px 6px;font-size:var(--fs-2)}.sbGuide .cellList li:before{content:counter(c) "　";color:var(--muted)}' +
     '.sbGuide .pain{color:var(--bad);font-weight:700}.sbGuide mark{background:var(--yellow);color:var(--ink-fixed);padding:0 2px;border-radius:3px}.sbGuide .ph{margin:4px 0 0;font-size:var(--fs-2)}' +
-    '.sbGuide .cpmsg{font-size:var(--fs-1);color:var(--muted);margin-left:6px}.sbGuide textarea.cpfb{display:none;margin-top:4px;min-height:70px}';
+    '.sbGuide .cpmsg{font-size:var(--fs-1);color:var(--muted);margin-left:6px}.sbGuide textarea.cpfb{display:none;margin-top:4px;min-height:70px}' +
+    '.sbBox a.btn.sbOpen,.sbBox a.btn.sbMain{display:inline-flex;align-items:center;justify-content:center;text-decoration:none}' +
+    '.sbBox .sbMainRow{display:flex;align-items:center;gap:var(--s3);flex-wrap:wrap;margin:0 0 var(--s3)}.sbBox .sbMain{font-size:var(--fs-4);font-weight:900;padding:12px 22px;min-height:52px;background:var(--pop);color:var(--ink-fixed);border:var(--bw) solid var(--ink);border-radius:var(--r-m);box-shadow:var(--sh) var(--sh) 0 var(--ink);cursor:pointer}' +
+    '.sbBox .sbAct{display:inline-flex;gap:var(--s2);flex-wrap:wrap}.sbBox .dis,.sbAct .dis{opacity:.5;filter:grayscale(1);cursor:not-allowed;background:var(--line);box-shadow:none}.sbBox .sbNeed{flex:1 1 100%;font-size:var(--fs-2);color:var(--bad);margin-top:2px}' +
+    '.sbBox .sbMain2{font-weight:900;padding:12px 18px;min-height:52px;background:var(--yellow);color:var(--ink-fixed);border:var(--bw) solid var(--ink);border-radius:var(--r-m);box-shadow:var(--sh) var(--sh) 0 var(--ink);cursor:pointer}' +
+    '.sbProg{margin:0 0 var(--s3);padding:var(--s2) var(--s3);border:var(--bw-s) solid var(--ink);border-radius:var(--r-m);background:var(--panel)}.sbProg ul{display:flex;flex-wrap:wrap;gap:4px 14px;margin:6px 0 0;padding:0;list-style:none;font-size:var(--fs-2)}.sbProg li.ok{color:var(--ok);font-weight:700}' +
+    '.wkBox{border-top:var(--bw-s) dashed var(--ink);padding:8px 0}.wkBox>details>summary{cursor:pointer;list-style-position:inside}.wkDone{display:inline-block;font-size:var(--fs-2);font-weight:900;padding:2px 10px;border-radius:10px;border:var(--bw-s) solid var(--ink);line-height:1.5}.wkBox>details>summary .wkDone{display:block;margin-top:4px}.wkDone.ok{background:var(--mint);color:var(--ink-fixed)}.wkDone.todo{background:var(--soft-y,#fff3bf);color:var(--ink-fixed)}' +
+    '@media (max-width:860px){.sbBox a.btn.sbOpen,.sbBox button,.sbGuide button{min-height:44px;padding-left:14px;padding-right:14px}.sbBox .rooms li{padding:10px 0}.sbBox .sbMain{width:100%}.sbBox .sbAct{width:100%}.sbBox .sbAct>*{flex:1 1 0;justify-content:center}}';
 
   /* 指令文字裡的【…】要學生換掉：畫面上標黃，複製出去的文字不變 */
   function marked(t) { return esc(t).replace(/【[^】]*】/g, function (m) { return '<mark>' + m + '</mark>'; }); }
@@ -94,7 +117,7 @@
       return '<li><b>' + esc(s.t) + '</b>' + esc(s.d) + extra + '</li>';
     }).join('');
     var main = C.mainName || '主角';
-    var first = id === 'sms' ? '看診快結束時，護理師推著移動式資訊站過來，用筆電把簡訊發到他的手機。' : '【照你的訪談寫：他在這裡做了什麼、遇到什麼】';
+    var first = id === 'sms' ? '看診快結束時，護理師口頭說明怎麼收衛教簡訊（離院前每位病人都要說明一次）；簡訊由醫院系統自動寄出，寄件顯示成一般門號。' : '【照你的訪談寫：他在這裡做了什麼、遇到什麼】';
     var right = '<div class="box"><h4>這個案例的主角</h4><b>' + esc(main) + '</b>　<span class="muted">' + esc(C.caseName || tone.name) + '</span></div>' +
       '<div class="box"><h4>先想的問題</h4><ul style="margin:0;padding-left:1.2em">' + (C.goal || []).map(function (g) { return '<li>' + esc(g) + '</li>'; }).join('') + '</ul></div>' +
       '<div class="box"><h4>對照準則</h4>' + (C.focus || []).map(function (f) { return '<span class="tag">' + esc(f) + '</span> '; }).join('') + '<div class="muted" style="font-size:var(--fs-1)">每格痛點，想想違反了哪一條。</div></div>' +
@@ -112,14 +135,20 @@
     var e1 = m.entry1 || { done: [], todo: [], caseName: '' };
     var t1 = '<div class="tile"><h3>入口 1　進急診室</h3><div style="font-size:var(--fs-2)">先去問人。' + esc(e1.caseName) + '：已訪談 <b>' + e1.done.length + '</b> 位（重要人物共 ' + (e1.done.length + e1.todo.length) + ' 位）' + (e1.todo.length ? '<br><span class="muted">還沒問過：' + esc(e1.todo.join('、')) + '</span>' : '，重要人物都問過了') + '</div>' +
       '<div style="margin-top:var(--s2)"><button type="button" id="sbEnter1">進急診室（開房間或加入）</button></div></div>';
-    var t2 = '<div class="tile"><h3>入口 2　第 8 週 UX 故事板</h3><div style="font-size:var(--fs-2)">可以開故事板了：先去房間訪談，再從下面「我進過的房間」那一列開。</div>' +
-      (m.mobile ? '<div class="muted" style="margin-top:var(--s2)">故事板請用電腦開。</div>' : '<div style="margin-top:var(--s2)"><button type="button" id="sbEnter2">基本教學</button></div>') + '</div>';
+    var t2 = '<div class="tile"><h3>入口 2　第 8 週 UX 故事板</h3><div style="font-size:var(--fs-2)">下面「我進過的房間」每一列都有兩顆鈕：<b>📖 故事板</b>開這間房的故事板，<b>🩺 回去訪談</b>回到這間房再問人。訪談卡打勾之後，灰色的 📖 就會變成可以點。</div>' +
+      '<div style="margin-top:var(--s2)"><button type="button" id="sbEnter2">基本教學</button></div></div>';   /* 10-26 二丙全班只有手機：手機也有基本教學與開故事板 */
     var rows = (m.rooms || []).length ? '<ul class="rooms">' + m.rooms.map(function (r) {
       return '<li><span class="sbDot" style="background:' + r.ct + ';color:' + r.on + '" title="案例' + esc(r.letter) + '">' + esc(r.letter) + '</span><b>' + esc(r.name) + '</b><span class="muted">房號 ' + esc(r.code) + '</span><span>訪談卡 ' + r.cards + ' 張</span>' +
-        (r.open ? '<span class="tag ok" title="' + esc(RL.nextLine(r.level)) + '">' + esc(RL.label(r.level)) + '</span>' + (m.mobile ? '' : '<button type="button" class="ghost" data-export="' + esc(r.code) + '">匯出訪談報告</button><a class="btn" href="storyboard.html?room=' + encodeURIComponent(r.code) + '">開故事板</a>') : '<span class="tag warn">先訪談 1 位才能開故事板</span>') +
+        (r.open ? '<span class="tag ok" title="' + esc(RL.nextLine(r.level)) + '">' + esc(RL.label(r.level)) + '</span>' : '<span class="tag warn">還沒有訪談卡</span>') +
+        '<span class="sbAct">' + (r.open ? '<a class="btn sbOpen" href="storyboard.html?room=' + encodeURIComponent(r.code) + '">📖 故事板</a>' : '<span class="btn sbOpen dis" role="button" aria-disabled="true" title="' + esc(need(r).text) + '">📖 故事板</span>') + '<button type="button" class="ghost sbRevisit" data-revisit="' + esc(r.code) + '">🩺 回去訪談</button>' + (r.open && !m.mobile ? '<button type="button" class="ghost" data-export="' + esc(r.code) + '">匯出訪談報告</button>' : '') + '</span>' + (r.open ? '' : '<span class="sbNeed">' + esc(need(r).text) + '</span>') +
         '</li>';
     }).join('') + '</ul>' : '<div class="muted" style="margin-top:var(--s2)">還沒有進過的房間。先到入口 1 開一間，去問人。</div>';
-    return '<div class="sbBox"><div class="tiles">' + t1 + t2 + '</div><h3 style="margin:var(--s3) 0 0;font-size:var(--fs-3)">我進過的房間</h3>' + rows + '</div>';
+    /* 最上面的主按鈕：有房間就直接開最近進過的那間房的故事板；還沒有房間就先去急診室訪談 */
+    var nd = m.mainNeed || need({ cards: 0, started: 0 });
+    var main = m.main && m.main.code ? '<div class="sbMainRow"><a class="btn sbMain" id="sbMain" href="storyboard.html?room=' + encodeURIComponent(m.main.code) + '">📖 繼續我的故事板</a><span class="muted">房間 ' + esc(m.main.code) + '</span></div>'
+      : '<div class="sbMainRow"><span class="btn sbMain dis" id="sbMainOff" role="button" aria-disabled="true" title="' + esc(nd.text) + '">📖 繼續我的故事板</span>' +
+        (m.mainRoom ? '<button type="button" class="sbMain2" data-revisit="' + esc(m.mainRoom) + '">🩺 回去訪談（房間 ' + esc(m.mainRoom) + '）</button>' : '<button type="button" class="sbMain2" id="sbMain0">🩺 先進急診室訪談</button>') + '<span class="sbNeed">' + esc(nd.text) + '</span></div>';
+    return '<div class="sbBox">' + main + progHtml(m.prog) + '<div class="tiles">' + t1 + t2 + '</div><h3 style="margin:var(--s3) 0 0;font-size:var(--fs-3)">我進過的房間</h3>' + rows + '</div>';
   }
 
   /* ───── 瀏覽器端 ───── */
@@ -143,5 +172,5 @@
   }
 
   return { TEMPLATES: TEMPLATES, ORDER: ORDER, STEPS: STEPS, PROMPTS: PROMPTS, ERRORS: ERRORS, CSS: CSS, keyIds: keyIds, interviewedSummary: interviewedSummary, roomRows: roomRows,
-    guideHtml: guideHtml, lobbyHtml: lobbyHtml, injectCss: injectCss, mountGuide: mountGuide, esc: esc };
+    guideHtml: guideHtml, lobbyHtml: lobbyHtml, need: need, progHtml: progHtml, injectCss: injectCss, mountGuide: mountGuide, esc: esc };
 });

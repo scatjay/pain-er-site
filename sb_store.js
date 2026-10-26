@@ -40,6 +40,7 @@
     function ref(path) {
       return {
         key: parts(path).pop(),
+        orderByKey: function () { return this; }, limitToLast: function () { return this; },
         child: function (p) { return ref(path.replace(/\/$/, '') + '/' + p); },
         set: function (v) { noUndef(v, path); setAt(path, v); fire(); return Promise.resolve(); },
         update: function (obj) { noUndef(obj, path); Object.keys(obj).forEach(function (k) { setAt(path + '/' + k, obj[k]); }); fire(); return Promise.resolve(); },
@@ -99,11 +100,12 @@
       getThumbsOnce: function (code, board) { return root.child('sbth/' + code + '/' + board).once('value').then(function (s) { var v = val(s) || {}, o = {}; Object.keys(v).forEach(function (k) { o[k] = v[k] && v[k].d; }); return o; }); },
 
       /* 額度：先扣個人再扣全站；全站扣失敗要把個人退回 */
-      reserve: function (sid) {
+      reserve: function (sid, cfg) {
+        cfg = cfg || SB.CONFIG_DEFAULTS;
         var day = SB.dayKey(now()), u = root.child('sbq/' + day + '/u/' + sid), t = root.child('sbq/' + day + '/total');
-        return u.transaction(SB.bumpFn(SB.LIMITS.perUserPerDay)).then(function (ur) {
+        return u.transaction(SB.bumpFn(cfg.uploadPerUserDay)).then(function (ur) {
           if (!ur.committed) return { ok: false, reason: 'user-limit' };
-          return t.transaction(SB.bumpFn(SB.LIMITS.sitePerDay)).then(function (tr) {
+          return t.transaction(SB.bumpFn(cfg.uploadSiteDay)).then(function (tr) {
             if (!tr.committed) return u.transaction(SB.dropFn()).then(function () { return { ok: false, reason: 'site-limit' }; });
             return { ok: true, day: day, userUsed: val(ur.snapshot), siteUsed: val(tr.snapshot) };
           });
@@ -131,6 +133,20 @@
           return Promise.resolve(r.set(o)).then(function () { return o; });
         });
       },
+      /* ———— 助教 ———— */
+      watchConfig: function (cb) { return on((opts.opsRoot || root).child('sbops/config'), function (v) { cb(SB.config(v)); }); },
+      /* 每人每日助教次數（搶名額；上限來自 sbops/config） */
+      reserveCoach: function (sid, cfg) {
+        cfg = cfg || SB.CONFIG_DEFAULTS; var day = SB.dayKey(now());
+        return root.child('coachq/' + day + '/' + sid).transaction(SB.bumpFn(cfg.coachPerDay)).then(function (r) { return r.committed ? { ok: true, used: val(r.snapshot) } : { ok: false, reason: 'coach-limit' }; });
+      },
+      watchCoachUsed: function (sid, cb) { return on(root.child('coachq/' + SB.dayKey(now()) + '/' + sid), function (v) { cb(Number(v) || 0); }); },
+      putCoachQ: function (sid, key, q) { return Promise.resolve(root.child('coach/' + sid + '/q/' + key).set(q)); },
+      watchCoachAnswers: function (sid, cb) { var r = root.child('coach/' + sid + '/a'); if (r.orderByKey) r = r.orderByKey().limitToLast(20); return on(r, function (v) { cb(v || {}); }); },
+      watchMeta: function (code, sid, cb) { return on(root.child('sbm/' + code + '/' + sid), function (v) { cb(v || {}); }); },
+      /* 我拿到的 W8 成就（遊戲的成就面板讀這個節點顯示「W8 故事板」那一組） */
+      putAch: function (sid, ids) { return Promise.resolve(root.child('sbach/' + sid).set({ ids: ids.join(','), n: ids.length, t: now() })); },
+      setPersonas: function (code, sid, n) { return Promise.resolve(root.child('sbm/' + code + '/' + sid + '/personaCount').set(Math.max(0, Math.min(2, Number(n) || 0)))); },
       stop: function () { subs.forEach(function (p) { try { p[0].off('value', p[1]); } catch (e) {} }); subs = []; }
     };
   }

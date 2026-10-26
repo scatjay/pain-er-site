@@ -39,7 +39,7 @@
     PER.PERSONAS.forEach(function (p0) {
       var p = clone(p0);
       if (!isSms) {
-        if (override[p.id]) { p.layers = clone(override[p.id]); p.core = true; if (p.tangent === undefined) delete p.tangent; }
+        if (override[p.id]) { var ov = clone(override[p.id]); ['knows', 'unknown', 'rules'].forEach(function (k) { if (ov[k] !== undefined) { p[k] = ov[k]; delete ov[k]; } }); p.layers = ov; p.core = true; if (p.tangent === undefined) delete p.tangent; }
         else if (p.core) { p.core = false; p.tangent = '無'; p.layers = clone(GENERIC_LAYERS); }
         else if (/簡訊|通知/.test(JSON.stringify(p.layers))) { p.layers = clone(GENERIC_LAYERS); p.tangent = '無'; }
       }

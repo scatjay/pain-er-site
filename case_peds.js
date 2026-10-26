@@ -9,7 +9,7 @@
       goal:['家長離院後最先需要確認什麼？','哪些內容要能快速找到與轉述？','提醒工具會減少焦慮還是增加負擔？'],
       focus:['決策資訊可辨識','家長掌握與轉述','生活用語易理解'],
       directions:['回家照護小卡','家長專屬問答','定時提醒追蹤'],
-      mainPersona:'parent_kui', roomsFocus:['ped','waiting','triage','discharge','family','pharmacy']
+      mainPersona:'parent_kui', referrals:[{id:'nurse_yu',text:'兒科護理師小玉'},{id:'parent_kui',text:'那位半夜獨自帶孩子來的小葵'}], roomsFocus:['ped','waiting','triage','discharge','family','pharmacy']
     },
     clues: [
       {id:'K-01',title:'被折成小方塊的衛教紙',body:'離院資料被折了好幾折，重要段落藏在內側。小葵一手抱著孩子、一手翻紙，騎車前還得把濕外套和安全帽收好，最後只記得「回家再看」，卻說不出哪一張要先找。',material:'模擬',role:'key',pin:{room:'ped',rx:150,ry:25}},
@@ -31,7 +31,7 @@
         look:{skin:'#f3c9a5',outfit:'#ffc9c9',head:'pear',hair:'curl',eyes:'dots',mouth:'open',prop:'phone'},
         speech:'講話快、常停下來看孩子，會說「歹勢，我剛剛明明聽到了，怎麼現在想不起來」。',
         knows:['醫護剛才怎麼向她說明','自己回家後最怕忘記什麼'],unknown:['孩子接下來的狀況','資訊會不會自動傳給家人'],
-        layers:{surface:'我有聽啦，只是現在腦袋有點空白。',events:['離院時她抱著孩子、收包包又回訊息，幾張說明紙先塞進袋子。','伴侶打電話問交代，她記得有幾個重點，卻分不清先後。'],need:'她希望有一份一眼能找到重點、可以直接轉給伴侶的回家小卡；若能由她自己選時間、只提醒一次，她也願意試試。她不想收到沒問過的連續提醒。'},
+        layers:{surface:'我有聽啦，只是現在腦袋有點空白。',events:['離院時她抱著孩子、收包包又回訊息，幾張說明紙先塞進袋子。','伴侶打電話問交代，她記得有幾個重點，卻分不清先後。'],need:'她當下心裡想的是：「我明明聽到了，怎麼現在想不起來？」怕漏掉什麼，回家孩子出狀況會怪自己，也不想讓伴侶擔心。她希望有一份一眼能找到重點、可以直接轉給伴侶的回家小卡；若能由她自己選時間、只提醒一次，她也願意試試。她不想收到沒問過的連續提醒。'},
         reactions:{leading:'若你說「你是不是想要手機提醒」，她會先點頭，接著補充其實怕吵。',jargon:'聽到流程或介面術語就皺眉，請用「回家怎麼找」這種說法。',repeat:'重複問會以為自己答錯，先告訴她是在確認理解。',sensitive:'問到是不是好媽媽會立刻緊張，避免評價。',rapport:'先問孩子現在是否安穩，再給她幾秒整理思緒，她比較說得出來。'},
         avail:{moving:'short',acts:{'抱孩子候診':'short','接受離院說明':'short','領取說明資料':'short'},eventBlocks:true},idle:['（拍孩子的背）','（翻那疊紙）','（看著訊息又刪掉）'],cases:['peds']},
       {id:'nurse_yu',name:'小玉',title:'兒科護理師',core:true,material:'模擬',decision:false,
