@@ -101,7 +101,7 @@ body.proj .priv{display:none!important}
     <label class="muted">週次・班級 <select id="sessSel"></select></label> <span class="muted small" id="weekNote"></span>
     <button id="deidBtn" title="學號、姓名、信箱換成代號，投影時用">去識別化：開</button><button id="projBtn" title="字放大、藏掉次要資訊">投影模式：關</button>
     <span class="small muted" id="whoami" style="font-size:.85em"></span><button id="logoutBtn" class="ghost">登出</button></div>
-  <div class="clsbar" id="clsBar" role="status" aria-live="polite"><span id="clsOnline" class="onlbig" title="現在有幾位學生在線上（5 分鐘內有心跳；每 30 秒更新）">● 在線 —</span><span id="clsNow">讀取中…</span><span id="clsNext" class="muted"></span><span class="grow"></span><span id="clsUpd" class="muted"></span><button id="clsAuto" class="sm ghost" hidden>回到自動</button><button id="clsRefresh" class="sm" title="重新讀取故事板、房間、成就、用量與助教，並重算所有分頁">立即更新</button></div>
+  <div class="clsbar" id="clsBar" role="status" aria-live="polite"><span id="clsExport" class="onlbig zero" title="匯出過訪談報告的學生人數（學生按「匯出」時記錄，從 10-27 部署後開始算）">📄 匯出報告 —</span><span id="clsOnline" class="onlbig" title="現在有幾位學生在線上（5 分鐘內有心跳；每 30 秒更新）">● 在線 —</span><span id="clsNow">讀取中…</span><span id="clsNext" class="muted"></span><span class="grow"></span><span id="clsUpd" class="muted"></span><button id="clsAuto" class="sm ghost" hidden>回到自動</button><button id="clsRefresh" class="sm" title="重新讀取故事板、房間、成就、用量與助教，並重算所有分頁">立即更新</button></div>
   <div id="root"></div>
   <div class="ftnote"><p><b>要調整設定（助教次數、上傳張數、費用上限、模型、保護模式）請在 Claude Code 跟助理說。</b>這一頁只能看、不能改。</p><p>資料來自 Firebase 專案 gen-lang-client-0556836042（故事板在 sbx 節點，只有楊老師的帳號讀得到）。去識別化：學號、姓名、信箱換成當場次的固定代號（學生01、02…）。</p><div id="legend"></div></div>
 </div>
@@ -110,7 +110,7 @@ body.proj .priv{display:none!important}
 <script src="report_level.js?v=202610262300"></script>
 <script src="teacher_model.js?v=202610270013"></script>
 <script src="skill_badge.js?v=202610270013"></script>
-<script src="sb_dashboard.js?v=202610271350"></script>
+<script src="sb_dashboard.js?v=202610271405"></script>
 <script>
 (function () {
   var $ = function (id) { return document.getElementById(id); };
@@ -172,6 +172,20 @@ body.proj .priv{display:none!important}
         el.innerHTML = '<span aria-hidden="true">●</span> 在線 <span style="font-size:28px">' + n5 + '</span> 人' + (cur && byCls[cur] ? '<small>' + esc(cur) + ' ' + byCls[cur] + '</small>' : '') + (detail && !cur ? '<small>' + esc(detail) + '</small>' : ''); el.className = 'onlbig' + (n5 ? '' : ' zero'); el.title = '5 分鐘內有心跳 ' + n5 + ' 人' + (detail ? '（' + detail + '）' : '') + '；其中 2.5 分鐘內 ' + n2 + ' 人（心跳每 120 秒一次）。每 30 秒更新，最後讀取 ' + new Date().toTimeString().slice(0, 8);
       }, function () { el.textContent = '● 在線 —'; });
     }
+    /* 10-27 匯出訪談報告人數：每 60 秒讀一次 rptx（只讀）；分班用名冊對，對不到的歸「未分班」 */
+    function exportDraw() {
+      var el = $('clsExport'); if (!el || !loader.exports) return;
+      Promise.resolve(loader.exports()).then(function (p) {
+        if (!p) { el.textContent = '📄 匯出報告 —'; return; }
+        var clsOf = {}, byCls = {}, n = 0, times = 0;
+        try { ((lastModel && lastModel.students) || []).forEach(function (r) { if (r && r.sid) clsOf[String(r.sid).toLowerCase()] = r.cls || ''; }); } catch (e) {}
+        Object.keys(p).forEach(function (k) { var x = p[k] || {}; if (!x.n) return; n++; times += Number(x.n) || 0; var cl = clsOf[String(k).toLowerCase()] || x.cls || '未分班'; byCls[cl] = (byCls[cl] || 0) + 1; });
+        var detail = ['二甲', '二乙', '二丙', '未分班'].filter(function (k) { return byCls[k]; }).map(function (k) { return k + ' ' + byCls[k]; }).join('　');
+        el.innerHTML = '📄 匯出報告 <span style="font-size:28px">' + n + '</span> 人' + (detail ? '<small>' + esc(detail) + '</small>' : '') + (times ? '<small>共 ' + times + ' 次</small>' : '');
+        el.className = 'onlbig' + (n ? '' : ' zero');
+      }, function () { el.textContent = '📄 匯出報告 —'; });
+    }
+    exportDraw(); setInterval(function () { if (document.visibilityState !== 'hidden') exportDraw(); }, 60000);
     onlineDraw(); setInterval(function () { if (document.visibilityState !== 'hidden') onlineDraw(); }, 30000);
     h.ready.then(function () { if (qs.get('open')) { h.ui.open[qs.get('open')] = true; loader.thumbs(qs.get('open')).then(function (t) { h.ui.thumbs[qs.get('open')] = t; h.draw(); }); } });
   }

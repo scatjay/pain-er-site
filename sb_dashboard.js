@@ -434,6 +434,10 @@
       online: function () {
         return db.ref('er/' + sess + '/presence').once('value').then(function (s) { return s.val() || {}; }, function () { return null; });
       },
+      /* 10-27 楊老師：有多少學生匯出過訪談報告。只讀 er/{場次}/rptx（學生按匯出時只記次數與時間，不存報告內容） */
+      exports: function () {
+        return db.ref('er/' + sess + '/rptx').once('value').then(function (s) { return s.val() || {}; }, function () { return null; });
+      },
       thumbs: function (code) {
         return db.ref('sbx/' + sess + '/sbth/' + code).once('value').then(function (s) {
           var v = s.val() || {}, o = {}; Object.keys(v).forEach(function (bk) { o[bk] = {}; Object.keys(v[bk] || {}).forEach(function (slot) { var d = v[bk][slot] && v[bk][slot].d; if (typeof d === 'string' && d.indexOf('data:image/') === 0) o[bk][slot] = d; }); }); return o;
