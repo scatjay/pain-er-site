@@ -198,7 +198,7 @@
         '<div class="muted" id="holdNote" style="font-size:var(--fs-1)">⏸ 你在訪談，急診室的時間先暫停；切到別的分頁或走開就會繼續。</div></div>';
       var live = liveReady();
       if (sel.av.level !== 'blocked' && APP.online) html += '<div class="card" id="chatBox" style="margin-top:6px"><div class="row"><b style="flex:1">💬 即時訪談</b><span id="chatStat" class="muted" style="font-size:var(--fs-1)">' + (live ? '連線中' : '目前離線') + '</span></div>' +
-        '<div id="icBox"></div><div class="row" style="margin:2px 0"><button type="button" class="ghost" id="icAsk" style="font-size:var(--fs-1)">🧭 助教</button></div><div id="chatLog" style="max-height:260px;overflow:auto;font-size:var(--fs-3);margin:6px 0;padding:4px 0;border-top:var(--bw-s) dashed var(--line)"></div>' +
+        '<div id="icBox"></div><div class="row" style="margin:2px 0"><button type="button" class="ghost" id="icAsk" style="font-size:var(--fs-1)">🧭 助教</button></div><div id="icChat"></div><div id="chatLog" style="max-height:260px;overflow:auto;font-size:var(--fs-3);margin:6px 0;padding:4px 0;border-top:var(--bw-s) dashed var(--line)"></div>' +
         '<div class="row"><input id="chatIn" maxlength="300" placeholder="' + (live ? '問 ' + esc(ent.name) + ' 一個問題（Enter 送出）' : '即時訪談離線：老師的電腦沒開，請用下面的指令貼到 Gemini') + '"' + (live ? '' : ' disabled') + '><button id="chatSend"' + (live ? '' : ' disabled') + '>送出</button></div></div>';
       if (sel.av.level !== 'blocked') html += '<details' + (APP.online && live ? '' : ' open') + ' style="margin-top:6px"><summary class="muted" style="cursor:pointer;font-size:var(--fs-2)">' + (APP.online ? '備援：' : '') + '產生訪談指令，貼到 Gemini 訪談</summary><button id="genP" style="margin-top:6px">產生訪談指令</button><div id="pOut"></div></details>';
     } else {
@@ -365,6 +365,20 @@
         if (b4) b4.onclick = function () { var s2 = icLoad(); s2.off = true; icSave(s2); icBoxEl().innerHTML = '<div class="muted" style="font-size:var(--fs-1);margin:4px 0">好，不再自動提醒。想看時隨時按「🧭 助教」。</div>'; };
       } catch (e) { /* 助教出錯不能影響訪談 */ }
     }
+    /* 10-27 訪談階段的對話式助教：幫學生看懂、問得出口（不替寫）。名額與一般助教共用；只在線上模式有 */
+    try {
+      var icC = $('icChat');
+      if (icC && window.ERG_ICHAT && window.firebase && window.firebase.database && APP.online) {
+        var pp = ((c.world && c.world.personas) || {})[ent.pid] || {};
+        var ctl = c._icChatCtl;
+        if (!ctl || ctl._sid !== me() || ctl._room !== c.code) {
+          ctl = c._icChatCtl = window.ERG_ICHAT.create({ db: window.firebase.database(), sess: APP.SESS, sid: me(), room: c.code, getPersona: function () { return c._icChatPersona || {}; } });
+          ctl._sid = me(); ctl._room = c.code;
+        }
+        c._icChatPersona = { pid: ent.pid, name: ent.name, title: pp.title || '' };
+        window.ERG_ICHAT.mount(icC, ctl, {});
+      }
+    } catch (e) { /* 助教出錯不能影響訪談 */ }
     var tIc = $('icAsk'); if (tIc) tIc.onclick = function () { var s3 = icLoad(); s3.off = false; icSave(s3); icRun(1); };
     if (c._icT) { clearInterval(c._icT); c._icT = null; }
     c._icT = setInterval(function () { if (!$('icBox')) { clearInterval(c._icT); c._icT = null; return; } icRun(); }, 30000);
