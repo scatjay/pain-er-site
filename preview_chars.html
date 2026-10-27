@@ -1,0 +1,8 @@
+<!doctype html><meta charset="utf-8"><title>角色總覽</title>
+<body style="margin:0;background:#f8f9fa;font:14px sans-serif"><div id="g" style="display:flex;flex-wrap:wrap;gap:6px;padding:10px"></div>
+<script src="personas.js"></script><script src="chars.js"></script>
+<script>
+var g=document.getElementById('g');
+ERG_PERSONAS.PERSONAS.forEach(function(p,i){var d=document.createElement('div');d.style.cssText='background:#fff;border:2px solid #ccc;border-radius:8px;padding:4px;text-align:center;width:110px';
+ d.innerHTML=ERG_CHARS.character(p.look,{seed:i*7+3,label:p.name,mood:['idle','busy','angry','sleepy','waiting'][i%5],size:1.2})+'<div style="font-size:11px;color:#555">'+p.title.slice(0,10)+'</div>';g.appendChild(d)});
+</script>

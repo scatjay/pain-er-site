@@ -20,7 +20,11 @@
     }
     S.openModal('<div></div>');paint();timer=setInterval(function(){if(!document.getElementById('modal').classList.contains('on')){finish(false);return;}if(!paused){elapsed+=0.5*speed;if(elapsed>length)elapsed=0;paint();}},500);
   }
-  function renderBook(cur,host){var all=window.ERG_EVENT_GUIDE.build().filter(function(g){return g.caseId==='sms'||g.caseId===cur.world.meta.id;}),replays=cur.player.replays||[],seen={};replays.forEach(function(r){seen[r.id]=r;});
+  /* 10-27 廖漢翎：事件簿的「已遇到」只讀這間房的紀錄，登入落在別間房就整份空白。改成合併自己所有房間（同一個事件取最早的一筆）。 */
+  function allReplays(cur){var seen={};function add(list){(list||[]).forEach(function(r){if(r&&r.id&&(!seen[r.id]||(Number(r.time)||0)<(Number(seen[r.id].time)||0)))seen[r.id]=r;});}
+    try{var A=window.ERG_APP,C=window.ERG_CORE;if(A&&A.DB&&C&&A.me&&A.me.sid){A.DB.listRooms(A.SESS).forEach(function(x){var r=A.DB.getRoom(x.code),p=r&&r.members&&r.members[A.me.sid]?C.getPlayer(r,A.me.sid):null;if(p)add(p.replays);});}}catch(e){}
+    add(cur.player.replays);return seen;}
+  function renderBook(cur,host){var all=window.ERG_EVENT_GUIDE.build().filter(function(g){return g.caseId==='sms'||g.caseId===cur.world.meta.id;}),seen=allReplays(cur);
     host.innerHTML='<div class="card"><b>重要事件簿</b><div class="muted">已遇到事件可查看觀察與訪談提示並重播。未遇到事件只顯示地點與模擬時間。</div></div>'+all.map(function(g){var r=seen[g.id],when=g.when.label,room=g.rooms.map(window.ERG_EVENT_GUIDE.roomName).join('、');return '<details class="eventEntry"><summary><b>'+esc(g.title)+'</b>　'+('★'.repeat(g.importance))+'<div class="muted">'+esc(when)+'　｜　'+esc(room)+(r?'　｜　已遇到':'　｜　尚未遇到')+'</div></summary>'+(r?'<div class="eventAnswers"><b>觀察</b><ul>'+g.observe.map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ul><b>訪談方向提醒</b><div class="muted">這不是誰問過的紀錄，是遊戲給你的提示：這件事發生後，可以去問下面這些人、往這個方向問。</div>'+g.interview.map(function(x){return '<div class="card"><b>建議去問：'+esc((cur.world.personas[x.who]||{}).name||x.who)+'</b><p>可以這樣問：「'+esc(x.ask)+'」</p><p><b>聽的時候留意：</b>'+esc(x.listenFor)+'</p></div>';}).join('')+'<p class="muted">使用性問題：'+esc(g.usability)+'</p><button data-replay="'+esc(g.id)+'">重播</button></div>':'<p class="muted">前往 '+esc(room)+'；約 '+esc(when)+' 發生。遇到事件後才會顯示觀察與訪談提示。</p>')+'</details>';}).join('');
     host.querySelectorAll('[data-replay]').forEach(function(b){b.onclick=function(){var e=seen[b.dataset.replay];if(e)replay(cur,guide(e.id),e);};});
   }
