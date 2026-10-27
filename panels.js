@@ -163,9 +163,11 @@
   function watchNote() {
     var c = cur(), loc = player().loc, w = c && c.watchRoom;
     if (!c || !c.rotation || !c.rotation.on || !w || w === loc) return '';
-    var names = [];
-    c.world.at(c.clock.worldSec).forEach(function (it) { if (it.pos.room === w && it.ent.kind !== 'bot') names.push(it.ent.name); });
-    return '<p style="margin:0 0 6px">👀 輪播正在看「<b>' + esc(roomNameOf(w)) + '</b>」：' + (names.length ? esc(names.join('、')) : '現在沒有人') + '。你自己還在「' + esc(roomNameOf(loc)) + '」，要訪談那裡的人得走過去（下方「其他房間的人」點一下就過去）。</p>';
+    var ppl = [];
+    c.world.at(c.clock.worldSec).forEach(function (it) { if (it.pos.room === w && it.ent.kind !== 'bot') ppl.push({ id: it.ent.id, name: it.ent.name, pid: it.ent.pid }); });
+    /* 10-27 楊老師：輪播正在看的那間房裡的人，可以直接按下去訪談（等於「過去找他」，走到那間房並選中他） */
+    var gb = c._goBusy, btns = ppl.map(function (h) { return '<button type="button" class="pill" data-goto="' + esc(h.id) + '" data-room="' + esc(w) + '" data-name="' + esc(h.name) + '"' + (gb ? ' disabled aria-disabled="true"' : '') + ' title="點一下，直接過去找他訪談" style="font-size:var(--fs-1);min-height:32px;padding:2px 9px;margin:2px;cursor:pointer;' + mbtiCss(h.pid) + '">' + esc(h.name) + '</button>'; }).join('');
+    return '<p style="margin:0 0 6px">👀 輪播正在看「<b>' + esc(roomNameOf(w)) + '</b>」：' + (ppl.length ? '（點人名，直接過去訪談他）<br>' + btns : '現在沒有人') + '<br>你自己還在「' + esc(roomNameOf(loc)) + '」。</p>';
   }
   /* 10-27 楊老師：重要關係人的按鈕直接用象限顏色（對應 MBTI）。顏色旁一定有四碼文字，不靠顏色分辨 */
   function mbtiCss(pid) { try { var i = window.ERG_TYPE_UI && window.ERG_TYPE_UI.info(pid); return i ? 'background:' + i.q.bg + ';border-color:' + i.q.color + ';color:#1b1b1b;' : ''; } catch (e) { return ''; } }
@@ -253,7 +255,9 @@
     });
     var rooms = Object.keys(byRoom).filter(function (rid) { return rid !== mine; }).sort(function (a, b) { return LAY.room(a).name.localeCompare(LAY.room(b).name); });
     if (!rooms.length) return '<span class="muted">現在其他房間沒有可以訪談的人。</span>';
-    return rooms.map(function (rid) { return byRoom[rid].map(function (h) { var gb = c._goBusy, mineBusy = !!(gb && gb.id === h.ent.id); return '<button type="button" class="pill' + (mineBusy ? ' going' : '') + '" data-goto="' + esc(h.ent.id) + '" data-room="' + esc(rid) + '" data-name="' + esc(h.ent.name) + '"' + (gb ? ' disabled aria-disabled="true"' : '') + (mineBusy ? ' aria-busy="true"' : '') + ' title="點一下，直接過去' + esc(roomNameOf(rid)) + '找他" style="font-size:var(--fs-1);min-height:32px;padding:2px 9px;margin:2px;border-style:dashed;cursor:pointer;' + mbtiCss(h.ent.pid) + '">' + (mineBusy ? '<span class="goSpin" aria-hidden="true"></span><span class="goHour" aria-hidden="true">⏳</span> 前往中…' : esc(h.ent.name) + '　<span style="font-weight:400">在' + esc(roomNameOf(rid)) + '</span>') + '</button>'; }).join(''); }).join('');   /* 10-15 楊老師：不在這間房的人，點一下就直接傳送過去（不用走路），到了自動選他 */
+    var flat = []; rooms.forEach(function (rid) { byRoom[rid].forEach(function (h) { flat.push({ rid: rid, h: h, typed: (window.ERG_TYPE_UI && window.ERG_TYPE_UI.info(h.ent.pid)) ? 1 : 0, i: flat.length }); }); });
+    flat.sort(function (x, y) { return (y.typed - x.typed) || (x.i - y.i); });   /* 10-27：有人格顏色的重要關係人排前面，其餘維持原本的房間順序 */
+    return flat.map(function (x) { var rid = x.rid, h = x.h; var gb = c._goBusy, mineBusy = !!(gb && gb.id === h.ent.id); return '<button type="button" class="pill' + (mineBusy ? ' going' : '') + '" data-goto="' + esc(h.ent.id) + '" data-room="' + esc(rid) + '" data-name="' + esc(h.ent.name) + '"' + (gb ? ' disabled aria-disabled="true"' : '') + (mineBusy ? ' aria-busy="true"' : '') + ' title="點一下，直接過去' + esc(roomNameOf(rid)) + '找他" style="font-size:var(--fs-1);min-height:32px;padding:2px 9px;margin:2px;border-style:dashed;cursor:pointer;' + mbtiCss(h.ent.pid) + '">' + (mineBusy ? '<span class="goSpin" aria-hidden="true"></span><span class="goHour" aria-hidden="true">⏳</span> 前往中…' : esc(h.ent.name) + '　<span style="font-weight:400">在' + esc(roomNameOf(rid)) + '</span>') + '</button>'; }).join('');   /* 10-15 楊老師：不在這間房的人，點一下就直接傳送過去（不用走路），到了自動選他 */
   }
   /* 10-20 楊老師：點「其他房間的人」後新房間要載入一陣子，這段時間畫面不能沒反應。
      點下去先立刻畫出『前往中…』（轉圈圈＋面板上方一行字、名單全部暫時不能點，避免連點），下一個畫面畫完才真的傳送；
@@ -278,6 +282,8 @@
     Array.prototype.forEach.call(p.querySelectorAll('[data-goto]'), function (b) { b.onclick = function () {
       var id = b.dataset.goto, rid = b.dataset.room, c = cur(), nm = b.dataset.name || '他';
       if (c._goBusy) return;   /* 正在前往：連點只算一次 */
+      /* 10-27：點的是輪播正在看的那間房的人 ⇒ 先停輪播（停輪播＝人過去那間房），再直接選中他，輪播才不會又把畫面換走 */
+      try { var rb = document.getElementById('rotationBtn'); if (c.rotation && c.rotation.on && c.watchRoom === rid && rb) rb.click(); } catch (x) {}
       if (rid === player().loc) { c.selNpc = id; renderIntv(); return; }
       c._goMsg = null; var busy = c._goBusy = { id: id, room: rid, name: nm, t0: Date.now(), done: false };
       busy.timer = setTimeout(function () {   /* 超時：解除禁用，讓學生可以再點一次 */
