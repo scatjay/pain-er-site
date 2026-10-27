@@ -349,6 +349,11 @@
       '<section class="card"><h3>大家問了什麼（所選範圍的課程問題，' + c.questions.length + ' 則）</h3><div class="line">' + topics + '</div><div class="qs priv">' + qs + '</div><div class="muted small">主題用固定關鍵字歸類，歸不進去的放「其他」。</div></section>' +
       '<section class="card"><h3>目前參數（要改請在 Claude Code 說）</h3><div class="small">每人每日助教 ' + cfg.coachPerDay + ' 次・每板代填 ' + cfg.fillPerBoard + ' 格・改寫門檻 ' + cfg.rewriteThreshold + '・每人每日上傳 ' + cfg.uploadPerUserDay + ' 張・全站每日 ' + cfg.uploadSiteDay + ' 張・助教日費用上限 US$' + cfg.coachDayUsd + '・模型 ' + esc(cfg.modelLite) + '／' + esc(cfg.modelFill) + '（代填）</div></section>';
   }
+  /* 10-27 楊老師：後台要直接看得到學生每一格寫了什麼（誰／在哪／做什麼／想什麼／痛點），不只標題 */
+  function cellText(c) {
+    var rows = [['誰', c.who], ['哪', c.where], ['做', c.what], ['想', c.think], ['痛', c.pain]].filter(function (x) { return x[1]; });
+    return rows.length ? '<div class="ctx priv">' + rows.map(function (x) { return '<div><b>' + x[0] + '</b> ' + esc(x[1]) + '</div>'; }).join('') + '</div>' : '';
+  }
   function roomBody(m, code, ui) {
     var boards = m.boardsByRoom[code] || [], th = (ui.thumbs || {})[code];
     if (th === undefined) return '<div class="muted small">點開時載入縮圖…</div>';
@@ -356,7 +361,7 @@
     return boards.map(function (b) {
       return '<div><b>' + (b.bk === 'wall' ? '房間牆' : '個人板 ' + esc(ui.deid ? (m.alias[b.bk.replace(/^u_/, '')] || '學生') : b.bk.replace(/^u_/, ''))) + '</b><div class="strip">' + b.cells.map(function (c) {
         var t = th[b.bk] && th[b.bk][SB.slotKey(c.n)], au = c.by ? (ui.deid ? (m.alias[c.by] || '學生') : c.by) : '';
-        return '<figure>' + (t ? '<img alt="" src="' + esc(t) + '">' : '<div class="noimg">（無圖）</div>') + '<figcaption>' + c.n + ' ' + esc(c.title) + (c.moment ? ' ★' : '') + '<br>' + esc(au) + (c.er ? '・' + esc(SB.bandText(c.er.band)) + ' ' + Math.round(c.er.r * 100) + '%' : '') + (SB.needsSource(c) ? '・缺出處' : '') + '</figcaption></figure>';
+        return '<figure>' + (t ? '<img alt="" src="' + esc(t) + '">' : '<div class="noimg">（無圖）</div>') + '<figcaption>' + c.n + ' ' + esc(c.title) + (c.moment ? ' ★' : '') + '<br>' + esc(au) + (c.er ? '・' + esc(SB.bandText(c.er.band)) + ' ' + Math.round(c.er.r * 100) + '%' : '') + (SB.needsSource(c) ? '・缺出處' : '') + '</figcaption>' + cellText(c) + '</figure>';
       }).join('') + '</div></div>';
     }).join('') || '<span class="muted small">沒有內容</span>';
   }
@@ -449,7 +454,7 @@
     '.flag{display:inline-block;border:1px solid currentColor;border-radius:999px;padding:0 8px;margin:1px 3px 1px 0;font-size:.82em;font-weight:800;background:var(--warnbg);color:var(--warn)}.flag.s1{background:var(--badbg);color:var(--bad)}.flag.s5{background:var(--infobg);color:var(--info)}' +
     '.bar{display:inline-flex;height:8px;background:var(--line);border-radius:4px;overflow:hidden;width:90px;vertical-align:middle}.bar i{display:block;height:100%}' +
     'details.room{border:2px solid var(--ink);border-left:10px solid var(--cc,#8896a0);border-radius:10px;margin:8px 0;padding:6px 12px;background:var(--panel)}details.room>summary{cursor:pointer;display:flex;gap:12px;flex-wrap:wrap;align-items:center;min-height:36px}.case{font-weight:700}.aus{flex:1 0 100%}.au{display:inline-block;margin-right:14px;font-size:.8em}' +
-    '.strip{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}.strip figure{margin:0;width:120px;font-size:11px}.strip img,.noimg{width:120px;height:80px;object-fit:contain;border:2px solid var(--ink);border-radius:6px;background:var(--panel2);display:flex;align-items:center;justify-content:center;color:var(--muted)}' +
+    '.strip{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}.strip figure{margin:0;width:150px;font-size:11px}.ctx{margin-top:3px;line-height:1.35;color:var(--ink)}.ctx b{opacity:.65}.strip img,.noimg{width:150px;height:100px;object-fit:contain;border:2px solid var(--ink);border-radius:6px;background:var(--panel2);display:flex;align-items:center;justify-content:center;color:var(--muted)}' +
     '.qs{max-height:320px;overflow:auto;border-top:1px dashed var(--line);margin-top:6px;padding-top:6px}.q{margin:4px 0;font-size:.88em;word-break:break-word}.trend{width:100%;max-width:640px;height:170px;display:block;margin:4px 0 8px;color:var(--ink)}.empty{padding:12px;color:var(--muted);text-align:center}' +
     '@media (max-width:560px){.card{padding:10px 10px}.fr{grid-template-columns:1fr;gap:2px;margin:8px 0}.fn{text-align:left}.strip figure{width:calc(50% - 4px)}.strip img,.noimg{width:100%}}';
 
