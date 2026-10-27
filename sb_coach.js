@@ -51,6 +51,7 @@
     var q = { kind: kind, level: Math.max(1, Math.min(4, Number(o.level) || 1)), slot: Math.max(0, Math.min(8, Number(o.slot) || 0)), room: String(o.room || '').slice(0, 8), board: String(o.board || 'wall').slice(0, 24), ask: SB.clip(o.ask || '', ASK_MAX), t: Number(o.t) || 0 };
     if (kind === 'fill') q.level = 4; else if (kind === 'hint') q.level = 1; else if (kind === 'check') q.level = 2; else if (kind === 'pattern') q.level = 3;
     if (q.slot) q.cur = { who: SB.clip(cur.who, 24), where: SB.clip(cur.where, 40), what: SB.clip(cur.what, 140), think: SB.clip(cur.think, 140) };
+    if (kind === 'course' && q.level === 2) q.nextLv = Math.max(1, Math.min(3, Number(o.nextLv) || 1));
     if (kind === 'next') { q.step = Number(o.step) || 0; q.stepTitle = SB.clip(o.stepTitle || '', 40); q.nextLv = Math.max(1, Math.min(3, Number(o.nextLv) || 1)); }
     return q;
   }
@@ -116,6 +117,7 @@
     else if (q.kind === 'check') t = '我看了你寫的：這格沒有出處，「他怎麼想」也還是空的。對照訪談卡 [' + id + '] 補上。';
     else if (q.kind === 'pattern') t = '（別的案例的句型）「他站在叫號螢幕前，連按了三次重新整理，還是不知道輪到誰」。你可以套成「他在【哪裡】【做了什麼動作】，還是【卡在哪】」。';
     else if (q.kind === 'next') t = '你現在卡在「' + (q.stepTitle || '下一步') + '」。先做這一件事就好。';
+    else if (q.kind === 'course' && q.level === 2) t = '（本機測試用的固定答案）先說說你看到的：這一格裡，他最想完成的事是什麼？一次只回答這一個問題就好。';
     else if (q.kind === 'course') t = '（本機測試用的固定答案）這個問題線上版助教才會回答，課程內容在各週學習單。';
     else t = '';
     var out = { text: t, refs: [id].filter(function (x) { return /^#.+-\d+$/.test(x); }), kind: q.kind, model: 'local-stub', ok: true };
@@ -129,7 +131,7 @@
 
   /* ═════════ 畫面（瀏覽器） ═════════ */
   var $ = function (id) { return document.getElementById(id); };
-  var applyOnce = {}, A = null, LOG = [], pending = {}, nextCount = {}, offAns = null, ansCache = {};
+  var CHATN = 0, CHAT_MAX = 5, applyOnce = {}, A = null, LOG = [], pending = {}, nextCount = {}, offAns = null, ansCache = {};
 
   function ctxHelp() { return { firstRef: ((A.S.frags || [])[0] || {}).recId }; }
   function injectCss() {
@@ -139,6 +141,7 @@
       '.cbtn.armed{background:var(--pop)}#tourMask{position:fixed;z-index:50;border-radius:10px;box-shadow:0 0 0 9999px rgba(0,0,0,.62);pointer-events:none;transition:all .25s}#tourTip{position:fixed;z-index:51;max-width:340px;background:var(--panel);color:var(--fg);border:3px solid var(--ink);border-radius:10px;padding:10px 14px;box-shadow:6px 6px 0 var(--ink)}' +
       '#demo{position:fixed;inset:0;z-index:40;background:var(--bg);overflow:auto;padding:12px}#demo .wrap{max-width:1100px;margin:0 auto}#demo .dc{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}#demo .dcell{background:var(--panel);border:3px solid var(--ink);border-radius:10px;padding:8px;font-size:13px}' +
       '#demo .dcell.moment{background:var(--soft-r)}#demo .dcell img{width:100%;height:110px;object-fit:contain;background:#eef;border-radius:6px}#demo .why{background:var(--soft-y);border:2px dashed var(--ink);border-radius:10px;padding:6px 10px;margin:6px 0}#demo .card{margin:8px 0}';
+    st.textContent += '#coachBox .chatbox{border:3px solid var(--ink);border-radius:10px;background:var(--soft-g,#e8f7ec);padding:6px 8px;margin:8px 0}#coachBox .chatbox .chip{font-size:12px}';
     document.head.appendChild(st);
   }
 
@@ -150,9 +153,12 @@
       '<div class="row"><button class="mini" id="cNext">🧭 幫我往下一步</button><button class="mini" id="cTour">教我怎麼用</button><button class="mini" id="cDemo">🎬 看助教做一次</button></div>' +
       '<div class="meta">現在卡在：第 ' + step.step + ' 步「' + esc(step.title) + '」。今天還能問助教 <b id="cLeft">' + left + '</b> 次（含提示與課程問答）。</div>' +
       '<label>我已經還原的人物誌：<select id="cPersonas" style="width:auto"><option value="0">0 位</option><option value="1">1 位</option><option value="2">2 位以上</option></select></label>' +
+      '<div class="chatbox"><b>💬 跟助教聊聊</b><div class="muted">幫你「看懂」或「問得出口」，不會替你寫格子。一次只聊一件事，一段最多 ' + CHAT_MAX + ' 輪（目前第 <b id="cTurn">' + (CHATN >= CHAT_MAX ? CHAT_MAX : CHATN + 1) + '</b> 輪）。</div>' +
+      '<div class="row"><button class="mini chip" data-chip="這個詞（準則）是什麼意思？舉我手上的例子。">這是什麼意思？</button><button class="mini chip" data-chip="我不知道該怎麼問這位人物，幫我想想。">我不知道怎麼問</button><button class="mini chip" data-chip="我想問的是：">幫我把問題改成開放式</button></div>' +
+      '<textarea id="cChat" maxlength="' + ASK_MAX + '" placeholder="例如：我不確定這一格要寫誰的視角？"></textarea><div class="row"><button class="mini" id="cChatGo"' + (CHATN >= CHAT_MAX ? ' disabled' : '') + '>聊</button><button class="mini ghost" id="cChatNew">新對話</button></div></div>' +
       '<label>問整門課（≤' + ASK_MAX + ' 字）<textarea id="cAsk" maxlength="' + ASK_MAX + '" placeholder="例如：嚴重性評分怎麼打？人物誌和故事板差在哪？"></textarea></label><div class="row"><button class="mini" id="cCourse">問</button></div>' +
       '<div id="cLog">' + LOG.slice(-8).map(bubble).join('') + '</div>';
-    if (box.dataset.sig !== html) { var ta = $('cAsk'), keep = ta ? ta.value : '', st0 = box.scrollTop, atEnd = st0 > 0 && st0 + box.clientHeight >= box.scrollHeight - 8; box.innerHTML = html; box.scrollTop = atEnd ? box.scrollHeight : st0;   /* 換內容會把抽屜捲回最上面：保留原本位置（原本在最底就留在最底） */ box.dataset.sig = html; if ($('cAsk')) $('cAsk').value = keep; if ($('cPersonas')) $('cPersonas').value = String(Math.min(2, Number(S.personas) || 0)); bind(); }
+    if (box.dataset.sig !== html) { var tc = $('cChat'), keepC = tc ? tc.value : '', ta = $('cAsk'), keep = ta ? ta.value : '', st0 = box.scrollTop, atEnd = st0 > 0 && st0 + box.clientHeight >= box.scrollHeight - 8; box.innerHTML = html; box.scrollTop = atEnd ? box.scrollHeight : st0;   /* 換內容會把抽屜捲回最上面：保留原本位置（原本在最底就留在最底） */ box.dataset.sig = html; if ($('cAsk')) $('cAsk').value = keep; if ($('cChat')) $('cChat').value = keepC; if ($('cPersonas')) $('cPersonas').value = String(Math.min(2, Number(S.personas) || 0)); bind(); }
   }
   function bubble(m) {
     if (m.q) return '<div class="bub q"><div class="meta">我問（' + esc(m.label) + (m.slot ? '・第 ' + m.slot + ' 格' : '') + '）</div>' + esc(m.ask || '') + '</div>';
@@ -189,6 +195,7 @@
     var S = A.S; if (!q) return; delete pending[key];
     var text = a.text || (a.ok === false ? '助教現在忙不過來，稍後再試。' : '（沒有內容）');
     var m = { q: false, text: text, ok: a.ok !== false, slot: q.slot, model: a.model || '' };
+    if (q.kind === 'course' && q.level === 2) { if (a.ok !== false) CHATN = Number(a.turn) || (CHATN + 1); else if (a.err === 'chat-cap') CHATN = CHAT_MAX; }
     if (q.kind === 'fill' && a.fill && q.slot) {
       var empty = !a.fill.what && !a.fill.think;
       if (empty) { m.text = (a.text || '訪談裡還沒有足夠的內容可以寫這一格。') + ' 先回去再問一個人。'; }
@@ -220,6 +227,14 @@
     };
     $('cTour').onclick = startTour; $('cDemo').onclick = startDemo;
     $('cCourse').onclick = function () { var v = $('cAsk').value.trim(); if (!v) { A.toast('先寫下你想問的問題'); return; } ask({ kind: 'course', level: 1, slot: 0, ask: v, label: '課程問答' }).then(function () { $('cAsk').value = ''; }); };
+    Array.prototype.forEach.call(document.querySelectorAll('#coachBox .chip'), function (b) { b.onclick = function () { var t = $('cChat'); t.value = b.getAttribute('data-chip'); t.focus(); }; });
+    $('cChatGo').onclick = function () {
+      var v = $('cChat').value.trim(); if (!v) { A.toast('先寫下你想聊的事'); return; }
+      if (CHATN >= CHAT_MAX) { A.toast('這段對話先到這裡了。去訪談或寫寫看，有新的發現再按「新對話」。'); return; }
+      var n = Number(A.S.sel) || 0; if (n < 1 || n > 8) n = 0;
+      ask({ kind: 'course', level: 2, slot: n, nextLv: CHATN === 0 ? 1 : 2, ask: v, cur: n ? curOf(n) : undefined, label: '對話' }).then(function () { $('cChat').value = ''; });
+    };
+    $('cChatNew').onclick = function () { CHATN = 0; pushLog({ q: false, text: '——新對話——這一段從頭開始，助教不會記得前面聊的。', ok: true, slot: 0, model: '' }); };
     $('cPersonas').onchange = function () { S.personas = Number($('cPersonas').value) || 0; A.setPersonas(S.personas); render(); };
   }
   function curOf(n) { if (!n) return {}; var c = A.cellFor(n).c; return { who: c.who, where: c.where, what: c.what, think: c.think }; }
