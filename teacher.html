@@ -805,7 +805,8 @@ var CLASS_WINDOWS = [].concat(
   function fbDoneAt(e) { var d = e && e.done; if (!d || !d.t) return ''; var t = new Date(Number(d.t)); return (t.getMonth() + 1) + '/' + t.getDate() + ' ' + ('0' + t.getHours()).slice(-2) + ':' + ('0' + t.getMinutes()).slice(-2); }
   function renderFb() {
     var v = fbData, keys = Object.keys(v).sort(function (a, b) { return Number(v[b].t) - Number(v[a].t); }), cnt = {}; keys.forEach(function (k) { var kd = v[k].kind || ''; cnt[kd] = (cnt[kd] || 0) + 1; });
-    var nb = $('nFb'); nb.textContent = keys.length; nb.classList.toggle('alert', !!cnt.bug); nb.title = cnt.bug ? (cnt.bug + ' 則「有問題」') : '';
+    var openK = keys.filter(function (k) { return !v[k].done; }), openBug = openK.filter(function (k) { return v[k].kind === 'bug'; }).length, nb = $('nFb');
+    nb.textContent = openK.length; nb.classList.toggle('alert', openBug > 0); nb.title = '還沒處理 ' + openK.length + ' 則' + (openBug ? '（其中 ' + openBug + ' 則「有問題」）' : '') + '；已處理 ' + (keys.length - openK.length) + ' 則';   /* 10-27 楊老師：紅字只算還沒處理的 */
     $('fbFilter').innerHTML = '<label class="muted">類別 <select id="fbKindSel" aria-label="回報類別">' + [['', '全部', keys.length]].concat(Object.keys(KINDS).map(function (k) { return [k, KINDS[k], cnt[k] || 0]; })).map(function (f) { return '<option value="' + f[0] + '"' + (fbKind === f[0] ? ' selected' : '') + '>' + esc(f[1]) + ' ' + f[2] + '</option>'; }).join('') + '</select></label>';
     var nDone = keys.filter(function (k) { return v[k].done; }).length;
     $('fbFilter').innerHTML += ' <label class="muted">狀態 <select id="fbStSel" aria-label="處理狀態">' + [['', '全部 ' + keys.length], ['open', '處理中 ' + (keys.length - nDone)], ['done', '已處理 ' + nDone]].map(function (f) { return '<option value="' + f[0] + '"' + (fbState === f[0] ? ' selected' : '') + '>' + f[1] + '</option>'; }).join('') + '</select></label>';
@@ -966,7 +967,7 @@ var CLASS_WINDOWS = [].concat(
       var sc = scores || {}, ids = Object.keys(sc), nb = 0, mx = 0, l3 = 0; ids.forEach(function (k) { var b = ((sc[k] || {}).badgeIds || []).length; nb += b; if (b > mx) mx = b; if (lvOf(k) >= 3) l3 += 1; });
       kp('kp_board', [[ids.length, '人有成就資料'], [nb, '枚成就已解開'], [mx, '枚＝最多一人解開'], [l3, '人技能 Lv.3']]);
       var fk = Object.keys(fbData || {}), fc = { bug: 0, idea: 0, confused: 0 }; fk.forEach(function (k) { var kd = fbData[k].kind; if (fc[kd] != null) fc[kd] += 1; });
-      kp('kp_fb', [[fk.length, '則回報（最近 100 則）'], [fk.filter(function (k) { return fbData[k] && fbData[k].done; }).length, '則已處理'], [fc.bug, '則有問題', fc.bug ? 'bad' : ''], [fc.idea, '則建議'], [fc.confused, '則看不懂']]);
+      kp('kp_fb', [[fk.length, '則回報（最近 100 則）'], [fk.filter(function (k) { return fbData[k] && fbData[k].done; }).length, '則已處理'], [fk.filter(function (k) { return fbData[k] && !fbData[k].done && fbData[k].kind === 'bug'; }).length, '則有問題還沒處理', fk.filter(function (k) { return fbData[k] && !fbData[k].done && fbData[k].kind === 'bug'; }).length ? 'bad' : ''], [fc.idea, '則建議'], [fc.confused, '則看不懂']]);
       var iv = (((daemon || {}).admin || {}).ivReview || {}).summary, L = (iv && iv.levels) || {}, gr = gResp || {}, gk = Object.keys(gr), fix = gk.filter(function (k) { return gr[k].rev && !gr[k].rev.ok; }).length;
       kp('kp_rev', [[iv ? iv.n : '—', '位上週訪談已審'], [L['起步'] || 0, '起步'], [L['進步中'] || 0, '進步中'], [L['很好'] || 0, '很好'], [gk.length, '位送出回應指引'], [fix, '位需補強', fix ? 'bad' : '']]);
       var day = SESS.replace('ER-', ''), u = (usageAll || {})[day] || {}, ut = u._total || {}, CAP = Number((daemon || {}).maxSid) || 150, uk = Object.keys(u).filter(function (k) { return k.charAt(0) !== '_'; }), cap = uk.filter(function (k) { return (u[k].turns || 0) >= CAP; }).length, cum = 0;

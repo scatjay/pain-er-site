@@ -84,7 +84,7 @@ body.proj{--fs:21px}body.proj .wrap{max-width:none}body.proj .small{display:none
 .sg-empty{padding:6px 0}
 body.proj .priv{display:none!important}
 /* SHARED-DASH-CSS:END */
-.onlbig{display:inline-flex;align-items:baseline;gap:6px;padding:4px 14px;border-radius:99px;background:var(--ok);color:#fff;font-weight:900;font-size:20px;line-height:1.2;white-space:nowrap}.onlbig.zero{background:var(--line);color:var(--muted,#6c655b)}
+.onlbig{display:inline-flex;align-items:baseline;gap:6px;padding:4px 14px;border-radius:99px;background:var(--ok);color:#fff;font-weight:900;font-size:20px;line-height:1.2;white-space:nowrap}.onlbig.zero{background:var(--line);color:var(--muted,#6c655b)}.onlbig small{font-size:13px;font-weight:700;opacity:.92}
 </style>
 </head>
 <body>
@@ -165,8 +165,11 @@ body.proj .priv{display:none!important}
       var el = $('clsOnline'); if (!el || !loader.online) return;
       Promise.resolve(loader.online()).then(function (p) {
         if (!p) { el.textContent = '● 在線 —'; return; }
-        var t = Date.now(), n5 = 0, n2 = 0; Object.keys(p).forEach(function (k) { var x = Number((p[k] || {}).t || 0); if (x && t - x < 300000) { n5++; if (t - x < 150000) n2++; } });
-        el.textContent = '● 在線 ' + n5 + ' 人'; el.className = 'onlbig' + (n5 ? '' : ' zero'); el.title = '5 分鐘內有心跳 ' + n5 + ' 人；其中 2.5 分鐘內 ' + n2 + ' 人（心跳每 120 秒一次）。每 30 秒更新，最後讀取 ' + new Date().toTimeString().slice(0, 8);
+        var t = Date.now(), n5 = 0, n2 = 0, byCls = {}, clsOf = {};
+        try { ((lastModel && lastModel.students) || []).forEach(function (r) { if (r && r.sid) clsOf[String(r.sid).toLowerCase()] = r.cls || ''; }); } catch (e) {}
+        Object.keys(p).forEach(function (k) { var x = Number((p[k] || {}).t || 0); if (x && t - x < 300000) { n5++; if (t - x < 150000) n2++; var cl = clsOf[String(k).toLowerCase()] || '未分班'; byCls[cl] = (byCls[cl] || 0) + 1; } });
+        var cur = (FIL && FIL.cls && FIL.cls !== '全部') ? FIL.cls : '', detail = ['二甲', '二乙', '二丙', '未分班'].filter(function (k) { return byCls[k]; }).map(function (k) { return k + ' ' + byCls[k]; }).join('　');
+        el.innerHTML = '<span aria-hidden="true">●</span> 在線 <span style="font-size:28px">' + n5 + '</span> 人' + (cur && byCls[cur] ? '<small>' + esc(cur) + ' ' + byCls[cur] + '</small>' : '') + (detail && !cur ? '<small>' + esc(detail) + '</small>' : ''); el.className = 'onlbig' + (n5 ? '' : ' zero'); el.title = '5 分鐘內有心跳 ' + n5 + ' 人' + (detail ? '（' + detail + '）' : '') + '；其中 2.5 分鐘內 ' + n2 + ' 人（心跳每 120 秒一次）。每 30 秒更新，最後讀取 ' + new Date().toTimeString().slice(0, 8);
       }, function () { el.textContent = '● 在線 —'; });
     }
     onlineDraw(); setInterval(function () { if (document.visibilityState !== 'hidden') onlineDraw(); }, 30000);
