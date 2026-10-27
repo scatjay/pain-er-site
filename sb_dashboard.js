@@ -425,6 +425,10 @@
           return { now: (now ? now() : Date.now()), sess: sess, profiles: a[0], rooms: a[1], sb: a[2], sbm: a[3], sbach: a[4], sbq: a[5], usage: ops.usage, config: ops.config, coachUsage: ops.coachUsage, worker: ops.coachWorker, score: a[7], errors: errs };
         });
       },
+      /* 10-27 楊老師：先讓我看得到即時上線人數。只讀 er/{場次}/presence（學生每 120 秒的心跳），不訂閱、不寫入；判準與 teacher.html 的 isOnline 相同（5 分鐘內有心跳） */
+      online: function () {
+        return db.ref('er/' + sess + '/presence').once('value').then(function (s) { return s.val() || {}; }, function () { return null; });
+      },
       thumbs: function (code) {
         return db.ref('sbx/' + sess + '/sbth/' + code).once('value').then(function (s) {
           var v = s.val() || {}, o = {}; Object.keys(v).forEach(function (bk) { o[bk] = {}; Object.keys(v[bk] || {}).forEach(function (slot) { var d = v[bk][slot] && v[bk][slot].d; if (typeof d === 'string' && d.indexOf('data:image/') === 0) o[bk][slot] = d; }); }); return o;
