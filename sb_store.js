@@ -145,6 +145,7 @@
       watchCoachAnswers: function (sid, cb) { var r = root.child('coach/' + sid + '/a'); if (r.orderByKey) r = r.orderByKey().limitToLast(20); return on(r, function (v) { cb(v || {}); }); },
       watchMeta: function (code, sid, cb) { return on(root.child('sbm/' + code + '/' + sid), function (v) { cb(v || {}); }); },
       /* 我拿到的 W8 成就（遊戲的成就面板讀這個節點顯示「W8 故事板」那一組） */
+      getAch: function (sid) { return root.child('sbach/' + sid).once('value').then(function (s) { var v = val(s) || {}; return String(v.ids || '').split(',').filter(Boolean); }, function () { return []; }); },
       putAch: function (sid, ids) { return Promise.resolve(root.child('sbach/' + sid).set({ ids: ids.join(','), n: ids.length, t: now() })); },
       setPersonas: function (code, sid, n) { return Promise.resolve(root.child('sbm/' + code + '/' + sid + '/personaCount').set(Math.max(0, Math.min(2, Number(n) || 0)))); },
       stop: function () { subs.forEach(function (p) { try { p[0].off('value', p[1]); } catch (e) {} }); subs = []; }

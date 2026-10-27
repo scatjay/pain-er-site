@@ -91,6 +91,7 @@
     $('reviseLink').href = backHref(); $('lobbyLink').href = lobbyHref();
     var ids = (SB.arr(S.player.interviews).filter(SB.filled)).map(function (r) { return r.id; });
     var pers = {}; SB.arr(S.player.interviews).filter(SB.filled).forEach(function (r) { pers[r.personaId] = 1; });
+    if (S.store.getAch) S.store.getAch(S.sid).then(function (ids0) { S.keepAch = ids0 || []; S.achLoaded = 1; renderSide2(); }, function () { S.keepAch = []; S.achLoaded = 1; });
     S.store.ensureBaseline(CODE, S.sid, ids, Object.keys(pers)).then(function (b) { S.baseline = b; S.baseDone = 1; renderSide(); renderAll(); }, function (e) { S.baseDone = 1; console.warn('[sb] 第一次開板的訪談快照寫不進去：', e && e.message); renderAll(); });
     var offs = S.offs;
     offs.push(S.store.watchBoard(CODE, 'wall', function (b) { S.cells.wall = b.cells; renderAll(); }));
@@ -134,6 +135,32 @@
 
   /* ———— 頂列：額度、模式、儲存狀態 ———— */
   function qv() { return SB.quotaView({ userUsed: S.quota.userUsed, siteUsed: S.quota.siteUsed, mode: S.mode, cfg: S.cfg }); }
+  /* 用起點：跟「分鏡草稿」同一套算法——把起點原文記成這格的 draft，沒改寫就算「照抄」，改寫超過兩成才算改寫（後台的自己寫比例與學生自己看到的都用這個） */
+  function useStart(n, st) {
+    var o = cellFor(n), what = st.scene.slice(0, SB.LIMITS.field.what);
+    var next = SB.applyEdit(o.c, { what: what }, S.sid, NOW(), S.cfg);
+    next.draft = { who: '', where: '', what: what, think: '' }; next.er = SB.erFor(next, S.cfg);
+    var list = cur(), idx = -1; list.forEach(function (c, i) { if (c.n === next.n) idx = i; }); if (idx >= 0) list[idx] = next; else { list.push(next); list.sort(function (a, b) { return a.n - b.n; }); }
+    return S.store.saveCell(CODE, bkey(S.boardName), o.virtual ? null : o.c, next).then(function () { S.saved = NOW(); renderTop(); renderAll(true); }, function (e) { toast('存不進去：' + (e && e.message)); });
+  }
+  /* 一開始可以用助教與起點快速建立認知；最終挑戰是「從空白開始」，六個主題各做一次 */
+  function soloLine() {
+    var done = (S.keepAch || []).filter(function (x) { return /^so_/.test(x); }).map(function (x) { return x.slice(3); }), order = SB.CASE_ORDER || [];
+    var names = order.map(function (k) { var i = SB.caseInfo(k); return (done.indexOf(k) >= 0 ? '✓' : '·') + (i && i.name ? i.name : k); }).join('　');
+    return '<div class="muted">最終挑戰「從空白開始」：' + done.length + '／' + order.length + ' 個主題完成。（' + esc(names) + '）一開始可以放心用起點和助教建立感覺，之後再試一次完全不靠它們。</div>';
+  }
+  /* 我的 AI 參與度（自己看）：自己寫／改寫／照抄／助教代填，各占幾成 */
+  function renderMeter() {
+    var el = $('aiMeter'); if (!el) return;
+    var cnt = { own: 0, rewrite: 0, copy: 0, ai: 0 }, tot = 0;
+    cur().forEach(function (c) { if (c.by === S.sid && c.er && SB.hasContent(c)) { cnt[c.er.band] = (cnt[c.er.band] || 0) + 1; tot += 1; } });
+    if (!tot) { el.innerHTML = '<b>我的 AI 參與度</b>　<span class="muted">你寫了第一格，這裡就會顯示：自己寫、改寫、照抄、助教代填各占幾成。</span>'; return; }
+    function pct(k) { return Math.round(cnt[k] * 100 / tot); }
+    var seg = [['own', '自己寫', '#69db7c'], ['rewrite', '改寫', '#ffd43b'], ['copy', '照抄', '#ff922b'], ['ai', '助教代填', '#a5d8ff']];
+    el.innerHTML = '<b>我的 AI 參與度</b>　' + seg.map(function (x) { return '<span class="ml"><i style="background:' + x[2] + '"></i>' + x[1] + ' ' + cnt[x[0]] + ' 格（' + pct(x[0]) + '%）</span>'; }).join('') +
+      '<div class="mbar" aria-hidden="true">' + seg.map(function (x) { return cnt[x[0]] ? '<span style="width:' + (cnt[x[0]] * 100 / tot) + '%;background:' + x[2] + '"></span>' : ''; }).join('') + '</div>' +
+      '<div class="muted">助教或起點幫忙不是不好，但這些格子要改成你自己的話，才算你的。這個比例只有你和老師看得到。</div>' + soloLine();
+  }
   function renderTop() {
     if (!S.active) return; var q = qv();
     $('quota').innerHTML = '<b>' + esc(SB.banner(q.left)) + '</b>' + (q.why !== 'ok' ? '<div class="why">' + esc(SB.WHY_TEXT[q.why]) + '</div>' : '');
@@ -141,6 +168,7 @@
     $('modeNote').textContent = S.mode === 'normal' ? '' : '系統狀態：' + SB.MODE_TEXT[S.mode]; $('modeNote').hidden = S.mode === 'normal';
     $('saved').textContent = S.saved ? '已自動儲存 ' + hhmm(S.saved) : '';
     var mine = S.boardName === 'me'; $('tabWall').className = mine ? '' : 'on'; $('tabMe').className = mine ? 'on' : '';
+    renderMeter();
   }
 
   /* ———— 格子 ———— */
@@ -170,11 +198,11 @@
         '<div class="imgbar"><label class="btn mini ' + (q.canUpload && !ro ? '' : 'dis') + '">選圖<input type="file" accept="image/*" data-n="' + i + '" ' + (q.canUpload && !ro ? '' : 'disabled') + ' class="fileinp"></label>' +
         (th ? ' <button class="mini" data-n="' + i + '" data-act="full" ' + (SB.loadFull(S.mode) ? '' : 'disabled title="系統現在只提供縮圖"') + '>看原圖</button> <button class="mini" data-n="' + i + '" data-act="fit">' + (c.fit === 'cover' ? '完整顯示' : '填滿裁切') + '</button> <button class="mini" data-n="' + i + '" data-act="rmimg" ' + (ro ? 'disabled' : '') + '>拿掉圖</button>' : '') +
         (c.img ? ' <span class="muted">' + c.img.w + '×' + c.img.h + '</span>' : '') + '</div>' +
-        '<div class="ask">' + esc(ask) + '</div>' +
+        '<div class="ask">' + esc(ask) + '</div>' + startBlock(i, c, ro) +
         '<div class="row2"><label>誰<input class="f" data-n="' + i + '" data-k="who" maxlength="24" value="' + esc(c.who) + '" ' + (ro ? 'disabled' : '') + '></label>' +
         '<label>在哪<input class="f" data-n="' + i + '" data-k="where" maxlength="40" value="' + esc(c.where) + '" ' + (ro ? 'disabled' : '') + '></label></div>' +
-        '<label>發生什麼<textarea class="f" data-n="' + i + '" data-k="what" maxlength="140" ' + (ro ? 'disabled' : '') + '>' + esc(c.what) + '</textarea></label>' +
-        '<label>他怎麼想<textarea class="f" data-n="' + i + '" data-k="think" maxlength="140" ' + (ro ? 'disabled' : '') + '>' + esc(c.think) + '</textarea></label>' +
+        '<label>發生什麼<textarea class="f" data-n="' + i + '" data-k="what" maxlength="140" ' + (ro ? 'disabled' : '') + '>' + esc(c.what) + '</textarea></label>' + fragPick(i, 'what', ro) +
+        '<label>他怎麼想<textarea class="f" data-n="' + i + '" data-k="think" maxlength="140" ' + (ro ? 'disabled' : '') + '>' + esc(c.think) + '</textarea></label>' + fragPick(i, 'think', ro) +
         (c.aiText ? '<div><span class="ai-badge">' + (c.er && c.er.band === 'ai' ? '🤖 助教示範（這格幾乎不計分，改成你自己的話）' : '♻️ 助教示範，已改成自己的') + '</span></div>' : '') +
         (c.pain ? '<div class="painline">痛點句：<mark class="pain">' + esc(c.pain) + '</mark></div>' : '') +
         '<div class="bar"><button class="mini" data-n="' + i + '" data-act="pain" ' + (ro ? 'disabled' : '') + '>把選到的字標成痛點句（紅）</button> ' +
@@ -188,10 +216,71 @@
         '<span class="by">' + (c.by ? '作者 ' + esc(c.by) + (c.er ? '・' + esc(SB.bandText(c.er.band)) + ' ' + Math.round(c.er.r * 100) + '%' : '') : '') + (mineCell ? '' : '') + '</span>' +
         (!o.virtual && !ro && (st === 'empty' || mineCell) ? '<button class="mini del" data-n="' + i + '" data-act="del">刪除這格</button>' : '') + '</footer></article>';
     }
-    $('cells').innerHTML = html;
+    $('cells').innerHTML = html; decorateCounters();
     $('addCell').disabled = ro || n >= SB.LIMITS.maxCells; $('addCell').textContent = '＋ 新增一格（' + n + '／' + SB.LIMITS.maxCells + '）';
     $('draftBtn').disabled = ro;
     renderSide2();
+  }
+  /* 10-27 楊老師：每格先給「備選起點」（案例本來就有的線索）＋對應的啟發式評估準則提示。
+     只帶「發生了什麼」；「他怎麼想」與痛點句一定由學生自己寫。起點是哪一個、用哪條準則，只記在這台裝置（不改資料庫欄位）。 */
+  function stKey(n) { return 'erg_sbst_' + S.sid + '_' + CODE + '_' + n; }
+  function stGet(n) { try { return JSON.parse(localStorage.getItem(stKey(n)) || 'null'); } catch (e) { return null; } }
+  function stSet(n, v) { try { if (v) localStorage.setItem(stKey(n), JSON.stringify(v)); else localStorage.removeItem(stKey(n)); } catch (e) {} }
+  function stFind(id) { var L = (window.ERG_SB_STARTS && window.ERG_SB_STARTS.cases[S.caseId]) || []; for (var i = 0; i < L.length; i += 1) if (L[i].id === id) return L[i]; return null; }
+  function squash(x) { return String(x || '').replace(/\s+/g, ''); }
+  function startBlock(n, c, ro) {
+    var ST = window.ERG_SB_STARTS; if (!ST || ro) return '';
+    var L = ST.cases[S.caseId] || [], P = ST.principles, ch = stGet(n), st = ch && stFind(ch.id), html = '';
+    if (st && squash(c.what)) {
+      var same = squash(c.what) === squash(st.scene), pid = ch.p || st.p, p = P[pid];
+      html += '<div class="stbadge' + (same ? ' todo' : ' own') + '"><b>' + (same ? '起點・待補強' : '已改寫成自己的') + '</b> 來自線索 ' + esc(st.id) + '「' + esc(st.title) + '」' + (same ? '。請改成你自己訪談到的樣子，並寫「他怎麼想」。' : '。') + ' <button class="mini" data-n="' + n + '" data-act="stclear">拿掉起點</button></div>';
+      if (p) html += '<div class="prin"><div class="ph"><b>對照準則：' + esc(p.name) + '</b> <span class="en">' + esc(p.en) + '</span></div><div>白話：' + esc(p.plain) + '</div><div class="pq"><b>問問自己：</b>' + esc(p.ask) + '</div>' +
+        '<div class="pb"><select data-n="' + n + '" data-act="setprin" aria-label="換一條準則"><option value="">不太像，換一條看看…</option>' + Object.keys(P).map(function (k) { return '<option value="' + k + '"' + (k === pid ? ' disabled' : '') + '>' + esc(k.replace('H', '') + '　' + P[k].name) + '</option>'; }).join('') + '</select></div>' +
+        '<div class="pb">' + (CO ? '<button class="mini" data-n="' + n + '" data-act="stask" data-kind="prin">問助教：這條準則是什麼意思？我這格像不像？</button>' : '') + '</div>' +
+        '<div class="pn">建議只是幫你想，不是答案。你可以選別條準則，也可以認為這格其實沒有違反任何一條。' + (CO ? '助教會用一次今天的名額。' : '') + '</div></div>';
+      return html;
+    }
+    if (squash(c.what) || !L.length) return '';
+    var used = {}; for (var k = 1; k <= slotCount(); k += 1) { var o = stGet(k); if (o && o.id) used[o.id] = 1; }
+    var free = L.filter(function (x) { return !used[x.id]; }), pick = []; for (var j = 0; j < free.length && pick.length < 3; j += 1) { var cand = free[(j + n - 1) % free.length]; if (pick.indexOf(cand) < 0) pick.push(cand); }
+    html += '<details class="stbox" open><summary>A　先選一個起點（也可以略過，自己寫）</summary>' + pick.map(function (x) {
+      var p = P[x.p]; return '<div class="stcard"><b>' + esc(x.title) + '</b> <span class="tg">線索 ' + esc(x.id) + '</span><div>' + esc(x.scene) + '</div><div class="stbar"><span class="tg prn">可能涉及：' + esc(p ? p.name : '') + '</span><button class="mini" data-n="' + n + '" data-act="stuse" data-sid="' + esc(x.id) + '">用這個起點</button></div></div>';
+    }).join('') + '<div class="muted">起點只幫你想「發生了什麼」；「他怎麼想」和痛點句要你自己寫。沒有適合的就直接填下面。</div>' + (CO ? '<div class="stbar"><button class="mini" data-n="' + n + '" data-act="stask" data-kind="start">問助教：我該挑哪一個起點？</button><span class="muted">會用一次今天的名額</span></div>' : '') + '</details>';
+    return html;
+  }
+  /* 「問助教」：沿用既有助教的「課程問答」（只依課程脈絡卡直接回答，不改資料庫欄位）。問題用程式組好，≤300 字。 */
+  function stAsk(n, kind) {
+    if (!CO || !CO._ask) { toast('助教現在不能用'); return; }
+    var ST = window.ERG_SB_STARTS, P = ST && ST.principles, c = cellFor(n).c, ch = stGet(n), st = ch && stFind(ch.id), q = '', label = '';
+    if (kind === 'prin' && st && P) {
+      var p = P[ch.p || st.p]; label = '問助教：' + p.name;
+      q = '啟發式評估的「' + p.name + '」是什麼意思？我故事板第 ' + n + ' 格寫的是「' + String(c.what || '').slice(0, 70) + '」，要怎麼判斷這一格有沒有違反這條？請給我判斷的線索，不要替我寫。';
+    } else if (kind === 'start' && ST) {
+      var L = (ST.cases[S.caseId] || []).slice(0, 3), names = Object.keys(pnames()).map(function (k) { return pnames()[k]; }).slice(0, 4).join('、');
+      label = '問助教：挑哪個起點';
+      q = '我故事板第 ' + n + ' 格要選起點。我訪談過' + (names ? '：' + names : '的人還不多') + '。可選的有：' + L.map(function (x) { return x.title; }).join('、') + '。怎麼挑比較合適？請說判斷的方法就好。';
+    } else { toast('先選好起點再問'); return; }
+    CO._ask({ kind: 'course', level: 1, slot: 0, ask: q.slice(0, 280), label: label });
+  }
+  /* 欄位字數計數：只顯示上限（沒有下限）；到 85% 轉橘色，不用紅色也不打叉 */
+  function cntText(el) { var mx = Number(el.getAttribute('maxlength')) || 0, len = (el.value || '').length; return mx ? len + '／' + mx : ''; }
+  function cntClass(el) { return 'cnt' + ((el.value || '').length >= (Number(el.getAttribute('maxlength')) || 1) * 0.85 ? ' near' : ''); }
+  function decorateCounters() {
+    Array.prototype.forEach.call(document.querySelectorAll('#cells .f[maxlength]'), function (el) {
+      if (el.dataset.k === 'title') return;
+      var nx = el.nextElementSibling; if (!nx || !nx.classList || !nx.classList.contains('cnt')) { nx = document.createElement('span'); el.parentNode.insertBefore(nx, el.nextSibling); }
+      nx.textContent = cntText(el); nx.className = cntClass(el);
+    });
+  }
+  /* 10-27 楊老師：訪談碎片讓學生用「選」的。每一格的「發生什麼／他怎麼想」下面各有一個下拉，列出我自己訪談卡裡寫過的句子（人物＋前 24 字），選了就接在欄位後面、並自動加進這格的出處。
+     發生什麼 ← 事件、表面說法；他怎麼想 ← 真正需要。選項依「人物」分組，這樣學生不用先想要翻哪張卡。 */
+  function fragPick(n, k, ro) {
+    var fr = SB.fragments(SB.arr(S.player && S.player.interviews), pnames()), want = k === 'think' ? ['need'] : ['events', 'surface'], byP = {}, order = [];
+    fr.forEach(function (f, i) { if (want.indexOf(f.kind) < 0) return; var key = f.name || f.pid || '人物'; if (!byP[key]) { byP[key] = []; order.push(key); } byP[key].push('<option value="' + i + '">' + esc((f.text.length > 24 ? f.text.slice(0, 24) + '…' : f.text)) + '</option>'); });
+    var label = k === 'think' ? '＋ 從我的訪談挑「他可能怎麼想」…' : '＋ 從我的訪談挑「發生了什麼」…';
+    if (!order.length) return '<div class="fragpick muted">' + (k === 'think' ? '訪談卡裡還沒有寫「真正需要」，先回去訪談補一句，這裡就會出現可以挑的句子。' : '訪談卡裡還沒有寫「事件」或「表面說法」，先回去訪談補一句。') + '</div>';
+    return '<div class="fragpick"><select data-n="' + n + '" data-act="pickfrag" data-k="' + k + '" ' + (ro ? 'disabled' : '') + ' aria-label="' + esc(label) + '"><option value="">' + esc(label) + '</option>' +
+      order.map(function (key) { return '<optgroup label="' + esc(key) + '">' + byP[key].join('') + '</optgroup>'; }).join('') + '</select></div>';
   }
   /* 隊友（別人當作者的格子）用過、而且不是我的訪談卡的編號：可以拿來當出處（接力一格成就） */
   function mateRefs() {
@@ -203,14 +292,18 @@
     var list = cur(), sum = SB.authorSummary(list), me = null; sum.forEach(function (a) { if (a.sid === S.sid) me = a; });
     var cnt = { ai: 0, copy: 0, rewrite: 0, own: 0 }; list.forEach(function (c) { if (c.by === S.sid && c.er) cnt[c.er.band] = (cnt[c.er.band] || 0) + 1; });
     var stt = SB.boardStats({ cells: list }), mom = stt.moments;
-    var ach = SB.achievements({ sid: S.sid, wall: S.cells.wall, mine: S.cells.me, interviews: SB.arr(S.player && S.player.interviews), baseline: S.baseline, cfg: S.cfg });
-    var gotIds = ach.filter(function (a) { return a.got; }).map(function (a) { return a.id; }), sig = gotIds.join(',');
-    if (S.achSig !== sig && S.baseDone) { S.achSig = sig; S.store.putAch(S.sid, gotIds).catch(function () {}); }
+    var keep = S.keepAch || [], soloCases = keep.filter(function (x) { return /^so_/.test(x); }).map(function (x) { return x.slice(3); });
+    var ach = SB.achievements({ sid: S.sid, wall: S.cells.wall, mine: S.cells.me, interviews: SB.arr(S.player && S.player.interviews), baseline: S.baseline, cfg: S.cfg, caseId: S.caseId, soloCases: soloCases });
+    var gotIds = ach.filter(function (a) { return a.got; }).map(function (a) { return a.id; });
+    if (gotIds.indexOf('solo') >= 0) gotIds.push('so_' + S.caseId);
+    var allIds = keep.concat(gotIds).filter(function (v, i, a) { return v && a.indexOf(v) === i; }), sig = allIds.join(',');
+    if (S.achLoaded && S.achSig !== sig && S.baseDone) { S.achSig = sig; S.keepAch = allIds; S.store.putAch(S.sid, allIds).catch(function () {}); }
+    ach.forEach(function (a) { if (!a.got && keep.indexOf(a.id) >= 0 && a.group !== 'solo') a.got = true; });
     $('stats').innerHTML = '<h2>' + (S.boardName === 'wall' ? '這面牆' : '我的故事板') + '</h2>' +
       '<div>' + stt.filled + ' 格有內容・' + stt.withImg + ' 格有圖・' + stt.withRefs + ' 格有出處</div>' +
       '<div class="' + (mom ? 'ok' : 'warn') + '">' + (mom ? '已標出 ' + mom + ' 個關鍵時刻' : '還沒標出關鍵時刻（用一句話寫他在哪一刻最卡）') + '</div>' +
       '<h3>自己寫的程度（我當作者的格子）</h3><div id="ratio">自己寫 ' + cnt.own + ' 格・改寫 ' + cnt.rewrite + ' 格・照抄草稿 ' + cnt.copy + ' 格・助教代填 ' + cnt.ai + ' 格</div><div class="muted">草稿只是起點，改成你自己的話才算你的。</div>' +
-      ['coop', 'coach'].map(function (g) { return '<h3>' + (g === 'coop' ? '合作成就' : '助教成就') + '</h3>' + ach.filter(function (a) { return a.group === g; }).map(function (a) { return '<div class="ach ' + (a.got ? 'got' : '') + '" title="' + esc(a.desc) + '"><span>' + a.icon + '</span> <b>' + esc(a.name) + '</b> ' + (a.got ? '已拿到' : '<span class="muted">' + esc(a.desc) + '</span>') + '</div>'; }).join(''); }).join('');
+      ['coop', 'coach', 'solo'].map(function (g) { return '<h3>' + (g === 'coop' ? '合作成就' : g === 'coach' ? '助教成就' : '自己來（最終挑戰）') + '</h3>' + ach.filter(function (a) { return a.group === g; }).map(function (a) { return '<div class="ach ' + (a.got ? 'got' : '') + '" title="' + esc(a.desc) + '"><span>' + a.icon + '</span> <b>' + esc(a.name) + '</b> ' + (a.got ? '已拿到' : '<span class="muted">' + esc(a.desc) + '</span>') + '</div>'; }).join(''); }).join('');
   }
 
   /* ———— 儲存 ———— */
@@ -301,18 +394,23 @@
     document.addEventListener('focusout', function () { flushAll(); setTimeout(function () { if (S.dirty && !(document.activeElement && $('cells').contains(document.activeElement))) renderAll(true); }, 50); });
     window.addEventListener('beforeunload', flushAll);
     var cells = $('cells');
-    cells.addEventListener('input', function (e) { var t = e.target; if (t.classList.contains('f')) queueEdit(Number(t.dataset.n), t.dataset.k, t.value); });
+    cells.addEventListener('input', function (e) { var t = e.target; if (t.classList.contains('f')) { queueEdit(Number(t.dataset.n), t.dataset.k, t.value); var nx = t.nextElementSibling; if (nx && nx.classList.contains('cnt')) { nx.textContent = cntText(t); nx.className = cntClass(t); } } });
     cells.addEventListener('focusin', function (e) { var t = e.target, n = Number(t.dataset.n || (t.closest('.cell') && t.closest('.cell').dataset.n)); if (n) { S.sel = n; S.lastField = t.dataset.k ? { n: n, el: t } : S.lastField; } });
     cells.addEventListener('change', function (e) {
       var t = e.target, n = Number(t.dataset.n);
       if (t.type === 'file') { if (t.files && t.files[0]) uploadFile(n, t.files[0]); t.value = ''; return; }
       if (t.dataset.act === 'moment') commit(n, { moment: t.checked }).then(function () { renderAll(true); });
+      else if (t.dataset.act === 'setprin' && t.value) { var cs = stGet(n); if (cs) { cs.p = t.value; stSet(n, cs); renderAll(true); } }
+      else if (t.dataset.act === 'pickfrag' && t.value !== '') { var fr0 = SB.fragments(SB.arr(S.player && S.player.interviews), pnames()), f0 = fr0[Number(t.value)], kk = t.dataset.k; if (f0 && canWrite()) { var o0 = cellFor(n).c, pa = {}; pa[kk] = ((o0[kk] ? o0[kk] + '；' : '') + f0.text).slice(0, 140); pa.refs = o0.refs.concat([f0.recId]).filter(function (v, i, a) { return a.indexOf(v) === i; }); var full0 = (o0[kk] ? o0[kk] + '；' : '') + f0.text; if (full0.length > 140) toast('這句放進去會超過 140 字，已放到上限；沒放進來的是：「' + full0.slice(140, 170) + (full0.length > 170 ? '…' : '') + '」，可以拆到下一格。', 6500); commit(n, pa).then(function () { renderAll(true); }); } t.value = ''; }
       else if (t.dataset.act === 'addref' && t.value) { var o = cellFor(n); commit(n, { refs: o.c.refs.concat([t.value]).filter(function (v, i, a) { return a.indexOf(v) === i; }) }).then(function () { renderAll(true); }); }
     });
     cells.addEventListener('click', function (e) {
       var b = e.target.closest('button'); var card = e.target.closest('.cell'); if (card) S.sel = Number(card.dataset.n);
       if (e.target.closest('.img') && !b) { var im = e.target.closest('.img'); if (im.querySelector('img')) showFull(Number(im.dataset.n)); return; }
       if (!b) return; var n = Number(b.dataset.n), act = b.dataset.act;
+      if (b.dataset.act === 'stuse') { var stx = stFind(b.dataset.sid); if (stx && canWrite()) { stSet(n, { id: stx.id, p: stx.p }); useStart(n, stx); } return; }
+      if (b.dataset.act === 'stask') { stAsk(n, b.dataset.kind); return; }
+      if (b.dataset.act === 'stclear') { stSet(n, null); renderAll(true); return; }
       if (b.dataset.rm) { var o = cellFor(n); commit(n, { refs: o.c.refs.filter(function (r) { return r !== b.dataset.rm; }) }).then(function () { renderAll(true); }); return; }
       if (act === 'full') showFull(n);
       else if (act === 'fit') { var c2 = cellFor(n).c; commit(n, { fit: c2.fit === 'cover' ? 'contain' : 'cover' }).then(function () { renderAll(true); }); }

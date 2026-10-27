@@ -367,7 +367,9 @@
     { id: 'askthenwrite', group: 'coach', icon: '💬', name: '問了助教，自己寫完', how: '某一格你問過助教（提示、檢查或句型），最後是你自己寫完、有出處。' },
     { id: 'allsourced', group: 'coach', icon: '🔗', name: '整張每格都有出處', how: '一面故事板至少 ' + LIMITS.defaultCells + ' 格，每一格都有內容也都有出處。' },
     { id: 'nofill', group: 'coach', icon: '✍️', name: '整張沒有代填', how: '一面故事板至少 ' + LIMITS.defaultCells + ' 格都有內容，沒有任何一格是助教代填。' },
-    { id: 'reclaim', group: 'coach', icon: '♻️', name: '把示範改成自己的', how: '助教代填的格子，你改寫超過六成，變回自己的。' }
+    { id: 'reclaim', group: 'coach', icon: '♻️', name: '把示範改成自己的', how: '助教代填的格子，你改寫超過六成，變回自己的。' },
+    { id: 'solo', group: 'solo', icon: '🧱', name: '從空白開始', how: '一面個人板至少 ' + LIMITS.defaultCells + ' 格，從空白自己寫（沒有起點、草稿、助教代填），每格都有內容和出處，並標出關鍵時刻。' },
+    { id: 'soloall', group: 'solo', icon: '🏆', name: '六個主題都從空白做過', how: '六個主題各完成一次「從空白開始」。' }
   ];
   function fullBoardOf(cells, minCells) { return cells.length >= minCells && cells.every(hasContent); }
   function achievements(ctx) {
@@ -395,6 +397,10 @@
     got.allsourced = boards.some(function (b) { return boardOk(b, function (cs) { return cs.every(function (c) { return c.refs.length > 0; }); }); });
     got.nofill = boards.some(function (b) { return boardOk(b, function (cs) { return aiFillCount(cs) === 0; }); });
     got.reclaim = mineCells.some(function (c) { return !!c.aiText && c.er && c.er.band !== 'ai'; });
+    /* 10-27 楊老師：一開始可以用助教與起點快速建立認知，但最終成就要從全部空白的分鏡自己組出來。個人板每格都是我寫的、沒有 draft（起點與草稿都算）、沒有助教代填（cl＜4）、有出處、有關鍵時刻。 */
+    got.solo = fullBoardOf(mine, LIMITS.defaultCells) && mine.every(function (c) { return c.by === me && !c.draft && !c.aiText && c.cl < 4 && c.refs.length > 0; }) && mine.some(function (c) { return c.moment; });
+    var soloDone = {}; arr(ctx.soloCases).forEach(function (k) { soloDone[k] = 1; }); if (got.solo && ctx.caseId) soloDone[ctx.caseId] = 1;
+    got.soloall = CASE_ORDER.every(function (k) { return soloDone[k]; });
     return ACH_META.map(function (m) { return { id: m.id, group: m.group, icon: m.icon, name: m.name, got: !!got[m.id], desc: m.how }; });
   }
 

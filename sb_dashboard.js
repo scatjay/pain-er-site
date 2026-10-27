@@ -389,8 +389,8 @@
     function nOf(a) { return inScope.filter(function (x) { return x.ach.indexOf(a.id) >= 0; }).length; }
     function rowsOf(g) { return m.ach.filter(function (a) { return a.group === g; }).map(function (a) { var n = nOf(a); return '<tr class="' + (n ? '' : 'zero') + '"><td>' + esc(a.icon + ' ' + a.name) + '<div class="muted small">' + esc(a.how) + '</div></td><td><b>' + n + '</b>' + (base ? ' <span class="muted small">（' + pct(n, base) + '%）</span>' : '') + '</td>' + cls.map(function (c) { return '<td>' + (a.byCls[c] || 0) + '</td>'; }).join('') + '</tr>'; }); }
     var head = ['成就', '人數（佔開過板的人）'].concat(cls), got = inScope.filter(function (x) { return x.ach.length; }).length, zero = m.ach.filter(function (a) { return !nOf(a); }).length;
-    return kp([[base, '人開過故事板'], [got, '人拿到至少 1 個成就'], [pick(m, { cls: ui.cls, q: '', deid: true }).filter(function (x) { return x.sk.story || x.sk.source; }).length, '人有技能資料'], [zero, '個成就沒人拿到', zero && base >= 5 ? 'bad' : ''], [m.ach.length, '個成就（合作＋助教）']], '成就關鍵數字') + scopeNote(NOTE.ac, sc) +
-      htmlSkillW8(m, ui) + '<section class="card"><h3>合作成就</h3>' + table(head, rowsOf('coop')) + '</section><section class="card"><h3>助教相關成就</h3>' + table(head, rowsOf('coach')) + '</section>' +
+    return kp([[base, '人開過故事板'], [got, '人拿到至少 1 個成就'], [pick(m, { cls: ui.cls, q: '', deid: true }).filter(function (x) { return x.sk.story || x.sk.source; }).length, '人有技能資料'], [zero, '個成就沒人拿到', zero && base >= 5 ? 'bad' : ''], [m.ach.length, '個成就（合作＋助教＋自己來）']], '成就關鍵數字') + scopeNote(NOTE.ac, sc) +
+      htmlSkillW8(m, ui) + '<section class="card"><h3>合作成就</h3>' + table(head, rowsOf('coop')) + '</section><section class="card"><h3>助教相關成就</h3>' + table(head, rowsOf('coach')) + '</section><section class="card"><h3>自己來（最終挑戰：從空白開始）</h3>' + table(head, rowsOf('solo')) + '<div class="muted small">「從空白開始」＝一面個人板 6 格都沒有起點、草稿、助教代填，每格有出處並標出關鍵時刻；「六個主題」＝六個主題各完成一次。</div></section>' +
       '<div class="muted small">開過故事板的人 ' + base + ' 位；沒有人拿到的成就用淡色標出，可能是判準太難或學生不知道有這個成就。</div>';
   }
   function levelText(s) { return s.report.level ? s.report.stars : '尚未'; }

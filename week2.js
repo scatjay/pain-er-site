@@ -66,7 +66,7 @@
   function started(now) { return (now || Date.now()) >= Date.parse(START); }
   /* 10-20 起新增的徽章不算進「比 1/3（W6）多 3 枚」：W6 結束的基準快照（10-19）不含它，已有人先拿到會等於少做一枚。
      總數 total 減去「已拿到的、不在基準裡的新徽章」；ids 是玩家已拿到的徽章 id 清單。 */
-  var NEW_SINCE_BASE = ['pry_open', 'w8_together', 'w8_relay', 'w8_fill', 'w8_revisit', 'w8_premiere', 'w8_askthenwrite', 'w8_allsourced', 'w8_nofill', 'w8_reclaim'];   /* 10-26：W8 故事板成就也不算進 W7 的比較 */
+  var NEW_SINCE_BASE = ['pry_open', 'w8_together', 'w8_relay', 'w8_fill', 'w8_revisit', 'w8_premiere', 'w8_askthenwrite', 'w8_allsourced', 'w8_nofill', 'w8_reclaim', 'w8_solo', 'w8_soloall'];   /* 10-26：W8 故事板成就也不算進 W7 的比較 */
   function badgeCount(total, ids) {
     var n = Number(total) || 0, got = ids || [];
     NEW_SINCE_BASE.forEach(function (id) { if (got.indexOf(id) >= 0) n -= 1; });

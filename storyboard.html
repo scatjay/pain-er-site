@@ -51,7 +51,7 @@ label{display:block;font-size:12px;font-weight:700;margin-top:4px}
 .ck{display:inline-block;font-weight:400;margin-left:6px}.ck input{width:auto}
 mark.pain{background:none;color:var(--bad);font-weight:900;text-decoration:underline wavy}
 .painline{font-size:13px}
-.refs{font-size:12px;margin-top:6px}.refs select{width:auto;max-width:180px;padding:1px 4px;font-size:12px}
+.fragpick{margin:-2px 0 6px;font-size:12px}.fragpick select{width:100%;padding:3px 6px;font-size:13px;border:2px dashed var(--ink,#222);border-radius:8px;background:var(--soft,#fffbe8)}.stbox{margin:6px 0 10px;border:3px solid var(--ink,#1e1e1e);border-radius:10px;background:#fffbe8;padding:6px 10px}.stbox summary{font-weight:900;cursor:pointer;font-size:13px}.stcard{border:2px solid var(--ink,#1e1e1e);border-radius:8px;background:#fff;padding:6px 8px;margin:6px 0;font-size:13px;line-height:1.5}.stbar{display:flex;gap:6px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-top:4px}.tg.prn{background:#a5d8ff}.stbadge{margin:6px 0;padding:5px 9px;border:2px solid var(--ink,#1e1e1e);border-radius:8px;font-size:13px;line-height:1.5}.stbadge.todo{background:#ffd9a6}.stbadge.own{background:#b2f2bb}.prin{margin:6px 0 10px;border:3px solid var(--ink,#1e1e1e);border-radius:10px;background:#a5d8ff;padding:8px 10px;font-size:13px;line-height:1.55;color:#1e1e1e}.prin .en{font-size:11px}.prin .pq{background:#fff;border:2px solid var(--ink,#1e1e1e);border-radius:8px;padding:5px 8px;margin:5px 0}.prin .pb select{width:100%;font-size:13px}.prin .pn{font-size:11px;margin-top:4px}.cnt{display:block;text-align:right;font-size:11px;color:var(--muted,#59656d);margin:-2px 2px 4px}.cnt.near{color:#c2410c;font-weight:700}#aiMeter .ml{display:inline-flex;align-items:center;gap:4px;margin-right:10px}#aiMeter .ml i{display:inline-block;width:10px;height:10px;border:2px solid var(--ink,#1e1e1e);border-radius:50%}#aiMeter .mbar{display:flex;height:10px;border:2px solid var(--ink,#1e1e1e);border-radius:99px;overflow:hidden;margin:5px 0}#aiMeter .mbar span{display:block;height:100%}.refs{font-size:12px;margin-top:6px}.refs select{width:auto;max-width:180px;padding:1px 4px;font-size:12px}
 .chip{display:inline-block;border:var(--bw-s) solid var(--ink);border-radius:99px;padding:0 8px;margin:1px 2px;background:var(--mint);color:#1e1e1e;font-size:12px}.chip .x{background:none;border:0;box-shadow:none;padding:0 2px;cursor:pointer;color:#1e1e1e}
 .gap{background:var(--soft-r);border:var(--bw-s) solid var(--ink);border-radius:var(--r-m);padding:3px 8px;font-size:12px;margin-top:6px}
 .need{color:var(--bad);font-weight:700}.ok{color:var(--ok);font-weight:700}.warn{color:var(--bad)}
@@ -121,12 +121,13 @@ mark.pain{background:none;color:var(--bad);font-weight:900;text-decoration:under
       <button id="pngBtn" title="把這面故事板存成一張圖片（手機用這個交作業）">下載成圖片</button>
       <button id="printBtn">另存 PDF 交作業</button>
     </div>
-    <div class="line" style="margin-top:6px"><div id="quota" class="quota"></div><div id="modeNote" hidden></div>
+    <div class="line" style="margin-top:6px"><div id="quota" class="quota"></div>
+    <div id="aiMeter" class="card" style="margin:6px 0;padding:8px 10px;font-size:13px;flex:1 1 100%"></div><div id="modeNote" hidden></div>
       <button id="draftBtn" class="mini">幫我排一份草稿</button><span class="muted">只會填空格；沒有訪談素材的格子會留空，提醒你回去再問。</span></div>
   </div>
   <div id="layout">
     <aside><div class="card" id="coachBox"></div><div class="card" id="side1"></div><div class="card" id="prompts"></div><div class="card" id="stats"></div></aside>
-    <main><div id="cells"></div><p><button id="addCell">＋ 新增一格</button> <span class="muted">每面板最多 8 格，預設 6 格；最後一格留給關鍵時刻。</span></p></main>
+    <main><div id="cells"></div><p><button id="addCell">＋ 新增一格</button> <span class="muted">每面板最多 8 格，預設 6 格；最後一格留給關鍵時刻。一格只放一個畫面、一個瞬間，寫不下就拆成兩格。欄位字數只有上限、沒有下限，先寫短的也行。</span></p></main>
   </div>
 </div>
 <div id="lb" hidden></div>
@@ -136,13 +137,14 @@ mark.pain{background:none;color:var(--bad);font-weight:900;text-decoration:under
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-<script src="er_firebase.js?v=202610271220"></script>
-<script src="local_db.js?v=202610271220"></script>
-<script src="remote_db.js?v=202610271220"></script>
+<script src="er_firebase.js?v=202610271717"></script>
+<script src="local_db.js?v=202610271717"></script>
+<script src="remote_db.js?v=202610271717"></script>
 <script>document.addEventListener("click",function(e){var f=e.target.closest&&e.target.closest("#coachFab");if(f){document.body.classList.add("coach-open");f.classList.remove("has-new");}var c=e.target.closest&&e.target.closest("#cClose");if(c)document.body.classList.remove("coach-open");});</script>
-<script src="sb_core.js?v=202610271220"></script>
-<script src="sb_store.js?v=202610271220"></script>
-<script src="sb_coach.js?v=202610271220"></script>
-<script src="sb_ui.js?v=202610271220"></script>
+<script src="sb_core.js?v=202610271717"></script>
+<script src="sb_store.js?v=202610271717"></script>
+<script src="sb_coach.js?v=202610271717"></script>
+<script src="sb_starts.js?v=202610271717"></script>
+<script src="sb_ui.js?v=202610271717"></script>
 </body>
 </html>
