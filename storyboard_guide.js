@@ -119,7 +119,7 @@
     }).join('');
     var main = C.mainName || '主角';
     var first = id === 'sms' ? '看診快結束時，護理師口頭說明怎麼收衛教簡訊（離院前每位病人都要說明一次）；簡訊由醫院系統自動寄出，寄件顯示成一般門號。' : '【照你的訪談寫：他在這裡做了什麼、遇到什麼】';
-    var right = '<div class="box"><h4>這個案例的主角</h4><b>' + esc(main) + '</b>　<span class="muted">' + esc(C.caseName || tone.name) + '</span></div>' +
+    var right = '<div class="box"><h4>範例用的主角</h4><b>' + esc(main) + '</b>　<span class="muted">' + esc(C.caseName || tone.name) + '</span><div class="muted" style="font-size:var(--fs-1)">這只是示範用。你也可以改寫你訪談過的其他人，用他的角度寫故事，「誰」那一格自己填。</div></div>' +
       '<div class="box"><h4>先想的問題</h4><ul style="margin:0;padding-left:1.2em">' + (C.goal || []).map(function (g) { return '<li>' + esc(g) + '</li>'; }).join('') + '</ul></div>' +
       '<div class="box"><h4>對照準則</h4>' + (C.focus || []).map(function (f) { return '<span class="tag">' + esc(f) + '</span> '; }).join('') + '<div class="muted" style="font-size:var(--fs-1)">每格痛點，想想違反了哪一條。</div></div>' +
       '<div class="box"><h4>只示範第一格：「' + esc(T.cells[0]) + '」</h4><div class="ph">誰：' + esc(main) + '<br>在哪：' + esc(T.place) + '<br>發生什麼：<span class="pain">' + marked(first) + '</span><br>他怎麼想：「<mark>從訪談原話寫，猜的要標「推測」</mark>」<br>出處：<mark>#__</mark>（自己填訪談編號）</div></div>' +

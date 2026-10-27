@@ -589,7 +589,18 @@
   /* 這個案例的重要人物（大廳與報告共用） */
   function caseKeyIds(world) { var pl = Object.keys(world.personas).filter(function (k) { return (world.personas[k].cases || []).indexOf(world.meta.id) >= 0; }).map(function (id) { return { id: id }; }); return window.ERG_STORYBOARD.keyIds(world.meta.id, world.meta, pl); }
   /* 組報告並開在視窗裡（iframe）。ctx：{ world, room, pl, markers, skill:{ask,ctx}, passed, partners, chat } */
+  /* 10-27 楊老師：要看得到多少學生匯出過訪談報告。只記次數、第一次與最近一次時間、哪一間房，不存報告內容；寫在 er/{場次}/rptx/{學號}（er/$sess 本來就讓登入者讀寫，不用改規則） */
+  function noteReportExport(code) {
+    try {
+      if (!window.firebase || !window.firebase.database || !APP.SESS || !me()) return;
+      var ref = window.firebase.database().ref('er/' + APP.SESS + '/rptx/' + me()), now = Date.now(), SV = window.firebase.database.ServerValue;
+      var up = { n: SV && SV.increment ? SV.increment(1) : 1, last: now, lastRoom: String(code || '').slice(0, 8), cls: APP.me.cls || '' };
+      ref.child('first').transaction(function (v) { return v || now; });
+      ref.update(up);
+    } catch (x) { if (window.console) console.warn('匯出紀錄寫入失敗', x); }
+  }
   function openReportModal(c) {
+    noteReportExport(c.code || (cur() && cur().code));
     var w = c.world, names = {}; Object.keys(w.personas).forEach(function (k) { names[k] = w.personas[k].name; });
     var d = c.pl.discussion, dg = window.ERG_REPORT_LEVEL ? window.ERG_REPORT_LEVEL.chatDigest(c.chat) : { counts: {}, quotes: {} };
     var html = RP.html({ student: { id: me(), cls: APP.me.cls, name: '' }, caseName: w.meta.name, date: new Date().toISOString().slice(0, 10), passed: c.passed, interviews: c.pl.interviews,
@@ -617,7 +628,7 @@
     try { mk = L.listMarkers((DB.getScene(code) || []).concat(CORE.mcardEls(room))).filter(function (m) { return m.author === me(); }); } catch (x) {}
     var dm = pl.discussion || {};
     fetchChat(code, function (chat) {
-      openReportModal({ world: world, pl: pl, markers: mk, skill: { ask: pr.ask || 1, ctx: pr.ctx || 1 }, passed: !!pl.submitted, chat: chat, partners: (dm.partners || []).map(function (x) { return x.id; }).join('、') });
+      openReportModal({ code: code, world: world, pl: pl, markers: mk, skill: { ask: pr.ask || 1, ctx: pr.ctx || 1 }, passed: !!pl.submitted, chat: chat, partners: (dm.partners || []).map(function (x) { return x.id; }).join('、') });
       if (done) done(true);
     });
   };
