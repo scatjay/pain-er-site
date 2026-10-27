@@ -38,7 +38,7 @@
     /* 個人化檢核點：每位學生自己的指引逐項（狀態由 tools/er_guide_sync.py 每小時算好寫回 guide/{學號}/st；任何時間都能完成，不限上課） */
     var g = c.guide || {}, gst = (g.st && g.st.items) || [];
     var myItems = (g.items || []).map(function (it, k) {
-      var x = gst[k] || {}, part = x.s === 'part', prog = (x.p || []).map(function (q) { return Math.min(q[0], q[1]) + '/' + q[1]; }).join('、');
+      var x = gst[k] || {}, part = x.s === 'part', prog = (x.p || []).map(function (q) { return q[1] > 0 && q[1] < 1 ? '目前 ' + Math.round(q[0] * 100) + '%，要在 ' + Math.round(q[1] * 100) + '% 以下' : Math.min(q[0], q[1]) + '/' + q[1]; }).join('、');
       /* 10-20：同步狀態最多落後 2 小時；技能等級在畫面上是即時算的。技能類的項目用即時等級再判一次，免得同一頁一處 ✗ 一處 ✓（二乙 0192） */
       var okNow = x.s === 'ok', mm = /(探問|情境感知)[」』]?\s*升到\s*Lv\.?\s*(\d)/.exec(String(it.title || ''));
       if (mm && num(mm[2], 9) <= (mm[1] === '探問' ? ask : ctx)) okNow = true;
