@@ -224,12 +224,19 @@
     p.innerHTML = html; bindNpc(p); bindAllNpc(p);
     if ($('goNpc')) $('goNpc').onclick = function () { var wr2 = whereIs(pid); if (wr2) RM.travel(wr2); };
     if (sel && $('chatBox')) bindChat(sel, ent);
+    /* 10-27 李彤心、學生回報：「產生訪談指令」按下後約 3 秒就消失。訪談頁會因為人物移動、時間走動重畫，指令區塊跟著被洗掉。
+       產生的指令記在 cur()._pOut，每次重畫後（同一位人物）自動放回並展開，直到學生換人或自己離開。 */
+    function showPrompt(text) {
+      var o = $('pOut'); if (!o) return; o.innerHTML = '<pre class="prompt" id="pTxt"></pre><div class="row"><button id="pCopy">複製指令</button><span id="pCopied" class="muted"></span></div>'; $('pTxt').textContent = text;
+      try { var dd = o.closest('details'); if (dd) dd.open = true; } catch (x) {}
+      $('pCopy').onclick = function () { var done = function () { $('pCopied').textContent = '已複製'; }; if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, function () { selectText($('pTxt')); $('pCopied').textContent = '請手動複製（已選取）'; }); else { selectText($('pTxt')); $('pCopied').textContent = '請手動複製（已選取）'; } };
+    }
     var g = $('genP'); if (g && sel) g.onclick = function () {
       if (recFor(ent.pid) < 0) { var r = CL.newRecord({ id: CORE.nextId(player(), me()), author: me(), round: 1, loc: player().loc, simTime: RM.simTime(), personaId: ent.pid, link: '' }); player().interviews.push(r); save(); }
-      var text = promptFor(sel); renderIntv();
-      var o = $('pOut'); o.innerHTML = '<pre class="prompt" id="pTxt"></pre><div class="row"><button id="pCopy">複製指令</button><span id="pCopied" class="muted"></span></div>'; $('pTxt').textContent = text;
-      $('pCopy').onclick = function () { var done = function () { $('pCopied').textContent = '已複製'; }; if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, function () { selectText($('pTxt')); $('pCopied').textContent = '請手動複製（已選取）'; }); else { selectText($('pTxt')); $('pCopied').textContent = '請手動複製（已選取）'; } };
+      var text = promptFor(sel); cur()._pOut = { pid: ent.pid, text: text }; renderIntv();
+      showPrompt(text);
     };
+    if (sel && cur()._pOut && cur()._pOut.pid === ent.pid && $('pOut') && !$('pTxt')) showPrompt(cur()._pOut.text);
     if (rec) {
       Array.prototype.forEach.call(p.querySelectorAll('[data-tick]'), function (b) { b.onclick = function () { var k = b.dataset.tick, v = rec.items[k]; setRec(ix, k, { done: !v.done, trust: v.done ? '' : (v.trust || 'said') }); }; });
       Array.prototype.forEach.call(p.querySelectorAll('[data-trust]'), function (b) { b.onclick = function () { var a = b.dataset.trust.split('|'); setRec(ix, a[0], { trust: a[1] }); }; });
@@ -444,7 +451,7 @@
       '<div id="cardForm" style="margin-top:6px"></div></div>' +
       (cur().mobile ? '' : '<div class="row"><button class="ghost" id="seeNb">看筆記本</button><button class="ghost" id="seeAll">回到全景</button></div>') + '<h2>筆記本裡的卡（' + mine.length + '）</h2>';
     mine.forEach(function (m) { html += '<div class="card" data-cid="' + esc(m.id) + '" style="padding:6px 10px;margin:6px 0;box-shadow:var(--sh) var(--sh) 0 var(--ink)"><b>' + esc(m.id) + '</b> <span class="tag">' + esc(m.type) + '</span> <span class="muted" style="font-size:var(--fs-1)">' + (m.author === me() ? '我' : esc(m.author)) + '</span><div style="font-size:var(--fs-2)">' + esc(String(m.text || '').split('\n').slice(1).join(' ')) + '</div></div>'; });
-    p.innerHTML = html;
+    keepScroll(p, function () { p.innerHTML = html; });
     /* 10-18：場景一變（事件裡人物移動）onSceneChanged 就重畫這一頁；原本選的卡片種類只放在一次性的 prefill，
        重畫後一律回到「便利貼」⇒ 學生按了「勘查卡」表單會自己跳掉。改成記住目前選的種類。 */
     var type = pre.type || P.cardType || '便利貼'; P.cardType = type;
@@ -458,7 +465,7 @@
           '<label>根據哪一張卡或哪一段訪談（要填，檢核點 3 才會亮）<input id="cf-refs" placeholder="點下面的編號，或自己打 #' + esc(me()) + '-01"></label>' +
           '<div id="cf-refPick">' + (mineIds.length ? mineIds.map(function (id) { return '<button type="button" class="pill" data-rp="' + esc(id) + '">' + esc(id) + '</button>'; }).join('') : '<span class="muted" style="font-size:var(--fs-1)">你還沒有卡片或訪談可以當根據，先去記一張勘查卡。</span>') + '</div>';
       }
-      f.innerHTML = h + '<div class="row" style="margin-top:6px"><button id="cf-add">加到筆記本</button><span id="cf-err" class="err"></span></div>';
+      keepScroll(f, function () { f.innerHTML = h + '<div class="row" style="margin-top:6px"><button id="cf-add">加到筆記本</button><span id="cf-err" class="err"></span></div>'; });
       Array.prototype.forEach.call(f.querySelectorAll('[data-rp]'), function (b) { b.onclick = function () {
         var inp = $('cf-refs'), list = inp.value.split(/[,，\s]+/).filter(Boolean), i = list.indexOf(b.dataset.rp);
         if (i >= 0) list.splice(i, 1); else list.push(b.dataset.rp);
@@ -492,6 +499,12 @@
     var cs = player().conclusions; if (!cs.length || cs[cs.length - 1].text) cs.push({ text: '', refs: [], tradeoff: '', direction: '' });
     var c = cs[cs.length - 1]; if (c.refs.indexOf(id) < 0) c.refs.push(id); save();
   }
+  /* 10-27 何詩涵：勘查卡選完項目畫面會跳走。表單或整頁重畫會讓外層捲動位置回到最上面。這個函式在重畫前記下捲動位置、重畫後還原。 */
+  function keepScroll(el, fn) {
+    var sc = el, st = 0; while (sc && sc !== document.body) { var oy = '';
+      try { oy = getComputedStyle(sc).overflowY; } catch (x) {} if ((oy === 'auto' || oy === 'scroll') && sc.scrollHeight > sc.clientHeight) break; sc = sc.parentElement; }
+    if (sc && sc !== document.body) st = sc.scrollTop; fn(); if (sc && sc !== document.body) sc.scrollTop = st;
+  }
   function renderConcl() {
     var p = $('p-concl'), dirs = (cur().world.meta.directions || []).concat(['其他']), ids = myIds(), cs = player().conclusions;
     var html = '<div class="muted" style="font-size:var(--fs-2)">每一條結論都要有根據的編號與取捨，不寫「最佳方案」，要寫在什麼前提下選哪個、放棄什麼。</div>';
@@ -508,7 +521,7 @@
         '<div style="margin-top:4px">根據：' + ((c.refs || []).map(function (r) { return '<span class="ref ' + (ids.indexOf(r) >= 0 ? '' : 'bad') + '">' + esc(r) + '</span>'; }).join('') || '<span class="muted">（點下面的編號加入）</span>') + '</div>' +
         '<div>' + ids.map(function (id) { return '<button class="pill ' + (c.refs.indexOf(id) >= 0 ? 'on' : '') + '" data-ref="' + i + '|' + esc(id) + '">' + esc(id) + '</button>'; }).join('') + '</div>' +
         '<label>取捨<input data-ci="' + i + '" data-f="tradeoff" value="' + esc(c.tradeoff) + '" placeholder="在什麼前提下這樣選、放棄了什麼"></label>' +
-        '<label>再設計方向<select data-ci="' + i + '" data-f="direction"><option value="">（請選）</option>' + dirs.map(function (d) { return '<option' + (c.direction === d ? ' selected' : '') + '>' + esc(d) + '</option>'; }).join('') + '</select></label></div>';
+        '<label>再設計方向<select data-ci="' + i + '" data-f="direction"><option value="">（請選）</option>' + dirs.map(function (d) { return '<option value="' + esc(d) + '"' + (c.direction === d ? ' selected' : '') + '>' + esc(d === '其他' ? '其他（以上都不適合，我想的是別的方向）' : d) + '</option>'; }).join('') + '</select></label><div class="muted" style="font-size:var(--fs-1)">前三個是這個案例預先想好的再設計方向；都不適合就選「其他」，並把你想的方向寫進上面的「取捨」。</div></div>';   /* 10-27 陳威霖：看不懂「其他」是什麼意思 */
     });
     html += '<div class="row"><button class="ghost" id="cAdd">新增一條結論</button></div>';
     var e = cur().ev, c4 = e && e.ev.list[3];
@@ -575,7 +588,11 @@
     if (!sub || !inWork) html += '<button id="submitBtn" ' + (canSub ? '' : 'disabled') + '>提交</button> <span class="muted" style="font-size:var(--fs-1)">' + subMsg + '</span>' + (why && !canSub ? '<div id="submitWhy" class="card" style="margin-top:6px;border-color:var(--bad);font-size:var(--fs-2)">' + why + '</div>' : '');
     else if (e.ev.passed) html += passedBlock(e);
     else html += '<div class="card" style="border-color:var(--bad)"><b>已經按過提交，但還有打叉的項目</b><div class="muted" style="font-size:var(--fs-2)">把上面打叉的補完，這裡就會變成綠色的「已通過」。</div></div>';
-    p.innerHTML = html + '</details>';
+    /* 10-27 楊老師：檢核點分頁看不到第 8 週要做的事。放一段「下一單元」提示和直接開故事板的連結（沿用頂列 📖 故事板的網址；還不能開時說明還缺什麼）。 */
+    var sbTop = $('sbJump'), sbOk = sbTop && sbTop.href && !sbTop.classList.contains('dis') && !sbTop.hidden;
+    var nextCard = '<div class="card" id="cpNextUnit" style="margin-top:8px"><b>下一單元（第 8 週）：用訪談做 UX 故事板</b><div class="muted" style="font-size:var(--fs-2)">把你問來的訪談卡排成 6 格故事：誰、在哪、發生什麼、他怎麼想，最後標出他最卡的那一格。' + (sbOk ? '' : '先在「訪談」分頁至少記一位人物的內容，故事板才會打開。') + '</div>' +
+      (sbOk ? '<div class="row" style="margin-top:4px"><a class="btn" id="cpGoSb" href="' + esc(sbTop.href) + '">📖 開故事板</a></div>' : '') + '</div>';
+    p.innerHTML = html + '</details>' + nextCard;
     var w1d = $('cpW1'); if (w1d) w1d.addEventListener('toggle', function () { var cc = cur(); if (cc) cc.cpW1Open = w1d.open; });   /* 記住這間房開過，重畫時不會又收起來 */
     var sb = $('submitBtn'); if (sb) sb.onclick = doSubmit;
     var rb = $('reportBtn'); if (rb) rb.onclick = function () { showReport(e); };

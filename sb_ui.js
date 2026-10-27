@@ -356,6 +356,8 @@
         var o = cellFor(n), pre = o.virtual ? commit(n, { title: o.c.title }) : Promise.resolve();
         return pre.then(function () { return S.store.putImage(CODE, bkey(S.boardName), n, { full: full.url, thumb: th.url, w: full.w, h: full.h }); }).then(function () {
           S.full[bkey(S.boardName) + n] = full.url; S.saved = NOW(); toast('圖片放好了（' + Math.round(full.bytes / 1024) + ' KB）'); renderTop();
+          /* 10-27：選完檔案後焦點還停在檔案欄位上，renderAll 會因為「打字中不重畫」而略過，要等焦點離開圖才出現，學生以為上傳失敗 */
+          try { var ae0 = document.activeElement; if (ae0 && ae0.blur) ae0.blur(); } catch (x) {} renderAll(true);
         }, function (e) { S.store.refund(S.sid); throw e; });
       });
     }).catch(function (e) { toast(e && e.message || '圖片上傳失敗', 6000); });

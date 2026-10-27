@@ -220,7 +220,7 @@
     return {
       interviewees: ids.length, interviewIds: ids, coreOpened: keys(pried).length, interviewsDeep: complete, maxItems: maxItems,
       coreDone: CORE_IDS.filter(function (id) { return who[id]; }).length, coreTotal: CORE_IDS.length,
-      rooms: arr(player.visited).length, cards: arr(player.cards).length, events: keys(player.seenEv).length,
+      rooms: Math.max(keys(player.roomsSeen).length, arr(player.visited).length), cards: arr(player.cards).length, events: keys(player.seenEv).length,
       keep: arr(ctx.keep),   /* 10-15：之前在別間房已經解開的成就（從 score/{學號} 讀回來）；換案例開新房間時，已拿到的不會不見 */
       reports: Number(ctx.reports) || 0, fb: ctx.fb || null,   /* 10-27：回報技能與回報成就用（fbStats 的結果） */
         /* 10-23：回報過遊戲問題幾次（panels.js 的 achCtx 從本機回報紀錄算；過去的回報者由老師端補寫進 score） */

@@ -76,7 +76,7 @@
     var sid = APP.me.sid; if (!sid) return null;
     var rooms = DB.listRooms(APP.SESS).map(function (r) { return DB.getRoom(r.code); });
     var mine = rooms.filter(function (r) { return String(r.host) === String(sid) && r.members && r.members[sid]; });
-    var meta = mine.length ? caseMeta(mine[mine.length - 1].case || 'sms') : caseMeta('sms');
+    var meta = function (id) { return caseMeta(id || 'sms'); };   /* 10-27：每間房用自己的案例（再設計方向清單才對得上） */
     var st = CORE.checkpointState(DB, APP.SESS, sid, APP.me.profile, markersByRoom(), meta);
     var ev = CP.evaluate(st);
     APP.lit = ev.lit;
@@ -336,6 +336,7 @@
     }, function () { GUIDE.busy = false; GUIDE.loaded = true; GUIDE.sid = sid; });
   }
   function week2Ctx() {
+    try { if (typeof ensureMyScore === 'function') ensureMyScore(); } catch (x) {}
     var sid = String(APP.me.sid), pf = (APP.me.profile && APP.me.profile.progress) || {}, sc = window.ERG_MY_SCORE || {}, seen = {};
     DB.listRooms(APP.SESS).forEach(function (r) { var x = DB.getRoom(r.code) || {}; if (x.members && x.members[sid]) seen[x.case || 'sms'] = 1; });
     /* 10-20：本機存的進度（profile.progress）只在這台裝置的房間裡更新，換裝置或離開房間後會落後；已發布的成績（score）跨裝置。兩邊取大的（二丙 0179 成就總數增加但追加成就 0/3） */
@@ -583,7 +584,7 @@
   function ensureMyScore() {
     if (myScoreAsked || !ONLINE || !window.firebase || !APP.me.sid) return;
     myScoreAsked = true;
-    window.firebase.database().ref('er/' + APP.SESS + '/score/' + APP.me.sid).once('value', function (snap) { window.ERG_MY_SCORE = snap.val() || {}; window.ERG_SCORES_READY = true; }, function () { myScoreAsked = false; });
+    window.firebase.database().ref('er/' + APP.SESS + '/score/' + APP.me.sid).once('value', function (snap) { window.ERG_MY_SCORE = snap.val() || {}; window.ERG_SCORES_READY = true; try { if ($('lobby') && $('lobby').classList.contains('on')) renderLobby(); } catch (x) {} }, function () { myScoreAsked = false; });   /* 10-27：在大廳（還沒進房間）也要讀自己的成績，讀到之後重畫大廳，不然指引卡一直顯示「現在共 0 枚」（曾亮瑜、何詩涵都是在大廳回報） */
     try { window.firebase.database().ref('sbx/' + APP.SESS + '/sbach/' + APP.me.sid).once('value', function (snap) { var v = snap.val() || {}; window.ERG_MY_SB_ACH = String(v.ids || '').split(',').filter(Boolean); }, function () {}); } catch (e) {}   /* 10-26：W8 故事板成就 */
   }
   function publishScore(force) {

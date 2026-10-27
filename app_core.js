@@ -111,13 +111,16 @@
       return { id: id, confirmed: !!(other && other.confirms && other.confirms[sid]) };
     });
     function build(wr) {
+      /* 10-27 陳威霖、陳珈欣：選哪個「再設計方向」都說無效。以前整個評估只用「最後開的那間自己的房」的案例，在別種案例的房間裡寫結論，方向清單就對不上。
+         caseInfo 可以是函式（案例代號 → 案例資料），每間房用自己的案例；舊的傳法（直接給一份資料）照舊可用。 */
+      var ci = typeof caseInfo === 'function' ? caseInfo((wr && wr.case) || (ownRoom && ownRoom.case) || 'sms') : caseInfo;
       var ownPlayer = wr ? getPlayer(wr, sid) : null;
       var interviews = ownPlayer ? ownPlayer.interviews : [];
       var links = ownPlayer ? ownPlayer.links || {} : {};
       var doneIv = interviews.filter(function (r) { return CL.progress(r).complete; });
       var haveLinks = doneIv.length > 0 && doneIv.every(function (r) { return /^https:\/\//.test(getLink(links, r.id)); });
       return {
-        student: { id: sid, cls: profile.cls }, case: { directions: (caseInfo && caseInfo.directions) || [] },
+        student: { id: sid, cls: profile.cls }, case: { directions: (ci && ci.directions) || [] },
         markers: wr ? (markersByRoom[wr.code] || []) : [], interviews: interviews,
         conclusions: ownPlayer ? ownPlayer.conclusions : [],
         sessions: sessions, discussion: { room: vr ? vr.code : '', partners: partners, checks: disc.checks || {} },
