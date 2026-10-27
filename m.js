@@ -95,6 +95,9 @@
   APP.data.listeners.push(function (topic) {
     if (!cur) return;
     if (topic === 'scene:' + cur.code && window.ERG_PANELS) window.ERG_PANELS.onSceneChanged();
+    /* 10-27 檢核點不同步：同學在『別間房』按確認、或我較早的房間的卡片剛載入，原本只有『目前這間房』的變動才會重算；
+       現在只要是我參與的房間有變動，就在 0.3 秒後重算一次檢核燈號（合併短時間內的多次通知） */
+    var mt = /^(room|scene):(.+)$/.exec(topic || ''); if (mt && mt[2] !== String(cur.code)) { var rr = null; try { rr = DB.getRoom(mt[2]); } catch (x) {} if (rr && rr.members && rr.members[APP.me.sid]) { clearTimeout(cur._syncT); cur._syncT = setTimeout(function () { if (cur) S.refreshDots(); }, 300); } }
     if (topic === 'room:' + cur.code) { cur.room = DB.getRoom(cur.code); var p = CORE.getPlayer(cur.room, APP.me.sid); if (p) cur.player.confirms = p.confirms || cur.player.confirms; S.refreshDots(); if (window.ERG_PANELS) window.ERG_PANELS.onRoomChanged(); }
   });
 
@@ -169,7 +172,7 @@
   function startTravel(id){var rm=LAYOUT.room(id);if(rm&&rm.type==='remote'&&(id==='home'||id==='clinic')){goRemote(id);return true;}if(!rm||rm.type!=='room')return false;var a=(cur.player.loc==='home'||cur.player.loc==='clinic')?spotIn('street'):cur.me,b=spotIn(id),from=nearestNode(a),to=nearestNode(b,id)||nearestNode(b),route=from&&to?window.ERG_NPC.shortestPath(cur.world.graph,from,to):null;if(!route){toast('找不到可走的路線，請從附近房間前往。');return false;}var pts=[{x:a.x,y:a.y}];route.ids.forEach(function(nid){var n=cur.world.graph.nodes[nid];if(Math.hypot(n.x-pts[pts.length-1].x,n.y-pts[pts.length-1].y)>1)pts.push({x:n.x,y:n.y});});if(Math.hypot(b.x-pts[pts.length-1].x,b.y-pts[pts.length-1].y)>1)pts.push(b);clearTimeout(cur._jumpT);cur.walk={points:pts,index:1,target:id};$('locLabel').textContent='前往：'+rm.name;return true;}
   function advanceWalk(dt){if(!cur.walk||cur.clock.paused)return;var w=cur.walk,remain=70*cur.world.data.SIM.SECONDS_PER_SIM_MIN/cur.clock.secPerMin*dt;while(remain>0&&w.index<w.points.length){var a=cur.me,b=w.points[w.index],d=Math.hypot(b.x-a.x,b.y-a.y);if(d<=remain){cur.me={x:b.x,y:b.y};remain-=d;w.index++;}else{cur.me={x:a.x+(b.x-a.x)*remain/d,y:a.y+(b.y-a.y)*remain/d};remain=0;}}var rm=LAYOUT.roomAt(cur.me.x,cur.me.y);if(rm&&rm!==cur.player.loc){cur.player.loc=rm;cur.watchRoom=rm;renderScene();renderNav();soundForRoom(rm);if(window.ERG_PANELS)window.ERG_PANELS.onMove();}if(w.index>=w.points.length){var dest=w.target;cur.walk=null;setLoc(dest,true);DB.appendEvent(cur.code,{kind:'move',env:APP.me.sid,to:dest});persist(true);}}
   S.travel = startTravel;
-  S.teleport=function(id){cur.walk=null;clearTimeout(cur._jumpT);setLoc(id);}; S.setWatchRoom=function(id){if(!LAYOUT.room(id)||LAYOUT.room(id).type!=='room')return;cur.watchRoom=id;if(window.ERG_PANELS&&window.ERG_PANELS.onWatch)window.ERG_PANELS.onWatch(id);var scene=document.getElementById('sceneBox');if(scene){scene.style.transition='opacity .18s';scene.style.opacity='.55';setTimeout(function(){scene.style.opacity='1';},30);}renderScene();renderTokens();};
+  S.teleport=function(id){cur.walk=null;clearTimeout(cur._jumpT);setLoc(id);}; S.setWatchRoom=function(id){if(!LAYOUT.room(id)||LAYOUT.room(id).type!=='room')return;cur.watchRoom=id;try{var cp=$('caption');if(cp)cp.textContent=cur.world.captionFor(id)||LAYOUT.room(id).name;}catch(x){}if(window.ERG_PANELS&&window.ERG_PANELS.onWatch)window.ERG_PANELS.onWatch(id);var scene=document.getElementById('sceneBox');if(scene){scene.style.transition='opacity .18s';scene.style.opacity='.55';setTimeout(function(){scene.style.opacity='1';},30);}renderScene();renderTokens();};
   function renderNav() {
     /* 10-18 UI 方案 8：「🗺️ 全部」釘在最左邊；「附近」最多 6 間（離得最近的，其餘從「全部」找）；「去過」扣掉附近已有的、最多 4 間；列尾有「›」提示還能往右滑 */
     var here = LAYOUT.room(cur.player.loc), hc = here ? { x: here.x + here.w / 2, y: here.y + here.h / 2 } : { x: 0, y: 0 };
@@ -461,6 +464,8 @@
         goTo ? function () { hidePop(); S.teleport(goTo); toTop(); } : null);
     }
     var bz=cur.busy;$('roomNow').innerHTML=(bz?'<i class="lamp" style="background:'+bz.light.color+'"></i>'+esc(bz.light.text+'・'+bz.phase)+'　':'')+esc(nowTxt);
+    /* 10-27 楊老師：輪播換房間時，黃色提示不會跟著變。輪播正在看別間房時，這一格改成講那間房現在的人，並說清楚自己還在哪 */
+    if (cur.watchRoom && cur.watchRoom !== cur.player.loc) { var wpp = cur.world.at(cur.clock.worldSec).filter(function (it) { return it.pos.room === cur.watchRoom && it.ent.kind !== 'bot'; }).map(function (it) { return it.ent.name; }); $('roomNow').innerHTML = '👀 輪播正在看「' + esc(roomName(cur.watchRoom)) + '」，現在有：' + (wpp.length ? esc(wpp.join('、')) : '沒有人') + '。你自己在「' + esc(roomName(cur.player.loc)) + '」。'; }
     if (here.length) {   /* 10-18 改 1.5 秒（10-13：事件字幕只顯示 5 秒，不一直蓋住房間（真機截圖：半個房間被「呼——（忙翻）」擋住） */
       var sid = String(here[0].id || here[0].title || '') + '@' + cur.player.loc;
       if (cur._sfxId !== sid) { cur._sfxId = sid; cur._sfxUntil = Date.now() + 1500; }

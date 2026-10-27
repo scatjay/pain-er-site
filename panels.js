@@ -167,6 +167,8 @@
     c.world.at(c.clock.worldSec).forEach(function (it) { if (it.pos.room === w && it.ent.kind !== 'bot') names.push(it.ent.name); });
     return '<p style="margin:0 0 6px">👀 輪播正在看「<b>' + esc(roomNameOf(w)) + '</b>」：' + (names.length ? esc(names.join('、')) : '現在沒有人') + '。你自己還在「' + esc(roomNameOf(loc)) + '」，要訪談那裡的人得走過去（下方「其他房間的人」點一下就過去）。</p>';
   }
+  /* 10-27 楊老師：重要關係人的按鈕直接用象限顏色（對應 MBTI）。顏色旁一定有四碼文字，不靠顏色分辨 */
+  function mbtiCss(pid) { try { var i = window.ERG_TYPE_UI && window.ERG_TYPE_UI.info(pid); return i ? 'background:' + i.q.bg + ';border-color:' + i.q.color + ';color:#1b1b1b;' : ''; } catch (e) { return ''; } }
   function renderIntv() {
     var p = $('p-intv'), here = RM.entityHere();
     if (cur().role !== 'member') { p.innerHTML = '<p class="muted">旁觀者不能訪談。</p>'; return; }
@@ -181,7 +183,7 @@
     /* 選了現場的人在訪談時，急診室的時間先暫停（不然問到一半他就照班表走掉了） */
     c0.intvHold = !!sel;
     var html = goNote() + watchNote() + '<div class="muted" style="font-size:var(--fs-2)">這間房裡的人（只有在同一房間才問得到）：</div><div class="row" style="margin:6px 0">' +
-      (here.length ? here.map(function (h) { return '<button class="pill ' + (sel && sel.ent.id === h.ent.id ? 'on' : '') + '" data-npc="' + esc(h.ent.id) + '">' + esc(h.ent.name) + '・' + ({ free: '可聊', short: '簡短', blocked: '正忙' })[h.av.level] + (window.ERG_TYPE_UI ? window.ERG_TYPE_UI.badge(h.ent.pid, true) : '') + '</button>'; }).join('') : '<span class="muted">現在這間房沒有人。</span>') + '</div>';
+      (here.length ? here.map(function (h) { return '<button class="pill ' + (sel && sel.ent.id === h.ent.id ? 'on' : '') + '" data-npc="' + esc(h.ent.id) + '" style="' + mbtiCss(h.ent.pid) + (sel && sel.ent.id === h.ent.id ? 'box-shadow:0 0 0 3px var(--ink);font-weight:900;' : '') + '">' + esc(h.ent.name) + '・' + ({ free: '可聊', short: '簡短', blocked: '正忙' })[h.av.level] + (window.ERG_TYPE_UI ? window.ERG_TYPE_UI.badge(h.ent.pid, true) : '') + '</button>'; }).join('') : '<span class="muted">現在這間房沒有人。</span>') + '</div>';
     /* 其他房間的人：灰色、不能選，後面標在哪間房（10-12 楊老師）。要訪談就先走過去——用地圖或下方的房間按鈕。 */
     html += '<div class="muted" style="font-size:var(--fs-2);margin-top:8px">其他房間的人（點一下，直接過去找他）：</div><div id="allNpc" style="font-size:var(--fs-2);margin:4px 0 6px">' + allNpcHtml() + '</div>';
     if (recs.length) html += '<div class="muted" style="font-size:var(--fs-2);margin-top:8px">我問過的人（人不在也可以回來打勾）：</div><div class="row" id="myRecs" style="margin:4px 0 6px">' + recs.map(function (r) { var pr = CL.progress(r); return '<button class="pill ' + (recPid === r.personaId ? 'on' : '') + '" data-rec="' + esc(r.personaId) + '">' + esc(nameOf(r.personaId)) + '　' + pr.done + '/' + pr.total + (pr.complete ? ' ✔' : '') + '</button>'; }).join('') + '</div>';
@@ -194,7 +196,7 @@
         '<div class="muted" id="holdNote" style="font-size:var(--fs-1)">⏸ 你在訪談，急診室的時間先暫停；切到別的分頁或走開就會繼續。</div></div>';
       var live = liveReady();
       if (sel.av.level !== 'blocked' && APP.online) html += '<div class="card" id="chatBox" style="margin-top:6px"><div class="row"><b style="flex:1">💬 即時訪談</b><span id="chatStat" class="muted" style="font-size:var(--fs-1)">' + (live ? '連線中' : '目前離線') + '</span></div>' +
-        '<div id="chatLog" style="max-height:260px;overflow:auto;font-size:var(--fs-3);margin:6px 0;padding:4px 0;border-top:var(--bw-s) dashed var(--line)"></div>' +
+        '<div id="icBox"></div><div class="row" style="margin:2px 0"><button type="button" class="ghost" id="icAsk" style="font-size:var(--fs-1)">🧭 助教</button></div><div id="chatLog" style="max-height:260px;overflow:auto;font-size:var(--fs-3);margin:6px 0;padding:4px 0;border-top:var(--bw-s) dashed var(--line)"></div>' +
         '<div class="row"><input id="chatIn" maxlength="300" placeholder="' + (live ? '問 ' + esc(ent.name) + ' 一個問題（Enter 送出）' : '即時訪談離線：老師的電腦沒開，請用下面的指令貼到 Gemini') + '"' + (live ? '' : ' disabled') + '><button id="chatSend"' + (live ? '' : ' disabled') + '>送出</button></div></div>';
       if (sel.av.level !== 'blocked') html += '<details' + (APP.online && live ? '' : ' open') + ' style="margin-top:6px"><summary class="muted" style="cursor:pointer;font-size:var(--fs-2)">' + (APP.online ? '備援：' : '') + '產生訪談指令，貼到 Gemini 訪談</summary><button id="genP" style="margin-top:6px">產生訪談指令</button><div id="pOut"></div></details>';
     } else {
@@ -251,7 +253,7 @@
     });
     var rooms = Object.keys(byRoom).filter(function (rid) { return rid !== mine; }).sort(function (a, b) { return LAY.room(a).name.localeCompare(LAY.room(b).name); });
     if (!rooms.length) return '<span class="muted">現在其他房間沒有可以訪談的人。</span>';
-    return rooms.map(function (rid) { return byRoom[rid].map(function (h) { var gb = c._goBusy, mineBusy = !!(gb && gb.id === h.ent.id); return '<button type="button" class="pill' + (mineBusy ? ' going' : '') + '" data-goto="' + esc(h.ent.id) + '" data-room="' + esc(rid) + '" data-name="' + esc(h.ent.name) + '"' + (gb ? ' disabled aria-disabled="true"' : '') + (mineBusy ? ' aria-busy="true"' : '') + ' title="點一下，直接過去' + esc(roomNameOf(rid)) + '找他" style="font-size:var(--fs-1);min-height:32px;padding:2px 9px;margin:2px;border-style:dashed;cursor:pointer">' + (mineBusy ? '<span class="goSpin" aria-hidden="true"></span><span class="goHour" aria-hidden="true">⏳</span> 前往中…' : esc(h.ent.name) + '　<span style="font-weight:400">在' + esc(roomNameOf(rid)) + '</span>') + '</button>'; }).join(''); }).join('');   /* 10-15 楊老師：不在這間房的人，點一下就直接傳送過去（不用走路），到了自動選他 */
+    return rooms.map(function (rid) { return byRoom[rid].map(function (h) { var gb = c._goBusy, mineBusy = !!(gb && gb.id === h.ent.id); return '<button type="button" class="pill' + (mineBusy ? ' going' : '') + '" data-goto="' + esc(h.ent.id) + '" data-room="' + esc(rid) + '" data-name="' + esc(h.ent.name) + '"' + (gb ? ' disabled aria-disabled="true"' : '') + (mineBusy ? ' aria-busy="true"' : '') + ' title="點一下，直接過去' + esc(roomNameOf(rid)) + '找他" style="font-size:var(--fs-1);min-height:32px;padding:2px 9px;margin:2px;border-style:dashed;cursor:pointer;' + mbtiCss(h.ent.pid) + '">' + (mineBusy ? '<span class="goSpin" aria-hidden="true"></span><span class="goHour" aria-hidden="true">⏳</span> 前往中…' : esc(h.ent.name) + '　<span style="font-weight:400">在' + esc(roomNameOf(rid)) + '</span>') + '</button>'; }).join(''); }).join('');   /* 10-15 楊老師：不在這間房的人，點一下就直接傳送過去（不用走路），到了自動選他 */
   }
   /* 10-20 楊老師：點「其他房間的人」後新房間要載入一陣子，這段時間畫面不能沒反應。
      點下去先立刻畫出『前往中…』（轉圈圈＋面板上方一行字、名單全部暫時不能點，避免連點），下一個畫面畫完才真的傳送；
@@ -331,6 +333,35 @@
     var c = cur(), existing = recFor(ent.pid) >= 0 ? player().interviews[recFor(ent.pid)] : null, recId = existing ? existing.id : null;
     if (c.chatOff) { try { c.chatOff(); } catch (e) {} c.chatOff = null; }
     var lastTurns = [];   /* 成就用：這段對話目前的內容（送出下一題時拿對方上一句來比） */
+
+    /* 10-27 訪談 AI 助教（第 1 階段：只用規則，在瀏覽器裡跑，不呼叫模型、不新增資料庫寫入）。規則與句庫在 interview_coach.js／interview_coach_rules.js。
+       自動出手只給第 1 級；學生按「給我例子」「示範一下」才給第 2、3 級。已出過的提示記在這台瀏覽器（localStorage），換人或換房不重複。 */
+    var icKey = 'erg_ic1_' + me(), icLastKey = '';
+    function icLoad() { try { var o = JSON.parse(localStorage.getItem(icKey) || '{}'); return { shown: Array.isArray(o.shown) ? o.shown : [], off: !!o.off }; } catch (e) { return { shown: [], off: false }; } }
+    function icSave(o) { try { localStorage.setItem(icKey, JSON.stringify({ shown: o.shown.slice(-120), off: !!o.off })); } catch (e) {} }
+    function icBoxEl() { return $('icBox'); }
+    function icRun(req) {
+      try {
+        var IC = window.ERG_IC; if (!IC || !window.ERG_IC_RULES || !icBoxEl()) return;
+        var st = icLoad(), now = Date.now(), pl = player(), q = pl.q || {};
+        var turns = lastTurns.map(function (t) { return { role: t.role, text: t.text, t: Number(t.t) || 0 }; });
+        var lastA = 0; turns.forEach(function (t) { if (t.role === 'a' && t.t > lastA) lastA = t.t; });
+        var lastU = 0; turns.forEach(function (t) { if (t.role === 'u' && t.t > lastU) lastU = t.t; });
+        var ctx = { pid: ent.pid, turns: turns, convKey: (recId || ('new-' + ent.pid)), asked: Number((q.who || {})[ent.pid]) || 0, qLast: q.last, idleSec: (lastA && lastA > lastU) ? Math.round((now - lastA) / 1000) : 0, now: now, shown: st.shown, autoOff: st.off };
+        if (req) { ctx.requested = true; ctx.level = req; }
+        var r = IC.evaluate(ctx, window.ERG_IC_RULES); if (!r || !r.fire || !r.text) return;
+        if (!req) { if (r.key && r.key === icLastKey) return; icLastKey = r.key || ''; }
+        st.shown.push({ moment: r.moment, variant: r.variant, pid: r.pid || ent.pid, conv: r.conv || ctx.convKey, qn: r.qn, key: r.key, t: now, level: r.level }); icSave(st);
+        icBoxEl().innerHTML = '<div class="card" style="margin:6px 0;border-style:dashed"><div style="font-size:var(--fs-1)" class="muted">🧭 助教提醒（自己決定要不要用，不影響任何分數）</div><div style="font-size:var(--fs-2);margin:4px 0">' + esc(r.text) + '</div><div class="row" style="gap:6px;flex-wrap:wrap"><button type="button" class="ghost" id="icEx" style="font-size:var(--fs-1)">給我例子</button><button type="button" class="ghost" id="icDemo" style="font-size:var(--fs-1)">示範一下</button><button type="button" class="ghost" id="icClose" style="font-size:var(--fs-1)">收起來</button><button type="button" class="ghost" id="icOff" style="font-size:var(--fs-1)">先不要自動提醒</button></div></div>';
+        var b1 = $('icEx'), b2 = $('icDemo'), b3 = $('icClose'), b4 = $('icOff');
+        if (b1) b1.onclick = function () { icRun(2); }; if (b2) b2.onclick = function () { icRun(3); };
+        if (b3) b3.onclick = function () { icBoxEl().innerHTML = ''; };
+        if (b4) b4.onclick = function () { var s2 = icLoad(); s2.off = true; icSave(s2); icBoxEl().innerHTML = '<div class="muted" style="font-size:var(--fs-1);margin:4px 0">好，不再自動提醒。想看時隨時按「🧭 助教」。</div>'; };
+      } catch (e) { /* 助教出錯不能影響訪談 */ }
+    }
+    var tIc = $('icAsk'); if (tIc) tIc.onclick = function () { var s3 = icLoad(); s3.off = false; icSave(s3); icRun(1); };
+    if (c._icT) { clearInterval(c._icT); c._icT = null; }
+    c._icT = setInterval(function () { if (!$('icBox')) { clearInterval(c._icT); c._icT = null; return; } icRun(); }, 30000);
     function draw(v) {
       try { lastTurns = Object.keys((v && v.turns) || {}).map(function (k) { return v.turns[k]; }).sort(function (a, b) { return a.t - b.t; }); } catch (e) { lastTurns = []; }
       var logEl = $('chatLog'); if (!logEl) return;
@@ -341,6 +372,7 @@
       }).join('') + (turns[turns.length - 1].role === 'u' ? '<div class="muted" style="font-size:var(--fs-1)">' + esc(ent.name) + ' 正在想……</div>' : '') : '<div class="muted" style="font-size:var(--fs-2)">還沒開始。先打招呼，或問一個開放式的問題。</div>';
       logEl.scrollTop = logEl.scrollHeight;
       if (recId && turns.some(function (t) { return t.role === 'a' && t.status === 'ok'; })) { var ix2 = recFor(ent.pid); if (ix2 >= 0 && !CORE.getLink(player().links, player().interviews[ix2].id)) { player().links[CORE.linkKey(player().interviews[ix2].id)] = liveLink(player().interviews[ix2].id); save(); var lk = $('lnk'); if (lk) lk.value = CORE.getLink(player().links, player().interviews[ix2].id); } }
+      icRun();
       var st = $('chatStat'); if (st) st.textContent = liveReady() ? ('連線中・' + turns.filter(function (t) { return t.role === 'u'; }).length + ' 題') : liveLabel();
     }
     if (recId) { var ref = chatRef(recId), cb = function (s) { draw(s.val()); }; ref.on('value', cb); c.chatOff = function () { ref.off('value', cb); }; } else draw(null);

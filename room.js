@@ -143,6 +143,8 @@
   function data_listen() {
     APP.data.listeners.push(function (topic) {
       if (!cur) return;
+      /* 10-27 檢核點不同步：別間房（同學在那邊按確認、我較早的房間載入完成）有變動時，也重算檢核燈號 */
+      var mt = /^(room|scene):(.+)$/.exec(topic || ''); if (mt && mt[2] !== String(cur.code)) { var rr = null; try { rr = DB.getRoom(mt[2]); } catch (x) {} if (rr && rr.members && rr.members[APP.me.sid]) { clearTimeout(cur._syncT); cur._syncT = setTimeout(function () { if (cur) S.refreshDots(); }, 300); } }
       if (topic === 'scene:' + cur.code) pullRemoteScene();
       if (topic === 'room:' + cur.code) { cur.room = DB.getRoom(cur.code); var p = CORE.getPlayer(cur.room, APP.me.sid); if (p) { cur.player.confirms = p.confirms || cur.player.confirms; } S.refreshDots(); if (window.ERG_PANELS) window.ERG_PANELS.onRoomChanged(); }
     });
