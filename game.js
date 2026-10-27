@@ -88,7 +88,7 @@
      本機模式（?local=1，測試用）：直接填學號進入，沒有 Google。 */
   var AUTH = null, isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
   function finishLogin(sid, cls, email, name, uid) {
-    APP.me.sid = sid; APP.me.cls = cls; APP.me.email = email; APP.me.name = name || ''; APP.me.uid = uid || null;
+    APP.me.sid = sid; APP.me.cls = cls; try { syncMats(); } catch (e) {} APP.me.email = email; APP.me.name = name || ''; APP.me.uid = uid || null;
     var prof = CORE.getProfile(APP.storage, sid);
     if (!prof) { var d = AV.defaultFor(sid); prof = { sid: sid, cls: cls, avatar: d, speed: '標準', chosen: false, sound: true }; }
     prof.cls = cls; prof.email = email; prof.name = name || prof.name || ''; APP.me.profile = prof; CORE.saveProfile(APP.storage, sid, prof);
@@ -394,6 +394,17 @@
   }
   /* 10-26 楊老師「W7 已經不是本週了」：10/27 07:10 起大廳最上方換成 W8（故事板卡），W7 收成預設摺起來的「上週」，回應指引仍可補送 */
   var W8_START = Date.parse('2026-10-26T20:00:00+08:00'), week2Open = false;   /* 10-27 楊老師：新單元前一晚就切（原本上課前 1 小時），讓老師先確認 */
+  /* 10-28 楊老師：有開啟閱讀當週教材的成就。大廳「本週教材」連結；點開記在本機（week_materials.js），成就「翻開本週教材」讀它 */
+  function syncMats() { try { var M = window.ERG_MATS; if (M && APP.me.sid) window.ERG_MY_MATS = M.weeksOpened(localStorage, APP.me.sid); } catch (e) {} }
+  function matsHtml() {
+    var M = window.ERG_MATS; if (!M || !APP.me.sid || !w8Started()) return ''; var ls = M.links('w8', APP.me.cls); if (!ls.length) return '';
+    var done = M.openedIds(localStorage, APP.me.sid, 'w8');
+    return '<div class="card" id="matCard" style="margin:8px 0 0"><b>📖 本週教材（W8）</b><span class="muted" style="font-size:var(--fs-1)">　打開讀一讀，會拿到成就「翻開本週教材」（只記有打開）</span><div style="display:flex;flex-direction:column;gap:4px;margin-top:6px">' +
+      ls.map(function (l) { return '<a class="ghost" data-mat="' + l.id + '" href="' + l.url + '" target="_blank" rel="noopener" style="display:block;padding:6px 8px">' + (done.indexOf(l.id) >= 0 ? '✓ ' : '') + esc(l.title) + '</a>'; }).join('') + '</div></div>';
+  }
+  function bindMats(card) {
+    Array.prototype.forEach.call(card.querySelectorAll('[data-mat]'), function (a) { a.addEventListener('click', function () { try { window.ERG_MATS.record(localStorage, APP.me.sid, 'w8', a.getAttribute('data-mat')); syncMats(); if (a.textContent.indexOf('✓') !== 0) a.textContent = '✓ ' + a.textContent; } catch (e) {} }); });
+  }
   function w8Started() { var q = location.search.match(/[?&]w8=(0|1)/); if (q) return q[1] === '1'; return Date.now() >= W8_START; }
   window.ERG_W8_ON = w8Started;   /* 10-27：成就分頁用它決定哪一組單元排最前面、展開 */
   /* 10-19 楊老師：送出後顯示「審核中」，一天只能送一次（每天晚上用 Claude 批次審一次，tools/er_guide_review.py 寫回 guideResp/{學號}/rev） */
@@ -528,6 +539,7 @@
     var bestRow = rows.slice().sort(function (a, b) { return (b.started - a.started) || (b.code === lastRoom) - (a.code === lastRoom); })[0] || null;
     var steps = w8Steps(rows);
     card.innerHTML = '<div class="row"><b style="flex:1;font-size:var(--fs-4)">' + (w8Started() ? '痛點急診室 3/3（W8）這週要做的事：人物誌＋UX 故事板' : '第 8 週　UX 故事板') + '</b></div>' + (w8Started() ? '<div class="muted" style="font-size:var(--fs-2);margin:2px 0 6px">匯出訪談報告 → 還原 2 位人物誌 → 排 6 格故事板、標出關鍵時刻 → 生成圖片放進故事板。不夠的地方回房間再問一位。卡住了，故事板裡有 AI 助教。</div>' : '') + SB.lobbyHtml({ mobile: mobile, entry1: e1, rooms: rows, main: mainRoom ? { code: mainRoom } : null, mainRoom: bestRow ? bestRow.code : '', mainNeed: SB.need(bestRow || { cards: 0, started: 0 }), prog: { steps: steps } });
+    card.insertAdjacentHTML('beforeend', matsHtml()); bindMats(card); syncMats();
     loadW8P(mine.map(function (x) { return x.code; }));
     var b1 = $('sbEnter1'); if (b1) b1.onclick = function () { var t = $('createBtn'); t.scrollIntoView({ block: 'center' }); t.focus(); };
     var b0 = $('sbMain0'); if (b0) b0.onclick = function () { var t = $('createBtn'); t.scrollIntoView({ block: 'center' }); t.focus(); };   /* 還沒有房間：先去開房間或加入 */
@@ -584,6 +596,7 @@
   function ensureMyScore() {
     if (myScoreAsked || !ONLINE || !window.firebase || !APP.me.sid) return;
     myScoreAsked = true;
+    syncMats();
     window.firebase.database().ref('er/' + APP.SESS + '/score/' + APP.me.sid).once('value', function (snap) { window.ERG_MY_SCORE = snap.val() || {}; window.ERG_SCORES_READY = true; try { if ($('lobby') && $('lobby').classList.contains('on')) renderLobby(); } catch (x) {} }, function () { myScoreAsked = false; });   /* 10-27：在大廳（還沒進房間）也要讀自己的成績，讀到之後重畫大廳，不然指引卡一直顯示「現在共 0 枚」（曾亮瑜、何詩涵都是在大廳回報） */
     try { window.firebase.database().ref('sbx/' + APP.SESS + '/sbach/' + APP.me.sid).once('value', function (snap) { var v = snap.val() || {}; window.ERG_MY_SB_ACH = String(v.ids || '').split(',').filter(Boolean); }, function () {}); } catch (e) {}   /* 10-26：W8 故事板成就 */
   }

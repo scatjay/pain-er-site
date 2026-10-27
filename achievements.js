@@ -293,6 +293,7 @@
     { id: 'w8_nofill', icon: '✍️', name: '整張沒有代填', desc: '第 8 週故事板：一面故事板至少 6 格都有內容，沒有任何一格是助教代填', test: function () { return sbHas('nofill'); } },
     { id: 'w8_reclaim', icon: '♻️', name: '把示範改成自己的', desc: '第 8 週故事板：助教代填的格子，你改寫超過六成', test: function () { return sbHas('reclaim'); } },
     { id: 'w8_solo', icon: '🧱', name: '從空白開始', desc: '第 8 週故事板：一面個人板至少 6 格，從空白自己寫，沒有起點、草稿、助教代填，每格有出處並標出關鍵時刻', test: function () { return sbHas('solo'); } },
+    { id: 'w8_mat', icon: '📖', name: '翻開本週教材', desc: '第 8 週：從遊戲大廳的「本週教材」打開過 W8 的教材（只記有打開，不代表讀完）', test: function () { return matHas('w8'); } },
     { id: 'w8_soloall', icon: '🏆', name: '六個主題都從空白做過', desc: '第 8 週故事板：六個主題各完成一次「從空白開始」', test: function () { return sbHas('soloall'); } },
     /* 10-27：W8 自己的成就（人物誌、關鍵時刻、猜測有標明）；判準在 skillsW8，資料來源見該處註解 */
     { id: 'w8_people', icon: '🧑‍🤝‍🧑', name: '兩位人物立起來', desc: '第 8 週：人物誌做了 2 位，而且你訪談過病人或家屬', test: function (m) { return hasW8(m, 'w8_people'); } },
@@ -311,9 +312,10 @@
   var UNIT_OF = {};
   ['first_talk', 'pry_open', 'five_talks', 'ten_talks', 'all_core', 'deep_dig', 'chatty', 'q_intro', 'q_event', 'q_why', 'q_echo', 'q_chain', 'q_key3', 'q_open10', 'explorer', 'mapper', 'notes', 'witness', 'replay', 'partner', 'thinker', 'all_cp', 'vip', 'boss', 'kid_whisperer', 'translator', 'inclusive', 'case_two', 'case_four', 'case_all'].forEach(function (id) { UNIT_OF[id] = 'W6'; });
   ['guide_followed', 'guide_effect'].forEach(function (id) { UNIT_OF[id] = 'W7'; });
-  ['w8_together', 'w8_relay', 'w8_fill', 'w8_premiere', 'w8_askthenwrite', 'w8_allsourced', 'w8_nofill', 'w8_reclaim', 'w8_solo', 'w8_soloall', 'w8_people', 'w8_moment', 'w8_guess'].forEach(function (id) { UNIT_OF[id] = 'W8'; });
+  ['w8_together', 'w8_relay', 'w8_fill', 'w8_premiere', 'w8_askthenwrite', 'w8_allsourced', 'w8_nofill', 'w8_reclaim', 'w8_solo', 'w8_soloall', 'w8_mat', 'w8_people', 'w8_moment', 'w8_guess'].forEach(function (id) { UNIT_OF[id] = 'W8'; });
   ['w8_revisit', 'x_bring_old', 'x_thread', 'x_keyperson', 'x_ask_write', 'bug_hunter', 'idea_giver', 'clear_report'].forEach(function (id) { UNIT_OF[id] = 'x'; });   /* 10-27 楊老師：回報是跨作業的技能，回報成就歸跨單元 */
   DEFS.forEach(function (d) { d.unit = UNIT_OF[d.id] || 'all'; });
+  function matHas(w) { try { return ((typeof window !== 'undefined' && window.ERG_MY_MATS) || []).indexOf(w) >= 0; } catch (e) { return false; } }   /* 10-28：week_materials.js 記的「從大廳打開過哪一週的教材」 */
   function sbHas(k) { try { return ((typeof window !== 'undefined' && window.ERG_MY_SB_ACH) || []).indexOf(k) >= 0; } catch (e) { return false; } }
   function badges(m) { return DEFS.map(function (d) { return { id: d.id, unit: d.unit, icon: d.icon, name: d.name, desc: d.desc, ok: !!d.test(m) || (m.keep || []).indexOf(d.id) >= 0 }; }); }
   function earned(m) { return badges(m).filter(function (b) { return b.ok; }); }

@@ -75,6 +75,19 @@ var ERG_PRES = (function () {
     PANEL_HINT: '這裡全班都看得到，請友善發言。',   /* 輸入框下方的小字 */
     maskProfanity: ERG_PROFX.mask,
     /* 台北時間（UTC+8、無日光節約）：不用本機時區 */
+    /* 10-28 楊老師：公開討論區最新訊息做成彈幕。名字與內容都先遮罩；太長截斷；自己說的顯示「我」 */
+    danmakuLine: function (m, meSid) {
+      if (!m) return ''; var self = ERG_PRES, nm = m.sid === meSid ? '我' : self.maskProfanity(String(m.name || m.sid || '')).slice(0, 8), tx = self.maskProfanity(String(m.text || '')).replace(/\s+/g, ' ').trim();
+      if (!tx) return ''; if (tx.length > 36) tx = tx.slice(0, 36) + '…'; return nm + '：' + tx;
+    },
+    /* 彈幕軌道：回傳第一條「上一則已經離開起點」的軌道，全忙回 -1（那一則就不播，不排隊——彈幕是即時感，不是訊息佇列） */
+    pickLane: function (freeAt, now) { for (var i = 0; i < freeAt.length; i++) if ((freeAt[i] || 0) <= now) return i; return -1; },
+    /* 這一批快照裡哪些是「剛來的新訊息」：第一批只記錄不播；之後只播沒見過、且不超過 60 秒前的 */
+    freshKeys: function (seen, v, now, first) {
+      var out = []; Object.keys(v || {}).sort(function (a, b) { return (Number(v[a].t) || 0) - (Number(v[b].t) || 0); }).forEach(function (k) {
+        if (seen[k]) return; seen[k] = 1; if (first) return; var t = Number(v[k].t) || 0; if (t && now - t > 60000) return; out.push(k);
+      }); return out;
+    },
     dayLabel: function (t) { t = Number(t); if (!(t > 0)) return ''; var d = new Date(t + 8 * 3600000); return (d.getUTCMonth() + 1) + '/' + d.getUTCDate() + '（' + '日一二三四五六'.charAt(d.getUTCDay()) + '）'; },
     hhmm: function (t) { t = Number(t); if (!(t > 0)) return ''; var d = new Date(t + 8 * 3600000), p = function (n) { return (n < 10 ? '0' : '') + n; }; return p(d.getUTCHours()) + ':' + p(d.getUTCMinutes()); },
     /* 聊天清單：每天第一則前一行日期分隔線、每則前面 hh:mm；名字與內容都先遮罩再跳脫。沒有 t 的訊息（剛送出、伺服器時間還沒回來）不顯示時間 */
@@ -104,6 +117,7 @@ if (typeof window !== 'undefined') window.ERG_PRES = ERG_PRES;
   box.innerHTML = '<details id="socialDet"' + (wantOpen ? ' open' : '') + '><summary style="cursor:pointer" title="' + ERG_PRES.PANEL_NAME + '：全班都看得到"><b>👥 ' + ERG_PRES.PANEL_NAME + '</b> <span id="onlineCount" class="muted">線上 0 位</span> <span id="talkNew" class="pill on" style="font-size:var(--fs-1);padding:0 7px;display:none">新訊息</span></summary>' +
     '<div id="onlineList" style="font-size:var(--fs-1);margin:4px 0;max-height:52px;overflow:auto"></div>' +
     '<div id="talkToday" class="muted" style="font-size:var(--fs-1);margin-top:2px"></div>' +
+    '<label class="muted" style="font-size:var(--fs-1);display:inline-flex;gap:4px;align-items:center;margin-top:2px"><input type="checkbox" id="dmOn"> 彈幕（新訊息從畫面上方飄過）</label>' +
     '<div id="talkLog"style="max-height:min(150px,16vh);overflow:auto;font-size:var(--fs-2);border-top:var(--bw-s) dashed var(--line);padding-top:4px"></div>' +
     '<div class="row" style="margin-top:4px"><input id="talkIn" maxlength="200" placeholder="在' + ERG_PRES.PANEL_NAME + '說一句（全班看得到）" aria-label="在' + ERG_PRES.PANEL_NAME + '說一句"><button id="talkSend" class="ghost" title="送出到' + ERG_PRES.PANEL_NAME + '">送</button></div>' +
     '<div id="talkHint" class="muted" style="font-size:var(--fs-1);margin-top:2px">' + ERG_PRES.PANEL_HINT + '</div></details>';
@@ -141,6 +155,7 @@ if (typeof window !== 'undefined') window.ERG_PRES = ERG_PRES;
   }
   function setToday() { var el = $('talkToday'), d = '📅 今天 ' + ERG_PRES.dayLabel(Date.now()); if (el && el.textContent !== d) el.textContent = d; }   /* 台北時間的今天，固定在清單上方 */
   function renderTalk(v) {
+    try { dmFeed(v); } catch (e) {}
     var el = $('talkLog'); if (!el) return; var keys = Object.keys(v).sort(function (a, b) { return Number(v[a].t) - Number(v[b].t); });
     var nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 30;
     if (talkSeen >= 0 && keys.length > talkSeen && !$('socialDet').open) $('talkNew').style.display = ''; talkSeen = keys.length;
@@ -154,11 +169,36 @@ if (typeof window !== 'undefined') window.ERG_PRES = ERG_PRES;
     fdb.ref('er/' + APP.SESS + '/talk').push({ sid: APP.me.sid, name: st.name, code: st.code, loc: st.loc, text: text.slice(0, 200), t: firebase.database.ServerValue.TIMESTAMP });
     inp.value = '';
   }
+  /* ───── 10-28 彈幕（2D；3D 之後再做）：蓋在舞台上方一條窄帶，pointer-events 全關所以不擋點擊；三條軌道，全忙就略過 ───── */
+  var dmOn = true, dmSeen = {}, dmFirst = true, dmLane = [0, 0, 0], DM_H = 24;
+  try { dmOn = localStorage.getItem('erg2:danmaku') !== '0'; } catch (e) {}
+  var dmBox = $('dmOn'); if (dmBox) { dmBox.checked = dmOn; dmBox.onchange = function () { dmOn = dmBox.checked; try { localStorage.setItem('erg2:danmaku', dmOn ? '1' : '0'); } catch (e) {} if (!dmOn) { var L = $('danmaku'); if (L) L.innerHTML = ''; } }; }
+  function dmLayer() {
+    var L = $('danmaku'); if (L) return L; var host = $('stage') || $('sceneBox'); if (!host) return null;
+    L = document.createElement('div'); L.id = 'danmaku'; L.setAttribute('aria-hidden', 'true');
+    L.style.cssText = 'position:absolute;left:0;right:0;top:' + ($('stage') ? '46' : '6') + 'px;height:' + (DM_H * 3 + 6) + 'px;overflow:hidden;pointer-events:none;z-index:20';
+    host.appendChild(L); return L;
+  }
+  function dmShow(text) {
+    var L = dmLayer(); if (!L || !L.animate) return; var now = Date.now(), lane = ERG_PRES.pickLane(dmLane, now); if (lane < 0) return;
+    var el = document.createElement('span'); el.textContent = text;
+    el.style.cssText = 'position:absolute;top:' + (lane * DM_H + 2) + 'px;left:0;white-space:nowrap;font-size:var(--fs-2,14px);font-weight:700;color:#fff;background:rgba(33,37,41,.72);padding:1px 10px;border-radius:12px;pointer-events:none;will-change:transform';
+    L.appendChild(el); var w = el.offsetWidth, W = L.clientWidth || 600, dur = Math.max(7000, (W + w) * 11);   /* 約每秒 90px，至少 7 秒 */
+    dmLane[lane] = now + (w + 40) / (W + w) * dur;   /* 尾巴離開起點之後，這條軌道才再給下一則 */
+    var a = el.animate([{ transform: 'translateX(' + W + 'px)' }, { transform: 'translateX(' + (-w) + 'px)' }], { duration: dur, easing: 'linear' });
+    a.onfinish = a.oncancel = function () { if (el.parentNode) el.parentNode.removeChild(el); };
+  }
+  function dmFeed(v) {
+    var keys = ERG_PRES.freshKeys(dmSeen, v, Date.now(), dmFirst); dmFirst = false;
+    var ae = document.activeElement; if (ae && /^(INPUT|TEXTAREA)$/.test(ae.tagName) && ae.id !== 'talkIn' && ae.id !== 'dmOn') return;   /* 楊老師 10-28「照建議」：學生正在打字（訪談、紀錄、結論）時不飄，免得分心 */
+    if (!dmOn || document.hidden) return; try { if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return; } catch (e) {}
+    keys.slice(-3).forEach(function (k, i) { var line = ERG_PRES.danmakuLine(v[k], APP.me.sid); if (line) setTimeout(function () { dmShow(line); }, i * 900); });
+  }
   $('talkSend').onclick = send;
   $('talkIn').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); send(); } });
   document.addEventListener('visibilitychange', function () { if (!document.hidden) beat(); });
   /* 登入完成後才開始；房間變動（換房）時更新 */
   var started = false, lastLoc = '';
   setInterval(function () { setToday(); if (!started && APP.me.sid) { started = true; startPresence(); } var c = room(); var loc = c ? c.code + '/' + c.player.loc : ''; if (started && loc !== lastLoc) { lastLoc = loc; beat(); renderOnline(); } }, 1000);
-  window.ERG_SOCIAL = { beat: beat, online: function () { return online; }, refreshOnce: refreshOnce, watching: function () { return presWatchOn; } };
+  window.ERG_SOCIAL = { dm: { feed: dmFeed, show: dmShow, on: function () { return dmOn; } }, beat: beat, online: function () { return online; }, refreshOnce: refreshOnce, watching: function () { return presWatchOn; } };
 })();
