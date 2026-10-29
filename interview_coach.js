@@ -308,6 +308,8 @@
       if (!requested && blocked(ctx, R, Object.assign({}, x, { _info: cd._info }))) { why = 'cooldown:' + k; continue; }
       pick = x; break;
     }
+    /* 10-29 鄭筠靜：稱讚（praise）只有一句、沒有 2、3 級。畫面上顯示稱讚時按「給我例子／示範一下」，會再挑到同一句稱讚，看起來沒反應。求助時不挑稱讚，改走下面的通用方向 */
+    if (requested && pick && pick.variant === 'praise') pick = null;
     if (!pick && requested) {   /* 求助但沒有特別的事：給通用方向 */
       var P = R.personas[ctx.pid], turns = Array.isArray(ctx.turns) ? ctx.turns : [];
       var vars = cd.A ? cd.A.vars : null;

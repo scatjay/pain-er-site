@@ -152,6 +152,7 @@
     var html = '<div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0">🤖 助教</h2><button class="mini only-m" id="cClose">收起 ▾</button></div><div class="muted">只看得到<b>你自己</b>的訪談；每句附出處，沒有就叫你回去問。' + (A.local ? '<br><b>本機測試：固定示範答案，不呼叫模型。</b>' : '') + '</div>' +
       '<div class="row"><button class="mini" id="cNext">🧭 幫我往下一步</button><button class="mini" id="cTour">教我怎麼用</button><button class="mini" id="cDemo">🎬 看助教做一次</button></div>' +
       '<div class="meta">現在卡在：第 ' + step.step + ' 步「' + esc(step.title) + '」。今天還能問助教 <b id="cLeft">' + left + '</b> 次（含提示與課程問答）。</div>' +
+      '<div id="qrSb"></div>' +
       '<label>我已經還原的人物誌：<select id="cPersonas" style="width:auto"><option value="0">0 位</option><option value="1">1 位</option><option value="2">2 位以上</option></select></label>' +
       '<div class="chatbox"><b>💬 跟助教聊聊</b><div class="muted">幫你「看懂」或「問得出口」，不會替你寫格子。一次只聊一件事，一段最多 ' + CHAT_MAX + ' 輪（目前第 <b id="cTurn">' + (CHATN >= CHAT_MAX ? CHAT_MAX : CHATN + 1) + '</b> 輪）。</div>' +
       '<div class="row"><button class="mini chip" data-chip="這個詞（準則）是什麼意思？舉我手上的例子。">這是什麼意思？</button><button class="mini chip" data-chip="我不知道該怎麼問這位人物，幫我想想。">我不知道怎麼問</button><button class="mini chip" data-chip="我想問的是：">幫我把問題改成開放式</button></div>' +
@@ -159,6 +160,16 @@
       '<label>問整門課（≤' + ASK_MAX + ' 字）<textarea id="cAsk" maxlength="' + ASK_MAX + '" placeholder="例如：嚴重性評分怎麼打？人物誌和故事板差在哪？"></textarea></label><div class="row"><button class="mini" id="cCourse">問</button></div>' +
       '<div id="cLog">' + LOG.slice(-8).map(bubble).join('') + '</div>';
     if (box.dataset.sig !== html) { var tc = $('cChat'), keepC = tc ? tc.value : '', ta = $('cAsk'), keep = ta ? ta.value : '', st0 = box.scrollTop, atEnd = st0 > 0 && st0 + box.clientHeight >= box.scrollHeight - 8; box.innerHTML = html; box.scrollTop = atEnd ? box.scrollHeight : st0;   /* 換內容會把抽屜捲回最上面：保留原本位置（原本在最底就留在最底） */ box.dataset.sig = html; if ($('cAsk')) $('cAsk').value = keep; if ($('cChat')) $('cChat').value = keepC; if ($('cPersonas')) $('cPersonas').value = String(Math.min(2, Number(S.personas) || 0)); bind(); }
+    mountQuota();
+  }
+  /* 10-29 臨時提高上限：名額（每人每日 coachPerDay，由 Firebase 規則、前端、助教後端三處各擋一次）用完時鈕變醒目。助教名額是全班同一個數字，沒有個別提高；這裡把需求記給老師 */
+  function mountQuota() {
+    var h = $('qrSb'), QR = window.ERG_QUOTA; if (!h || !QR || !A) return;
+    try {
+      QR.mount(h, { where: 'sb', blocked: function () { return coachLeft(A.S.coachUsed, A.S.cfg) <= 0; },
+        getCtx: function () { var S = A.S, pl = S.player || {}; return { sid: S.sid, cls: pl.cls || '', name: pl.name || '', sess: S.sess, room: A.code, used: S.coachUsed, coachCap: S.cfg.coachPerDay,
+          db: (!A.local && window.firebase && window.firebase.database) ? window.firebase.database() : null, ua: navigator.userAgent }; } });
+    } catch (e) { /* 申請鈕出錯不能影響助教 */ }
   }
   function bubble(m) {
     if (m.q) return '<div class="bub q"><div class="meta">我問（' + esc(m.label) + (m.slot ? '・第 ' + m.slot + ' 格' : '') + '）</div>' + esc(m.ask || '') + '</div>';

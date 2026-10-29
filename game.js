@@ -192,6 +192,8 @@
     var PHONE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
     var popupHelp = '瀏覽器擋住了 Google 的登入視窗。請再按一次「用 Google 登入」。還是沒有跳出來：iPhone 到「設定 → Safari」把「阻擋彈出式視窗」關掉再回來按，或改用 Chrome 開這個網址。';
     if (INAPP) authMsg(inappMsg);
+    /* 10-29 陳安柔：故事板按「回去訪談」整頁跳到大廳，Firebase 還在還原登入的那一兩秒，畫面先停在『用 Google 登入』，看起來像要重新登入。還原完成之前先說明、鈕先停用。 */
+    if (!INAPP) { $('googleBtn').disabled = true; authMsg('正在確認你有沒有登入過…（不用重新登入，請稍等）'); }
     $('googleBtn').onclick = function () {
       if (INAPP) { authMsg(inappMsg); return; }
       authMsg('登入中…（會跳出 Google 的視窗）');
@@ -208,6 +210,7 @@
     var devsid = (location.search.match(/[?&]devsid=([A-Za-z0-9_-]{3,16})/) || [])[1];
     if (devsid && /^(127\.0\.0\.1|localhost)$/.test(location.hostname)) { var go = function () { finishLogin(devsid, '其他', devsid.toLowerCase() + '@test.local', '測試' + devsid, (AUTH.currentUser || {}).uid || null); }; AUTH.signInAnonymously().then(go, function () { go(); }); }
     AUTH.onAuthStateChanged(function (user) {
+      $('googleBtn').disabled = false;
       if (!user) { setAuthUi('google'); if (!INAPP && !redirFail && !redirBack) authMsg(''); show('login'); return; }
       var email = user.email || ('anon-' + user.uid.slice(0, 6) + '@test.local');
       firebase.database().ref('er/users/' + user.uid).once('value', function (s) {
@@ -397,13 +400,18 @@
   /* 10-28 楊老師：有開啟閱讀當週教材的成就。大廳「本週教材」連結；點開記在本機（week_materials.js），成就「翻開本週教材」讀它 */
   function syncMats() { try { var M = window.ERG_MATS; if (M && APP.me.sid) window.ERG_MY_MATS = M.weeksOpened(localStorage, APP.me.sid); } catch (e) {} }
   function matsHtml() {
-    var M = window.ERG_MATS; if (!M || !APP.me.sid || !w8Started()) return ''; var ls = M.links('w8', APP.me.cls); if (!ls.length) return '';
-    var done = M.openedIds(localStorage, APP.me.sid, 'w8');
-    return '<div class="card" id="matCard" style="margin:8px 0 0"><b>📖 本週教材（W8）</b><span class="muted" style="font-size:var(--fs-1)">　打開讀一讀，會拿到成就「翻開本週教材」（只記有打開）</span><div style="display:flex;flex-direction:column;gap:4px;margin-top:6px">' +
-      ls.map(function (l) { return '<a class="ghost" data-mat="' + l.id + '" href="' + l.url + '" target="_blank" rel="noopener" style="display:block;padding:6px 8px">' + (done.indexOf(l.id) >= 0 ? '✓ ' : '') + esc(l.title) + '</a>'; }).join('') + '</div></div>';
+    var M = window.ERG_MATS; if (!M || !APP.me.sid) return '';
+    function list(wk) { var ls = M.links(wk, APP.me.cls); if (!ls.length) return ''; var done = M.openedIds(localStorage, APP.me.sid, wk);
+      return ls.map(function (l) { return '<a class="ghost" data-mat="' + l.id + '" data-wk="' + wk + '" href="' + l.url + '" target="_blank" rel="noopener" style="display:block;padding:6px 8px">' + (done.indexOf(l.id) >= 0 ? '✓ ' : '') + esc(l.title) + '</a>'; }).join(''); }
+    var h = '', cur = w8Started() ? list('w8') : '';
+    if (cur) h += '<div class="card" id="matCard" style="margin:8px 0 0"><b>📖 本週教材（W8）</b><span class="muted" style="font-size:var(--fs-1)">　打開讀一讀，會拿到成就「翻開本週教材」（只記有打開）</span><div style="display:flex;flex-direction:column;gap:4px;margin-top:6px">' + cur + '</div></div>';
+    var w7 = list('w7'), w6 = list('w6');
+    if (w7 || w6) h += '<details class="card" id="matOld" style="margin:8px 0 0"><summary><b>📚 往週教材（W6、W7）</b><span class="muted" style="font-size:var(--fs-1)">　補讀也會拿到成就</span></summary><div style="display:flex;flex-direction:column;gap:4px;margin-top:6px">'
+      + (w7 ? '<b style="font-size:var(--fs-1)">W7</b>' + w7 : '') + (w6 ? '<b style="font-size:var(--fs-1)">W6</b>' + w6 : '') + '</div></details>';
+    return h;
   }
   function bindMats(card) {
-    Array.prototype.forEach.call(card.querySelectorAll('[data-mat]'), function (a) { a.addEventListener('click', function () { try { window.ERG_MATS.record(localStorage, APP.me.sid, 'w8', a.getAttribute('data-mat')); syncMats(); if (a.textContent.indexOf('✓') !== 0) a.textContent = '✓ ' + a.textContent; } catch (e) {} }); });
+    Array.prototype.forEach.call(card.querySelectorAll('[data-mat]'), function (a) { a.addEventListener('click', function () { try { window.ERG_MATS.record(localStorage, APP.me.sid, a.getAttribute('data-wk') || 'w8', a.getAttribute('data-mat')); syncMats(); if (a.textContent.indexOf('✓') !== 0) a.textContent = '✓ ' + a.textContent; } catch (e) {} }); });
   }
   function w8Started() { var q = location.search.match(/[?&]w8=(0|1)/); if (q) return q[1] === '1'; return Date.now() >= W8_START; }
   window.ERG_W8_ON = w8Started;   /* 10-27：成就分頁用它決定哪一組單元排最前面、展開 */
@@ -460,7 +468,9 @@
         (e.ev.next ? '<div id="lobbyNext" style="margin:6px 0;padding:6px 10px;border:var(--bw) solid var(--ink);border-radius:var(--r-m);background:var(--yellow);color:var(--ink-fixed);font-size:var(--fs-3)"><b>下一步</b>　' + esc(e.ev.next.text) + '</div>' : '') +
         '<details id="lobbyCk"' + (window.innerWidth >= 900 && !e.ev.passed ? ' open' : '') + '><summary style="cursor:pointer;font-size:var(--fs-2)" class="muted">六個檢核點要做什麼（完成 ✔、還沒 ✘）</summary>' + window.ERG_CHECKPOINTS.listHtml(e.ev, { compact: true }) + '</details></details>';
       var ae = document.activeElement; if (ae && /^gr_[abc]$/.test(ae.id || '')) { /* 正在寫回應：不重畫，免得字被洗掉、游標跳走 */ }
-      else box.innerHTML = (window.ERG_WEEK2 ? '<div class="wkBox">' + week2Html() + '</div>' : '') + '<div class="wkBox">' + w1 + '</div>';   /* W7、W6 同一層、樣式一致、預設都收合（w8Started 之後） */
+      else { var dOpen = {}, dAll = box.querySelectorAll('details'); Array.prototype.forEach.call(dAll, function (d, i) { dOpen[d.id || ('#' + i)] = d.open; });   /* 10-29 彭安妮：大廳每隔幾秒重畫，打開的面板（W6 檢核點、審核紀錄…）被洗回收合。重畫前記住每個 details 開著沒，畫完還原 */
+      box.innerHTML = (window.ERG_WEEK2 ? '<div class="wkBox">' + week2Html() + '</div>' : '') + '<div class="wkBox">' + w1 + '</div>';   /* W7、W6 同一層、樣式一致、預設都收合（w8Started 之後） */
+      Array.prototype.forEach.call(box.querySelectorAll('details'), function (d, i) { var k = d.id || ('#' + i); if (dOpen[k] !== undefined) d.open = dOpen[k]; }); }
       bindWeek2();
       var wb = $('week2Box'); if (wb && wb.tagName === 'DETAILS') wb.ontoggle = function () { week2Open = wb.open; };
     }

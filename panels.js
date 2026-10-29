@@ -16,7 +16,9 @@
   P.renderAll = function () { ['clue', 'intv', 'cards', 'concl', 'disc', 'cp', 'events'].forEach(P.render); };
   P.render = function (t) { ({ clue: renderClue, intv: renderIntv, cards: renderCards, concl: renderConcl, disc: renderDisc, cp: renderCp, events: renderEvents, ach: renderAch })[t](); };
   /* 成就分頁：自己的指標與徽章＋班級「誰最多」（線上模式讀 er/{sess}/score；本機版只有自己） */
-  function achCtx() { var c = cur(); var cp = (window.ERG_CORE && window.ERG_CP && c) ? (function () { try { var st = window.ERG_CORE.checkpointState(c, me()); return window.ERG_CP.evaluate(st).every(function (x) { return x.ok; }); } catch (e) { return false; } })() : false; return { cpAllOk: cp, shift: c && c.world && c.world.shift, cases: casesTried(), reports: reportsMade(), fb: fbMine(), keep: keptBadges(), sb: window.ERG_MY_SBD || null, prevSk: prevW8Sk() }; }
+  /* 10-29：筆記卡存在畫布（手機是 room.mcards），player.cards 從來沒人寫入 → 便利貼大師與「便利貼最多」永遠 0；改數自己記的卡 */
+  function myCardCount() { try { return L.listMarkers(RM.markerEls()).filter(function (m) { return String(m.author) === String(me()); }).length; } catch (e) { return 0; } }
+  function achCtx() { var c = cur(); var cp = (window.ERG_CORE && window.ERG_CP && c) ? (function () { try { var st = window.ERG_CORE.checkpointState(c, me()); return window.ERG_CP.evaluate(st).every(function (x) { return x.ok; }); } catch (e) { return false; } })() : false; return { cards: myCardCount(), cpAllOk: cp, shift: c && c.world && c.world.shift, cases: casesTried(), reports: reportsMade(), fb: fbMine(), keep: keptBadges(), sb: window.ERG_MY_SBD || null, prevSk: prevW8Sk() }; }
   /* 10-27 W8 技能：上次已發布的等級（等級不倒退） */
   function prevW8Sk() { try { var s = window.ERG_MY_SCORE || {}; return { story: s.skStory, source: s.skSource }; } catch (e) { return {}; } }
   /* 10-15：成就是照『現在這間房』的紀錄算的，換案例開新房間會歸零；把之前已發布的成就帶回來，已拿到的不收回 */
@@ -199,6 +201,7 @@
       var live = liveReady();
       if (sel.av.level !== 'blocked' && APP.online) html += '<div class="card" id="chatBox" style="margin-top:6px"><div class="row"><b style="flex:1">💬 即時訪談</b><span id="chatStat" class="muted" style="font-size:var(--fs-1)">' + (live ? '連線中' : '目前離線') + '</span></div>' +
         '<div id="icBox"></div><div class="row" style="margin:2px 0"><button type="button" class="ghost" id="icAsk" style="font-size:var(--fs-1)">🧭 助教</button></div><div id="icChat"></div><div id="chatLog" style="max-height:260px;overflow:auto;font-size:var(--fs-3);margin:6px 0;padding:4px 0;border-top:var(--bw-s) dashed var(--line)"></div>' +
+        '<div id="qrLive"></div>' +
         '<div class="row"><input id="chatIn" maxlength="300" placeholder="' + (live ? '問 ' + esc(ent.name) + ' 一個問題（Enter 送出）' : '即時訪談離線：老師的電腦沒開，請用下面的指令貼到 Gemini') + '"' + (live ? '' : ' disabled') + '><button id="chatSend"' + (live ? '' : ' disabled') + '>送出</button></div></div>';
       if (sel.av.level !== 'blocked') html += '<details' + (APP.online && live ? '' : ' open') + ' style="margin-top:6px"><summary class="muted" style="cursor:pointer;font-size:var(--fs-2)">' + (APP.online ? '備援：' : '') + '產生訪談指令，貼到 Gemini 訪談</summary><button id="genP" style="margin-top:6px">產生訪談指令</button><div id="pOut"></div></details>';
     } else {
@@ -346,6 +349,17 @@
     var c = cur(), existing = recFor(ent.pid) >= 0 ? player().interviews[recFor(ent.pid)] : null, recId = existing ? existing.id : null;
     if (c.chatOff) { try { c.chatOff(); } catch (e) {} c.chatOff = null; }
     var lastTurns = [];   /* 成就用：這段對話目前的內容（送出下一題時拿對方上一句來比） */
+    /* 10-29 臨時提高上限：對話區旁的申請鈕＋「臨時提高中（到幾點）」。被個人每小時／每日額度擋住時（capKind）鈕改成醒目樣式。
+       liveq 是代理程式寫在 sbx/{場次}/coach/{學號}/liveq 的本人專屬節點（只有本人與老師讀得到），這裡只讀、不寫。 */
+    try {
+      var QR = window.ERG_QUOTA;
+      if (QR) {
+        if (c._qrOff) { try { c._qrOff(); } catch (e) {} c._qrOff = null; }
+        if (APP.online && window.firebase && window.firebase.database) c._qrOff = QR.watchLiveq(window.firebase.database(), APP.SESS, me());
+        QR.mount($('qrLive'), { where: 'live', blocked: function () { return !!QR.capKind(lastTurns[lastTurns.length - 1]); },
+          getCtx: function () { var m = APP.me || {}; return { sid: me(), cls: m.cls || '', name: m.name || '', sess: APP.SESS, room: c.code, db: (APP.online && window.firebase && window.firebase.database) ? window.firebase.database() : null, ua: navigator.userAgent }; } });
+      }
+    } catch (e) { /* 申請鈕出錯不能影響訪談 */ }
 
     /* 10-27 訪談 AI 助教（第 1 階段：只用規則，在瀏覽器裡跑，不呼叫模型、不新增資料庫寫入）。規則與句庫在 interview_coach.js／interview_coach_rules.js。
        自動出手只給第 1 級；學生按「給我例子」「示範一下」才給第 2、3 級。已出過的提示記在這台瀏覽器（localStorage），換人或換房不重複。 */
@@ -379,7 +393,7 @@
         var pp = ((c.world && c.world.personas) || {})[ent.pid] || {};
         var ctl = c._icChatCtl;
         if (!ctl || ctl._sid !== me() || ctl._room !== c.code) {
-          ctl = c._icChatCtl = window.ERG_ICHAT.create({ db: window.firebase.database(), sess: APP.SESS, sid: me(), room: c.code, getPersona: function () { return c._icChatPersona || {}; } });
+          ctl = c._icChatCtl = window.ERG_ICHAT.create({ db: window.firebase.database(), sess: APP.SESS, sid: me(), cls: (APP.me || {}).cls || '', name: (APP.me || {}).name || '', room: c.code, getPersona: function () { return c._icChatPersona || {}; } });
           ctl._sid = me(); ctl._room = c.code;
         }
         c._icChatPersona = { pid: ent.pid, name: ent.name, title: pp.title || '' };
@@ -400,6 +414,7 @@
       logEl.scrollTop = logEl.scrollHeight;
       if (recId && turns.some(function (t) { return t.role === 'a' && t.status === 'ok'; })) { var ix2 = recFor(ent.pid); if (ix2 >= 0 && !CORE.getLink(player().links, player().interviews[ix2].id)) { player().links[CORE.linkKey(player().interviews[ix2].id)] = liveLink(player().interviews[ix2].id); save(); var lk = $('lnk'); if (lk) lk.value = CORE.getLink(player().links, player().interviews[ix2].id); } }
       icRun();
+      try { if (window.ERG_QUOTA) window.ERG_QUOTA.refreshAll(); } catch (e) {}   /* 最後一則是額度用完的回覆 → 申請鈕變醒目 */
       var st = $('chatStat'); if (st) st.textContent = liveReady() ? ('連線中・' + turns.filter(function (t) { return t.role === 'u'; }).length + ' 題') : liveLabel();
     }
     if (recId) { var ref = chatRef(recId), cb = function (s) { draw(s.val()); }; ref.on('value', cb); c.chatOff = function () { ref.off('value', cb); }; } else draw(null);

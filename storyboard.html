@@ -7,8 +7,10 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap">
 <style>
 /* 風格沿用 index.html 的 :root：粗黑框、手繪圓角、網點背景；顏色全用變數，亮暗兩套 */
-:root{--bg:#eaf4fb;--dot:#cfe3f1;--panel:#fff;--fg:#1e1e1e;--muted:#59656d;--ink:#1e1e1e;--pop:#ff6b4a;--yellow:#ffd43b;--mint:#b2f2bb;--sky:#a5d8ff;--bad:#c92a2a;--ok:#1b5e2c;--line:#cfd8de;--bw:3px;--bw-s:2px;--r-m:10px;--r-hand:5px 7px 2px 2px;--sh:3px;--sh-l:6px;--ct:#3d6fe0;--soft-y:color-mix(in srgb,var(--yellow) 26%,var(--panel));--soft-r:color-mix(in srgb,var(--pop) 16%,var(--panel))}
+:root{--bg:#eaf4fb;--dot:#cfe3f1;--panel:#fff;--fg:#1e1e1e;--muted:#59656d;--ink:#1e1e1e;--pop:#ff6b4a;--yellow:#ffd43b;--mint:#b2f2bb;--sky:#a5d8ff;--bad:#c92a2a;--ok:#1b5e2c;--line:#cfd8de;--bw:3px;--bw-s:2px;--r-m:10px;--r-hand:5px 7px 2px 2px;--sh:3px;--sh-l:6px;--ct:#3d6fe0;--soft-y:color-mix(in srgb,var(--yellow) 26%,var(--panel));--soft-r:color-mix(in srgb,var(--pop) 16%,var(--panel));--soft-g:color-mix(in srgb,var(--mint) 38%,var(--panel))}
 @media (prefers-color-scheme:dark){:root{--bg:#10191f;--dot:#1b2a33;--panel:#18262e;--fg:#e8eff2;--muted:#9fb0b9;--ink:#e8eff2;--pop:#ff8a70;--yellow:#e0b82a;--mint:#2f6b3f;--sky:#2a557a;--bad:#ff8787;--ok:#69db7c;--line:#2c3f4a;color-scheme:dark}}
+/* 10-29：深色模式下，寫死亮底的區塊（stbox／stcard／stbadge）文字跟著變亮色 → 白底白字；分頁鈕底色是 --panel 但字固定深色。亮底區塊字固定深色，跟著 --panel 的鈕字用 --fg */
+.stbox,.stbox summary,.stbox select,.stcard,.stcard .muted,.stbox .muted,.stbadge{color:#1e1e1e}.stbox .muted,.stcard .muted{color:#59656d}.tabs button{color:var(--fg)}.tabs button.on{color:var(--bg)}.fragpick select{color:#1e1e1e}@media (prefers-color-scheme:dark){span.chip,button.chip,.chip .x{color:var(--fg)}}
 *{box-sizing:border-box}
 html,body{margin:0}
 body{background:var(--bg);background-image:radial-gradient(var(--dot) 1.5px,transparent 1.5px);background-size:18px 18px;color:var(--fg);font:15px/1.6 "Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif}
@@ -137,14 +139,14 @@ mark.pain{background:none;color:var(--bad);font-weight:900;text-decoration:under
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-<script src="er_firebase.js?v=202610280048"></script>
-<script src="local_db.js?v=202610280048"></script>
-<script src="remote_db.js?v=202610280048"></script>
+<script src="er_firebase.js?v=202610291455"></script>
+<script src="local_db.js?v=202610291455"></script>
+<script src="remote_db.js?v=202610291455"></script>
 <script>document.addEventListener("click",function(e){var f=e.target.closest&&e.target.closest("#coachFab");if(f){document.body.classList.add("coach-open");f.classList.remove("has-new");}var c=e.target.closest&&e.target.closest("#cClose");if(c)document.body.classList.remove("coach-open");});</script>
-<script src="sb_core.js?v=202610280048"></script>
-<script src="sb_store.js?v=202610280048"></script>
-<script src="sb_coach.js?v=202610280048"></script>
-<script src="sb_starts.js?v=202610280048"></script>
-<script src="sb_ui.js?v=202610280048"></script>
+<script src="sb_core.js?v=202610291455"></script>
+<script src="sb_store.js?v=202610291455"></script>
+<script src="quota_request.js?v=202610291455"></script><script src="sb_coach.js?v=202610291455"></script>
+<script src="sb_starts.js?v=202610291455"></script>
+<script src="sb_ui.js?v=202610291455"></script>
 </body>
 </html>

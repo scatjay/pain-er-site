@@ -24,11 +24,11 @@
 
   /* 控制器：opts { db, sess, sid, room, now, getPersona, limit } ；db 是 firebase.database()（測試時可換成假的） */
   function create(opts) {
-    opts = opts || {}; var now = opts.now || function () { return Date.now(); }, st = { turn: 0, pid: '', busy: false };
+    opts = opts || {}; var now = opts.now || function () { return Date.now(); }, st = { turn: 0, pid: '', busy: false, lim: 0 };
     function base(p) { return opts.db.ref('sbx/' + opts.sess + '/' + p); }
     function limit() {
-      if (typeof opts.limit === 'number') return Promise.resolve(opts.limit);
-      return opts.db.ref('sbops/config/coachPerDay').once('value').then(function (s) { var v = Number(s.val()); return v > 0 ? v : DEFAULT_LIMIT; }, function () { return DEFAULT_LIMIT; });
+      if (typeof opts.limit === 'number') return Promise.resolve(st.lim = opts.limit);
+      return opts.db.ref('sbops/config/coachPerDay').once('value').then(function (s) { var v = Number(s.val()); return st.lim = (v > 0 ? v : DEFAULT_LIMIT); }, function () { return st.lim = DEFAULT_LIMIT; });
     }
     function reset(pid) { st.turn = 0; st.pid = pid || ''; }
     function send(text) {
@@ -60,7 +60,7 @@
         ref.on('value', fn); timer = setTimeout(function () { fin(null); }, opts.waitMs || WAIT_MS);
       });
     }
-    return { send: send, reset: reset, state: st, MAX_TURNS: MAX_TURNS };
+    return { send: send, reset: reset, state: st, MAX_TURNS: MAX_TURNS, opts: opts, limit: limit };
   }
 
   /* 畫面：放在「即時訪談」卡片裡。el 是容器；ctl 是 create() 的結果 */
@@ -73,8 +73,15 @@
         '<div class="muted" style="font-size:var(--fs-1);margin:4px 0">一次只聊一件事，一段最多 ' + MAX_TURNS + ' 輪（目前第 <b id="icTurn">' + turn + '</b> 輪），會用掉今天的助教名額。</div>' +
         '<div class="row" style="flex-wrap:wrap;gap:4px">' + CHIPS.map(function (c, i) { return '<button type="button" class="ghost" data-icchip="' + i + '" style="font-size:var(--fs-1)">' + esc(c.label) + '</button>'; }).join('') + '</div>' +
         '<div id="icChatLog" style="margin:6px 0;font-size:var(--fs-2)">' + log.slice(-6).map(function (m) { return '<div class="card" style="margin:4px 0;padding:4px 8px;' + (m.q ? 'background:var(--soft-y,#fff8db)' : '') + '"><div class="muted" style="font-size:var(--fs-1)">' + (m.q ? '我問' : '🤖 助教') + '</div>' + esc(m.text).replace(/\n/g, '<br>') + '</div>'; }).join('') + '</div>' +
-        '<div class="row"><input id="icChatIn" maxlength="' + (ASK_MAX - 40) + '" placeholder="例如：他說話很短，我不知道怎麼追問" style="flex:1"><button type="button" id="icChatGo"' + (ctl.state.turn >= MAX_TURNS ? ' disabled' : '') + '>聊</button><button type="button" class="ghost" id="icChatNew">新對話</button></div></details>';
+        '<div class="row"><input id="icChatIn" maxlength="' + (ASK_MAX - 40) + '" placeholder="例如：他說話很短，我不知道怎麼追問" style="flex:1"><button type="button" id="icChatGo"' + (ctl.state.turn >= MAX_TURNS ? ' disabled' : '') + '>聊</button><button type="button" class="ghost" id="icChatNew">新對話</button></div><div class="icqr"></div></details>';
       var d = el.querySelector('details'); if (d && opts.open) d.open = true;
+      /* 10-29 臨時提高上限：名額（每人每日 30，規則與助教後端各擋一次）用完時鈕變醒目；助教的名額是全班同一個數字，沒有「個別提高」，這裡只是把需求記給老師 */
+      try {
+        var QR = (typeof window !== 'undefined') && window.ERG_QUOTA, host = el.querySelector('.icqr'), o2 = ctl.opts || {};
+        if (QR && host) QR.mount(host, { where: 'coach', blocked: function () { var l = log[log.length - 1]; return !!(l && l.cap); },
+          getCtx: function () { return { sid: o2.sid, cls: (o2.cls || ''), name: (o2.name || ''), sess: o2.sess, room: o2.room, db: o2.db || null, coachCap: ctl.state.lim, ua: (typeof navigator !== 'undefined' ? navigator.userAgent : '') }; } });
+        if (ctl.limit && !ctl.state.lim) ctl.limit().then(function () { try { QR.refreshAll(); } catch (e2) {} }, function () {});   /* 先把名額上限讀進來，申請時才帶得出「今日上限」 */
+      } catch (e) { /* 申請鈕出錯不能影響助教 */ }
       Array.prototype.forEach.call(el.querySelectorAll('[data-icchip]'), function (b) { b.onclick = function () { var inp = el.querySelector('#icChatIn'); inp.value = CHIPS[Number(b.getAttribute('data-icchip'))].text; inp.focus(); }; });
       el.querySelector('#icChatGo').onclick = go;
       el.querySelector('#icChatIn').onkeydown = function (e) { if (e.key === 'Enter') { e.preventDefault(); go(); } };
@@ -83,7 +90,7 @@
     function go() {
       var inp = el.querySelector('#icChatIn'), v = inp.value.trim(); if (!v) return;
       var go1 = el.querySelector('#icChatGo'); go1.disabled = true; log.push({ q: true, text: v }); inp.value = ''; opts.open = true; draw();
-      ctl.send(v).then(function (a) { log.push({ q: false, text: (a && a.text) || '（沒有回答）' }); opts.open = true; draw(); });
+      ctl.send(v).then(function (a) { log.push({ q: false, text: (a && a.text) || '（沒有回答）', cap: !!(a && a.err === 'cap-user') }); opts.open = true; draw(); });
     }
     draw();
   }

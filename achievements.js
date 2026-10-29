@@ -220,7 +220,7 @@
     return {
       interviewees: ids.length, interviewIds: ids, coreOpened: keys(pried).length, interviewsDeep: complete, maxItems: maxItems,
       coreDone: CORE_IDS.filter(function (id) { return who[id]; }).length, coreTotal: CORE_IDS.length,
-      rooms: Math.max(keys(player.roomsSeen).length, arr(player.visited).length), cards: arr(player.cards).length, events: keys(player.seenEv).length,
+      rooms: Math.max(keys(player.roomsSeen).length, arr(player.visited).length), cards: Math.max(arr(player.cards).length, Number(ctx.cards) || 0), events: keys(player.seenEv).length,
       keep: arr(ctx.keep),   /* 10-15：之前在別間房已經解開的成就（從 score/{學號} 讀回來）；換案例開新房間時，已拿到的不會不見 */
       reports: Number(ctx.reports) || 0, fb: ctx.fb || null,   /* 10-27：回報技能與回報成就用（fbStats 的結果） */
         /* 10-23：回報過遊戲問題幾次（panels.js 的 achCtx 從本機回報紀錄算；過去的回報者由老師端補寫進 score） */
@@ -293,6 +293,8 @@
     { id: 'w8_nofill', icon: '✍️', name: '整張沒有代填', desc: '第 8 週故事板：一面故事板至少 6 格都有內容，沒有任何一格是助教代填', test: function () { return sbHas('nofill'); } },
     { id: 'w8_reclaim', icon: '♻️', name: '把示範改成自己的', desc: '第 8 週故事板：助教代填的格子，你改寫超過六成', test: function () { return sbHas('reclaim'); } },
     { id: 'w8_solo', icon: '🧱', name: '從空白開始', desc: '第 8 週故事板：一面個人板至少 6 格，從空白自己寫，沒有起點、草稿、助教代填，每格有出處並標出關鍵時刻', test: function () { return sbHas('solo'); } },
+    { id: 'w6_mat', icon: '📖', name: '翻開 W6 教材', desc: '第 6 週：從遊戲大廳的「往週教材」打開過 W6 的教材（只記有打開，不代表讀完）', test: function () { return matHas('w6'); } },
+    { id: 'w7_mat', icon: '📖', name: '翻開 W7 教材', desc: '第 7 週：從遊戲大廳的「往週教材」打開過 W7 的教材（只記有打開，不代表讀完）', test: function () { return matHas('w7'); } },
     { id: 'w8_mat', icon: '📖', name: '翻開本週教材', desc: '第 8 週：從遊戲大廳的「本週教材」打開過 W8 的教材（只記有打開，不代表讀完）', test: function () { return matHas('w8'); } },
     { id: 'w8_soloall', icon: '🏆', name: '六個主題都從空白做過', desc: '第 8 週故事板：六個主題各完成一次「從空白開始」', test: function () { return sbHas('soloall'); } },
     /* 10-27：W8 自己的成就（人物誌、關鍵時刻、猜測有標明）；判準在 skillsW8，資料來源見該處註解 */
@@ -311,13 +313,27 @@
   var UNIT_NAME = { W8: 'W8　人物誌＋UX 故事板', x: '跨單元銜接（W6／W7 → W8）', W7: 'W7　依指引再推進', W6: 'W6　第一輪訪談', all: '通用（任何時候都算）' };
   var UNIT_OF = {};
   ['first_talk', 'pry_open', 'five_talks', 'ten_talks', 'all_core', 'deep_dig', 'chatty', 'q_intro', 'q_event', 'q_why', 'q_echo', 'q_chain', 'q_key3', 'q_open10', 'explorer', 'mapper', 'notes', 'witness', 'replay', 'partner', 'thinker', 'all_cp', 'vip', 'boss', 'kid_whisperer', 'translator', 'inclusive', 'case_two', 'case_four', 'case_all'].forEach(function (id) { UNIT_OF[id] = 'W6'; });
-  ['guide_followed', 'guide_effect'].forEach(function (id) { UNIT_OF[id] = 'W7'; });
+  ['guide_followed', 'guide_effect', 'w7_mat'].forEach(function (id) { UNIT_OF[id] = 'W7'; });
+  UNIT_OF.w6_mat = 'W6';
   ['w8_together', 'w8_relay', 'w8_fill', 'w8_premiere', 'w8_askthenwrite', 'w8_allsourced', 'w8_nofill', 'w8_reclaim', 'w8_solo', 'w8_soloall', 'w8_mat', 'w8_people', 'w8_moment', 'w8_guess'].forEach(function (id) { UNIT_OF[id] = 'W8'; });
   ['w8_revisit', 'x_bring_old', 'x_thread', 'x_keyperson', 'x_ask_write', 'bug_hunter', 'idea_giver', 'clear_report'].forEach(function (id) { UNIT_OF[id] = 'x'; });   /* 10-27 楊老師：回報是跨作業的技能，回報成就歸跨單元 */
   DEFS.forEach(function (d) { d.unit = UNIT_OF[d.id] || 'all'; });
   function matHas(w) { try { return ((typeof window !== 'undefined' && window.ERG_MY_MATS) || []).indexOf(w) >= 0; } catch (e) { return false; } }   /* 10-28：week_materials.js 記的「從大廳打開過哪一週的教材」 */
   function sbHas(k) { try { return ((typeof window !== 'undefined' && window.ERG_MY_SB_ACH) || []).indexOf(k) >= 0; } catch (e) { return false; } }
-  function badges(m) { return DEFS.map(function (d) { return { id: d.id, unit: d.unit, icon: d.icon, name: d.name, desc: d.desc, ok: !!d.test(m) || (m.keep || []).indexOf(d.id) >= 0 }; }); }
+  /* 10-29 學生建議：有數量條件的成就顯示進度 (目前/目標)。只列單純「某個數字 >= 門檻」的；其餘不顯示。 */
+  var PROG = {
+    five_talks: ['interviewees', 5], ten_talks: ['interviewees', 10], all_core: ['coreDone', null], chatty: ['chatTurns', 20],
+    q_intro: ['qIntro', 3], q_event: ['qEvent', 5], q_why: ['qWhy', 3], q_echo: ['qEcho', 5], q_chain: ['qChain', 8],
+    explorer: ['rooms', 10], mapper: ['rooms', 20], notes: ['cards', 5], witness: ['events', 3], half_hour: ['playMin', 30], marathon: ['playMin', 60],
+    after_hours: ['offTurns', 5], revisit: ['offRest', 3], late_night: ['offLate', 3], case_two: ['cases', 2], case_four: ['cases', 4], case_all: ['cases', 6]
+  };
+  function progOf(id, m) {
+    var d = PROG[id]; if (!d) return null;
+    var goal = d[1] === null ? Number(m.coreTotal) || 0 : d[1], v = Number(m[d[0]]) || 0;
+    if (!goal) return null;
+    return { v: Math.min(v, goal), goal: goal };
+  }
+  function badges(m) { return DEFS.map(function (d) { return { id: d.id, unit: d.unit, icon: d.icon, name: d.name, desc: d.desc, prog: progOf(d.id, m), ok: !!d.test(m) || (m.keep || []).indexOf(d.id) >= 0 }; }); }
   function earned(m) { return badges(m).filter(function (b) { return b.ok; }); }
 
   /* 給班級排行的小物件（不含名字；名字由呼叫端補） */
@@ -362,7 +378,7 @@
     esc = esc || function (s) { return String(s); };
     var bs = badges(m), got = bs.filter(function (b) { return b.ok; }).length;
     var stat = '<div class="row" style="gap:10px;flex-wrap:wrap;font-size:var(--fs-2)">' + [['訪談過', m.interviewees + ' 人'], ['房間', m.rooms + ' 間'], ['便利貼', m.cards + ' 張'], ['事件', m.events + ' 件'], ['即時提問', m.chatTurns + ' 題'], ['累計', m.playMin + ' 分鐘']].map(function (x) { return '<span><b>' + x[0] + '</b> ' + x[1] + '</span>'; }).join('') + '</div>';
-    function gridOf(list) { return '<div class="achGrid">' + list.map(function (b) { return '<div class="ach ' + (b.ok ? 'on' : '') + '" title="' + esc(b.desc) + '"><div class="achIcon">' + b.icon + '</div><div class="achName">' + esc(b.name) + '</div><div class="achDesc">' + esc(b.desc) + '</div></div>'; }).join('') + '</div>'; }
+    function gridOf(list) { return '<div class="achGrid">' + list.map(function (b) { return '<div class="ach ' + (b.ok ? 'on' : '') + '" title="' + esc(b.desc) + '"><div class="achIcon">' + b.icon + '</div><div class="achName">' + esc(b.name) + '</div>' + (b.prog ? '<div class="achProg" style="font-size:var(--fs-1);font-weight:700">(' + (b.ok ? b.prog.goal : b.prog.v) + '/' + b.prog.goal + ')</div>' : '') + '<div class="achDesc">' + esc(b.desc) + '</div></div>'; }).join('') + '</div>'; }
     var head = '<p class="muted" style="font-size:var(--fs-1);margin:4px 0">徽章 ' + got + ' / ' + bs.length + '。這不是分數，只是記錄你在急診室裡做過的事。</p>' + stat;
     if (!o) return head + gridOf(bs);
     /* 10-27 依單元分組：本週單元排最前面並展開，前幾週收合（和大廳 W8 置頂、前週收合一致）。o：{ current:'W8'|'W7', sk:{ask,ctx}, fresh, open:{單元:true/false}（重畫前的展開狀態） } */
