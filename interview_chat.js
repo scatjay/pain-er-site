@@ -2,7 +2,8 @@
    只幫學生把模糊的困惑變成能問人物的好問題，不替學生寫任何紀錄或格子。
    走的是故事板助教同一條通道：sbx/{場次}/coach/{學號}/q/{key}（kind=course、level=2，nextLv 1＝新對話、2＝接續），
    名額共用 sbx/{場次}/coachq/{日期}/{學號}（每人每日 30 次，上限來自 sbops/config/coachPerDay），一段對話最多 5 輪。
-   後端對話記憶在助教後端的記憶體裡（tools/sb_coach_worker.py），這裡只記輪數。不改 Firebase 規則。 */
+   後端對話記憶在助教後端的記憶體裡（tools/sb_coach_worker.py），這裡只記輪數。
+   10-29 臨時提高：每日名額＝floor(coachPerDay × 老師給的倍數)，倍數讀 sbx/{場次}/coach/{學號}/boost（沒有或到期就 ×1），每次送出前現讀。 */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
   else root.ERG_ICHAT = factory();
@@ -20,15 +21,22 @@
     persona = persona || {}; var pre = persona.name ? '（我正在訪談「' + String(persona.name).slice(0, 12) + '」' + (persona.title ? '，' + String(persona.title).slice(0, 20) : '') + '）' : '';
     var t = String(text || '').trim(); return (pre + t).slice(0, ASK_MAX);
   }
+  /* 臨時提高的算法在 quota_request.js（瀏覽器是 window.ERG_QUOTA，Node 測試用 require）；兩邊都拿不到就不提高（規則那邊本來就會擋，只是沒有加成） */
+  function Qm() { try { if (typeof window !== 'undefined' && window.ERG_QUOTA) return window.ERG_QUOTA; if (typeof require === 'function') return require('./quota_request.js'); } catch (e) { /* 沒有就算了 */ } return null; }
+  function effLimit(base, boost, now) { var Q = Qm(); return Q && Q.coachLimit ? Q.coachLimit(base, boost, now) : base; }
   function keyOf(ts) { return String(Math.floor(Number(ts))).padStart ? String(Math.floor(Number(ts))).padStart(13, '0') : ('0000000000000' + Math.floor(Number(ts))).slice(-13); }
 
   /* 控制器：opts { db, sess, sid, room, now, getPersona, limit } ；db 是 firebase.database()（測試時可換成假的） */
   function create(opts) {
-    opts = opts || {}; var now = opts.now || function () { return Date.now(); }, st = { turn: 0, pid: '', busy: false, lim: 0 };
+    opts = opts || {}; var now = opts.now || function () { return Date.now(); }, st = { turn: 0, pid: '', busy: false, lim: 0, base: 0, boost: null };
     function base(p) { return opts.db.ref('sbx/' + opts.sess + '/' + p); }
     function limit() {
-      if (typeof opts.limit === 'number') return Promise.resolve(st.lim = opts.limit);
-      return opts.db.ref('sbops/config/coachPerDay').once('value').then(function (s) { var v = Number(s.val()); return st.lim = (v > 0 ? v : DEFAULT_LIMIT); }, function () { return st.lim = DEFAULT_LIMIT; });
+      var b0 = typeof opts.limit === 'number' ? Promise.resolve(opts.limit)
+        : opts.db.ref('sbops/config/coachPerDay').once('value').then(function (s) { var v = Number(s.val()); return v > 0 ? v : DEFAULT_LIMIT; }, function () { return DEFAULT_LIMIT; });
+      return b0.then(function (base) {
+        st.base = base;
+        return base > 0 ? Promise.resolve(opts.db.ref('sbx/' + opts.sess + '/coach/' + opts.sid + '/boost').once('value')).then(function (s) { return s && s.val ? s.val() : null; }, function () { return null; }) : null;
+      }).then(function (bo) { st.boost = bo || null; return st.lim = effLimit(st.base, st.boost, now()); });
     }
     function reset(pid) { st.turn = 0; st.pid = pid || ''; }
     function send(text) {
@@ -75,11 +83,12 @@
         '<div id="icChatLog" style="margin:6px 0;font-size:var(--fs-2)">' + log.slice(-6).map(function (m) { return '<div class="card" style="margin:4px 0;padding:4px 8px;' + (m.q ? 'background:var(--soft-y,#fff8db)' : '') + '"><div class="muted" style="font-size:var(--fs-1)">' + (m.q ? '我問' : '🤖 助教') + '</div>' + esc(m.text).replace(/\n/g, '<br>') + '</div>'; }).join('') + '</div>' +
         '<div class="row"><input id="icChatIn" maxlength="' + (ASK_MAX - 40) + '" placeholder="例如：他說話很短，我不知道怎麼追問" style="flex:1"><button type="button" id="icChatGo"' + (ctl.state.turn >= MAX_TURNS ? ' disabled' : '') + '>聊</button><button type="button" class="ghost" id="icChatNew">新對話</button></div><div class="icqr"></div></details>';
       var d = el.querySelector('details'); if (d && opts.open) d.open = true;
-      /* 10-29 臨時提高上限：名額（每人每日 30，規則與助教後端各擋一次）用完時鈕變醒目；助教的名額是全班同一個數字，沒有「個別提高」，這裡只是把需求記給老師 */
+      /* 10-29 臨時提高上限：名額（每人每日 30，規則與助教後端各擋一次）用完時鈕變醒目；老師同意後寫 boost，有效名額乘上倍數 */
       try {
         var QR = (typeof window !== 'undefined') && window.ERG_QUOTA, host = el.querySelector('.icqr'), o2 = ctl.opts || {};
         if (QR && host) QR.mount(host, { where: 'coach', blocked: function () { var l = log[log.length - 1]; return !!(l && l.cap); },
-          getCtx: function () { return { sid: o2.sid, cls: (o2.cls || ''), name: (o2.name || ''), sess: o2.sess, room: o2.room, db: o2.db || null, coachCap: ctl.state.lim, ua: (typeof navigator !== 'undefined' ? navigator.userAgent : '') }; } });
+          getCtx: function () { return { sid: o2.sid, cls: (o2.cls || ''), name: (o2.name || ''), sess: o2.sess, room: o2.room, db: o2.db || null, coachBase: ctl.state.base, coachCap: ctl.state.lim, ua: (typeof navigator !== 'undefined' ? navigator.userAgent : '') }; } });
+        if (o2.db && !ctl._bw) { ctl._bw = true; QR.watchBoost(o2.db, o2.sess, o2.sid); }   /* 老師給的臨時提高：監聽後對話區顯示「每日 N 次，到 HH:MM」 */
         if (ctl.limit && !ctl.state.lim) ctl.limit().then(function () { try { QR.refreshAll(); } catch (e2) {} }, function () {});   /* 先把名額上限讀進來，申請時才帶得出「今日上限」 */
       } catch (e) { /* 申請鈕出錯不能影響助教 */ }
       Array.prototype.forEach.call(el.querySelectorAll('[data-icchip]'), function (b) { b.onclick = function () { var inp = el.querySelector('#icChatIn'); inp.value = CHIPS[Number(b.getAttribute('data-icchip'))].text; inp.focus(); }; });

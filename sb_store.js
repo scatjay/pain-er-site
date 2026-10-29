@@ -138,8 +138,13 @@
       /* 每人每日助教次數（搶名額；上限來自 sbops/config） */
       reserveCoach: function (sid, cfg) {
         cfg = cfg || SB.CONFIG_DEFAULTS; var day = SB.dayKey(now());
-        return root.child('coachq/' + day + '/' + sid).transaction(SB.bumpFn(cfg.coachPerDay)).then(function (r) { return r.committed ? { ok: true, used: val(r.snapshot) } : { ok: false, reason: 'coach-limit' }; });
+        /* 有效名額＝基本名額 × 老師給的臨時提高（沒有就 ×1）；送出前現讀一次 boost，不依賴監聽有沒有先到 */
+        return Promise.resolve(root.child('coach/' + sid + '/boost').once('value')).then(function (s) { return val(s); }, function () { return null; }).then(function (b) {
+          return root.child('coachq/' + day + '/' + sid).transaction(SB.bumpFn(SB.coachLimit(cfg, b, now())));
+        }).then(function (r) { return r.committed ? { ok: true, used: val(r.snapshot) } : { ok: false, reason: 'coach-limit' }; });
       },
+      /* 老師給我的助教臨時提高：{mult, until} 或 null（規則：只有本人與老師讀得到） */
+      watchBoost: function (sid, cb) { return on(root.child('coach/' + sid + '/boost'), function (v) { cb(v && typeof v === 'object' ? v : null); }); },
       watchCoachUsed: function (sid, cb) { return on(root.child('coachq/' + SB.dayKey(now()) + '/' + sid), function (v) { cb(Number(v) || 0); }); },
       putCoachQ: function (sid, key, q) { return Promise.resolve(root.child('coach/' + sid + '/q/' + key).set(q)); },
       watchCoachAnswers: function (sid, cb) { var r = root.child('coach/' + sid + '/a'); if (r.orderByKey) r = r.orderByKey().limitToLast(20); return on(r, function (v) { cb(v || {}); }); },

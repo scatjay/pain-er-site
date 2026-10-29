@@ -101,6 +101,11 @@
     offs.push(S.store.watchOps(function (v) { var o = SB.opsState(v, NOW()); S.ops = o; S.mode = o.mode; renderTop(); renderAll(); }));
     offs.push(S.store.watchConfig(function (c) { S.cfg = c; renderTop(); renderAll(); if (CO) CO.render(); }));
     offs.push(S.store.watchCoachUsed(S.sid, function (n) { S.coachUsed = n; if (CO) CO.render(); }));
+    /* 10-29 老師給的助教臨時提高：寫進 S.boost 讓「今天還能問 N 次」跟著變；到期時再重畫一次回到基本名額 */
+    offs.push(S.store.watchBoost(S.sid, function (b) {
+      S.boost = b; try { if (window.ERG_QUOTA) window.ERG_QUOTA.setBoost(S.sid, b); } catch (e) {} if (CO) CO.render();
+      clearTimeout(S.timers.boostEnd); var b2 = SB.coachBoost(b, NOW()); if (b2) S.timers.boostEnd = setTimeout(function () { if (CO) CO.render(); }, Math.min(b2.until - NOW() + 500, 2147000000));
+    }));
     offs.push(S.store.watchMeta(CODE, S.sid, function (m) { S.personas = Number(m.personaCount) || 0; if (CO) CO.render(); }));
     watchQuota(); setInterval(function () { if (S.quota.day && S.quota.day !== SB.dayKey(NOW())) watchQuota(); }, 30000);
     refreshAside(); bindStatic(); renderAll(true);

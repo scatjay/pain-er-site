@@ -23,7 +23,8 @@
   function kindOfLevel(lv) { return (LEVELS[lv] || LEVELS[0]).kind; }
   function nextLevel(cl) { cl = Number(cl) || 0; return Math.min(4, cl + 1); }
   function fillAllowed(cells, cfg) { return SB.aiFillCount(cells) < (cfg || SB.CONFIG_DEFAULTS).fillPerBoard; }
-  function coachLeft(used, cfg) { return Math.max(0, (cfg || SB.CONFIG_DEFAULTS).coachPerDay - (Number(used) || 0)); }
+  /* 今天還能問幾次：有效名額（基本名額 × 老師給的臨時提高，沒有就 ×1）減已用；boost＝sbx/{場次}/coach/{學號}/boost */
+  function coachLeft(used, cfg, boost, now) { return Math.max(0, SB.coachLimit(cfg, boost, now) - (Number(used) || 0)); }
 
   /* ———— 「幫我往下一步」：依故事板資料判斷卡在 W8 七步驟的哪一步（規則寫在程式，不交給模型猜） ———— */
   var STEP_TITLES = ['', '進急診室問人', '還原 2 位人物誌', '挑故事片段', '照樣板排 6 格', '找出關鍵時刻', '放圖片', '看缺口回去補訪'];
@@ -147,7 +148,7 @@
 
   /* 面板 */
   function render() {
-    if (!A) return; if (Object.keys(ansCache).length) tryApply(); var S = A.S, cfg = S.cfg, left = coachLeft(S.coachUsed, cfg), box = $('coachBox'); if (!box) return;
+    if (!A) return; if (Object.keys(ansCache).length) tryApply(); var S = A.S, cfg = S.cfg, left = coachLeft(S.coachUsed, cfg, S.boost), box = $('coachBox'); if (!box) return;
     var step = whichStep(stepState());
     var html = '<div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0">🤖 助教</h2><button class="mini only-m" id="cClose">收起 ▾</button></div><div class="muted">只看得到<b>你自己</b>的訪談；每句附出處，沒有就叫你回去問。' + (A.local ? '<br><b>本機測試：固定示範答案，不呼叫模型。</b>' : '') + '</div>' +
       '<div class="row"><button class="mini" id="cNext">🧭 幫我往下一步</button><button class="mini" id="cTour">教我怎麼用</button><button class="mini" id="cDemo">🎬 看助教做一次</button></div>' +
@@ -162,12 +163,12 @@
     if (box.dataset.sig !== html) { var tc = $('cChat'), keepC = tc ? tc.value : '', ta = $('cAsk'), keep = ta ? ta.value : '', st0 = box.scrollTop, atEnd = st0 > 0 && st0 + box.clientHeight >= box.scrollHeight - 8; box.innerHTML = html; box.scrollTop = atEnd ? box.scrollHeight : st0;   /* 換內容會把抽屜捲回最上面：保留原本位置（原本在最底就留在最底） */ box.dataset.sig = html; if ($('cAsk')) $('cAsk').value = keep; if ($('cChat')) $('cChat').value = keepC; if ($('cPersonas')) $('cPersonas').value = String(Math.min(2, Number(S.personas) || 0)); bind(); }
     mountQuota();
   }
-  /* 10-29 臨時提高上限：名額（每人每日 coachPerDay，由 Firebase 規則、前端、助教後端三處各擋一次）用完時鈕變醒目。助教名額是全班同一個數字，沒有個別提高；這裡把需求記給老師 */
+  /* 10-29 臨時提高上限：名額（每人每日 coachPerDay，由 Firebase 規則、前端、助教後端三處各擋一次）用完時鈕變醒目。老師同意後寫 coach/{學號}/boost，有效名額＝floor(coachPerDay × 倍數)，畫面顯示「臨時提高中：每日 N 次，到 HH:MM」 */
   function mountQuota() {
     var h = $('qrSb'), QR = window.ERG_QUOTA; if (!h || !QR || !A) return;
     try {
-      QR.mount(h, { where: 'sb', blocked: function () { return coachLeft(A.S.coachUsed, A.S.cfg) <= 0; },
-        getCtx: function () { var S = A.S, pl = S.player || {}; return { sid: S.sid, cls: pl.cls || '', name: pl.name || '', sess: S.sess, room: A.code, used: S.coachUsed, coachCap: S.cfg.coachPerDay,
+      QR.mount(h, { where: 'sb', blocked: function () { return coachLeft(A.S.coachUsed, A.S.cfg, A.S.boost) <= 0; },
+        getCtx: function () { var S = A.S, pl = S.player || {}; return { sid: S.sid, cls: pl.cls || '', name: pl.name || '', sess: S.sess, room: A.code, used: S.coachUsed, coachBase: S.cfg.coachPerDay, coachCap: SB.coachLimit(S.cfg, S.boost),
           db: (!A.local && window.firebase && window.firebase.database) ? window.firebase.database() : null, ua: navigator.userAgent }; } });
     } catch (e) { /* 申請鈕出錯不能影響助教 */ }
   }
@@ -186,7 +187,7 @@
   /* 送出一則問題（本機：直接給固定答案；線上：先搶名額再寫 q，等後端回 a） */
   function ask(o) {
     var S = A.S, cfg = S.cfg, label = o.label || (LEVELS[o.level || 1] || LEVELS[1]).name;
-    if (coachLeft(S.coachUsed, cfg) <= 0) { A.toast('今天助教的名額用完了（每人每天 ' + cfg.coachPerDay + ' 次），明天 00:00 再問。'); return Promise.resolve(null); }
+    if (coachLeft(S.coachUsed, cfg, S.boost) <= 0) { A.toast('今天助教的名額用完了（每人每天 ' + SB.coachLimit(cfg, S.boost) + ' 次），明天 00:00 再問。'); return Promise.resolve(null); }
     if (o.kind === 'fill' && !fillAllowed(A.cur(), cfg)) { A.toast('這張故事板最多代填 ' + cfg.fillPerBoard + ' 格，其他格自己寫寫看。'); return Promise.resolve(null); }
     var q = buildQuestion({ kind: o.kind, level: o.level, slot: o.slot, room: A.code, board: A.S.boardName === 'me' ? 'u_' + S.sid : 'wall', ask: o.ask, cur: o.cur, step: o.step, stepTitle: o.stepTitle, nextLv: o.nextLv, t: Date.now() });
     pushLog({ q: true, label: label, slot: q.slot, ask: q.ask || (o.kind === 'next' ? '幫我往下一步' : '') });

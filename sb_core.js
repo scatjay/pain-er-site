@@ -25,6 +25,16 @@
     ['modelLite', 'modelFill'].forEach(function (k) { o[k] = typeof r[k] === 'string' && /^gemini-[a-z0-9.\-]{3,40}$/.test(r[k]) ? r[k] : CONFIG_DEFAULTS[k]; });
     return o;
   }
+  /* 10-29 助教「臨時提高上限」：老師在 sbx/{場次}/coach/{學號}/boost 存 {mult 1.5–4, until 毫秒}；沒有、倍數不合理、已到期都當作沒有。
+     有效每日名額＝floor(coachPerDay × mult)——Firebase 規則（coachq 的 .validate）、前端、助教後端（tools/sb_coach_worker.py）三處用同一個算法 */
+  function coachBoost(b, now) {
+    if (!b || typeof b !== 'object') return null; var m = Number(b.mult), u = Number(b.until);
+    if (!(m >= 1.5 && m <= 4) || !(u > (now == null ? Date.now() : Number(now)))) return null;
+    return { mult: m, until: u };
+  }
+  function coachLimit(cfg, boost, now) {
+    var base = (cfg || CONFIG_DEFAULTS).coachPerDay, b = coachBoost(boost, now); return b ? Math.floor(base * b.mult) : base;
+  }
   var TIERS = [{ gb: 9.5, mode: 'readonly' }, { gb: 8.5, mode: 'noupload' }, { gb: 7, mode: 'thumb' }];
   var STORAGE_STOP_GB = 0.9;       /* 免費方案儲存上限 1 GB；到 0.9 GB 先停止上傳 */
   var MODE_RANK = { normal: 0, thumb: 1, noupload: 2, readonly: 3 };
@@ -439,7 +449,7 @@
     emptyCell: emptyCell, normCell: normCell, normBoard: normBoard, slotKey: slotKey, contentOf: contentOf, hasContent: hasContent, needsSource: needsSource, cellStatus: cellStatus, cellChecks: cellChecks, gapMessage: gapMessage,
     splitPain: splitPain, levenshtein: levenshtein, editRatio: editRatio, band: band, bandText: bandText, authorSummary: authorSummary,
     applyEdit: applyEdit, diffPaths: diffPaths, fragments: fragments, makeDraft: makeDraft,
-    dayKey: dayKey, nextResetTs: nextResetTs, resetLabel: resetLabel, bumpFn: bumpFn, dropFn: dropFn, quotaView: quotaView, banner: banner,
+    dayKey: dayKey, nextResetTs: nextResetTs, resetLabel: resetLabel, bumpFn: bumpFn, coachBoost: coachBoost, coachLimit: coachLimit, dropFn: dropFn, quotaView: quotaView, banner: banner,
     protection: protection, opsState: opsState, canWrite: canWrite, canUploadMode: canUploadMode, loadFull: loadFull,
     fitSize: fitSize, fitToBudget: fitToBudget, dataUrlBytes: dataUrlBytes, containRect: containRect,
     CONFIG_DEFAULTS: CONFIG_DEFAULTS, config: config, erFor: erFor, aiFillCount: aiFillCount, refAuthor: refAuthor, ACH_META: ACH_META,

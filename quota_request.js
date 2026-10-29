@@ -1,14 +1,16 @@
 /* 10-29 楊老師：學生被即時訪談／助教的題數上限擋住時，要能從對話區旁邊「申請臨時提高上限」。
-   做法：不新增資料庫節點、不改 Firebase 規則——申請走既有的回報管道 er/_feedback（kind:'quota'，ctx 帶區域、原因、今日用量與上限）。
-   老師用 tools/er_ops.py quota-requests 看、boost 指令同意；同意後代理程式在該生下一次提問時把「臨時提高中」寫進他自己才讀得到的
-   sbx/{場次}/coach/{學號}/liveq（規則：只有本人與老師讀得到），這支檔案讀它並在對話區顯示到期時間。
+   申請走既有的回報管道 er/_feedback（kind:'quota'，ctx 帶區域、原因、今日用量與上限）。
+   老師用 tools/er_ops.py quota-requests 看、boost 指令同意。同意後：
+   ‧即時訪談：代理程式在該生下一次提問時把「臨時提高中」寫進 sbx/{場次}/coach/{學號}/liveq，這支檔案讀它顯示到期時間。
+   ‧助教（訪談助教、故事板助教）：boost 指令同時寫 sbx/{場次}/coach/{學號}/boost = {mult, until(毫秒)}（只有老師能寫、本人與老師讀得到），
+     每日名額＝floor(coachPerDay × mult)，由 Firebase 規則、前端、助教後端三處用同一個算法擋；這支檔案監聽它並顯示「每日 N 次，到 HH:MM」。
    每人每天最多送 3 次；送出後按鈕停用 10 分鐘。全程不用 alert／confirm／prompt。 */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
   else root.ERG_QUOTA = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
-  var VERSION = 'quota-v1-20261029', MAX_PER_DAY = 3, COOLDOWN_MS = 10 * 60 * 1000, NOTE_MAX = 80, TZ = 8 * 3600 * 1000;
+  var VERSION = 'quota-v2-20261029', MAX_PER_DAY = 3, COOLDOWN_MS = 10 * 60 * 1000, NOTE_MAX = 80, TZ = 8 * 3600 * 1000;
   var REASONS = [
     { id: 'stuck', label: '我在認真問，升級卡住了' },
     { id: 'practice', label: '想多練習' },
@@ -39,6 +41,17 @@
   function boostLabel(liveq, now) {
     var b = boostOf(liveq, now); if (!b) return '';
     return '🔼 臨時提高中：每小時 ' + b.hour + ' 題、每日 ' + b.day + ' 題，到 ' + clock(b.until, now);
+  }
+  /* 助教的臨時提高：boost = {mult 1.5–4, until 毫秒}；沒有、倍數不合理、已到期都當作沒有（與 sb_core.js 的 coachBoost／coachLimit 同一個算法，測試對照） */
+  function coachBoost(b, now) {
+    if (!b || typeof b !== 'object') return null; var m = Number(b.mult), u = Number(b.until);
+    if (!(m >= 1.5 && m <= 4) || !(u > Number(now))) return null;
+    return { mult: m, until: u };
+  }
+  function coachLimit(base, b, now) { var x = coachBoost(b, now); return x ? Math.floor(Number(base) * x.mult) : Number(base); }
+  function coachBoostLabel(base, b, now) {
+    var x = coachBoost(b, now); if (!x || !(Number(base) > 0)) return '';
+    return '🔼 臨時提高中：每日 ' + Math.floor(Number(base) * x.mult) + ' 次，到 ' + clock(x.until, now);
   }
   /* 代理程式回給學生的「被擋」文字 → 'day'（個人每日）／'hour'（個人每小時）／''（不是個人額度，例如全班額度，申請也沒用）。
      文字與 tools/er_live_guard.py（MSG_RATE_HOUR）、er_chat_daemon.py（每人每日）一致；test_quota_request.js 會鎖住 */
@@ -89,7 +102,7 @@
   }
 
   /* ───── 畫面 ───── */
-  var views = [], LQ = {}, tick = null;
+  var views = [], LQ = {}, BO = {}, tick = null, BW = {};
   function setLiveq(sid, v) { LQ[String(sid || '').toLowerCase()] = v || null; refreshAll(); }
   function getLiveq(sid) { return LQ[String(sid || '').toLowerCase()] || null; }
   /* 讀自己的 liveq；db 是 firebase.database()。回傳取消函式 */
@@ -99,13 +112,23 @@
     try { ref.on('value', fn, function () {}); } catch (e) { return function () {}; }
     return function () { try { ref.off('value', fn); } catch (e) {} };
   }
+  function setBoost(sid, v) { BO[String(sid || '').toLowerCase()] = v || null; refreshAll(); }
+  function getBoost(sid) { return BO[String(sid || '').toLowerCase()] || null; }
+  /* 助教的 boost：每個學生只監聽一次（訪談助教與故事板助教共用）；回傳取消函式 */
+  function watchBoost(db, sess, sid) {
+    if (!db || !sess || !sid) return function () {};
+    var k = sess + '|' + String(sid).toLowerCase(); if (BW[k]) return BW[k];
+    var ref = db.ref('sbx/' + sess + '/coach/' + sid + '/boost'), fn = function (s) { setBoost(sid, s && s.val ? s.val() : null); };
+    try { ref.on('value', fn, function () {}); } catch (e) { return function () {}; }
+    return BW[k] = function () { try { ref.off('value', fn); } catch (e) {} delete BW[k]; };
+  }
   function refreshAll() {
     views = views.filter(function (v) { return v.el && (v.el.isConnected !== false) && (typeof document === 'undefined' || document.body.contains(v.el)); });
     views.forEach(function (v) { try { render(v); } catch (e) {} });
     if (tick) { clearTimeout(tick); tick = null; }
     var now = Date.now(), next = 0;
     views.forEach(function (v) {
-      var c = v.opts.getCtx ? v.opts.getCtx() : {}, q = v.opts.where === 'live' ? getLiveq(c.sid) : null, b = boostOf(q, now), st = loadState(v.opts.storage || localStore(), c.sid, now), ck = check(st, now);
+      var c = v.opts.getCtx ? v.opts.getCtx() : {}, q = v.opts.where === 'live' ? getLiveq(c.sid) : null, b = v.opts.where === 'live' ? boostOf(q, now) : coachBoost(getBoost(c.sid), now), st = loadState(v.opts.storage || localStore(), c.sid, now), ck = check(st, now);
       [b ? b.until - now : 0, ck.waitMs].forEach(function (ms) { if (ms > 0 && (!next || ms < next)) next = ms; });
     });
     if (next) tick = setTimeout(refreshAll, Math.min(next + 400, 2147000000));
@@ -115,7 +138,7 @@
   function render(v) {
     var o = v.opts, el = v.el, now = (o.now || Date.now)(), ctx = o.getCtx ? (o.getCtx() || {}) : {}, store = o.storage || localStore();
     var btn = o.btnClass || 'ghost', fs = 'font-size:' + (o.fontSize || 'var(--fs-1,12px)');
-    var liveq = o.where === 'live' ? getLiveq(ctx.sid) : null, lab = boostLabel(liveq, now);
+    var liveq = o.where === 'live' ? getLiveq(ctx.sid) : null, lab = o.where === 'live' ? boostLabel(liveq, now) : coachBoostLabel(ctx.coachBase, getBoost(ctx.sid), now);
     var st = loadState(store, ctx.sid, now), ck = check(st, now);
     if (v.s.open && ck.ok && el.querySelector('.qr-form') && !v.force) return;   /* 正在打字，別重畫把游標弄丟 */
     v.force = false;
@@ -147,7 +170,7 @@
       var t = (o.now || Date.now)(), st2 = loadState(store, ctx.sid, t), ck2 = check(st2, t);
       if (!ck2.ok) { if (err) err.textContent = ck2.why === 'max' ? '今天已經送了 ' + MAX_PER_DAY + ' 次。' : '剛送過，請稍等。'; return; }
       var c2 = o.getCtx ? (o.getCtx() || {}) : {}, lq = o.where === 'live' ? getLiveq(c2.sid) : null, entry;
-      var ctx2 = { sid: c2.sid, cls: c2.cls, name: c2.name, sess: c2.sess, room: c2.room, ua: c2.ua, used: lq && lq.used != null ? lq.used : c2.used, hourCap: lq ? lq.hour : c2.hourCap, dayCap: lq ? lq.dayCap : c2.dayCap, coachCap: c2.coachCap, boosted: !!boostOf(lq, t) };
+      var ctx2 = { sid: c2.sid, cls: c2.cls, name: c2.name, sess: c2.sess, room: c2.room, ua: c2.ua, used: lq && lq.used != null ? lq.used : c2.used, hourCap: lq ? lq.hour : c2.hourCap, dayCap: lq ? lq.dayCap : c2.dayCap, coachCap: o.where !== 'live' && c2.coachBase > 0 ? coachLimit(c2.coachBase, getBoost(c2.sid), t) : c2.coachCap, boosted: o.where === 'live' ? !!boostOf(lq, t) : !!coachBoost(getBoost(c2.sid), t) };
       try { entry = buildEntry({ where: o.where, reason: v.s.reason, note: note }, ctx2, t); } catch (x) { if (err) err.textContent = x.message; return; }
       bs.disabled = true;
       Promise.resolve(o.push ? o.push(entry) : push(c2.db, store, entry)).then(function () {
@@ -172,8 +195,8 @@
     var key = opts.where + '|' + ((opts.getCtx && opts.getCtx() || {}).sid || ''), v = { id: ++seq, el: el, opts: opts, s: (MEMO[key] = MEMO[key] || { open: false, note: '', reason: 'stuck', sentMsg: '' }) };
     views.push(v); render(v); refreshAll(); return v;
   }
-  function _reset() { views = []; LQ = {}; MEMO = {}; }
+  function _reset() { views = []; LQ = {}; BO = {}; BW = {}; MEMO = {}; }
 
-  return { VERSION: VERSION, MAX_PER_DAY: MAX_PER_DAY, COOLDOWN_MS: COOLDOWN_MS, NOTE_MAX: NOTE_MAX, REASONS: REASONS, WHERE: WHERE, dayKey: dayKey, clock: clock, boostOf: boostOf, boostLabel: boostLabel,
+  return { VERSION: VERSION, MAX_PER_DAY: MAX_PER_DAY, COOLDOWN_MS: COOLDOWN_MS, NOTE_MAX: NOTE_MAX, REASONS: REASONS, WHERE: WHERE, dayKey: dayKey, clock: clock, boostOf: boostOf, boostLabel: boostLabel, coachBoost: coachBoost, coachLimit: coachLimit, coachBoostLabel: coachBoostLabel, setBoost: setBoost, getBoost: getBoost, watchBoost: watchBoost,
     capKind: capKind, loadState: loadState, check: check, recordSent: recordSent, buildEntry: buildEntry, push: push, mount: mount, watchLiveq: watchLiveq, setLiveq: setLiveq, getLiveq: getLiveq, refreshAll: refreshAll, _reset: _reset };
 });
