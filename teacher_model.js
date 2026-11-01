@@ -342,7 +342,7 @@
   function weekNoteBase(week) { week = num(week, 0); return week ? week + '/3（W' + (5 + week) + '）：二丙二乙 ' + mdOf(classStartMs('二丙', week)) + ' 起、二甲 ' + mdOf(classStartMs('二甲', week)) + ' 起（上課前一小時起算）。' : '三週累計。'; }
 
   /* 頁首導覽：兩頁互相連結，目前這頁標 aria-current；連結帶著手動選的篩選（?f=），本機測試再帶 test／now 這類參數 */
-  var NAV = [{ id: 'talk', href: 'teacher.html', name: '訪談監看' }, { id: 'sb', href: 'sb_dashboard.html', name: 'W8 故事板' }], NAV_KEEP = ['test', 'variant', 'devteacher', 'now', 'sess', 'local'];
+  var NAV = [{ id: 'talk', href: 'teacher.html', name: '訪談監看' }, { id: 'sb', href: 'sb_dashboard.html', name: 'W8 故事板' }, { id: 'px', href: 'proposal_dashboard.html', name: 'W10 提案室' }], NAV_KEEP = ['test', 'variant', 'devteacher', 'now', 'sess', 'local'];
   function navQuery(f, search, isLocal) {
     var q = []; if (f && f.manual) q.push('f=' + encodeURIComponent(num(f.week, 0) + '|' + (f.cls || '')));
     if (isLocal) NAV_KEEP.forEach(function (k) { var m = new RegExp('[?&]' + k + '=([^&]*)').exec(search || ''); if (m) q.push(k + '=' + m[1]); });

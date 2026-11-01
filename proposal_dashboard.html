@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>痛點急診室 老師後台・W10 提案室</title>
+<!-- 痛點急診室 W10「提案室」老師儀表板（唯讀）。資料與規則見 docs/PROPOSAL_ROOM_HANDOFF.md 的「老師後台」一節。
+     只有老師名單裡的 Google 帳號能進；資料庫規則本來就只讓楊老師的帳號讀 prx 底下的提案資料（其他兩個帳號會看到「讀不到」）。
+     樣式、頁首、燈號、班級對應都沿用 sb_dashboard.html（W8 故事板後台）。
+     測試：只在本機（127.0.0.1／localhost）網址帶 ?test=1 會用假資料（&variant=bad 看出事的樣子、&cls=二丙&deid=0&case=bike&open=學號&now=2026-11-10T09:00:00%2B08:00）。 -->
+<style>
+:root{--bg:#fbf7ee;--panel:#fff;--panel2:#f4eedf;--ink:#1e1e1e;--muted:#6b6b6b;--line:#d9d2c0;--ok:#2b8a3e;--okbg:#d3f9d8;--bad:#c92a2a;--badbg:#ffe3e3;--yellow:#ffe066;--onyellow:#1e1e1e;--info:#1864ab;--infobg:#d0ebff;--fs:15px}
+@media (prefers-color-scheme:dark){:root{--bg:#10191f;--panel:#18262e;--panel2:#21343f;--ink:#e8eff2;--muted:#9fb0b9;--line:#2c3f4a;--ok:#69db7c;--okbg:#173b22;--bad:#ff8787;--badbg:#4a1c1c;--yellow:#e0b82a;--onyellow:#1e1e1e;--info:#74c0fc;--infobg:#14344f;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'Noto Sans TC',system-ui,sans-serif;font-size:var(--fs);line-height:1.5}
+.wrap{max-width:1240px;margin:0 auto;padding-inline:16px;padding-block:12px 40px}
+h1{font-size:1.35em;margin:0}h2{font-size:1.08em;margin:16px 0 6px}
+.card{background:var(--panel);border:2px solid var(--ink);border-radius:12px;padding:10px 12px;margin:8px 0;min-width:0}
+.scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.95em}th,td{border-bottom:1px solid var(--line);padding:6px 6px;text-align:left;vertical-align:top}
+th{font-size:.85em;color:var(--muted);white-space:nowrap}tbody tr:hover{background:var(--panel2)}
+.muted{color:var(--muted)}.small{font-size:.85em}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.row>*{min-width:0}
+input,select,button{font:inherit;padding:6px 10px;border:2px solid var(--ink);border-radius:8px;background:var(--panel);color:var(--ink)}
+button{cursor:pointer;font-weight:700}button:hover{background:var(--panel2)}button.on,button.on:hover{background:var(--yellow);color:var(--onyellow)}button:disabled{opacity:.5;cursor:wait}
+button.ghost{border-color:var(--line);font-weight:400}button.sm{padding:3px 8px;font-size:.88em}
+a{color:var(--info)}
+.top{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.top h1{flex:1;min-width:10em}
+.kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-top:8px}
+.kpi>div{background:var(--panel);border:2px solid var(--ink);border-radius:12px;padding:6px 8px;text-align:center}
+.big{font-size:2em;font-weight:900;line-height:1.1;font-variant-numeric:tabular-nums}
+.kpi.pk{margin:6px 0 10px}.kpi.pk .big{font-size:1.7em}.kpi.pk>div.bad{border-color:var(--bad);background:var(--badbg)}.kpi.pk>div.bad .big{color:var(--bad)}.kpi.pk>div.good{border-color:var(--ok);background:var(--okbg)}
+.kpi.pk>div.txt .big{font-size:1.05em;line-height:1.5;padding-top:.35em}
+.tabs{position:sticky;top:0;z-index:5;background:var(--bg);display:flex;gap:6px;overflow-x:auto;padding:8px 0;margin-top:8px;border-bottom:2px solid var(--ink)}
+.tabs button{white-space:nowrap;flex:none}
+.stool{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0 0}.stool input{min-height:36px;min-width:7em;max-width:260px;flex:1}
+.clsbar{display:flex;gap:6px 12px;flex-wrap:wrap;align-items:center;margin-top:8px;padding:6px 10px;border:2px solid var(--line);border-radius:10px;min-height:44px;background:var(--panel)}.clsbar.during{border-color:var(--ok)}.clsbar .grow{flex:1}.clsbar .sm{min-height:32px}.clsbar .ld{display:inline-block;width:12px;height:12px;border:2px solid var(--line);border-top-color:var(--info);border-radius:50%;animation:clsspin .8s linear infinite;vertical-align:-2px;margin-right:4px}@keyframes clsspin{to{transform:rotate(360deg)}}@media (prefers-reduced-motion:reduce){.clsbar .ld{animation:none}}
+.projNote{display:none}body.proj .projNote{display:block}
+.ftnote{font-size:.85em;margin-top:16px;color:var(--muted)}.ftnote p{margin:2px 0}
+body.proj{--fs:21px}body.proj .wrap{max-width:none}body.proj .small{display:none}
+#gate{max-width:520px;margin:40px auto}#gateStatus{margin-top:8px;font-size:.9em;min-height:1.6em}
+[hidden]{display:none!important}
+@media (max-width:760px){#weekNote{display:none}#whoami{display:none}.top{gap:6px}.tabs button,.top select,.top button,.clsbar button,.stool input{min-height:40px}}
+/* SHARED-DASH-CSS:BEGIN（teacher.html 與 sb_dashboard.html 這一段必須一模一樣；test_sb_dashboard.js 逐字比對） */
+:root{--warn:#7a5200;--warnbg:#fff3bf}
+@media (prefers-color-scheme:dark){:root{--warn:#ffd43b;--warnbg:#4a3a10}}
+.dnav{display:inline-flex;gap:4px;flex-wrap:wrap;align-items:center}
+.dnav a{display:inline-flex;align-items:center;min-height:36px;padding:3px 12px;border:2px solid var(--ink);border-radius:8px;background:var(--panel);color:var(--ink);font-weight:700;text-decoration:none}
+.dnav a:hover{background:var(--panel2)}
+.dnav a[aria-current=page]{background:var(--yellow);color:var(--onyellow)}
+@media (max-width:760px){.dnav a{min-height:44px}}
+.tl{display:inline-flex;align-items:center;gap:4px;padding:0 8px;border-radius:999px;border:1px solid currentColor;font-size:.82em;font-weight:800;white-space:nowrap}
+.tl::before{content:"";width:.65em;height:.65em;border-radius:50%;background:currentColor}
+.tl.ok{background:var(--okbg);color:var(--ok)}.tl.warn{background:var(--warnbg);color:var(--warn)}.tl.bad{background:var(--badbg);color:var(--bad)}.tl.info{background:var(--infobg);color:var(--info)}
+.tl3{margin-top:6px}.tl3 .tl{margin:0 2px}
+.sg{border:2px solid var(--ink);border-left-width:8px;border-radius:10px;padding:8px 10px;margin:8px 0;background:var(--panel)}
+.sg.lv-bad{border-left-color:var(--bad)}.sg.lv-warn{border-left-color:var(--warn)}.sg.lv-info{border-left-color:var(--info)}
+.sg-h{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.sg-w{font-size:.88em;color:var(--muted);margin-top:4px}.sg-a{margin-top:4px}
+.sg .say{margin:4px 0;padding-left:8px;border-left:3px solid var(--info)}
+.sg-n,.sg-more,.sg-doc{margin-top:6px}.sg-n>summary,.sg-more>summary,.sg-doc>summary{cursor:pointer;min-height:32px;display:flex;align-items:center;color:var(--muted);font-size:.9em}
+.sg-n>div{padding:2px 0 4px;font-size:.92em;overflow-wrap:anywhere}
+.sg-empty{padding:6px 0}
+body.proj .priv{display:none!important}
+/* SHARED-DASH-CSS:END */
+.clsbtns{display:inline-flex;gap:4px;flex-wrap:wrap}.clsbtns button{min-height:36px}
+@media (max-width:760px){.clsbtns button,.top button,.clsbar button,.stool input,.chip.pick{min-height:44px}.top{gap:6px}#whoami{display:none}}
+.stool input{min-height:36px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div id="gate" class="card" hidden>
+  <h1>痛點急診室 老師後台</h1>
+  <p class="muted">W10 提案室儀表板。只有教師名單裡的 Google 帳號能進，這一頁只能看、不能改。</p>
+  <button id="gGoogle" class="on" style="font-size:1.1em">用 Google 登入</button>
+  <div id="gateStatus" class="muted" role="status"></div>
+</div>
+<div id="app" hidden>
+  <div class="top"><h1>痛點急診室 老師後台</h1><span id="dnavBox"></span>
+    <span class="clsbtns" id="clsBtns" role="group" aria-label="班級"></span>
+    <button id="deidBtn" title="學號、姓名換成代號，投影時用">去識別化：開</button><button id="projBtn" title="字放大、藏掉次要資訊">投影模式：關</button>
+    <span class="small muted" id="whoami" style="font-size:.85em"></span><button id="logoutBtn" class="ghost">登出</button></div>
+  <div class="clsbar" id="clsBar" role="status" aria-live="polite"><span id="clsNow">讀取中…</span><span class="grow"></span><span id="clsUpd" class="muted"></span><button id="clsRefresh" class="sm" title="重新讀取提案、審核、用量，並重算">立即更新</button></div>
+  <div id="root"></div>
+  <div class="ftnote"><p><b>要調整設定（助手每日次數、費用上限、模型）請在 Claude Code 跟助理說。</b>這一頁只能看、不能改。</p><p>資料來自 Firebase 專案 gen-lang-client-0556836042（提案在 prx 節點，只有楊老師的帳號讀得到）。去識別化：學號、姓名換成固定代號（學生01、02…）；學生寫的提案內容照原文顯示。「查不到」＝資料庫裡沒有這項紀錄，不是 0。</p></div>
+</div>
+</div>
+<script src="sb_core.js?v=202611011523"></script>
+<script src="proposal_core.js?v=202611011523"></script>
+<script src="teacher_model.js?v=202611011523"></script>
+<script src="proposal_dashboard.js?v=202611011523"></script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var TM = window.ERG_TMODEL, PD = window.ERG_PXDASH, esc = TM.esc;
+  var qs = new URLSearchParams(location.search), isLocal = /^(127\.0\.0\.1|localhost)$/.test(location.hostname);
+  var CASEID = window.ERG_PX.caseOf(qs.get('case'));   /* 一次看一個案例（預設 sms；?case=bike／trash 是預留的別的案例） */
+  var SESS = /^ER-\d{8}$/.test(qs.get('sess') || '') ? qs.get('sess') : PD.DEFAULT_SESS;
+  var TEACHER_EMAILS = ['scatjay@gmail.com', 'prof.chwu@mx.nthu.edu.tw', 'nthuchwu@gapp.nthu.edu.tw'];   /* 與 teacher.html 同一份名單；資料庫規則只讓第一個帳號讀 prx，其他人會看到「讀不到」 */
+  var NOWO = null, fixedNow = 0; (function () { var m = isLocal && qs.get('now'); if (m) { var t = Date.parse(m); if (isFinite(t)) NOWO = { base: t, at: Date.now() }; } })();
+  function clk() { return NOWO ? NOWO.base + (Date.now() - NOWO.at) : (fixedNow || Date.now()); }
+  var DEID = true; try { if (localStorage.getItem(TM.DEID_KEY) === '0') DEID = false; } catch (e) {}
+  if (qs.get('deid') === '0') DEID = false;
+  var PROJ = false, CLS = '', h = null, lastModel = null, loading = false;
+  function loadScript(src) { return new Promise(function (ok, no) { var s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = function () { no(new Error('載入失敗：' + src)); }; document.head.appendChild(s); }); }
+  /* 頁首導覽：和另外兩頁同一組 class（.dnav），多一個目前這頁；本機測試帶著 test／variant／now 等參數 */
+  function navDraw() {
+    var keep = []; if (isLocal) ['test', 'variant', 'now', 'sess', 'local'].forEach(function (k) { var m = new RegExp('[?&]' + k + '=([^&]*)').exec(location.search); if (m) keep.push(k + '=' + m[1]); });
+    var q = keep.length ? '?' + keep.join('&') : '';
+    $('dnavBox').innerHTML = '<nav class="dnav" aria-label="後台頁面"><a href="teacher.html' + esc(q) + '">訪談監看</a><a href="sb_dashboard.html' + esc(q) + '">W8 故事板</a><a href="proposal_dashboard.html' + esc(q) + '" aria-current="page">W10 提案室</a></nav>';
+  }
+  function clsDraw() {
+    $('clsBtns').innerHTML = ['二甲', '二乙', '二丙', '全部'].map(function (c) { return '<button data-cls="' + c + '" class="' + (c === CLS ? 'on' : '') + '" aria-pressed="' + (c === CLS) + '">' + c + '</button>'; }).join('');
+    var cc = TM.currentClass(clk()), b = TM.classBar(cc);
+    $('clsNow').innerHTML = b.nowHtml + ' <span class="muted">' + esc(b.nextText) + '</span>'; $('clsBar').classList.toggle('during', b.during);
+    $('clsUpd').innerHTML = loading ? '<span class="ld" aria-hidden="true"></span>更新中…' : (lastModel ? '上次更新 ' + PD.fmtDT(lastModel.now) : '<span class="ld" aria-hidden="true"></span>讀取中…');
+  }
+  function syncDeid() { $('deidBtn').textContent = '去識別化：' + (DEID ? '開' : '關'); $('deidBtn').classList.toggle('on', DEID); }
+  function initHeader() {
+    CLS = ['二甲', '二乙', '二丙', '全部'].indexOf(qs.get('cls')) >= 0 ? qs.get('cls') : (TM.currentClass(clk()).cls || '全部');
+    navDraw(); clsDraw(); syncDeid();
+    $('clsBtns').addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b || !b.dataset.cls) return; CLS = b.dataset.cls; clsDraw(); if (h) h.setCls(CLS); });
+    $('clsRefresh').onclick = function () { if (h) h.reload(); };
+    $('deidBtn').onclick = function () { DEID = !DEID; try { localStorage.setItem(TM.DEID_KEY, DEID ? '1' : '0'); } catch (e) {} syncDeid(); if (h) h.setDeid(DEID); };
+    $('projBtn').onclick = function () { PROJ = !PROJ; $('projBtn').textContent = '投影模式：' + (PROJ ? '開' : '關'); $('projBtn').classList.toggle('on', PROJ); document.body.classList.toggle('proj', PROJ); };
+    setInterval(clsDraw, 60000);
+  }
+  function start(loader, who) {
+    $('gate').hidden = true; $('app').hidden = false; $('whoami').textContent = who; initHeader();
+    h = window.__pxdash = PD.mount($('root'), { loader: loader, deid: DEID, cls: CLS, autoMs: 10 * 60 * 1000,
+      onDraw: function (model) { lastModel = model; loading = false; clsDraw(); }, onLoading: function (v) { loading = v; if (lastModel) clsDraw(); } });
+    h.ready.then(function () { if (qs.get('open')) h.open(qs.get('open')); });
+  }
+  if (isLocal && qs.get('test') === '1') {
+    loadScript('proposal_dashboard_fixture.js?v=202611011800').then(function () {
+      var F = window.ERG_PXDASH_FIXTURE, raw = F.make({ variant: qs.get('variant') || 'ok', now: NOWO ? NOWO.base : undefined }), db = F.fakeDb(raw);
+      fixedNow = raw.now; window.__pxraw = raw; window.__pxdb = db;
+      start(PD.liveLoader(db, SESS, function () { return raw.now; }, CASEID), '（本機測試・假資料）');
+    }).catch(function (e) { document.body.textContent = String(e && e.message || e); });
+    return;
+  }
+  /* ———— 正式：Google 登入（與 sb_dashboard.html 相同做法；先彈窗，被擋才退回跳轉） ———— */
+  $('gate').hidden = false;
+  var say = function (m) { $('gateStatus').innerHTML = m; };
+  var INAPP = /Line\/|FBAN|FBAV|FB_IAB|Instagram|MicroMessenger|; wv\)/i.test(navigator.userAgent), redirBack = false;
+  var inappMsg = '這是 App 內建的瀏覽器（例如 LINE、FB），Google 不允許在這裡登入。請點右上角選單「用預設瀏覽器開啟」，或把網址貼到 Chrome／Safari。';
+  try { redirBack = sessionStorage.getItem('ergPxd_redir') === '1'; sessionStorage.removeItem('ergPxd_redir'); } catch (e) {}
+  if (INAPP) say(inappMsg);
+  (['https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js', 'https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js', 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js', 'er_firebase.js?v=202610270013'].reduce(function (p, s) { return p.then(function () { return loadScript(s); }); }, Promise.resolve())).then(function () {
+    firebase.initializeApp(window.ERG_FB); var fdb = firebase.database(), auth = firebase.auth();
+    function provider() { var p = new firebase.auth.GoogleAuthProvider(); p.setCustomParameters({ prompt: 'select_account' }); return p; }
+    function explain(e) { var c = (e && e.code) || ''; say(c === 'auth/operation-not-allowed' ? '這個 Firebase 專案還沒啟用 Google 登入。' : c === 'auth/unauthorized-domain' ? '這個網域還沒加進授權網域。' : '登入沒完成（' + esc(c || e) + '）。再按一次試試。'); }
+    function goRedirect() { try { sessionStorage.setItem('ergPxd_redir', '1'); } catch (e) {} auth.signInWithRedirect(provider()).catch(explain); }
+    $('gGoogle').onclick = function () { if (INAPP) { say(inappMsg); return; } say('登入中…（會跳出 Google 的視窗）'); auth.signInWithPopup(provider()).catch(function (e) { var c = (e && e.code) || ''; if (c === 'auth/popup-blocked' || c === 'auth/operation-not-supported-in-this-environment') goRedirect(); else explain(e); }); };
+    auth.getRedirectResult().then(function (r) { if (redirBack && !(r && r.user) && !auth.currentUser) say('跳轉登入在這個瀏覽器沒有成功。請再按一次登入並允許彈出視窗；還是不行就改用 Chrome 或 Safari。'); }).catch(explain);
+    $('logoutBtn').onclick = function () { $('logoutBtn').disabled = true; auth.signOut().then(function () { location.href = location.pathname; }, function () { $('logoutBtn').disabled = false; }); };
+    var started = false;
+    auth.onAuthStateChanged(function (u) {
+      if (!u) { $('gate').hidden = false; $('app').hidden = true; return; }
+      var email = (u.email || '').toLowerCase();
+      if (TEACHER_EMAILS.indexOf(email) < 0) { say('這個帳號（' + esc(email) + '）不在教師名單裡。請換一個帳號登入。'); auth.signOut(); return; }
+      if (started) return; started = true; start(PD.liveLoader(fdb, SESS, null, CASEID), email);
+    });
+  }).catch(function (e) { say('載入失敗：' + esc(e && e.message || e)); });
+})();
+</script>
+</body>
+</html>
