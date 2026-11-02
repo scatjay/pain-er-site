@@ -10,8 +10,8 @@
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   var MOB = /(^|\/)m\.html$/.test(location.pathname), IS_SB = /storyboard\.html$/.test(location.pathname);
   var LOCALHOST = /^(127\.0\.0\.1|localhost)$/.test(location.hostname);
-  /* 人物大頭照：圖還在生成。檔案放 art/portraits_1102/<人物id>.png 之後，把 PORTRAIT_ON 改成 true 就會換上（不存在的檔不要硬接） */
-  var PORTRAIT_DIR = 'art/portraits_1102/', PORTRAIT_ON = false;
+  /* 人物大頭照：art/portraits_1102/<人物id>.png（finalize.py 產生，192px）。部署要明確帶這些圖 */
+  var PORTRAIT_DIR = 'art/portraits_1102/', PORTRAIT_ON = true;
   var AV_COLORS = ['#ffc9c9', '#b2f2bb', '#a5d8ff', '#ffec99'];
 
   var ENV = { sid: '', sess: '', online: false, demo: false, cls: '' };
@@ -168,7 +168,7 @@
     return { text: done ? '訪談卡已記 ' + pr.done + '/' + pr.total + ' 項' : '聊過了，還沒記訪談卡', btn: '繼續問' };
   }
   function avHtml(w, i) {
-    var inner = PORTRAIT_ON ? '<img alt="" src="' + PORTRAIT_DIR + esc(w.pid) + '.png">' : esc(String(w.name).charAt(0));
+    var ch = esc(String(w.name).charAt(0)), inner = PORTRAIT_ON ? '<img alt="" src="' + PORTRAIT_DIR + esc(w.pid) + '.png" onerror="this.nextSibling.removeAttribute(&quot;style&quot;);this.parentNode.removeChild(this)"><span style="display:none">' + ch + '</span>' : ch;   /* 沒有圖的人物退回姓氏圓卡 */
     return '<span class="nvAv" data-pid="' + esc(w.pid) + '" style="background:' + AV_COLORS[i % AV_COLORS.length] + '" aria-hidden="true">' + inner + '</span>';
   }
   function peopleHtml(c) {
