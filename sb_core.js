@@ -288,15 +288,16 @@
       return null;
     }
     var hero = (opts.heroId && names[opts.heroId]) || info.hero, heroDone = !!(opts.heroId && fr.some(function (f) { return f.pid === opts.heroId; }));
-    var momentFrag = take(['need', 'surface', 'events'], true) || null;   /* 標了痛點標籤的話先留給關鍵時刻那一格 */
+    var momentFrag = take(['need'], true) || null;   /* 11-02：關鍵時刻只放 need（真正需要）；標了痛點標籤的優先 */
+    var firstDone = false;
     var cells = tpl.map(function (t, i) {
       var c = emptyCell(t.n); c.title = t.title; c.where = t.where; c.who = heroDone ? hero : info.hero; c.moment = !!t.moment;
-      var a = t.moment ? (momentFrag || take(['need', 'surface', 'events'])) : (take(['events']) || take(['surface']));
-      var b = t.moment ? null : take(['need']);
-      var refs = [];
-      if (a) { c.what = clip(a.text, LIMITS.field.what); refs.push(a.recId); }
-      if (b) { c.think = clip(b.text, LIMITS.field.think); if (refs.indexOf(b.recId) < 0) refs.push(b.recId); }
-      if (t.moment && a) { c.think = clip(a.text, LIMITS.field.think); c.what = ''; }
+      /* 依格子主題對應類型：第 1 格＝surface（他一開始怎麼說）、其餘一般格＝events、關鍵時刻＝need（進 think）；該類型沒有就留空，不拿別類補 */
+      var a = null, refs = [];
+      if (t.moment) a = momentFrag || take(['need']);
+      else if (!firstDone) { firstDone = true; a = take(['surface']); }
+      else a = take(['events']);
+      if (a) { refs.push(a.recId); if (t.moment) c.think = clip(a.text, LIMITS.field.think); else c.what = clip(a.text, LIMITS.field.what); }
       c.refs = refs;
       c.draft = hasContent(c) ? { who: c.who, where: c.where, what: c.what, think: c.think } : null;
       return c;

@@ -392,6 +392,7 @@
     if (!canWrite()) return;
     var d = SB.makeDraft(S.caseId, SB.arr(S.player.interviews), { names: pnames(), heroId: ((window.ERG_APP && window.ERG_APP.caseMeta) ? window.ERG_APP.caseMeta(S.caseId).mainPersona : 'patient') });
     var chain = Promise.resolve(), made = 0;
+    var noText = SB.fragments(SB.arr(S.player.interviews), pnames()).length === 0;   /* 0 片段＝訪談卡只打勾沒寫備註 */
     d.cells.forEach(function (dc) {
       var o = cellFor(dc.n); if (SB.hasContent(o.c)) return;
       if (!SB.hasContent(dc)) return; made += 1;
@@ -402,7 +403,7 @@
         return S.store.saveCell(CODE, bkey(S.boardName), o.virtual ? null : o.c, next);
       });
     });
-    chain.then(function () { S.saved = NOW(); toast(made ? '排好 ' + made + ' 格草稿；沒素材的格子留空，回去再問一個人。' : '沒有空格可以排草稿（或你的訪談內容還不夠）', 5000); renderAll(true); });
+    chain.then(function () { S.saved = NOW(); toast(made ? '排好 ' + made + ' 格草稿；沒素材的格子留空，回去再問一個人。' : (noText ? '這張訪談卡還沒寫備註，先回「訪談」分頁寫幾個字，再來排草稿。' : '沒有空格可以排草稿（或你的訪談內容還不夠）'), 5000); renderAll(true); });
   }
 
   /* ———— 事件 ———— */
