@@ -73,7 +73,7 @@ body.proj .sum{font-size:1.05em}
 @media (prefers-color-scheme:dark){:root{--s2fg:var(--bad);--s4fg:var(--ok)}}
 .rmtool select,.rmtool button{min-height:36px}.chatnav{gap:8px;align-items:center;margin:6px 0}.chatnav button{min-height:44px;min-width:44px}#chatClose{min-height:44px;min-width:44px}.chatnav span{flex:1;min-width:8em}
 @media (max-width:760px){.rmtool select,.rmtool button{min-height:44px}#rooms table,#rooms tbody,#rooms tr,#rooms td{display:block;width:auto}#rooms thead{display:none}#rooms tr{border:2px solid var(--line);border-radius:10px;margin:8px 0;padding:6px 8px}#rooms td{border:0;padding:2px 0;overflow-wrap:anywhere}#rooms a.lk{display:inline-flex;align-items:center;min-height:44px}#rooms.scroll{overflow-x:hidden}.chatnav button{flex:1 1 40%}.chatnav span{order:3;flex-basis:100%}}
-.onlbig{display:inline-flex;align-items:baseline;gap:6px;padding:4px 14px;border-radius:99px;background:var(--ok);color:#fff;font-weight:900;font-size:20px;line-height:1.2;white-space:nowrap}.onlbig small{font-size:13px;font-weight:700;opacity:.92}.onlbig.zero{background:var(--line);color:var(--muted,#6c655b)}.clsbar{display:flex;gap:6px 12px;flex-wrap:wrap;align-items:center;margin-top:8px;padding:6px 10px;border:2px solid var(--line);border-radius:10px;min-height:44px;background:var(--panel)}.clsbar.during{border-color:var(--ok)}.clsbar .grow{flex:1}.clsbar .sm{min-height:32px}.clsbar .ld{display:inline-block;width:12px;height:12px;border:2px solid var(--line);border-top-color:var(--info);border-radius:50%;animation:clsspin .8s linear infinite;vertical-align:-2px;margin-right:4px}@keyframes clsspin{to{transform:rotate(360deg)}}@media (prefers-reduced-motion:reduce){.clsbar .ld{animation:none}}.ldnote{padding:4px 8px;margin-bottom:6px;border-radius:8px;background:var(--infobg);color:var(--info);font-size:.9em}
+.onlbig{display:inline-flex;flex-wrap:wrap;max-width:100%;box-sizing:border-box;align-items:baseline;gap:2px 6px;padding:4px 14px;border-radius:18px;background:var(--ok);color:#fff;font-weight:900;font-size:20px;line-height:1.2}.onlbig small{font-size:13px;font-weight:700;opacity:.92}.onlbig.zero{background:var(--line);color:var(--muted,#6c655b)}.clsbar{display:flex;gap:6px 12px;flex-wrap:wrap;align-items:center;margin-top:8px;padding:6px 10px;border:2px solid var(--line);border-radius:10px;min-height:44px;background:var(--panel)}.clsbar.during{border-color:var(--ok)}.clsbar .grow{flex:1}.clsbar .sm{min-height:32px}.clsbar .ld{display:inline-block;width:12px;height:12px;border:2px solid var(--line);border-top-color:var(--info);border-radius:50%;animation:clsspin .8s linear infinite;vertical-align:-2px;margin-right:4px}@keyframes clsspin{to{transform:rotate(360deg)}}@media (prefers-reduced-motion:reduce){.clsbar .ld{animation:none}}.ldnote{padding:4px 8px;margin-bottom:6px;border-radius:8px;background:var(--infobg);color:var(--info);font-size:.9em}
 .sysbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:8px;min-height:36px}.sysbar .sm{min-height:32px}
 details.sysbox{margin-top:4px}details.sysbox>summary{cursor:pointer;min-height:32px;display:flex;align-items:center;color:var(--muted);font-size:.9em}
 .stc{display:inline-flex;align-items:center;gap:4px;padding:1px 8px;border-radius:999px;font-weight:800;font-size:.82em;white-space:nowrap;border:1px solid currentColor}
@@ -324,17 +324,17 @@ body.proj .priv{display:none!important}
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-<script src="er_firebase.js?v=202611022305"></script>
-<script src="checklist.js?v=202611022305"></script>
-<script src="checkpoints.js?v=202611022305"></script>
-<script src="avatar.js?v=202611022305"></script>
-<script src="local_db.js?v=202611022305"></script>
-<script src="app_core.js?v=202611022305"></script>
-<script src="achievements.js?v=202611022305"></script><script src="remote_db.js?v=202611022305"></script><script src="summary_render.js?v=202611022305"></script>
-<script src="layout.js?v=202611022305"></script>
-<script src="minimap.js?v=202611022305"></script><script src="map_layout.js?v=202611022305"></script><script src="skill_badge.js?v=202611022305"></script>
-<script src="personas_inclusive.js?v=202611022305"></script><script src="er_data.js?v=202611022305"></script><script src="npc_voice.js?v=202611022305"></script><script src="personas.js?v=202611022305"></script>
-<script src="week2.js?v=202611022305"></script><script src="ui_level.js?v=202611022305"></script><script src="teacher_model.js?v=202611022305"></script>
+<script src="er_firebase.js?v=202611022320"></script>
+<script src="checklist.js?v=202611022320"></script>
+<script src="checkpoints.js?v=202611022320"></script>
+<script src="avatar.js?v=202611022320"></script>
+<script src="local_db.js?v=202611022320"></script>
+<script src="app_core.js?v=202611022320"></script>
+<script src="achievements.js?v=202611022320"></script><script src="remote_db.js?v=202611022320"></script><script src="summary_render.js?v=202611022320"></script>
+<script src="layout.js?v=202611022320"></script>
+<script src="minimap.js?v=202611022320"></script><script src="map_layout.js?v=202611022320"></script><script src="skill_badge.js?v=202611022320"></script>
+<script src="personas_inclusive.js?v=202611022320"></script><script src="er_data.js?v=202611022320"></script><script src="npc_voice.js?v=202611022320"></script><script src="personas.js?v=202611022320"></script>
+<script src="week2.js?v=202611022320"></script><script src="ui_level.js?v=202611022320"></script><script src="teacher_model.js?v=202611022320"></script>
 <script>
 /* 教師名單：只有這裡的 Google 帳號能進。要加人就加在這裡（改完重新部署；資料庫規則 tools/er_after_google_enabled.py 也要加）。 */
 var TEACHER_EMAILS = ['scatjay@gmail.com', 'prof.chwu@mx.nthu.edu.tw', 'nthuchwu@gapp.nthu.edu.tw'];   /* 10-16 楊老師：清大吳智鴻老師（觀摩用，含後台） */
