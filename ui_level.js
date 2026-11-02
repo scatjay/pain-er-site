@@ -1,5 +1,5 @@
-/* 模式（新手／專家）：純函式與設定存取。畫面在 ui_level_ui.js。
-   學生看到的名稱只有「模式：新手／專家」（內部編號 1＝新手、3＝專家；2＝中級還沒做，目前一律當專家）。
+/* 模式（新手／中級／專家）：純函式與設定存取。畫面在 ui_level_ui.js。
+   學生看到的名稱只有「模式：新手／中級／專家」（內部編號 1＝新手、2＝中級、3＝專家）。
    預設是專家：沒選過的人畫面完全不變。
    設定：er/{場次}/profiles/{學號}/uiLevel、uiLevelAt（既有節點新增兩個欄位）＋本機 localStorage 快取；
    切換與詢問紀錄：er/{場次}/uilv/{學號}/{push} = { from, to, why, t, cls, dev, cards, days }。 */
@@ -9,7 +9,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  var NAMES = { 1: '新手', 3: '專家' };
+  var NAMES = { 1: '新手', 2: '中級', 3: '專家' };
   var WHY = ['self', 'ask-shown', 'ask-accept', 'ask-decline', 'up-shown', 'up-accept', 'up-decline'];
 
   /* 新手模式的人物卡白名單（每案例 ≤4 位）：role＝卡片上寫的身分，kin＝病人或家屬。
@@ -24,10 +24,67 @@
   };
   var CASE_IDS = Object.keys(WHITELIST);
 
-  /* 專家模式＝現在的畫面；除了 1 以外一律當專家（含沒有值、中級 2、亂填） */
-  function normalize(v) { return Number(v) === 1 ? 1 : 3; }
+  /* 專家模式＝現在的畫面；除了 1、2 以外一律當專家（含沒有值、亂填） */
+  function normalize(v) { v = Number(v); return v === 1 ? 1 : (v === 2 ? 2 : 3); }
   function nameOf(lv) { return NAMES[normalize(lv)]; }
   function isNovice(lv) { return normalize(lv) === 1; }
+  function isMid(lv) { return normalize(lv) === 2; }
+
+  /* ───── 中級模式：有場景，但房間與人物都少到專家的 1/3 以下（專家 22 間房、23 位人物 ⇒ 各最多 7）─────
+     每案例 7 位人物＋7 間房（含入口大廳；病患的家算一間）。挑法：新手那 4 位一定在；再補 3 位「同一批房間裡走動、一天大半時間都在開放房間」的核心人物。
+     沒登記的案例、對不到的人物或房間：scopeFor 回 null 或自動略過，畫面退回專家，不報錯。 */
+  var MID = {
+    sms:   { rooms: ['entrance', 'triage', 'waiting', 'consultA', 'discharge', 'nurse', 'home'], pids: ['patient', 'family', 'triage_nurse', 'nurse', 'er_doctor', 'guard', 'volunteer'] },
+    wait:  { rooms: ['entrance', 'triage', 'waiting', 'family', 'service', 'nurse', 'consultB'], pids: ['zhe_patient', 'mei_family', 'triage_nurse', 'service_ling', 'hearing_uncle', 'dad_hao', 'charge_lin'] },
+    way:   { rooms: ['entrance', 'lobby', 'service', 'triage', 'nurse', 'ct', 'restroom'], pids: ['auntie_lin', 'wheel_ming', 'vol_route', 'nurse_map', 'guard', 'clean_ya', 'facility_ren'] },
+    forms: { rooms: ['entrance', 'triage', 'consultA', 'family', 'lobby', 'service', 'waiting'], pids: ['tremor_ming', 'daughter_yu', 'reg_chen', 'nurse_forms', 'social_wei', 'triage_nurse', 'volunteer'] },
+    pay:   { rooms: ['entrance', 'lobby', 'pharmacy', 'discharge', 'home', 'waiting', 'family'], pids: ['qing_patient', 'gong_kiosk', 'lin_pharmacist', 'mei_counter', 'bo_tech', 'wei_worker', 'volunteer'] },
+    peds:  { rooms: ['entrance', 'ped', 'nurse', 'family', 'home', 'waiting', 'pharmacy'], pids: ['parent_kui', 'grandma_hui', 'nurse_yu', 'doctor_lin', 'pharm_ning', 'volunteer_mi', 'volunteer'] }
+  };
+  var MID_MAX = 7;
+  /* 中級的右側分頁（比專家少：沒有「事件簿」「討論」）；順序沿用專家 */
+  var MID_TABS = ['clue', 'intv', 'cards', 'concl', 'cp', 'ach'];
+  var MID_HIDDEN_TABS = ['events', 'disc'];
+  var GREY_TEXT = '這間房在專家模式才開。';
+  var SCOPE_NOTE = '灰色房間和其他人物在專家模式才開。這裡只會遇到開放房間裡的事件。';
+  /* 回傳 { rooms:[id], pids:[id], tabs:[…], hiddenTabs:[…] }；只有中級且案例有登記才有；avail（可選）＝{ rooms:fn(id)→bool, pids:fn(id)→bool } 用來略過對不到的 */
+  function scopeFor(level, caseId, avail) {
+    if (!isMid(level) || !MID[caseId]) return null;
+    var m = MID[caseId], ok = function (f, id) { return !f || f(id); };
+    var rooms = m.rooms.filter(function (r) { return ok(avail && avail.rooms, r); }).slice(0, MID_MAX);
+    var pids = m.pids.filter(function (p) { return ok(avail && avail.pids, p); }).slice(0, MID_MAX);
+    if (rooms.indexOf('entrance') < 0 || pids.length < 2) return null;
+    return { rooms: rooms, pids: pids, tabs: MID_TABS.slice(), hiddenTabs: MID_HIDDEN_TABS.slice() };
+  }
+  /* 把世界「變小」：只留開放人物、只留在開放房間裡的人（走道不算房間）；事件只留發生地點與開放房間有交集的；跑馬燈同步。可還原（removeScope）。
+     roomType(id) → 'room'|'remote'|'hall'|…；呼叫端給（瀏覽器用 ERG_LAYOUT.room，Node 用 layout.js）。 */
+  function applyScope(world, scope, roomType) {
+    if (!world || !scope || world.__lvScope) return false;
+    var rs = {}, ps = {}; scope.rooms.forEach(function (r) { rs[r] = 1; }); scope.pids.forEach(function (p) { ps[p] = 1; });
+    var keepRoom = function (id) { if (!id) return true; var t = roomType ? roomType(id) : 'room'; return !(t === 'room' || t === 'remote') || !!rs[id]; };
+    var keepEv = function (e) { var r = (e && e.rooms) || []; return !r.length || r.some(function (x) { return !!rs[x]; }); };
+    var sim = world.sim || {}, keep = { at: world.at, ae: sim.activeEvents, tk: sim.ticker };
+    world.at = function (t) { return keep.at.call(world, t).filter(function (it) { return it && it.ent && ps[it.ent.pid] && keepRoom(it.pos && it.pos.room); }); };
+    if (keep.ae) sim.activeEvents = function (m) { return keep.ae.call(sim, m).filter(keepEv); };
+    if (keep.tk && sim.events && sim.formatSim) sim.ticker = function (m, n) {
+      var lim = n === undefined ? 5 : Math.max(0, Math.floor(n));
+      return sim.events.filter(function (e) { return e.start <= m && keepEv(e); }).slice().sort(function (a, b) { return b.start - a.start || String(b.id).localeCompare(String(a.id)); }).slice(0, lim).map(function (e) { return { time: sim.formatSim(e.start), title: e.title, text: e.text }; });
+    };
+    world.__lvScope = { keep: keep, sig: scope.rooms.join(',') + '|' + scope.pids.join(',') };
+    return true;
+  }
+  function removeScope(world) {
+    if (!world || !world.__lvScope) return false;
+    var k = world.__lvScope.keep, sim = world.sim || {};
+    world.at = k.at; if (k.ae) sim.activeEvents = k.ae; if (k.tk) sim.ticker = k.tk; delete world.__lvScope; return true;
+  }
+  /* 房間列：開放的在前（依 MID 順序），灰色的在後；回傳 { open:[id], grey:[id] }，allIds＝所有可去的房間（type room／remote） */
+  function roomSplit(scope, allIds) {
+    var open = [], grey = [], rs = {}; (scope ? scope.rooms : []).forEach(function (r) { rs[r] = 1; });
+    (scope ? scope.rooms : []).forEach(function (r) { if ((allIds || []).indexOf(r) >= 0) open.push(r); });
+    (allIds || []).forEach(function (r) { if (!rs[r]) grey.push(r); });
+    return { open: open, grey: grey };
+  }
 
   /* 白名單：回傳 [{pid, role, kin}]；沒有登記的案例回傳空陣列（呼叫端要退回專家） */
   function whitelist(caseId) {
@@ -81,21 +138,29 @@
     s = s || {}; if (s.inRoom) return null;
     if (s.lastAskDay && s.lastAskDay === s.today) return null;
     var d = s.declines || {};
-    if (!isNovice(s.level)) {
+    var lv = normalize(s.level), slow = (s.days || 0) >= 2 && (s.cards || 0) <= 2;
+    if (lv === 3) {   /* 專家：進度慢 ⇒ 建議中級（從沒進過房間的，建議新手） */
       if ((d.ask || 0) >= ASK_MAX_DECLINE) return null;
-      if ((s.days || 0) >= 2 && (s.cards || 0) <= 2) return { kind: 'ask', to: 1, first: !s.entered };
+      if (slow) return s.entered ? { kind: 'ask', to: 2 } : { kind: 'ask', to: 1, first: true };
       return null;
     }
-    if ((d.up || 0) >= ASK_MAX_DECLINE) return null;
-    if ((s.cards || 0) >= 6 && (s.cells || 0) >= 3) return { kind: 'up', to: 3 };
+    if (lv === 2) {   /* 中級：進度慢 ⇒ 建議新手；熟練（訪談卡 ≥6、成就 ≥10）⇒ 建議專家 */
+      if (slow && (d.ask || 0) < ASK_MAX_DECLINE) return { kind: 'ask', to: 1 };
+      if ((d.up || 0) < ASK_MAX_DECLINE && (s.cards || 0) >= 6 && (s.badges || 0) >= 10) return { kind: 'up', to: 3 };
+      return null;
+    }
+    if ((d.up || 0) >= ASK_MAX_DECLINE) return null;   /* 新手：熟練（訪談卡 ≥6、故事板 ≥3 格）⇒ 建議中級 */
+    if ((s.cards || 0) >= 6 && (s.cells || 0) >= 3) return { kind: 'up', to: 2 };
     return null;
   }
   var NUDGE_TEXT = {
     ask: { title: '要先用新手模式嗎？', body: '人比較少、選項也少，先問到一位病人或家屬。之後隨時可以切回來。' },
     first: { title: '要不要先從新手模式開始？', body: '只有幾位重要的人、選項也少，先問到一位病人或家屬就好。之後隨時可以切回來。' },
-    up: { title: '想再多看一點嗎？', body: '你已經問了不少人、也開始寫故事板。專家模式有全部的房間、人物和事件，可以問更多人。進度不會不見，隨時可以切回來。' }
+    askMid: { title: '要改用中級模式嗎？', body: '房間和人物少一些，事件也少一些，比較不容易迷路；還是看得到場景。之後隨時可以切回來。' },
+    up: { title: '想再多看一點嗎？', body: '你已經問了不少人、也開始寫故事板。專家模式有全部的房間、人物和事件，可以問更多人。進度不會不見，隨時可以切回來。' },
+    upMid: { title: '想看到場景嗎？', body: '你已經問了不少人、也開始寫故事板。中級模式會出現場景，還有一些房間和人物可以逛。進度不會不見，隨時可以切回來。' }
   };
-  function nudgeText(n) { return n ? (n.kind === 'ask' && n.first ? NUDGE_TEXT.first : NUDGE_TEXT[n.kind]) : null; }
+  function nudgeText(n) { if (!n) return null; if (n.kind === 'ask') return n.first ? NUDGE_TEXT.first : (n.to === 2 ? NUDGE_TEXT.askMid : NUDGE_TEXT.ask); return n.to === 2 ? NUDGE_TEXT.upMid : NUDGE_TEXT.up; }
   var NUDGE_BTN = { yes: { ask: '好，切過去', up: '好，切過去' }, no: '不用，謝謝' };
 
   /* 從紀錄還原：最後一次詢問是哪一天、各類拒絕幾次（紀錄存在 uilv/{學號}，每筆 { from,to,why,t }） */
@@ -104,20 +169,20 @@
     var arr = []; if (log && typeof log === 'object') Object.keys(log).forEach(function (k) { if (log[k] && typeof log[k] === 'object') arr.push(log[k]); });
     arr.sort(function (a, b) { return Number(a.t) - Number(b.t); });
     var seen = {}; arr = arr.filter(function (e) { var k = String(e.why) + '|' + Number(e.t); if (seen[k]) return false; seen[k] = 1; return true; });   /* 本機備份與雲端各有一份同一筆時只算一次 */
-    var out = { lastAskDay: '', declines: { ask: 0, up: 0 }, lastWhy: '', lastSwitch: null, switches: 0, asked: 0 };
+    var out = { lastAskDay: '', declines: { ask: 0, up: 0 }, lastWhy: '', lastTgt: 0, lastSwitch: null, switches: 0, asked: 0 };
     arr.forEach(function (e) {
       var w = String(e.why || '');
       if (/-shown$/.test(w)) { out.lastAskDay = dayKey(e.t); out.asked += 1; }
       if (w === 'ask-decline') out.declines.ask += 1; if (w === 'up-decline') out.declines.up += 1;
       if (/^(self|ask-accept|up-accept)$/.test(w)) { out.switches += 1; out.lastSwitch = { from: e.from, to: e.to, t: Number(e.t) || 0, why: w }; }
-      if (/^(ask|up)-/.test(w)) out.lastWhy = w;
+      if (/^(ask|up)-/.test(w)) { out.lastWhy = w; if (e.tgt) out.lastTgt = normalize(e.tgt); else if (/-shown$/.test(w)) out.lastTgt = 0; }
     });
     return out;
   }
   /* 後台「提醒狀態」一格的字 */
   function remindText(st) {
     if (!st || !st.lastWhy) return '未提醒';
-    var w = st.lastWhy, kind = /^ask/.test(w) ? '建議新手' : '建議專家';
+    var w = st.lastWhy, kind = '建議' + (st.lastTgt ? nameOf(st.lastTgt) : (/^ask/.test(w) ? '新手' : '專家'));
     return kind + '：' + (/accept$/.test(w) ? '接受' : (/decline$/.test(w) ? '拒絕' : '已提醒，沒回應'));
   }
 
@@ -125,7 +190,7 @@
   function logEntry(from, to, why, ctx) {
     ctx = ctx || {}; var e = { from: normalize(from), to: normalize(to), why: WHY.indexOf(why) >= 0 ? why : 'self', t: Number(ctx.t) || 0 };
     if (ctx.cls) e.cls = String(ctx.cls); if (ctx.dev) e.dev = String(ctx.dev);
-    if (isFinite(ctx.cards)) e.cards = Number(ctx.cards); if (isFinite(ctx.days)) e.days = Number(ctx.days);
+    if (isFinite(ctx.cards)) e.cards = Number(ctx.cards); if (isFinite(ctx.days)) e.days = Number(ctx.days); if (ctx.tgt) e.tgt = normalize(ctx.tgt);
     return e;
   }
 
@@ -139,7 +204,8 @@
     if (l && r) return l.at >= r.at ? l : r; return l || r || { lv: 3, at: 0 };
   }
 
-  return { NAMES: NAMES, WHY: WHY, WHITELIST: WHITELIST, CASE_IDS: CASE_IDS, normalize: normalize, nameOf: nameOf, isNovice: isNovice, whitelist: whitelist, personasFor: personasFor,
+  return { NAMES: NAMES, WHY: WHY, WHITELIST: WHITELIST, CASE_IDS: CASE_IDS, normalize: normalize, nameOf: nameOf, isNovice: isNovice, isMid: isMid, whitelist: whitelist, personasFor: personasFor,
+    MID: MID, MID_MAX: MID_MAX, MID_TABS: MID_TABS, MID_HIDDEN_TABS: MID_HIDDEN_TABS, GREY_TEXT: GREY_TEXT, SCOPE_NOTE: SCOPE_NOTE, scopeFor: scopeFor, applyScope: applyScope, removeScope: removeScope, roomSplit: roomSplit,
     askHint: askHint, nextStep: nextStep, nudgeFor: nudgeFor, nudgeText: nudgeText, NUDGE_BTN: NUDGE_BTN, stateFromLog: stateFromLog, remindText: remindText, dayKey: dayKey,
     logEntry: logEntry, readLocal: readLocal, writeLocal: writeLocal, pick: pick, key: key, ASK_MAX_DECLINE: ASK_MAX_DECLINE,
     CONSEQUENCE_TEXT: '都算線索，但這份作業挑一個深入就好，其他可以記下來當背景。' };

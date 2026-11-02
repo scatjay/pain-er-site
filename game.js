@@ -466,8 +466,30 @@
       }, function (err) { b.disabled = false; $('grMsg').textContent = '沒有送出（' + ((err && err.code) || '連線問題') + '），請再按一次'; });
     };
   }
+  /* 11-02 老師給這位同學的提醒：guide/{學號}/teacherNote = { text, at }。大廳最上方一張卡，「知道了」後依 at 記在本機，同一則不再出現。
+     只有 teacherNote、沒有 items 的 guide 在別處一律當作沒有指引（guideHtml／week2Ctx 都看 items）。沒有此欄位時不動畫面。 */
+  function tnKey() { return 'erg_tn_' + String(APP.me.sid || ''); }
+  function tnSeen(n) { try { return localStorage.getItem(tnKey()) === String(n.at); } catch (e) { return false; } }
+  function renderTeacherNote() {
+    var wrap = document.querySelector('#lobby .wrap'); if (!wrap) return;
+    var g = GUIDE.g, n = g && g.teacherNote, old = $('tnCard');
+    var show = !!(n && typeof n.text === 'string' && n.text.trim() && !tnSeen(n));
+    if (!show) { if (old) old.remove(); return; }
+    var sig = String(n.at) + '|' + n.text;
+    if (old && old.getAttribute('data-sig') === sig) { if (wrap.firstChild !== old) wrap.insertBefore(old, wrap.firstChild); return; }
+    if (old) old.remove();
+    var d = document.createElement('div'); d.id = 'tnCard'; d.className = 'nvKeep nvBox'; d.setAttribute('data-sig', sig);
+    d.style.cssText = 'margin:0 0 8px;padding:8px 12px;border:var(--bw) solid var(--ink);border-radius:var(--r-m);background:var(--yellow);color:var(--ink-fixed,#1e1e1e);font-size:var(--fs-3)';
+    var h = document.createElement('b'); h.textContent = '📌 老師提醒';
+    var t = document.createElement('div'); t.style.cssText = 'margin:4px 0 6px;white-space:pre-wrap;line-height:1.55'; t.textContent = n.text;
+    var b = document.createElement('button'); b.type = 'button'; b.id = 'tnOk'; b.textContent = '知道了';
+    b.onclick = function () { try { localStorage.setItem(tnKey(), String(n.at)); } catch (e) {} d.remove(); };
+    d.appendChild(h); d.appendChild(t); d.appendChild(b); wrap.insertBefore(d, wrap.firstChild);
+  }
+  APP.setGuideForTest = function (g) { GUIDE.g = g; GUIDE.loaded = true; GUIDE.sid = APP.me.sid; renderLobby(); };   /* 瀏覽器測試用（本機模式沒有指引資料） */
   function renderLobby() {
     loadGuide();
+    try { renderTeacherNote(); } catch (e) {}
     /* 老師帳號的前台大廳才有「三班輪播展示」入口（學生看不到；展示模式本身不顯示） */
     (function () { var row = document.querySelector('#lobby .row'), b = $('demoEntry'), ok = !DEMO && multiLoginOk();
       if (!ok) { if (b) b.parentNode.removeChild(b); return; }

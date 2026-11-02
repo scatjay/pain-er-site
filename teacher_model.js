@@ -483,18 +483,18 @@
   }
 
 
-  /* ───── 11-02 模式（新手／專家）：後台「學生」頁的欄位與總覽。只供觀察，不是成績，也不能說是切換造成的 ─────
+  /* ───── 11-02 模式（新手／中級／專家）：後台「學生」頁的欄位與總覽。只供觀察，不是成績，也不能說是切換造成的 ─────
      input：{ profiles:{學號:{cls,uiLevel,uiLevelAt}}, uilv:{學號:{push:{from,to,why,t,cards,days}}}, cards:{學號:現在的訪談卡數}, now }
-     回傳：{ byCls:{班級:{n1,n3,total,shown,accept,decline}}, rows:{學號:{lv,name,remind,last,before,after,note}}, log:[{sid,t,from,to,why}]（新的在前）, totals }
+     回傳：{ byCls:{班級:{n1,n2,n3,total,shown,accept,decline}}, rows:{學號:{lv,name,remind,last,before,after,note}}, log:[{sid,t,from,to,why}]（新的在前）, totals }
      切換前每天訪談卡＝切換當時的訪談卡 ÷ 當時玩過的天數；切換後＝(現在 − 切換當時) ÷ 切換後經過的天數（至少 2 天才算，否則不算）。 */
   function uilvView(input) {
-    input = input || {}; var U0 = UILV0 || { normalize: function (v) { return Number(v) === 1 ? 1 : 3; }, nameOf: function (v) { return Number(v) === 1 ? '新手' : '專家'; }, stateFromLog: function () { return { lastWhy: '', lastSwitch: null, declines: {} }; }, remindText: function () { return '未提醒'; } };
-    var profiles = input.profiles || {}, uilv = input.uilv || {}, cards = input.cards || {}, now = num(input.now, Date.now()), out = { byCls: {}, rows: {}, log: [], totals: { n1: 0, n3: 0, total: 0 } };
+    input = input || {}; var U0 = UILV0 || { normalize: function (v) { v = Number(v); return v === 1 ? 1 : (v === 2 ? 2 : 3); }, nameOf: function (v) { v = Number(v); return v === 1 ? '新手' : (v === 2 ? '中級' : '專家'); }, stateFromLog: function () { return { lastWhy: '', lastSwitch: null, declines: {} }; }, remindText: function () { return '未提醒'; } };
+    var profiles = input.profiles || {}, uilv = input.uilv || {}, cards = input.cards || {}, now = num(input.now, Date.now()), out = { byCls: {}, rows: {}, log: [], totals: { n1: 0, n2: 0, n3: 0, total: 0 } };
     var sids = {}; keys(profiles).forEach(function (k) { sids[k] = 1; }); keys(uilv).forEach(function (k) { sids[k] = 1; });
     keys(sids).forEach(function (sid) {
       var pf = profiles[sid] || {}, lg = uilv[sid] || {}, st = U0.stateFromLog(lg), lv = U0.normalize(pf.uiLevel), cls = pf.cls || '其他';
-      var bc = out.byCls[cls] = out.byCls[cls] || { n1: 0, n3: 0, total: 0, shown: 0, accept: 0, decline: 0 };
-      bc.total += 1; if (lv === 1) bc.n1 += 1; else bc.n3 += 1; out.totals.total += 1; if (lv === 1) out.totals.n1 += 1; else out.totals.n3 += 1;
+      var bc = out.byCls[cls] = out.byCls[cls] || { n1: 0, n2: 0, n3: 0, total: 0, shown: 0, accept: 0, decline: 0 };
+      bc.total += 1; bc['n' + lv] += 1; out.totals.total += 1; out.totals['n' + lv] += 1;
       arr(lg).forEach(function (e) { var w = String(e.why || ''); if (/-shown$/.test(w)) bc.shown += 1; else if (/-accept$/.test(w)) bc.accept += 1; else if (/-decline$/.test(w)) bc.decline += 1; if (/^(self|ask-accept|up-accept)$/.test(w)) out.log.push({ sid: sid, t: num(e.t, 0), from: U0.normalize(e.from), to: U0.normalize(e.to), why: w }); });
       var ls = st.lastSwitch, before = null, after = null, note = '—';
       if (ls) {

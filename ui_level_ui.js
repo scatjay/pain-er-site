@@ -1,4 +1,4 @@
-/* 模式（新手／專家）的畫面：切換器、新手房間（純卡片）、專心對談、新手大廳、進大廳詢問、故事板新手。
+/* 模式（新手／中級／專家）的畫面：切換器、新手房間（純卡片）、專心對談、新手大廳、進大廳詢問、故事板新手；中級＝有場景但房間與人物少一些、故事板簡化版。
    純函式與設定在 ui_level.js。桌機 index.html、手機 m.html、故事板 storyboard.html 共用這一支。
    原則：專家＝現在的畫面，一個字都不改；新手只是「另一層顯示」，資料（房間、訪談卡、故事板格子）完全沿用，所以切換不重載、不丟進度。
    不新增呼叫模型的路徑：助教的固定問題在瀏覽器裡回答；打字問助教走原本的訪談助教（ERG_ICHAT）和故事板助教（ERG_SB_COACH），名額共用。 */
@@ -15,7 +15,7 @@
   var AV_COLORS = ['#ffc9c9', '#b2f2bb', '#a5d8ff', '#ffec99'];
 
   var ENV = { sid: '', sess: '', online: false, demo: false, cls: '' };
-  var ST = { lv: 3, at: 0, log: {}, logState: U.stateFromLog(null), roomOn: false, pane: '', nudge: null, chat: null, patched: false, booted: false, askLog: [] };
+  var ST = { lv: 3, at: 0, log: {}, logState: U.stateFromLog(null), roomOn: false, pane: '', nudge: null, chat: null, patched: false, booted: false, askLog: [], scope: null, scopeWorld: null };
   function app() { return window.ERG_APP; }
   function RM() { return window.ERG_ROOM; }
   function curRoom() { var r = RM(); return r && r.cur; }
@@ -25,12 +25,15 @@
   /* ───── 讀寫設定 ───── */
   UI.level = function () { return ST.lv; };
   UI.isNovice = function () { return !ENV.demo && U.isNovice(ST.lv); };
+  UI.isMid = function () { return !ENV.demo && U.isMid(ST.lv); };
+  UI.scope = function () { return ST.scope || null; };
   UI.talkOn = function () { return document.body.classList.contains('nvTalk'); };
   function logKey() { return 'erg_uilvlog_' + ENV.sid; }
   function readLog() { var o = {}; try { o = JSON.parse(localStorage.getItem(logKey()) || '{}') || {}; } catch (e) {} return o; }
   function stats() {
     var a = app(), rooms = a ? mineRooms() : [], cards = rooms.reduce(function (s, r) { return s + r.cards; }, 0), P = a && a.w8Data ? a.w8Data() : null;
-    return { rooms: rooms, cards: cards, entered: rooms.length > 0, days: playDays(rooms), cells: P ? (Number(P.filled) || 0) : 0 };
+    var pg = null; try { pg = a && a.progress ? a.progress() : null; } catch (e) {}
+    return { rooms: rooms, cards: cards, entered: rooms.length > 0, days: playDays(rooms), cells: P ? (Number(P.filled) || 0) : 0, badges: pg ? (Number(pg.badges) || 0) : 0 };
   }
   function playDays(rooms) {
     var set = {}, sid = ENV.sid;
@@ -54,8 +57,8 @@
     } catch (e) {}
     return out;
   }
-  function writeLog(from, to, why) {
-    var st = stats(), e = U.logEntry(from, to, why, { t: Date.now(), cls: ENV.cls, dev: MOB ? 'mobile' : 'desktop', cards: st.cards, days: st.days });
+  function writeLog(from, to, why, tgt) {
+    var st = stats(), e = U.logEntry(from, to, why, { t: Date.now(), cls: ENV.cls, dev: MOB ? 'mobile' : 'desktop', cards: st.cards, days: st.days, tgt: tgt });
     var o = readLog(); o['l' + e.t + Math.floor(Math.random() * 1000)] = e; try { localStorage.setItem(logKey(), JSON.stringify(o)); } catch (x) {}
     ST.log = o; ST.logState = U.stateFromLog(o);
     if (ENV.online && !ENV.demo) { var r = fref('uilv/' + ENV.sid); if (r) { try { r.push(e); } catch (x) { if (window.console) console.warn('uilv 寫入失敗', x); } } }
@@ -66,15 +69,15 @@
       ST.lv = lv; ST.at = Date.now(); U.writeLocal(localStorage, ENV.sid, lv, ST.at);
       if (ENV.online) { var r = fref('profiles/' + ENV.sid); if (r) { try { r.update({ uiLevel: lv, uiLevelAt: ST.at }); } catch (x) { if (window.console) console.warn('uiLevel 寫入失敗', x); } } }
     }
-    writeLog(from, lv, why || 'self'); applyLevel();
+    writeLog(from, lv, why || 'self', /^(ask|up)-/.test(why || '') ? lv : 0); applyLevel();
   };
-  UI.logOnly = function (why) { if (ENV.demo || !ENV.sid) return; writeLog(ST.lv, ST.lv, why); };
+  UI.logOnly = function (why, tgt) { if (ENV.demo || !ENV.sid) return; writeLog(ST.lv, ST.lv, why, tgt); };
 
   UI.boot = function (opts) {
     opts = opts || {}; ENV.sid = String(opts.sid || ''); ENV.sess = opts.sess || ''; ENV.online = !!opts.online; ENV.demo = !!opts.demo; ENV.cls = opts.cls || '';
-    ST.nudge = null; ST.nudgeAt = 0; ST.roomOn = false; if (ENV.demo || !ENV.sid) return;
+    ST.nudge = null; ST.nudgeAt = 0; ST.roomOn = false; if (ENV.demo || !ENV.sid) return;   /* 換人登入：不沿用上一位的 30 秒節流 */
     var loc = U.readLocal(localStorage, ENV.sid); ST.lv = loc ? loc.lv : 3; ST.at = loc ? loc.at : 0;
-    var q = LOCALHOST && /[?&]level=(1|3)/.exec(location.search); if (q) { ST.lv = Number(q[1]); }   /* 測試用：只在本機伺服器有效，不寫進設定 */
+    var q = LOCALHOST && /[?&]level=(1|2|3)/.exec(location.search); if (q) { ST.lv = Number(q[1]); }   /* 測試用：只在本機伺服器有效，不寫進設定 */
     ST.log = readLog(); ST.logState = U.stateFromLog(ST.log); markToday();
     ST.booted = true; injectCss(); mountAllSwitchers(); applyLevel();
     if (ENV.online && fb()) {
@@ -87,7 +90,7 @@
     }
   };
   function applyLevel() {
-    var nov = UI.isNovice(); document.body.classList.toggle('lv1', nov);
+    var nov = UI.isNovice(); document.body.classList.toggle('lv1', nov); document.body.classList.toggle('lv2', UI.isMid()); document.body.classList.toggle('lv2M', UI.isMid() && MOB);
     mountAllSwitchers();
     Array.prototype.forEach.call(document.querySelectorAll('.uilvSw'), paintSwitcher);
     var a = app();
@@ -100,7 +103,7 @@
   /* ───── 切換器 ───── */
   function swHtml(sheet) {
     return sheet ? '<button type="button" class="ghost uilvOpen" aria-haspopup="dialog">模式：' + U.nameOf(ST.lv) + '</button>'
-      : '<span class="lbl">模式</span><button type="button" data-lv="1">新手</button><button type="button" data-lv="3">專家</button>';
+      : '<span class="lbl">模式</span><button type="button" data-lv="1">新手</button><button type="button" data-lv="2">中級</button><button type="button" data-lv="3">專家</button>';
   }
   function paintSwitcher(el) {
     var sheet = el.getAttribute('data-sheet') === '1';
@@ -128,8 +131,9 @@
     var s = $('uilvSheet'); if (s) s.remove();
     s = document.createElement('div'); s.id = 'uilvSheet'; s.setAttribute('role', 'dialog'); s.setAttribute('aria-label', '選擇模式');
     s.innerHTML = '<div class="uilvBack"></div><div class="uilvBox"><b style="font-size:18px">選擇模式</b>' +
-      '<button type="button" data-lv="1" class="' + (U.isNovice(ST.lv) ? 'on' : '') + '"><b>新手</b><br>卡片，只問人，有問題問助教</button>' +
-      '<button type="button" data-lv="3" class="' + (!U.isNovice(ST.lv) ? 'on' : '') + '"><b>專家</b><br>全部房間、人物與事件</button>' +
+      '<button type="button" data-lv="1" class="' + (U.normalize(ST.lv) === 1 ? 'on' : '') + '"><b>新手</b><br>卡片，只問人，有問題問助教</button>' +
+      '<button type="button" data-lv="2" class="' + (U.normalize(ST.lv) === 2 ? 'on' : '') + '"><b>中級</b><br>有場景，房間和人物少一些</button>' +
+      '<button type="button" data-lv="3" class="' + (U.normalize(ST.lv) === 3 ? 'on' : '') + '"><b>專家</b><br>全部房間、人物與事件</button>' +
       '<span class="muted">隨時可以切換，進度不會不見。</span><button type="button" class="ghost" data-close="1">關閉</button></div>';
     document.body.appendChild(s);
     s.addEventListener('click', function (e) { var b = e.target.closest('button'); var back = e.target.classList.contains('uilvBack'); if (back || (b && b.dataset.close)) { s.remove(); return; } if (b && b.dataset.lv) { s.remove(); UI.setLevel(Number(b.dataset.lv), 'self'); } });
@@ -223,38 +227,40 @@
     { q: '「出處」是什麼意思？', a: '出處是這句話從哪裡來：是哪一位、第幾次訪談說的。故事板每一格都要附出處，別人才知道不是你編的。' },
     { q: '接下來要做什麼？', a: null }
   ];
-  function mountAi(c, step) {
-    var host = $('nvAi'); if (!host) return;
-    if (!host.firstChild) {
-      host.innerHTML = '<div class="nvRow"><b>問 AI 助教</b>' + FAQ.map(function (f, i) { return '<button type="button" class="nvChip" data-faq="' + i + '">' + esc(f.q) + '</button>'; }).join('') + '</div>' +
-        '<div id="nvAiAns" class="nvAns" aria-live="polite">看不懂哪裡，點上面的問題，或直接打字問。</div>' +
-        '<div class="nvRow"><label style="flex:1;display:flex"><span class="nvSr">輸入問題</span><input id="nvAiIn" maxlength="200" placeholder="看不懂哪裡，直接問助教" style="flex:1"></label><button type="button" class="nvBtn" id="nvAiGo">送出</button></div>' +
-        '<div class="muted nvSmall">點上面的固定問題不會用掉名額；打字送出會用掉今天的助教名額。</div>';
-      host.addEventListener('click', function (e) {
-        var b = e.target.closest('button'); if (!b) return;
-        if (b.dataset.faq !== undefined) { var f = FAQ[Number(b.dataset.faq)], cc = curRoom(), a = f.a; if (a === null && cc) a = stepFor(cc).text; $('nvAiAns').textContent = a || ''; return; }
-        if (b.id === 'nvAiGo') aiSend();
-      });
-      $('nvAiIn').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); aiSend(); } });
-    }
+  function mountAi(c, step) { var host = $('nvAi'); if (host) buildAi(host, 'nvAi'); }
+  /* 助教區的 DOM：p＝id 前綴（新手房間 'nvAi'、中級房間 'lv2Ai'），元素 id＝p+'Ans'／p+'In'／p+'Go' */
+  function buildAi(host, p) {
+    if (!host || host.firstChild) return;
+    host.innerHTML = '<div class="nvRow"><b>問 AI 助教</b>' + FAQ.map(function (f, i) { return '<button type="button" class="nvChip" data-faq="' + i + '">' + esc(f.q) + '</button>'; }).join('') + '</div>' +
+      '<div id="' + p + 'Ans" class="nvAns" aria-live="polite">看不懂哪裡，點上面的問題，或直接打字問。</div>' +
+      '<div class="nvRow"><label style="flex:1;display:flex"><span class="nvSr">輸入問題</span><input id="' + p + 'In" maxlength="200" placeholder="看不懂哪裡，直接問助教" style="flex:1"></label><button type="button" class="nvBtn" id="' + p + 'Go">送出</button></div>' +
+      '<div class="muted nvSmall">點上面的固定問題不會用掉名額；打字送出會用掉今天的助教名額。</div>';
+    host.addEventListener('click', function (e) {
+      var b = e.target.closest('button'); if (!b) return;
+      if (b.dataset.faq !== undefined) { var f = FAQ[Number(b.dataset.faq)], cc = curRoom(), a = f.a; if (a === null && cc) a = stepFor(cc).text; $(p + 'Ans').textContent = a || ''; return; }
+      if (b.id === p + 'Go') aiSend(p);
+    });
+    $(p + 'In').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); aiSend(p); } });
   }
-  function aiSend() {
-    var inp = $('nvAiIn'), ans = $('nvAiAns'), v = (inp.value || '').trim(), c = curRoom(), a = app(); if (!v) { ans.textContent = '先寫下你想問的事。'; return; }
+  function aiSend(p) {
+    p = p || 'nvAi';
+    var inp = $(p + 'In'), ans = $(p + 'Ans'), v = (inp.value || '').trim(), c = curRoom(), a = app(); if (!v) { ans.textContent = '先寫下你想問的事。'; return; }
     if (!a || !a.online || !fb() || !window.ERG_ICHAT || !c) { ans.textContent = '助教現在連不上（離線或測試模式沒有助教）。可以先點上面的固定問題。'; return; }
     if (!c._nvChat) c._nvChat = window.ERG_ICHAT.create({ db: fb(), sess: a.SESS, sid: ENV.sid, cls: ENV.cls, name: (a.me && a.me.name) || '', room: c.code, getPersona: function () { return {}; } });
-    $('nvAiGo').disabled = true; ans.textContent = '助教在想…';
-    c._nvChat.send(v).then(function (r) { ans.textContent = (r && r.text) || '（沒有回答）'; inp.value = ''; $('nvAiGo').disabled = false; }, function () { ans.textContent = '助教現在連不上，稍後再試。'; $('nvAiGo').disabled = false; });
+    $(p + 'Go').disabled = true; ans.textContent = '助教在想…';
+    c._nvChat.send(v).then(function (r) { ans.textContent = (r && r.text) || '（沒有回答）'; inp.value = ''; $(p + 'Go').disabled = false; }, function () { ans.textContent = '助教現在連不上，稍後再試。'; $(p + 'Go').disabled = false; });
   }
 
   /* ───── 點人物 → 專心對談；線索、筆記卡 → 沿用原本的分頁，全螢幕顯示 ───── */
-  function nvAsk(pid) {
-    var c = curRoom(), R = RM(), P = window.ERG_PANELS; if (!c || !R) return;
-    var it = whereNow(c, pid); if (!it) { if (R.toast) R.toast('他現在不在急診室裡，過一會兒再來。'); return; }
+  function goToPerson(pid, msg) {
+    var c = curRoom(), R = RM(); if (!c || !R) return false;
+    var it = whereNow(c, pid); if (!it) { if (R.toast) R.toast(msg); return false; }
     var ent = it.ent, room = it.pos.room;
     if (c.player.loc !== room) { c.pendingNpc = ent.id; if (R.teleport) R.teleport(room); }
     c.pendingNpc = null; c.selNpc = ent.id; c.selRecPid = null;
-    openPane('intv');
+    return true;
   }
+  function nvAsk(pid) { if (goToPerson(pid, '他現在不在急診室裡，過一會兒再來。')) openPane('intv'); }
   function openPane(kind) {
     var c = curRoom(), R = RM(); if (!c || !R) return;
     ST.pane = kind; UI._inPane = true;
@@ -305,19 +311,28 @@
     var R = RM(); if (!R || ST.patched || !R.switchTab) return; ST.patched = true;
     var orig = R.switchTab; R.switchTabQuiet = function (t) { UI._inPane = true; try { orig(t); } finally { UI._inPane = false; } };
     R.switchTab = function (t) {
-      var r = orig.apply(this, arguments);
+      var args = Array.prototype.slice.call(arguments);
+      if (ST.scope && U.MID_HIDDEN_TABS.indexOf(t) >= 0) { args[0] = t = 'intv'; }   /* 中級沒有「事件簿」「討論」：例如事件提示按「去事件簿」，改開訪談 */
+      var r = orig.apply(this, args);
       if (ST.roomOn && !UI._inPane && (t === 'intv' || t === 'clue' || t === 'cards')) openPane(t);   /* 例如「事件」提示按去訪談：新手畫面也要開得起來 */
       return r;
     };
+    R.blocked = function (id) {   /* 灰色房間不能進（room.js／m.js 的 startTravel、jumpTo、goRemote 會先問這裡） */
+      var sc = ST.scope; if (!sc || sc.rooms.indexOf(id) >= 0) return false;
+      var t = roomTypeOf(id); if (t !== 'room' && t !== 'remote') return false;
+      if (R.toast) R.toast(U.GREY_TEXT + '想去的話，切到專家模式。'); return true;
+    };
+    R.decorateChips = decorateChips;
+    var en = R.enter; if (en) R.enter = function () { var r = en.apply(this, arguments); try { sync(); } catch (e) {} return r; };
   }
   function sync() {
     if (ENV.demo) return;
-    patchRoom();
+    patchRoom(); try { syncMid(); } catch (e) { if (window.console) console.error('中級模式', e); }
     var c = curRoom(), want = !!(UI.isNovice() && roomActive() && supported(c));
     if (want !== ST.roomOn) {
       ST.roomOn = want; document.body.classList.toggle('nvRoom', want); document.body.classList.toggle('nvM', want && MOB);
       if (want) { lastSig = {}; ensureRoomDom(); }
-      else { document.body.classList.remove('nvPane', 'nvTalk'); ST.pane = ''; var h = $('nvPaneHead'); if (h) h.innerHTML = ''; if (c) { c.intvHold = false; } if (c && roomActive()) { try { RM().switchTabQuiet && RM().switchTabQuiet('clue'); } catch (e) {} } try { window.dispatchEvent(new Event('resize')); } catch (e) {} }
+      else { document.body.classList.remove('nvPane', 'nvTalk'); ST.pane = ''; var h = $('nvPaneHead'); if (h) h.innerHTML = ''; if (c) { c.intvHold = false; } if (c && roomActive()) { try { RM().switchTabQuiet && RM().switchTabQuiet('clue'); } catch (e) {} if (MOB) { try { window.scrollTo(0, 0); } catch (e) {} } }   /* 手機：離開新手時分頁切換會把頁面捲到分頁列，回到最上面才看得到場景 */ try { window.dispatchEvent(new Event('resize')); } catch (e) {} }
     }
     if (want) {
       if (ST.pane !== 'intv' || !document.body.classList.contains('nvPane')) renderRoom();
@@ -325,6 +340,92 @@
     }
   }
   UI.sync = sync; UI._reset = function () { ST.nudgeAt = 0; }; setInterval(sync, 600);
+
+  /* ───── 中級：場景留著，房間與人物少一些 ───── */
+  function roomTypeOf(id) { var r = window.ERG_LAYOUT && window.ERG_LAYOUT.room(id); return r ? r.type : ''; }
+  function travelIds() { var L = window.ERG_LAYOUT; return L && L.ROOMS ? L.ROOMS.filter(function (r) { return r.type === 'room' || r.id === 'home' || r.id === 'clinic'; }).map(function (r) { return r.id; }) : []; }
+  function scopeOf(c) {
+    var LAY = window.ERG_LAYOUT, pers = (c.world && c.world.personas) || {};
+    return U.scopeFor(2, caseIdOf(c), { rooms: function (r) { return !!(LAY && LAY.room(r)); }, pids: function (p) { return !!pers[p]; } });
+  }
+  function doStep(s, b) {
+    var R = RM(); if (!s) return;
+    if (s.kind === 'ask') { if (goToPerson(s.pid, '他現在不在開放的房間裡，過一會兒再來。') && R) R.switchTab('intv'); }
+    else if (s.kind === 'export') { var P = window.ERG_PANELS; if (P && P.exportFromLobby) { b.disabled = true; P.exportFromLobby(s.code, function () { b.disabled = false; }); } }
+  }
+  function onStripClick(e) {
+    var b = e.target.closest && e.target.closest('button,a'); if (!b) return;
+    if (b.id === 'lv2NextBtn') { var c = curRoom(); if (c) doStep(stepFor(c), b); }
+  }
+  function mountStrip(c) {
+    var tabs = $('tabs'); if (!tabs || !tabs.parentNode) return;
+    var st = $('lv2Strip');
+    if (!st) {
+      st = document.createElement('div'); st.id = 'lv2Strip'; st.className = 'nvKeep';
+      st.innerHTML = '<div id="lv2Next" aria-live="polite"></div><details id="lv2AiBox"><summary>問 AI 助教</summary><div id="lv2Ai"></div></details><div class="muted nvSmall" id="lv2Note"></div>';
+      tabs.parentNode.insertBefore(st, MOB ? ($('tabsAnchor') || tabs) : tabs); st.addEventListener('click', onStripClick);
+      buildAi($('lv2Ai'), 'lv2Ai'); $('lv2Note').textContent = U.SCOPE_NOTE; delete lastSig.lv2Next;
+    }
+    var s = stepFor(c);
+    var btn = s.kind === 'story' ? '<a class="nvBtn big" href="' + esc(s.href) + '">' + esc(s.label) + '</a>' : (s.kind === 'ask' || s.kind === 'export' ? '<button type="button" class="nvBtn big" id="lv2NextBtn">' + esc(s.label) + '</button>' : '');
+    put('lv2Next', '<div class="nvNextBox"><div style="flex:1;min-width:120px"><div class="nvK">下一步</div><div class="nvT">' + esc(s.text) + '</div></div>' + btn + '</div>');
+  }
+  function chipsHtml(sc, here) {
+    var L = window.ERG_LAYOUT, sp = U.roomSplit(sc, travelIds()), nm = function (id) { return id === 'home' ? '🚌 病患的家' : ((L && L.room(id) || {}).name || id); };
+    var open = sp.open.filter(function (id) { return id !== here; }).map(function (id) { return '<button type="button" class="ghost chip" data-lv2go="' + esc(id) + '">' + esc(nm(id)) + '</button>'; }).join('');
+    var show = sp.grey.slice(0, 3), more = sp.grey.length - show.length;
+    var grey = show.map(function (id) { return '<button type="button" class="ghost chip nvGreyRoom" aria-disabled="true" data-lv2grey="' + esc(id) + '" title="' + esc(U.GREY_TEXT) + '">' + esc(nm(id).replace(/（.*$/, '')) + '</button>'; }).join('') +
+      (more > 0 ? '<button type="button" class="ghost chip nvGreyRoom" aria-disabled="true" data-lv2grey="*" title="' + esc(U.GREY_TEXT) + '">其他 ' + more + ' 間</button>' : '');
+    return '<b>去別的房間：</b>' + (open || '<span class="muted">（這裡就是全部）</span>') + (grey ? ' <b class="muted">專家才開：</b>' + grey : '');
+  }
+  function bindChips(host) {
+    if (host._lv2b) return; host._lv2b = true;
+    host.addEventListener('click', function (e) {
+      var b = e.target.closest && e.target.closest('button'); if (!b) return; var R = RM();
+      if (b.dataset.lv2go && R) { R.travel(b.dataset.lv2go); return; }
+      if (b.dataset.lv2grey && R && R.toast) R.toast(U.GREY_TEXT + '想去的話，切到專家模式。');
+    });
+  }
+  function decorateChips() {
+    var sc = ST.scope, c = curRoom(); if (!sc || !c) return;
+    var host = $('visitedChips'), nav = $('nav'), here = c.player && c.player.loc, html = chipsHtml(sc, here);
+    if (host) { host.innerHTML = html; host.setAttribute('data-lv2', '1'); bindChips(host); return; }
+    if (nav && MOB) {
+      var mb = nav.querySelector('#mapBtn'), more = nav.querySelector('#navMore'); nav.innerHTML = ''; if (mb) nav.appendChild(mb);
+      nav.insertAdjacentHTML('beforeend', html); if (more) nav.appendChild(more); nav.setAttribute('data-lv2', '1'); bindChips(nav);
+    }
+  }
+  function greyMap(sc) {
+    var rs = {}; if (sc) sc.rooms.forEach(function (r) { rs[r] = 1; });
+    function paint(el, id) { var t = roomTypeOf(id), grey = !!sc && (t === 'room' || t === 'remote') && !rs[id]; if (el.classList.contains('nvGreyRm') !== grey) el.classList.toggle('nvGreyRm', grey); }
+    Array.prototype.forEach.call(document.querySelectorAll('g.ermm-click[data-room]'), function (g) { paint(g, g.getAttribute('data-room')); });
+    Array.prototype.forEach.call(document.querySelectorAll('.mLabel[data-room-label]'), function (g) { paint(g, g.getAttribute('data-room-label')); });
+  }
+  function syncMid() {
+    var c = curRoom(), w = c && c.world, R = RM(), sc = (UI.isMid() && roomActive() && w) ? scopeOf(c) : null;
+    if (ST.scopeWorld && ST.scopeWorld !== w) { U.removeScope(ST.scopeWorld); ST.scopeWorld = null; }
+    var was = !!ST.scope;
+    if (sc) {
+      var sig = sc.rooms.join(',') + '|' + sc.pids.join(',');
+      if (w.__lvScope && w.__lvScope.sig !== sig) U.removeScope(w);
+      if (!w.__lvScope) U.applyScope(w, sc, roomTypeOf);
+      ST.scopeWorld = w; ST.scope = sc; document.body.classList.add('lv2Room');
+      if (!was && c.player && sc.rooms.indexOf(c.player.loc) < 0 && R && R.teleport) { R.teleport('entrance'); if (R.toast) R.toast('剛才那間房在專家模式才開，先帶你回入口大廳。'); }
+      if (c.selNpc && !(w.at(c.clock.worldSec).some(function (it) { return it.ent.id === c.selNpc; }))) { /* 選到的人不在開放房間裡了：保留選取，由訪談面板自己處理「走開了」 */ }
+      mountStrip(c);
+      var h = $('visitedChips') || (MOB ? $('nav') : null);
+      if (R && R.renderChips && (!was || (h && h.getAttribute('data-lv2') !== '1'))) { try { R.renderChips(); } catch (e) {} }
+      greyMap(sc);
+      if (U.MID_HIDDEN_TABS.indexOf(c.tab) >= 0 && R) R.switchTab('intv');
+    } else if (was || document.body.classList.contains('lv2Room')) {
+      if (ST.scopeWorld) U.removeScope(ST.scopeWorld);
+      ST.scopeWorld = null; ST.scope = null; document.body.classList.remove('lv2Room');
+      var st = $('lv2Strip'); if (st) st.remove(); delete lastSig.lv2Next;
+      var h2 = $('visitedChips') || $('nav'); if (h2) h2.removeAttribute('data-lv2');
+      if (c && R && R.renderChips) { try { R.renderChips(); } catch (e) {} }
+      greyMap(null);
+    }
+  }
 
   /* ───── 大廳：新手版面＋進大廳詢問 ───── */
   function nameMapFor(caseId) {
@@ -385,14 +486,14 @@
     if (!ST.nudge) {
       if (Date.now() - (ST.nudgeAt || 0) < 30000) { if (old) old.remove(); return; }   /* 大廳每幾秒重畫一次，判準要掃全部房間；進大廳時算一次，30 秒內不重算 */
       ST.nudgeAt = Date.now();
-      var st = stats(), n = U.nudgeFor({ level: ST.lv, days: st.days, cards: st.cards, cells: st.cells, entered: st.entered, today: U.dayKey(Date.now()), lastAskDay: ST.logState.lastAskDay, declines: ST.logState.declines, inRoom: roomActive() });
+      var st = stats(), n = U.nudgeFor({ level: ST.lv, days: st.days, cards: st.cards, cells: st.cells, badges: st.badges, entered: st.entered, today: U.dayKey(Date.now()), lastAskDay: ST.logState.lastAskDay, declines: ST.logState.declines, inRoom: roomActive() });
       if (!n) { if (old) old.remove(); return; }
-      ST.nudge = n; UI.logOnly(n.kind + '-shown');
+      ST.nudge = n; UI.logOnly(n.kind + '-shown', n.to);
     }
     var n2 = ST.nudge, tx = U.nudgeText(n2);
     if (!old) { old = document.createElement('div'); old.id = 'nvNudge'; old.className = 'nvKeep nvBox nvDash'; var row = wrap.querySelector('.row'); row.parentNode.insertBefore(old, row.nextSibling);
       old.addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b) return; var nn = ST.nudge; if (!nn) return; ST.nudge = null;
-        if (b.dataset.yes) UI.setLevel(nn.to, nn.kind + '-accept'); else { UI.logOnly(nn.kind + '-decline'); old.remove(); } }); }
+        if (b.dataset.yes) UI.setLevel(nn.to, nn.kind + '-accept'); else { UI.logOnly(nn.kind + '-decline', nn.to); old.remove(); } }); }
     var html = '<b style="font-size:18px">' + esc(tx.title) + '</b><div>' + esc(tx.body) + '</div><div class="nvRow"><button type="button" class="nvBtn big" data-yes="1">' + esc(U.NUDGE_BTN.yes[n2.kind]) + '</button><button type="button" class="nvBtn" data-no="1">' + esc(U.NUDGE_BTN.no) + '</button></div>';
     if (old.getAttribute('data-sig') !== html) { old.innerHTML = html; old.setAttribute('data-sig', html); }
   }
@@ -405,8 +506,9 @@
   ];
   UI.sbBoot = function (api) { UI._sbApi = api; };
   UI.sbRender = function (api) {
-    UI._sbApi = api; var nov = UI.isNovice() && IS_SB && !ENV.demo;
-    document.body.classList.toggle('nvSb', nov);
+    UI._sbApi = api; var nov = UI.isNovice() && IS_SB && !ENV.demo, mid = UI.isMid() && IS_SB;
+    document.body.classList.toggle('nvSb', nov); document.body.classList.toggle('lv2Sb', mid);
+    if (mid) { try { sbMid(api); } catch (e) { if (window.console) console.error('故事板中級', e); } } else sbMidOff();
     var bar = $('nvSbBar'); if (!nov) { if (bar) bar.remove(); Array.prototype.forEach.call(document.querySelectorAll('#cells .nvCur,#cells .nvQuote'), function (x) { x.classList.remove('nvCur'); if (x.classList.contains('nvQuote')) x.remove(); }); return; }
     var S = api.S, n = Math.max(1, Math.min(S.sel || 1, 6)); if (S.sel !== n) S.sel = n;
     var cellsEl = $('cells'); if (!cellsEl) return;
@@ -432,12 +534,56 @@
       var ask = cur.querySelector('.ask'); (ask || cur.querySelector('header')).insertAdjacentElement('afterend', q);
     }
   };
+  /* ───── 故事板：中級（六格一覽、點開一格寫；有場景圖、助教引導與代填；比專家少痛點標記、起點卡、請隊友補） ───── */
+  function sbMidOff() {
+    var bar = $('l2SbBar'); if (bar) bar.remove();
+    Array.prototype.forEach.call(document.querySelectorAll('#cells .l2Cur,#cells .l2Sum'), function (x) { if (x.classList.contains('l2Sum')) x.remove(); else x.classList.remove('l2Cur'); });
+  }
+  function sbMid(api) {
+    var S = api.S, cellsEl = $('cells'); if (!cellsEl) return;
+    var els = Array.prototype.slice.call(cellsEl.querySelectorAll('.cell')), total = els.length; if (!total) return;
+    var filled = 0, firstEmpty = 0, noImg = [], i;
+    for (i = 1; i <= total; i++) { var o = api.cellFor(i).c, has = api.SB.hasContent(o); if (has) filled++; else if (!firstEmpty) firstEmpty = i; if (!o.img) noImg.push(i); }
+    if (!S.l2Init) { S.l2Init = true; S.sel = firstEmpty || 1; }
+    var n = Math.max(1, Math.min(S.sel || 1, total)); S.sel = n;
+    var c = api.cellFor(n).c, next;
+    if (filled < total) next = { text: '第 ' + firstEmpty + ' 格還沒寫，點開來補上（已完成 ' + filled + '／' + total + '）', go: firstEmpty, label: '去第 ' + firstEmpty + ' 格' };
+    else if (noImg.length) next = { text: '格子都寫好了。第 ' + noImg[0] + ' 格還沒放圖，點開來放上（已放圖 ' + (total - noImg.length) + '／' + total + '）', go: noImg[0], label: '去第 ' + noImg[0] + ' 格' };
+    else next = { text: '格子和圖都完成了。可以下載成圖片或另存 PDF 交作業。', go: 0 };
+    var empty = $('sbEmpty') && !$('sbEmpty').hidden;
+    var html = '<div class="nvNextBox"><div style="flex:1;min-width:160px"><div class="nvK">下一步</div><div class="nvT">' + esc(next.text) + '</div></div>' + (next.go && next.go !== n ? '<button type="button" class="nvBtn big" data-goto="' + next.go + '">' + esc(next.label) + '</button>' : '') + '</div>' +
+      '<div class="nvRow">' + (empty ? '' : '<button type="button" class="nvBtn" data-draft="1">幫我排草稿</button>') + '<button type="button" class="nvBtn" data-sbguide="1">引導我：第 ' + n + ' 格怎麼寫</button><button type="button" class="nvBtn" data-sbfill="1"' + (c.aiText ? ' disabled' : '') + '>幫我寫一個示範（代填）</button></div>' +
+      '<div class="nvRow"><b>問 AI 助教</b>' + SB_FAQ.map(function (f, k) { return '<button type="button" class="nvChip" data-sbfaq="' + k + '">' + esc(f.q) + '</button>'; }).join('') + '</div><div id="nvSbAns" class="nvAns" aria-live="polite"></div>' +
+      '<div class="muted nvSmall">代填的格子要改成自己的話才算你的；引導不扣分。</div>';
+    var bar = $('l2SbBar'), main = document.querySelector('main');
+    if (!bar) { bar = document.createElement('div'); bar.id = 'l2SbBar'; (main || cellsEl.parentNode).insertBefore(bar, (main || cellsEl.parentNode).firstChild); bar.addEventListener('click', function (e) { onSbClick(e, UI._sbApi); }); }
+    if (bar.getAttribute('data-sig') !== html) { var ans = $('nvSbAns') ? $('nvSbAns').textContent : ''; bar.innerHTML = html; bar.setAttribute('data-sig', html); if ($('nvSbAns') && ans) $('nvSbAns').textContent = ans; }
+    els.forEach(function (el) {
+      var k = Number(el.dataset.n), cur = k === n; el.classList.toggle('l2Cur', cur);
+      var sum = el.querySelector('.l2Sum');
+      if (cur) { if (sum) sum.remove(); el.removeAttribute('role'); el.removeAttribute('tabindex'); return; }
+      var o2 = api.cellFor(k).c, has = api.SB.hasContent(o2), refs = (o2.refs || []).length;
+      var h = '<b>' + esc(o2.title || '（還沒取名）') + '</b><div>' + esc(has ? String(o2.what || o2.who || '').slice(0, 44) : '還沒寫') + '</div><div class="muted nvSmall">' + (has ? (refs ? '有出處' : '還沒附出處') : '點開來寫') + (o2.img ? '・有圖' : '') + '</div>';
+      if (!sum) { sum = document.createElement('div'); sum.className = 'l2Sum'; el.appendChild(sum); }
+      if (sum.getAttribute('data-sig') !== h) { sum.innerHTML = h; sum.setAttribute('data-sig', h); }
+      el.setAttribute('role', 'button'); el.setAttribute('tabindex', '0'); el.setAttribute('aria-label', '打開第 ' + k + ' 格');
+    });
+  }
+  function sbMidOpen(e) {
+    if (!IS_SB || !document.body.classList.contains('lv2Sb') || !UI._sbApi) return;
+    if (e.type === 'keydown' && e.key !== 'Enter' && e.key !== ' ') return;
+    var cell = e.target.closest && e.target.closest('#cells .cell'); if (!cell || cell.classList.contains('l2Cur')) return;
+    e.preventDefault(); e.stopPropagation(); UI._sbApi.S.sel = Number(cell.dataset.n); UI._sbApi.renderAll(true);
+    var cur = document.querySelector('#cells .l2Cur'); if (cur && cur.scrollIntoView) { try { cur.scrollIntoView({ block: 'nearest' }); } catch (x) {} }
+  }
+  document.addEventListener('click', sbMidOpen, true); document.addEventListener('keydown', sbMidOpen, true);
   function onSbClick(e, api) {
     var b = e.target.closest('button'); var S = api.S;
     if (!b && e.target.closest('a')) return; if (!b) return;
     if (b.dataset.goto) { S.sel = Number(b.dataset.goto); api.renderAll(true); return; }
     if (b.dataset.step) { S.sel = Math.max(1, Math.min(6, (S.sel || 1) + Number(b.dataset.step))); api.renderAll(true); try { window.scrollTo(0, 0); } catch (x) {} return; }
     if (b.dataset.toexpert) { UI.setLevel(3, 'self'); return; }
+    if (b.dataset.draft) { var dr = $('draftBtn'); if (dr && !dr.disabled) dr.click(); return; }
     if (b.dataset.sbfaq !== undefined) { var f = SB_FAQ[Number(b.dataset.sbfaq)]; $('nvSbAns').textContent = f.a(api); return; }
     var CO = window.ERG_SB_COACH, n = S.sel || 1, c = api.cellFor(n).c;
     if (b.dataset.sbguide && CO) {   /* 引導：沿用助教的提示階梯（提示→檢查→示範句型），只到第 3 階；答案回來由助教自己記階 */
@@ -511,6 +657,23 @@
       'body.nvSb .cell textarea{min-height:96px}body.nvSb .cell input,body.nvSb .cell textarea,body.nvSb .cell select{min-height:44px}body.nvSb .cell button.mini{min-height:44px}',
       '#nvSbBar{display:flex;flex-direction:column;gap:10px;margin-bottom:12px}.nvDots{display:inline-flex;gap:6px}.nvDot{position:relative;width:44px;height:44px;min-height:44px;border:0;padding:0;background:none;box-shadow:none}.nvDot::before{content:\"\";position:absolute;left:50%;top:50%;width:22px;height:22px;margin:-11px 0 0 -11px;border-radius:50%;border:var(--bw-s,2px) solid var(--ink);background:var(--panel)}.nvDot.got::before{background:var(--mint)}.nvDot.cur::before{background:var(--yellow);outline:var(--bw-s,2px) solid var(--ink)}',
       '.nvQuote{background:var(--code,#f1f5f7);color:var(--fg);border:var(--bw-s,2px) solid var(--line,#cfd8de);border-radius:var(--r-m,8px);padding:12px;margin:8px 0;font-size:15px}.nvDone{background:var(--soft-g,#e6fcf0);color:#1e1e1e}',
+      /* 中級：房間（有場景）＋故事板 */
+      'body.lv2Room #skBtn,body.lv2Room #v3dBtn,body.lv2Room #fitBtn,body.lv2Room #sideBtn{display:none!important}',
+      'body.lv2Room #tabs button[data-t=\"events\"],body.lv2Room #tabs button[data-t=\"disc\"]{display:none!important}',
+      '#lv2Strip{display:none}body.lv2Room #lv2Strip{display:block;padding:8px 10px;border-bottom:var(--bw-s,2px) solid var(--ink);background:var(--panel);color:var(--fg)}',
+      '#lv2Strip .nvNextBox{padding:8px 12px;margin:0 0 6px;gap:10px}#lv2Strip .nvT{font-size:17px}#lv2Strip .nvBtn.big{min-height:44px;padding:0 14px;font-size:var(--fs-3,15px)}',
+      '#lv2Strip details>summary{min-height:44px;display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:700}#lv2Strip details>summary::after{content:\"▾\"}#lv2Strip details[open]>summary::after{content:\"▴\"}#lv2Strip .nvAns{margin:6px 0}',
+      '.nvGreyRoom{border:var(--bw-s,2px) dashed var(--muted,#8b969d)!important;background:var(--code,#edf1f3)!important;color:var(--muted,#59656d)!important;font-weight:400!important;box-shadow:none!important;cursor:not-allowed}',
+      'g.nvGreyRm{opacity:.28}.mLabel.nvGreyRm{opacity:.45;filter:grayscale(1)}',
+      'body.lv2M #nav .chip,body.lv2M #tabs button,body.lv2M #topbar button,body.lv2M #topbar a,body.lv2M .pin{min-height:44px}body.lv2M #topbar .uilvSw[data-sheet=\"1\"] button{min-height:44px}',
+      'body.lv2Sb #prompts,body.lv2Sb #stats,body.lv2Sb #aiMeter{display:none!important}#l2SbBar #nvSbAns:empty{display:none}',
+      'body.lv2Sb .cell .stbox,body.lv2Sb .cell .stbadge,body.lv2Sb .cell .prin,body.lv2Sb .cell .bar:has([data-act=help]),body.lv2Sb .cell button[data-act=pain]{display:none!important}',
+      'body.lv2Sb #draftBtn,body.lv2Sb #draftBtn+.muted{display:none!important}',
+      'body.lv2Sb button,body.lv2Sb .btn,body.lv2Sb select,body.lv2Sb input:not([type=checkbox]),body.lv2Sb textarea,body.lv2Sb summary{min-height:44px}body.lv2Sb button.mini,body.lv2Sb .btn.mini{padding:8px 12px;margin:2px 0}body.lv2Sb .ck{min-height:44px;display:inline-flex;align-items:center;gap:8px}body.lv2Sb .ck input{width:24px;height:24px;min-height:24px}body.lv2Sb .chip .x{min-width:44px;min-height:44px}',
+      'body.lv2Sb #cells{grid-template-columns:repeat(3,minmax(0,1fr))}body.lv2Sb .cell.l2Cur{grid-column:1/-1}',
+      'body.lv2Sb .cell:not(.l2Cur){cursor:pointer;min-height:44px}body.lv2Sb .cell:not(.l2Cur)>*:not(header):not(.l2Sum){display:none!important}body.lv2Sb .cell:not(.l2Cur) header input,body.lv2Sb .cell:not(.l2Cur) .mom{display:none}.l2Sum{margin-top:6px}',
+      '#l2SbBar{display:flex;flex-direction:column;gap:10px;margin-bottom:12px}',
+      '@media (max-width:860px){body.lv2Sb #cells{grid-template-columns:minmax(0,1fr)}}',
       '@media (prefers-reduced-motion:reduce){.nvBtn,.nvChip{transition:none}}'
     ].join('\n');
     document.head.appendChild(st);

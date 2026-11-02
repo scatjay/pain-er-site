@@ -304,6 +304,7 @@
   function startTravel(roomId) {
     if (!cur) return false;
     var target = LAYOUT.room(roomId); if (!target) return false;
+    if (S.blocked && S.blocked(roomId)) return false;   /* 11-02 中級模式：灰色房間不能進（判斷在 ui_level_ui.js） */
     if (target.type === 'remote') { if (roomId === 'home' || roomId === 'clinic') { goRemote(roomId); return true; } return false; }
     if (cur.walk) cur.walk = null; clearTimeout(cur._jumpT);   /* 走路與傳送互斥：按了走路就取消還沒執行的傳送 */
     var plan = VC.planTravel(cur.world, LAYOUT, { shortestPath: window.ERG_NPC.shortestPath }, { loc: cur.player.loc, me: cur.me }, roomId, VC.walkSpeed(cur.world, cur.clock));
@@ -333,13 +334,15 @@
     renderTravelChips();
   }
   /* 10-13：病患的家、回診門診不在急診室地圖上，原本沒有任何入口（學生回報「回診跟病患家過不去」）。這兩間用按鈕直接過去。 */
-  function goRemote(id){if(!cur)return;var rm=LAYOUT.room(id);if(!rm)return;cur.walk=null;clearTimeout(cur._jumpT);cur.stageMode='room';cur.focus=null;setLoc(id,true);refreshStageMode();DB.appendEvent(cur.code,{kind:'move',env:APP.me.sid,to:id});persist(true);toast(id==='home'?'搭公車到了病患的家。這裡有他手機收到的簡訊，家人也在。':'隔天，到了回診門診。');}
-  function renderTravelChips(){var host=$('visitedChips');if(!host||!cur)return;host.innerHTML='<b>院外：</b><button class="ghost" data-remote="home">🚌 病患的家</button><button class="ghost" data-remote="clinic">🏥 回診門診</button>'+' <b>去過的房間：</b>'+((cur.player.visited||[]).map(function(id){var r=LAYOUT.room(id);return r?'<button class="ghost" data-visit="'+esc(id)+'">'+esc(r.name)+'</button>':'';}).join('')||'尚無');Array.prototype.forEach.call(host.querySelectorAll('[data-visit]'),function(b){b.onclick=function(){startTravel(b.dataset.visit);};});Array.prototype.forEach.call(host.querySelectorAll('[data-remote]'),function(b){b.onclick=function(){goRemote(b.dataset.remote);};});}
+  function goRemote(id){if(!cur)return;var rm=LAYOUT.room(id);if(!rm)return;if(S.blocked&&S.blocked(id))return;cur.walk=null;clearTimeout(cur._jumpT);cur.stageMode='room';cur.focus=null;setLoc(id,true);refreshStageMode();DB.appendEvent(cur.code,{kind:'move',env:APP.me.sid,to:id});persist(true);toast(id==='home'?'搭公車到了病患的家。這裡有他手機收到的簡訊，家人也在。':'隔天，到了回診門診。');}
+  function renderTravelChips(){var host=$('visitedChips');if(!host||!cur)return;host.innerHTML='<b>院外：</b><button class="ghost" data-remote="home">🚌 病患的家</button><button class="ghost" data-remote="clinic">🏥 回診門診</button>'+' <b>去過的房間：</b>'+((cur.player.visited||[]).map(function(id){var r=LAYOUT.room(id);return r?'<button class="ghost" data-visit="'+esc(id)+'">'+esc(r.name)+'</button>':'';}).join('')||'尚無');Array.prototype.forEach.call(host.querySelectorAll('[data-visit]'),function(b){b.onclick=function(){startTravel(b.dataset.visit);};});Array.prototype.forEach.call(host.querySelectorAll('[data-remote]'),function(b){b.onclick=function(){goRemote(b.dataset.remote);};});if(S.decorateChips)S.decorateChips();}
   S.travel = startTravel;
+  S.renderChips = renderTravelChips;
   /* 10-18 D3：點地圖上的房間＝直接傳送（快速旅行）。短暫淡出淡入＋「到了○○」；底部移動列與推薦鈕仍是走路（startTravel）。
      人在院外（病患的家、回診門診）時，點院內房間一樣直接到。 */
   function jumpTo(roomId) {
     if (!cur) return false;
+    if (S.blocked && S.blocked(roomId)) return false;
     var jp = VC.planJump(LAYOUT, cur.player.loc, !!cur.walk, roomId), rm = LAYOUT.room(roomId);
     if (jp.kind === 'remote') { goRemote(roomId); return true; }
     if (jp.kind === 'same') { toast('你已經在' + rm.name + '了'); return true; }

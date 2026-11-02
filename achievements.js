@@ -226,7 +226,7 @@
         /* 10-23：回報過遊戲問題幾次（panels.js 的 achCtx 從本機回報紀錄算；過去的回報者由老師端補寫進 score） */
       cases: Number(ctx.cases) || 0,   /* 10-15：進過幾種不同案例的房間（大廳『開一間』的案例選單；由 panels.js 的 achCtx 從大廳索引算） */
       replays: arr(player.replays).length, partners: arr(player.discussion && player.discussion.partners).length,
-      conclusions: arr(player.conclusions).length, chatTurns: Number(player.chatTurns || 0), playMin: Number(player.playMin || 0),
+      conclusions: arr(player.conclusions).length, chatTurns: Number(player.chatTurns || 0), chatUniq: Number(player.chatUniq || 0), playMin: Number(player.playMin || 0),
       night: !!(player.nightSeen || ctx.shift === 'night'), cpAllOk: !!ctx.cpAllOk,
       offTurns: Number((player.off || {}).n || 0), offRest: Number((player.off || {}).rest || 0), offLate: Number((player.off || {}).late || 0),
       qEvent: Number((player.q || {}).ev || 0), qWhy: Number((player.q || {}).why || 0), qEcho: Number((player.q || {}).echo || 0), qIntro: Number((player.q || {}).intro || 0), qChain: Number((player.q || {}).chain || 0),
@@ -336,10 +336,19 @@
   function badges(m) { return DEFS.map(function (d) { return { id: d.id, unit: d.unit, icon: d.icon, name: d.name, desc: d.desc, prog: progOf(d.id, m), ok: !!d.test(m) || (m.keep || []).indexOf(d.id) >= 0 }; }); }
   function earned(m) { return badges(m).filter(function (b) { return b.ok; }); }
 
+  /* 11-02：只算「有效提問」。與最近 20 則（去空白後）相同、距上一次送出不到 5 秒、或少於 2 個字，訊息照送但不加提問數。
+     state = { recent: [], last: 0 }（只放在記憶體）；回傳 { ok, state }，不改傳入的物件。 */
+  var Q_MIN_GAP = 5000, Q_KEEP = 20, Q_MIN_LEN = 2;
+  function questionCheck(state, text, now) {
+    state = state || {}; var recent = Array.isArray(state.recent) ? state.recent : [], last = Number(state.last) || 0;
+    var norm = String(text == null ? '' : text).replace(/\s+/g, ''), len = Array.from(norm).length;
+    var ok = len >= Q_MIN_LEN && recent.indexOf(norm) < 0 && !(last && now - last < Q_MIN_GAP);
+    return { ok: ok, state: { recent: (ok ? recent.concat([norm]) : recent).slice(-Q_KEEP), last: now } };   /* 沒算進去的不記進最近清單，之後同一句話隔夠久再問仍算 */
+  }
   /* 給班級排行的小物件（不含名字；名字由呼叫端補） */
   function summary(player, ctx) {
     var m = metrics(player, ctx);
-    var o = { interviewees: m.interviewees, rooms: m.rooms, cards: m.cards, events: m.events, chatTurns: m.chatTurns, playMin: m.playMin, partners: m.partners, conclusions: m.conclusions, badges: earned(m).length, skAsk: Number(((player || {}).skillLv || {}).ask) || 1, skCtx: Number(((player || {}).skillLv || {}).ctx) || 1, badgeIds: earned(m).map(function (b) { return b.id; }) };
+    var o = { interviewees: m.interviewees, rooms: m.rooms, cards: m.cards, events: m.events, chatTurns: m.chatTurns, chatUniq: m.chatUniq, playMin: m.playMin, partners: m.partners, conclusions: m.conclusions, badges: earned(m).length, skAsk: Number(((player || {}).skillLv || {}).ask) || 1, skCtx: Number(((player || {}).skillLv || {}).ctx) || 1, badgeIds: earned(m).map(function (b) { return b.id; }) };
     /* 10-27 W8 技能：有讀到故事板資料（ctx.sb）才寫；寫之前跟上次已發布的（ctx.prevSk）取大，等級不會倒退。Firebase 不收 undefined，所以沒資料就不加欄位。 */
     if (ctx && ctx.sb) { var ps = ctx.prevSk || {}; o.skStory = Math.max(m.w8.story.lv, Number(ps.story) || 0); o.skSource = Math.max(m.w8.source.lv, Number(ps.source) || 0); }
     return o;
@@ -347,7 +356,7 @@
   /* 10-19 降流量：成就摘要的「變動判斷」不含 playMin（它每分鐘 +1，會讓每位前景學生每分鐘寫一次，全班人人收到）；
      playMin 改成累計滿 PLAYMIN_EVERY 分鐘才跟著寫一次，或離開頁面（force）時補寫。其他欄位一變就寫。 */
   var PLAYMIN_EVERY = 5;
-  function scoreSig(s) { return JSON.stringify([s.interviewees, s.rooms, s.cards, s.events, s.chatTurns, s.partners, s.conclusions, s.badges, s.skAsk, s.skCtx, s.skStory, s.skSource]); }
+  function scoreSig(s) { return JSON.stringify([s.interviewees, s.rooms, s.cards, s.events, s.chatTurns, s.chatUniq, s.partners, s.conclusions, s.badges, s.skAsk, s.skCtx, s.skStory, s.skSource]); }
   /* st = { sig, playMin }（上次寫出去的）；回傳 { write, sig }。force＝離開頁面時，playMin 只要有差就補寫 */
   function scoreDecide(st, s, force) {
     var sig = scoreSig(s), pm = Number(s.playMin) || 0, last = Number(st && st.playMin) || 0;
@@ -365,7 +374,7 @@
     };
   }
   /* 排行：scores = { sid: { name, ...summary } } → 每個項目的前三名 */
-  var BOARD = [['interviewees', '訪談最多人', '人'], ['playMin', '待最久', '分鐘'], ['rooms', '走最多房間', '間'], ['chatTurns', '問最多題', '題'], ['cards', '便利貼最多', '張'], ['events', '遇到最多事件', '件'], ['badges', '徽章最多', '枚']];
+  var BOARD = [['interviewees', '訪談最多人', '人'], ['playMin', '待最久', '分鐘'], ['rooms', '走最多房間', '間'], ['chatUniq', '問最多題', '題'], ['cards', '便利貼最多', '張'], ['events', '遇到最多事件', '件'], ['badges', '徽章最多', '枚']];
   function leaderboard(scores, topN) {
     topN = topN || 3; var sids = keys(scores);
     return BOARD.map(function (b) {
@@ -377,7 +386,7 @@
   function html(m, esc, o) {
     esc = esc || function (s) { return String(s); };
     var bs = badges(m), got = bs.filter(function (b) { return b.ok; }).length;
-    var stat = '<div class="row" style="gap:10px;flex-wrap:wrap;font-size:var(--fs-2)">' + [['訪談過', m.interviewees + ' 人'], ['房間', m.rooms + ' 間'], ['便利貼', m.cards + ' 張'], ['事件', m.events + ' 件'], ['即時提問', m.chatTurns + ' 題'], ['累計', m.playMin + ' 分鐘']].map(function (x) { return '<span><b>' + x[0] + '</b> ' + x[1] + '</span>'; }).join('') + '</div>';
+    var stat = '<div class="row" style="gap:10px;flex-wrap:wrap;font-size:var(--fs-2)">' + [['訪談過', m.interviewees + ' 人'], ['房間', m.rooms + ' 間'], ['便利貼', m.cards + ' 張'], ['事件', m.events + ' 件'], ['即時提問', m.chatUniq + ' 題'], ['累計', m.playMin + ' 分鐘']].map(function (x) { return '<span><b>' + x[0] + '</b> ' + x[1] + '</span>'; }).join('') + '</div>';
     function gridOf(list) { return '<div class="achGrid">' + list.map(function (b) { return '<div class="ach ' + (b.ok ? 'on' : '') + '" title="' + esc(b.desc) + '"><div class="achIcon">' + b.icon + '</div><div class="achName">' + esc(b.name) + '</div>' + (b.prog ? '<div class="achProg" style="font-size:var(--fs-1);font-weight:700">(' + (b.ok ? b.prog.goal : b.prog.v) + '/' + b.prog.goal + ')</div>' : '') + '<div class="achDesc">' + esc(b.desc) + '</div></div>'; }).join('') + '</div>'; }
     var head = '<p class="muted" style="font-size:var(--fs-1);margin:4px 0">徽章 ' + got + ' / ' + bs.length + '。這不是分數，只是記錄你在急診室裡做過的事。</p>' + stat;
     if (!o) return head + gridOf(bs);
@@ -393,5 +402,5 @@
     }).join('');
     return head + groups;
   }
-  return { fbStats: fbStats, skillReport: skillReport, skCard: skCard, DESC_REP: DESC_REP, DEFS: DEFS, BOARD: BOARD, CORE_IDS: CORE_IDS, SPECIAL: SPECIAL, metrics: metrics, noteQuestion: noteQuestion, noteOffHours: noteOffHours, offHours: offHours, SCHED: SCHED, chatStats: chatStats, skills: skills, skillsHtml: skillsHtml, skillsW8: skillsW8, UNIT_NAME: UNIT_NAME, SK_STORY: SK_STORY, SK_SOURCE: SK_SOURCE, badges: badges, earned: earned, summary: summary, leaderboard: leaderboard, html: html, scoreSig: scoreSig, scoreDecide: scoreDecide, makeScoreWatch: makeScoreWatch, PLAYMIN_EVERY: PLAYMIN_EVERY };
+  return { questionCheck: questionCheck, fbStats: fbStats, skillReport: skillReport, skCard: skCard, DESC_REP: DESC_REP, DEFS: DEFS, BOARD: BOARD, CORE_IDS: CORE_IDS, SPECIAL: SPECIAL, metrics: metrics, noteQuestion: noteQuestion, noteOffHours: noteOffHours, offHours: offHours, SCHED: SCHED, chatStats: chatStats, skills: skills, skillsHtml: skillsHtml, skillsW8: skillsW8, UNIT_NAME: UNIT_NAME, SK_STORY: SK_STORY, SK_SOURCE: SK_SOURCE, badges: badges, earned: earned, summary: summary, leaderboard: leaderboard, html: html, scoreSig: scoreSig, scoreDecide: scoreDecide, makeScoreWatch: makeScoreWatch, PLAYMIN_EVERY: PLAYMIN_EVERY };
 });

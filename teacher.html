@@ -324,17 +324,17 @@ body.proj .priv{display:none!important}
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-<script src="er_firebase.js?v=202611022320"></script>
-<script src="checklist.js?v=202611022320"></script>
-<script src="checkpoints.js?v=202611022320"></script>
-<script src="avatar.js?v=202611022320"></script>
-<script src="local_db.js?v=202611022320"></script>
-<script src="app_core.js?v=202611022320"></script>
-<script src="achievements.js?v=202611022320"></script><script src="remote_db.js?v=202611022320"></script><script src="summary_render.js?v=202611022320"></script>
-<script src="layout.js?v=202611022320"></script>
-<script src="minimap.js?v=202611022320"></script><script src="map_layout.js?v=202611022320"></script><script src="skill_badge.js?v=202611022320"></script>
-<script src="personas_inclusive.js?v=202611022320"></script><script src="er_data.js?v=202611022320"></script><script src="npc_voice.js?v=202611022320"></script><script src="personas.js?v=202611022320"></script>
-<script src="week2.js?v=202611022320"></script><script src="ui_level.js?v=202611022320"></script><script src="teacher_model.js?v=202611022320"></script>
+<script src="er_firebase.js?v=202611030005"></script>
+<script src="checklist.js?v=202611030005"></script>
+<script src="checkpoints.js?v=202611030005"></script>
+<script src="avatar.js?v=202611030005"></script>
+<script src="local_db.js?v=202611030005"></script>
+<script src="app_core.js?v=202611030005"></script>
+<script src="achievements.js?v=202611030005"></script><script src="remote_db.js?v=202611030005"></script><script src="summary_render.js?v=202611030005"></script>
+<script src="layout.js?v=202611030005"></script>
+<script src="minimap.js?v=202611030005"></script><script src="map_layout.js?v=202611030005"></script><script src="skill_badge.js?v=202611030005"></script>
+<script src="personas_inclusive.js?v=202611030005"></script><script src="er_data.js?v=202611030005"></script><script src="npc_voice.js?v=202611030005"></script><script src="personas.js?v=202611030005"></script>
+<script src="week2.js?v=202611030005"></script><script src="ui_level.js?v=202611030005"></script><script src="teacher_model.js?v=202611030005"></script>
 <script>
 /* 教師名單：只有這裡的 Google 帳號能進。要加人就加在這裡（改完重新部署；資料庫規則 tools/er_after_google_enabled.py 也要加）。 */
 var TEACHER_EMAILS = ['scatjay@gmail.com', 'prof.chwu@mx.nthu.edu.tw', 'nthuchwu@gapp.nthu.edu.tw'];   /* 10-16 楊老師：清大吳智鴻老師（觀摩用，含後台） */
@@ -639,7 +639,7 @@ var CLASS_WINDOWS = [].concat(
   }
   function renderBoard() {
     var A = window.ERG_ACH, el = $('board'); if (!A || !el) return;
-    var named = {}; Object.keys(scores).forEach(function (sid) { var s = scores[sid] || {}; named[sid] = Object.assign({}, s, { name: DEID ? aliasOf(sid) : (s.name || sid) }); });
+    var named = {}; Object.keys(scores).forEach(function (sid) { var s = scores[sid] || {}; var cl = s.cls || (profiles[sid] || {}).cls || ''; named[sid] = Object.assign({}, s, { name: (DEID ? aliasOf(sid) : (s.name || sid)) + (cl ? '（' + cl + '）' : '') }); });   /* 11-02 排行每個名字後面顯示班級（去識別模式也顯示） */
     var lb = A.leaderboard(named, 3), any = lb.some(function (b) { return b.rows.length; });
     el.innerHTML = any ? '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px">' + lb.map(function (b) { return '<div style="border:2px solid var(--line);border-radius:8px;padding:6px 8px"><b>' + esc(b.label) + '</b>' + (b.rows.length ? '<ol style="margin:4px 0 0 18px;padding:0">' + b.rows.map(function (r) { return '<li>' + esc(r.name) + '　' + r.v + ' ' + esc(b.unit) + '</li>'; }).join('') + '</ol>' : '<div class="muted small">—</div>') + '</div>'; }).join('') + '</div>' +
       '<div class="muted small" style="margin-top:6px">徽章清單：' + A.DEFS.map(function (d) { return d.icon + d.name; }).join('、') + '</div>' : '<span class="muted">還沒有人寫入分數（學生進房間一分鐘後會出現）。</span>';
@@ -844,9 +844,11 @@ var CLASS_WINDOWS = [].concat(
   /* 11-02 模式（新手／專家）：學生表兩欄＋總覽（各班人數、提醒結果、切換紀錄）。算法在 teacher_model.js 的 uilvView；這裡只畫。只供觀察，不是成績。 */
   var uilvV = null;
   function uilvCompute() { var cards = {}; stuRows.forEach(function (r) { cards[r.sid] = r.iv; }); uilvV = window.ERG_TMODEL.uilvView({ profiles: profiles, uilv: uilvAll, cards: cards, now: Date.now() }); return uilvV; }
+  var UILV_NM = { 1: '新手', 2: '中級', 3: '專家' };
+  function uilvSw(a, b) { return (UILV_NM[a] || '專家') + '→' + (UILV_NM[b] || '專家'); }
   function uilvCells(sid) {
     var v = (uilvV || uilvCompute()).rows[sid] || (uilvV.rows[String(sid).toLowerCase()]) || { name: '專家', remind: '未提醒', last: null, before: null, after: null, note: '—' };
-    var sw = v.last ? new Date(v.last.t).toLocaleDateString('zh-TW') + ' ' + (v.last.to === 1 ? '專家→新手' : '新手→專家') : '未切換';
+    var sw = v.last ? new Date(v.last.t).toLocaleDateString('zh-TW') + ' ' + uilvSw(v.last.from, v.last.to) : '未切換';
     var eff = v.last ? (v.before != null || v.after != null ? '前 ' + (v.before == null ? '—' : v.before) + '／後 ' + (v.after == null ? '—' : v.after) + ' 張/天' : esc(v.note)) : '';
     return '<td>' + esc(v.name) + '</td><td>' + esc(v.remind) + '<div class="muted small" style="font-size:.8em">' + esc(sw) + (eff ? '<br>' + eff : '') + '</div></td>';
   }
@@ -854,10 +856,10 @@ var CLASS_WINDOWS = [].concat(
     var box = $('uilvBox'); if (!box) return; var v = uilvCompute(), cls = Object.keys(v.byCls).sort();
     if (!cls.length) { box.innerHTML = ''; return; }
     var names = { '二甲': '二甲', '二乙': '二乙', '二丙': '二丙' };
-    box.innerHTML = '<details><summary><b>學生使用模式</b>　新手 ' + v.totals.n1 + ' 人・專家 ' + v.totals.n3 + ' 人　<span class="muted small">僅供觀察，不是成績</span></summary>' +
-      '<div style="display:flex;gap:10px;flex-wrap:wrap;margin:6px 0">' + cls.map(function (c) { var b = v.byCls[c]; return '<div class="card" style="margin:0;padding:8px 12px"><b>' + esc(names[c] || c) + '</b><div>新手 ' + b.n1 + '　專家 ' + b.n3 + '</div><div class="muted small">被建議 ' + b.shown + '｜接受 ' + b.accept + '｜拒絕 ' + b.decline + '</div></div>'; }).join('') + '</div>' +
+    box.innerHTML = '<details><summary><b>學生使用模式</b>　新手 ' + v.totals.n1 + ' 人・中級 ' + v.totals.n2 + ' 人・專家 ' + v.totals.n3 + ' 人　<span class="muted small">僅供觀察，不是成績</span></summary>' +
+      '<div style="display:flex;gap:10px;flex-wrap:wrap;margin:6px 0">' + cls.map(function (c) { var b = v.byCls[c]; return '<div class="card" style="margin:0;padding:8px 12px"><b>' + esc(names[c] || c) + '</b><div>新手 ' + b.n1 + '　中級 ' + b.n2 + '　專家 ' + b.n3 + '</div><div class="muted small">被建議 ' + b.shown + '｜接受 ' + b.accept + '｜拒絕 ' + b.decline + '</div></div>'; }).join('') + '</div>' +
       '<div class="muted small" style="margin:4px 0">切換前後每天訪談卡只是觀察：樣本小、而且是學生自己選的，不能說是「切換造成的」。切換後至少 2 天才會算。</div>' +
-      '<b class="small">最近的切換（最多 12 筆）</b>' + (v.log.length ? '<ul style="margin:4px 0 0 18px;padding:0;font-size:.9em">' + v.log.slice(0, 12).map(function (e) { return '<li>' + new Date(e.t).toLocaleString('zh-TW', { hour12: false }) + '　' + esc(DEID ? aliasOf(String(e.sid)) : e.sid) + '　' + (e.to === 1 ? '專家→新手' : '新手→專家') + '（' + esc({ self: '自己切', 'ask-accept': '接受建議新手', 'up-accept': '接受建議專家' }[e.why] || e.why) + '）</li>'; }).join('') + '</ul>' : '<span class="muted small">　還沒有人切換過。</span>') + '</details>';
+      '<b class="small">最近的切換（最多 12 筆）</b>' + (v.log.length ? '<ul style="margin:4px 0 0 18px;padding:0;font-size:.9em">' + v.log.slice(0, 12).map(function (e) { return '<li>' + new Date(e.t).toLocaleString('zh-TW', { hour12: false }) + '　' + esc(DEID ? aliasOf(String(e.sid)) : e.sid) + '　' + uilvSw(e.from, e.to) + '（' + esc({ self: '自己切', 'ask-accept': '接受建議', 'up-accept': '接受建議' }[e.why] || e.why) + '）</li>'; }).join('') + '</ul>' : '<span class="muted small">　還沒有人切換過。</span>') + '</details>';
   }
   function skCell(sid) { var x = (scores || {})[sid] || {}; return x.skAsk || x.skCtx || x.badgeIds ? SKB.badge(x.skAsk || 1, '探 Lv.' + (x.skAsk || 1)) + ' ' + SKB.badge(x.skCtx || 1, '境 Lv.' + (x.skCtx || 1)) + ' 🏅' + ((x.badgeIds || []).length) : '<span class="muted">—</span>'; }
   function respState(r) { if (!r || !r.t) return ['未送', 'muted']; if (r.rev && Number(r.rev.at) >= Number(r.t)) return r.rev.ok ? ['通過', 'ok'] : ['需補強', 'bad']; return [r.passed ? '通過（又送審）' : '審核中', r.passed ? 'ok' : '']; }

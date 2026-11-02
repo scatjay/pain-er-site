@@ -442,7 +442,8 @@
         var key = ref.child('turns').push({ role: 'u', text: text, t: now }).key;
         window.firebase.database().ref('er/_queue').push({ sess: APP.SESS, code: c.code, sid: me(), rec: safeKey(rec.id), turn: key, t: now });
       });
-      player().chatTurns = (Number(player().chatTurns) || 0) + 1;   /* 成就用：即時訪談送出幾題 */
+      var qc = (window.ERG_ACH && window.ERG_ACH.questionCheck) ? window.ERG_ACH.questionCheck(P.qState, text, now) : { ok: true, state: P.qState }; P.qState = qc.state;   /* 11-02：重複、太快、太短的不算提問數（訊息照送；手機版同一條路徑） */
+      if (qc.ok) { player().chatTurns = (Number(player().chatTurns) || 0) + 1; player().chatUniq = (Number(player().chatUniq) || 0) + 1; }   /* 成就用：即時訪談送出幾題 */
       P.skInvalidate();
       try { if (window.ERG_ACH && window.ERG_ACH.noteOffHours) window.ERG_ACH.noteOffHours(player(), now); } catch (e) {}   /* 10-23 課外時間成就 */
       try { if (window.ERG_ACH && window.ERG_ACH.noteQuestion) { var us = lastTurns.filter(function (t) { return t.role === 'u'; }), as = lastTurns.filter(function (t) { return t.role !== 'u'; }); window.ERG_ACH.noteQuestion(player(), { text: text, pid: ent.pid, prev: as.length ? as[as.length - 1].text : '', first: us.length === 0, n: us.length + 1 }); } } catch (e) {}
