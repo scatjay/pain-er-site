@@ -323,7 +323,8 @@
   }
   function filterValue(f) { return UNIT_SESS + '|' + num(f.week, 0) + '|' + (f.cls || ''); }
   function defaultFilter(now) {
-    var cc = currentClass(now); return { week: weekOf(cc.cls, cc.atMs) || 0, cls: cc.cls, manual: false };
+    var cc = currentClass(now); if (['before','during','after'].indexOf(cc.phase) < 0) return { week: 0, cls: '', manual: false };   /* 11-03 楊老師：不在上課時段一律看三班 */
+    return { week: weekOf(cc.cls, cc.atMs) || 0, cls: cc.cls, manual: false };
   }
   /* 決定一開始用哪個篩選：網址 ?f=週|班（兩頁互相連結時帶著）＞同一個分頁記住的選擇（sessionStorage 'erg_t_rm'，老師手動選過才記）＞今天或最近一堂課 */
   function resolveFilter(now, search, storage) {
@@ -361,7 +362,7 @@
     if (pf === 'during') now = '<b>現在：' + esc(c.cls) + '・上課中</b>（' + c.start + '–' + c.end + '，還有 ' + c.minsToEnd + ' 分）';
     else if (pf === 'before') now = '<b>現在：' + esc(c.cls) + '・上課前</b>（' + c.start + ' 開始，還有 ' + c.minsToStart + ' 分）';
     else if (pf === 'after') now = '<b>現在：' + esc(c.cls) + '・剛下課</b>（' + c.end + ' 下課，已過 ' + Math.max(0, -c.minsToEnd) + ' 分）';
-    else now = '<b>現在：不在上課時段</b>（預設看最近一堂：' + esc(c.cls) + ' ' + c.dowName + ' ' + c.start + '–' + c.end + '）';
+    else now = '<b>現在：不在上課時段</b>（預設看三班）';
     var nx = c.next;
     return { nowHtml: now, nextText: nx ? '下一堂：' + nx.cls + ' ' + nx.dowName + ' ' + nx.start + (pf === 'idle' ? '（還有 ' + fmtIn(nx.minsToStart) + '）' : '') : '', during: pf === 'during' };
   }
