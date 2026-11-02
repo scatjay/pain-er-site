@@ -145,6 +145,9 @@
   function slotKey(n) { return 's' + n; }
   function contentOf(c) { return [c.who, c.where, c.what, c.think].map(str).join('\n').replace(/^\n+|\n+$/g, ''); }
   function hasContent(c) { return !!(str(c.what) || str(c.think)); }
+  /* 11-02：空白故事板的三步提示。整面板（目前這一面）沒有任何一格有內容時才出現，有一格有內容就消失 */
+  var EMPTY_STEPS = [{ t: '先開板', d: '按下面「幫我排草稿」，用你的訪談卡把空格先填起來（沒有素材的格子會留空）。' }, { t: '寫滿六格', d: '每一格改幾個字，換成你自己看到、聽到的。短的也可以。' }, { t: '標關鍵時刻', d: '第 6 格勾「這格是關鍵時刻」，用一句話寫他在哪一刻最卡。' }];
+  function emptyBoard(list) { return !arr(list).some(function (c) { return c && hasContent(c); }); }
   function needsSource(c) { return hasContent(c) && (!c.refs || c.refs.length === 0); }
   function cellStatus(c) { return !hasContent(c) ? 'empty' : (needsSource(c) ? 'nosource' : 'ok'); }
   /* 六要素：誰、在哪、發生什麼、他怎麼想、痛點句、出處 */
@@ -446,7 +449,7 @@
 
   return { LIMITS: LIMITS, TIERS: TIERS, STORAGE_STOP_GB: STORAGE_STOP_GB, MODE_TEXT: MODE_TEXT, CASES: CASES, CASE_ORDER: CASE_ORDER, PROMPTS: PROMPTS, WHY_TEXT: WHY_TEXT,
     esc: esc, arr: arr, clip: clip, caseInfo: caseInfo, template: template, filled: filled, interviewCount: interviewCount, canEnter: canEnter,
-    emptyCell: emptyCell, normCell: normCell, normBoard: normBoard, slotKey: slotKey, contentOf: contentOf, hasContent: hasContent, needsSource: needsSource, cellStatus: cellStatus, cellChecks: cellChecks, gapMessage: gapMessage,
+    emptyCell: emptyCell, normCell: normCell, normBoard: normBoard, slotKey: slotKey, contentOf: contentOf, hasContent: hasContent, needsSource: needsSource, EMPTY_STEPS: EMPTY_STEPS, emptyBoard: emptyBoard, cellStatus: cellStatus, cellChecks: cellChecks, gapMessage: gapMessage,
     splitPain: splitPain, levenshtein: levenshtein, editRatio: editRatio, band: band, bandText: bandText, authorSummary: authorSummary,
     applyEdit: applyEdit, diffPaths: diffPaths, fragments: fragments, makeDraft: makeDraft,
     dayKey: dayKey, nextResetTs: nextResetTs, resetLabel: resetLabel, bumpFn: bumpFn, coachBoost: coachBoost, coachLimit: coachLimit, dropFn: dropFn, quotaView: quotaView, banner: banner,

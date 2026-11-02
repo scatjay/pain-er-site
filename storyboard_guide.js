@@ -69,12 +69,44 @@
     if (started > 0) return { ok: false, short: '還缺：訪談卡打勾', text: '還缺：訪談卡打勾——你已經開始跟 ' + started + ' 位聊了，但「訪談」分頁的檢核表還沒有打勾。到房間裡的「訪談」分頁，把問到的事打勾（「他一開始怎麼說」「那天發生了什麼事」「他真正需要什麼」，至少勾一項）。' };
     return { ok: false, short: '還缺：1 張訪談卡', text: '還缺：1 張訪談卡——先到這間房跟人物聊（點人物開始訪談），再到房間裡的「訪談」分頁的檢核表，把問到的事打勾（至少勾一項）。' };
   }
-  /* W8 卡頂端的完成列。p：{ steps: [{ label, ok: true | false | null（讀不到）}] } */
+  /* 11-02：主按鈕開哪一間——訪談卡最多的那間（只算能開的）；同樣多就取最近進過的（lastRoom），再來是最近加入／進入的 */
+  function pickMainRoom(rows, lastRoom) {
+    var open = (rows || []).filter(function (x) { return x && x.open; }); if (!open.length) return null;
+    var max = Math.max.apply(null, open.map(function (x) { return Number(x.cards) || 0; }));
+    var top = open.filter(function (x) { return (Number(x.cards) || 0) === max; });
+    var last = top.filter(function (x) { return x.code === lastRoom; })[0];
+    if (last) return last;
+    return top.slice().sort(function (a, b) { return (Number(b.seenAt) || 0) - (Number(a.seenAt) || 0); })[0];
+  }
+  /* 11-02：W8 卡只顯示「這位學生最前面沒做的一件」＋直接按鈕。
+     m：{ main:{code}（能開故事板的那間）, P:{opened, filled, moment, img, personas, code（寫最多的那間）} 或 null（還讀不到）, mobile }
+     順序：開故事板 → 幫我排草稿 → 繼續寫滿六格 → 標關鍵時刻 → 放圖 → 人物誌（要用電腦匯出報告）。goal 對應完成列的項目名稱。回傳 null＝沒有可開的房間或全部做完 */
+  function nextAction(m) {
+    m = m || {}; if (!m.main || !m.main.code) return null;
+    var P = m.P, GOAL = '故事板 6 格有內容';
+    if (!P) return { kind: 'link', label: '開故事板', href: 'storyboard.html?room=' + encodeURIComponent(m.main.code), goal: GOAL };
+    var filled = Number(P.filled) || 0, code = filled > 0 && P.code ? P.code : m.main.code, href = 'storyboard.html?room=' + encodeURIComponent(code);
+    if (!P.opened && filled === 0) return { kind: 'link', label: '開故事板', href: 'storyboard.html?room=' + encodeURIComponent(m.main.code), goal: GOAL };
+    if (filled === 0) return { kind: 'link', label: '幫我排草稿', href: href + '&draft=1', goal: GOAL };
+    if (filled < 6) return { kind: 'link', label: '繼續寫（已寫 ' + filled + '/6 格）', href: href, goal: GOAL };
+    if (!P.moment) return { kind: 'link', label: '標出關鍵時刻', href: href, goal: '標出關鍵時刻' };
+    if (!P.img) return { kind: 'link', label: '放一張圖', href: href, goal: '放了圖片' };
+    if ((Number(P.personas) || 0) < 2) return m.mobile ? { kind: 'pc', label: '人物誌：這步請用電腦', goal: '人物誌 2 位' } : { kind: 'export', label: '匯出訪談報告，做人物誌', code: m.main.code, goal: '人物誌 2 位' };
+    return null;
+  }
+  function actHtml(a) {
+    if (!a) return '';
+    if (a.kind === 'export') return '<button type="button" class="sbNext" data-export="' + esc(a.code) + '">' + esc(a.label) + '</button>';
+    if (a.kind === 'pc') return '<span class="sbNext pc" role="note">' + esc(a.label) + '</span>';
+    return '<a class="btn sbNext" href="' + esc(a.href) + '">' + esc(a.label) + '</a>';
+  }
+  /* W8 卡頂端的完成列。p：{ steps: [{ label, ok: true | false | null（讀不到）}], act: nextAction 的結果（可省略） }。只顯示最前面沒做的一件＋按鈕，五件全部收進「看全部」 */
   function progHtml(p) {
     if (!p || !p.steps) return '';
     var got = p.steps.filter(function (s) { return s.ok === true; }).length, next = p.steps.filter(function (s) { return s.ok !== true; })[0], unknown = p.steps.some(function (s) { return s.ok === null; });
-    var head = got === p.steps.length ? '<span class="wkDone ok">✅ 故事板全部完成（' + got + '/' + p.steps.length + '）</span>' : '<span class="wkDone todo">⬜ 完成 ' + got + '/' + p.steps.length + (next ? '｜下一步：' + esc(next.label) : '') + '</span>';
-    return '<div class="sbProg">' + head + '<ul>' + p.steps.map(function (s) { return '<li class="' + (s.ok === true ? 'ok' : '') + '">' + (s.ok === true ? '✅ ' : '⬜ ') + esc(s.label) + (s.ok === null ? '<span class="muted">（打開故事板後更新）</span>' : '') + '</li>'; }).join('') + '</ul></div>';
+    var nextLabel = p.act && p.act.goal ? p.act.goal : (next && next.label);
+    var head = got === p.steps.length ? '<span class="wkDone ok">✅ 故事板全部完成（' + got + '/' + p.steps.length + '）</span>' : '<span class="wkDone todo">⬜ 完成 ' + got + '/' + p.steps.length + (nextLabel ? '｜下一步：' + esc(nextLabel) : '') + '</span>';
+    return '<div class="sbProg">' + head + (got === p.steps.length ? '' : actHtml(p.act)) + '<details class="sbAll"><summary>看全部 ' + p.steps.length + ' 件</summary><ul>' + p.steps.map(function (s) { return '<li class="' + (s.ok === true ? 'ok' : '') + '">' + (s.ok === true ? '✅ ' : '⬜ ') + esc(s.label) + (s.ok === null ? '<span class="muted">（打開故事板後更新）</span>' : '') + '</li>'; }).join('') + '</ul></details></div>';
   }
   function fmtSeen(t) { var d = new Date(t), p = function (n) { return (n < 10 ? '0' : '') + n; }; return (d.getMonth() + 1) + '/' + d.getDate() + ' ' + p(d.getHours()) + ':' + p(d.getMinutes()); }
   function roomRows(rooms, skill, caseNames) {
@@ -101,9 +133,9 @@
     '.sbBox .sbMainRow{display:flex;align-items:center;gap:var(--s3);flex-wrap:wrap;margin:0 0 var(--s3)}.sbBox .sbMain{font-size:var(--fs-4);font-weight:900;padding:12px 22px;min-height:52px;background:var(--pop);color:var(--ink-fixed);border:var(--bw) solid var(--ink);border-radius:var(--r-m);box-shadow:var(--sh) var(--sh) 0 var(--ink);cursor:pointer}' +
     '.sbBox .sbAct{display:inline-flex;gap:var(--s2);flex-wrap:wrap}.sbBox .dis,.sbAct .sbOpen{border-width:var(--bw-t);box-shadow:none;padding:8px 16px;font-weight:700;border-radius:var(--r-m)}.sbAct .dis{opacity:.5;filter:grayscale(1);cursor:not-allowed;background:var(--panel);color:var(--fg);box-shadow:none}.sbBox .sbNeed{flex:1 1 100%;font-size:var(--fs-2);color:var(--bad);margin-top:2px}' +
     '.sbBox .sbMain2{font-weight:900;padding:12px 18px;min-height:52px;background:var(--yellow);color:var(--ink-fixed);border:var(--bw) solid var(--ink);border-radius:var(--r-m);box-shadow:var(--sh) var(--sh) 0 var(--ink);cursor:pointer}' +
-    '.sbProg{margin:0 0 var(--s3);padding:var(--s2) var(--s3);border:var(--bw-s) solid var(--ink);border-radius:var(--r-m);background:var(--panel)}.sbProg ul{display:flex;flex-wrap:wrap;gap:4px 14px;margin:6px 0 0;padding:0;list-style:none;font-size:var(--fs-2)}.sbProg li.ok{color:var(--ok);font-weight:700}' +
+    '.sbProg{margin:0 0 var(--s3);padding:var(--s2) var(--s3);border:var(--bw-s) solid var(--ink);border-radius:var(--r-m);background:var(--panel)}.sbProg ul{display:flex;flex-wrap:wrap;gap:4px 14px;margin:6px 0 0;padding:0;list-style:none;font-size:var(--fs-2)}.sbProg .sbAll{margin-top:6px;font-size:var(--fs-2)}.sbProg .sbAll summary{cursor:pointer;color:var(--muted)}.sbBox .sbNext{display:flex;align-items:center;justify-content:center;width:max-content;max-width:100%;min-height:44px;margin:8px 0 0;padding:8px 18px;font-weight:900;font-size:16px;background:var(--yellow);color:var(--ink-fixed);border:var(--bw) solid var(--ink);border-radius:var(--r-m);box-shadow:var(--sh) var(--sh) 0 var(--ink);text-decoration:none;cursor:pointer}.sbBox .sbNext.pc{background:var(--panel);color:var(--fg);box-shadow:none;border-style:dashed;cursor:default}.sbBox .sbPcOnly{font-size:var(--fs-2)}.sbProg li.ok{color:var(--ok);font-weight:700}' +
     '.wkBox{border-top:var(--bw-s) dashed var(--ink);padding:8px 0}.wkBox>details>summary{cursor:pointer;list-style-position:inside}.wkDone{display:inline-block;font-size:var(--fs-2);font-weight:900;padding:2px 10px;border-radius:10px;border:var(--bw-s) solid var(--ink);line-height:1.5}.wkBox>details>summary .wkDone{display:block;margin-top:4px}.wkDone.ok{background:var(--mint);color:var(--ink-fixed)}.wkDone.todo{background:var(--soft-y,#fff3bf);color:var(--ink-fixed)}' +
-    '@media (max-width:860px){.sbBox a.btn.sbOpen,.sbBox button,.sbGuide button{min-height:44px;padding-left:14px;padding-right:14px}.sbBox .rooms li{padding:10px 0}.sbBox .sbMain{width:100%}.sbBox .sbAct{width:100%}.sbBox .sbAct>*{flex:1 1 0;justify-content:center}}';
+    '@media (max-width:860px){.sbProg .sbAll summary{display:flex;align-items:center;min-height:44px}.sbBox .sbNext{width:100%}.sbBox .sbAct>.sbPcOnly{flex:1 1 100%;order:3}.sbBox .sbAct{flex-wrap:wrap}.sbBox a.btn.sbOpen,.sbBox button,.sbGuide button{min-height:44px;padding-left:14px;padding-right:14px}.sbBox .rooms li{padding:10px 0}.sbBox .sbMain{width:100%}.sbBox .sbAct{width:100%}.sbBox .sbAct>*{flex:1 1 0;justify-content:center}}';
 
   /* 指令文字裡的【…】要學生換掉：畫面上標黃，複製出去的文字不變 */
   function marked(t) { return esc(t).replace(/【[^】]*】/g, function (m) { return '<mark>' + m + '</mark>'; }); }
@@ -141,12 +173,12 @@
     var rows = (m.rooms || []).length ? '<ul class="rooms">' + m.rooms.map(function (r) {
       return '<li><span class="sbDot" style="background:' + r.ct + ';color:' + r.on + '" title="案例' + esc(r.letter) + '">' + esc(r.letter) + '</span><b>' + esc(r.name) + '</b><span class="muted">房號 ' + esc(r.code) + '</span>' + (r.seenAt ? '<span class="muted">' + (r.seenKind === 'last' ? '上次進入 ' : '加入於 ') + esc(fmtSeen(r.seenAt)) + '</span>' : '') + '<span>訪談卡 ' + r.cards + ' 張</span>' +
         (r.open ? '<span class="tag ok" title="' + esc(RL.nextLine(r.level)) + '">' + esc(RL.label(r.level)) + '</span>' : '<span class="tag warn">還沒有訪談卡</span>') +
-        '<span class="sbAct">' + (r.open ? '<a class="btn sbOpen" href="storyboard.html?room=' + encodeURIComponent(r.code) + '">📖 故事板</a>' : '<span class="btn sbOpen dis" role="button" aria-disabled="true" title="' + esc(need(r).text) + '">📖 故事板</span>') + '<button type="button" class="ghost sbRevisit" data-revisit="' + esc(r.code) + '">🩺 回去訪談</button>' + (r.open && !m.mobile ? '<button type="button" class="ghost" data-export="' + esc(r.code) + '">匯出訪談報告</button>' : '') + '</span>' + (r.open ? '' : '<span class="sbNeed">' + esc(need(r).text) + '</span>') +
+        '<span class="sbAct">' + (r.open ? '<a class="btn sbOpen" href="storyboard.html?room=' + encodeURIComponent(r.code) + '">📖 故事板</a>' : '<span class="btn sbOpen dis" role="button" aria-disabled="true" title="' + esc(need(r).text) + '">📖 故事板</span>') + '<button type="button" class="ghost sbRevisit" data-revisit="' + esc(r.code) + '">🩺 回去訪談</button>' + (r.open ? (m.mobile ? '<span class="muted sbPcOnly">匯出訪談報告：這步請用電腦</span>' : '<button type="button" class="ghost" data-export="' + esc(r.code) + '">匯出訪談報告</button>') : '') + '</span>' + (r.open ? '' : '<span class="sbNeed">' + esc(need(r).text) + '</span>') +
         '</li>';
     }).join('') + '</ul>' : '<div class="muted" style="margin-top:var(--s2)">還沒有進過的房間。先到入口 1 開一間，去問人。</div>';
     /* 最上面的主按鈕：有房間就直接開最近進過的那間房的故事板；還沒有房間就先去急診室訪談 */
     var nd = m.mainNeed || need({ cards: 0, started: 0 });
-    var main = m.main && m.main.code ? '<div class="sbMainRow"><a class="btn sbMain" id="sbMain" href="storyboard.html?room=' + encodeURIComponent(m.main.code) + '">📖 繼續我的故事板</a><span class="muted">房間 ' + esc(m.main.code) + '</span></div>'
+    var main = m.main && m.main.code ? '<div class="sbMainRow"><a class="btn sbMain" id="sbMain" href="storyboard.html?room=' + encodeURIComponent(m.main.code) + '">📖 繼續我的故事板</a><span class="muted">房間 ' + esc(m.main.code) + (m.main.cards ? '・訪談卡 ' + esc(m.main.cards) + ' 張' + (m.main.most ? '（你訪談最多的一間）' : '') : '') + '</span></div>'
       : '<div class="sbMainRow"><span class="btn sbMain dis" id="sbMainOff" role="button" aria-disabled="true" title="' + esc(nd.text) + '">📖 繼續我的故事板</span>' +
         (m.mainRoom ? '<button type="button" class="sbMain2" data-revisit="' + esc(m.mainRoom) + '">🩺 回去訪談（房間 ' + esc(m.mainRoom) + '）</button>' : '<button type="button" class="sbMain2" id="sbMain0">🩺 先進急診室訪談</button>') + '<span class="sbNeed">' + esc(nd.text) + '</span></div>';
     return '<div class="sbBox">' + main + progHtml(m.prog) + '<div class="tiles">' + t1 + t2 + '</div><h3 style="margin:var(--s3) 0 0;font-size:var(--fs-3)">我進過的房間</h3>' + rows + '</div>';
@@ -172,6 +204,6 @@
     draw(opts.caseId);
   }
 
-  return { TEMPLATES: TEMPLATES, ORDER: ORDER, STEPS: STEPS, PROMPTS: PROMPTS, ERRORS: ERRORS, CSS: CSS, keyIds: keyIds, interviewedSummary: interviewedSummary, roomRows: roomRows,
+  return { TEMPLATES: TEMPLATES, ORDER: ORDER, STEPS: STEPS, PROMPTS: PROMPTS, ERRORS: ERRORS, CSS: CSS, pickMainRoom: pickMainRoom, nextAction: nextAction, keyIds: keyIds, interviewedSummary: interviewedSummary, roomRows: roomRows,
     guideHtml: guideHtml, lobbyHtml: lobbyHtml, need: need, progHtml: progHtml, injectCss: injectCss, mountGuide: mountGuide, esc: esc };
 });

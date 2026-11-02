@@ -224,7 +224,21 @@
     $('cells').innerHTML = html; decorateCounters();
     $('addCell').disabled = ro || n >= SB.LIMITS.maxCells; $('addCell').textContent = '＋ 新增一格（' + n + '／' + SB.LIMITS.maxCells + '）';
     $('draftBtn').disabled = ro;
+    renderEmptyHint(ro);
     renderSide2();
+  }
+  /* 11-02 空白故事板：主按鈕「幫我排草稿」＋三步提示；目前這一面有任一格有內容就消失。網址帶 draft=1（大廳「幫我排草稿」鈕）時把焦點放到主按鈕，不自動寫入 */
+  function renderEmptyHint(ro) {
+    var box = $('sbEmpty'); if (!box) return;
+    var showHint = SB.emptyBoard(cur()), top = $('draftBtn'); if (top) { top.style.display = showHint ? 'none' : ''; if (top.nextElementSibling) top.nextElementSibling.style.display = showHint ? 'none' : ''; }   /* 空板時主按鈕在提示框裡，頂列那顆先收起來，免得同一個畫面兩顆一樣的鈕 */
+    if (!showHint) { box.hidden = true; box.innerHTML = ''; return; }
+    if (box.hidden || !box.firstChild) {
+      box.innerHTML = '<h2>這面板還是空的，照這三步開始</h2><ol>' + SB.EMPTY_STEPS.map(function (x) { return '<li><b>' + esc(x.t) + '</b>：' + esc(x.d) + '</li>'; }).join('') + '</ol>' +
+        '<button type="button" class="big" id="sbEmptyDraft">幫我排草稿</button> <span class="muted">只會填空格，不會蓋掉你寫的字。</span>';
+      box.hidden = false; $('sbEmptyDraft').onclick = makeDraftNow;
+    }
+    $('sbEmptyDraft').disabled = !!ro;
+    if (!S.draftFocus && Q.get('draft') === '1' && !ro) { S.draftFocus = true; try { box.scrollIntoView({ block: 'center' }); $('sbEmptyDraft').focus(); } catch (e) {} }
   }
   /* 10-27 楊老師：每格先給「備選起點」（案例本來就有的線索）＋對應的啟發式評估準則提示。
      只帶「發生了什麼」；「他怎麼想」與痛點句一定由學生自己寫。起點是哪一個、用哪條準則，只記在這台裝置（不改資料庫欄位）。 */
@@ -401,7 +415,7 @@
     document.addEventListener('focusout', function () { flushAll(); setTimeout(function () { if (S.dirty && !(document.activeElement && $('cells').contains(document.activeElement))) renderAll(true); }, 50); });
     window.addEventListener('beforeunload', flushAll);
     var cells = $('cells');
-    cells.addEventListener('input', function (e) { var t = e.target; if (t.classList.contains('f')) { queueEdit(Number(t.dataset.n), t.dataset.k, t.value); var nx = t.nextElementSibling; if (nx && nx.classList.contains('cnt')) { nx.textContent = cntText(t); nx.className = cntClass(t); } } });
+    cells.addEventListener('input', function (e) { var t = e.target; if (t.classList.contains('f')) { if (t.dataset.k !== 'title' && t.value.trim() && $('sbEmpty') && !$('sbEmpty').hidden) { $('sbEmpty').hidden = true; $('draftBtn').style.display = ''; if ($('draftBtn').nextElementSibling) $('draftBtn').nextElementSibling.style.display = ''; } queueEdit(Number(t.dataset.n), t.dataset.k, t.value); var nx = t.nextElementSibling; if (nx && nx.classList.contains('cnt')) { nx.textContent = cntText(t); nx.className = cntClass(t); } } });
     cells.addEventListener('focusin', function (e) { var t = e.target, n = Number(t.dataset.n || (t.closest('.cell') && t.closest('.cell').dataset.n)); if (n) { S.sel = n; S.lastField = t.dataset.k ? { n: n, el: t } : S.lastField; } });
     cells.addEventListener('change', function (e) {
       var t = e.target, n = Number(t.dataset.n);

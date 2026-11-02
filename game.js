@@ -500,15 +500,15 @@
   var W8P = { sid: '', codes: '', busy: false, data: null };
   function loadW8P(codes) {
     var key = codes.join(','), sid = APP.me.sid; if (!ONLINE || !codes.length || W8P.busy || (W8P.sid === sid && W8P.codes === key)) return;
-    W8P.busy = true; var fdb = firebase.database(), base = 'sbx/' + APP.SESS + '/', got = { personas: 0, filled: 0, moment: false, img: false }, bad = false;
+    W8P.busy = true; var fdb = firebase.database(), base = 'sbx/' + APP.SESS + '/', got = { personas: 0, filled: 0, moment: false, img: false, opened: false, code: '' }, bad = false;   /* 11-02：opened＝第一次開故事板時系統記的 firstOpenAt；code＝格子寫最多的那間（大廳「下一步」鈕要帶學生回那一間） */
     var jobs = [], sbd = {};   /* sbd：10-27 W8 技能／成就用的原始資料（achievements.js skillsW8），同一批讀取，不多讀 */
     codes.forEach(function (code) {
       var rm = sbd[code] = { code: code, wall: null, mine: null, meta: null };
-      jobs.push(fdb.ref(base + 'sbm/' + code + '/' + sid).once('value').then(function (s) { var mv = s.val() || {}; rm.meta = mv; got.personas = Math.max(got.personas, Number(mv.personaCount) || 0); }));
+      jobs.push(fdb.ref(base + 'sbm/' + code + '/' + sid).once('value').then(function (s) { var mv = s.val() || {}; rm.meta = mv; if (mv.firstOpenAt) got.opened = true; got.personas = Math.max(got.personas, Number(mv.personaCount) || 0); }));
       [['wall', 'wall'], ['u_' + sid, 'mine']].forEach(function (bb) {
         var b = bb[0];
         jobs.push(fdb.ref(base + 'sb/' + code + '/' + b + '/cells').once('value').then(function (s) {
-          var v = s.val() || {}; rm[bb[1]] = v; var ks = Object.keys(v), n = 0; ks.forEach(function (k) { var c = v[k] || {}; if (String(c.what || '').trim() || String(c.think || '').trim()) { n += 1; if (c.moment) got.moment = true; } if (c.img) got.img = true; }); got.filled = Math.max(got.filled, n);
+          var v = s.val() || {}; rm[bb[1]] = v; var ks = Object.keys(v), n = 0; ks.forEach(function (k) { var c = v[k] || {}; if (String(c.what || '').trim() || String(c.think || '').trim()) { n += 1; if (c.moment) got.moment = true; } if (c.img) got.img = true; }); if (n > got.filled) { got.filled = n; got.code = code; }
         }));
       });
     });
@@ -545,10 +545,10 @@
     var lastRoom = ''; try { lastRoom = localStorage.getItem('erg_last_room_' + sid) || ''; } catch (x) {}
     /* 主按鈕開「能開故事板的房間（有 ≥1 張訪談卡）」裡最近進過的那間；沒有任何一間能開就灰掉，旁邊寫還缺什麼，並給「回去訪談」去補 */
     var openRows = rows.filter(function (x) { return x.open; });
-    var mainRoom = openRows.length ? (openRows.some(function (x) { return x.code === lastRoom; }) ? lastRoom : openRows[0].code) : '';
+    var mainPick = SB.pickMainRoom(rows, lastRoom), mainRoom = mainPick ? mainPick.code : '';   /* 11-02：開訪談卡最多的那間（一樣多才看最近進過的）；原本是最近進過的 */
     var bestRow = rows.slice().sort(function (a, b) { return (b.started - a.started) || (b.code === lastRoom) - (a.code === lastRoom); })[0] || null;
     var steps = w8Steps(rows);
-    card.innerHTML = '<div class="row"><b style="flex:1;font-size:var(--fs-4)">' + (w8Started() ? '痛點急診室 3/3（W8）這週要做的事：人物誌＋UX 故事板' : '第 8 週　UX 故事板') + '</b></div>' + (w8Started() ? '<div class="muted" style="font-size:var(--fs-2);margin:2px 0 6px">匯出訪談報告 → 還原 2 位人物誌 → 排 6 格故事板、標出關鍵時刻 → 生成圖片放進故事板。不夠的地方回房間再問一位。卡住了，故事板裡有 AI 助教。</div>' : '') + SB.lobbyHtml({ mobile: mobile, entry1: e1, rooms: rows, main: mainRoom ? { code: mainRoom } : null, mainRoom: bestRow ? bestRow.code : '', mainNeed: SB.need(bestRow || { cards: 0, started: 0 }), prog: { steps: steps } });
+    card.innerHTML = '<div class="row"><b style="flex:1;font-size:var(--fs-4)">' + (w8Started() ? '痛點急診室 3/3（W8）這週要做的事：人物誌＋UX 故事板' : '第 8 週　UX 故事板') + '</b></div>' + (w8Started() ? '<div class="muted" style="font-size:var(--fs-2);margin:2px 0 6px">匯出訪談報告 → 還原 2 位人物誌 → 排 6 格故事板、標出關鍵時刻 → 生成圖片放進故事板。不夠的地方回房間再問一位。卡住了，故事板裡有 AI 助教。</div>' : '') + SB.lobbyHtml({ mobile: mobile, entry1: e1, rooms: rows, main: mainRoom ? { code: mainRoom, cards: mainPick.cards, most: openRows.length > 1 } : null, mainRoom: bestRow ? bestRow.code : '', mainNeed: SB.need(bestRow || { cards: 0, started: 0 }), prog: { steps: steps, act: SB.nextAction({ main: mainRoom ? { code: mainRoom } : null, P: W8P.sid === APP.me.sid ? W8P.data : null, mobile: mobile }) } });
     card.insertAdjacentHTML('beforeend', matsHtml()); bindMats(card); syncMats();
     loadW8P(mine.map(function (x) { return x.code; }));
     var b1 = $('sbEnter1'); if (b1) b1.onclick = function () { var t = $('createBtn'); t.scrollIntoView({ block: 'center' }); t.focus(); };
