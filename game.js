@@ -462,6 +462,11 @@
   }
   function renderLobby() {
     loadGuide();
+    /* 老師帳號的前台大廳才有「三班輪播展示」入口（學生看不到；展示模式本身不顯示） */
+    (function () { var row = document.querySelector('#lobby .row'), b = $('demoEntry'), ok = !DEMO && multiLoginOk();
+      if (!ok) { if (b) b.parentNode.removeChild(b); return; }
+      if (row && !b) { b = document.createElement('button'); b.type = 'button'; b.className = 'ghost'; b.id = 'demoEntry'; b.textContent = '🎬 三班輪播展示'; b.title = '三班輪流展示去識別化學生的大廳（不連資料庫、不寫入）';
+        b.onclick = function () { location.href = 'index.html?demo=rotate'; }; row.insertBefore(b, row.children[1] || null); } })();
     if ($('gr_a')) GUIDE.draft = { a: $('gr_a').value, b: $('gr_b').value, c: $('gr_c').value };   /* 還沒送出的字留著 */
     var e = evaluateAll(), box = $('progressBox');
     if (e) {
