@@ -58,7 +58,11 @@
   function caseMeta(id) { for (var i = 0; i < CASELIST.length; i++) if (CASELIST[i].meta.id === id) return CASELIST[i].meta; return CASELIST[0].meta; }
 
   var APP = window.ERG_APP = { DB: DB, data: data, storage: data.storage, online: ONLINE, me: { sid: null, cls: null, profile: null }, SESS: sess(), $: $, esc: esc,
-    CASELIST: CASELIST, caseMeta: caseMeta, enterLobby: enterLobby, show: show, lit: 0, evaluate: evaluateAll };
+    CASELIST: CASELIST, caseMeta: caseMeta, enterLobby: enterLobby, show: show, lit: 0, evaluate: evaluateAll,
+    /* 11-02 模式（新手／專家，ui_level_ui.js）要用的：大廳重畫、進房、故事板進度、往週還差幾項 */
+    demo: DEMO, renderLobby: function () { return renderLobby(); }, joinCode: function (c) { return joinCode(c); },
+    w8Data: function () { return (typeof W8P !== 'undefined' && W8P.sid === APP.me.sid) ? W8P.data : null; },
+    pastLeft: function () { try { var e = evaluateAll(), ev = window.ERG_WEEK2 ? window.ERG_WEEK2.evaluate(week2Ctx()) : { total: 0, lit: 0 }, rv = reviewState(GUIDE.r); return (e ? e.ev.total - e.ev.lit : 0) + (ev.total - ev.lit) + (rv.k === 'ok' ? 0 : 1); } catch (x) { return null; } } };
 
   function show(id) {
     ['login', 'avatar', 'lobby'].forEach(function (s) { $(s).classList.toggle('on', s === id); });
@@ -100,6 +104,7 @@
     if (ONLINE && DB.attach) DB.attach();
     try { sessionStorage.setItem('erg2_sid', sid); sessionStorage.setItem('erg2_cls', cls); } catch (e) {}
     $('loginErr').textContent = '';
+    try { if (window.ERG_UILV_UI) window.ERG_UILV_UI.boot({ sid: sid, sess: APP.SESS, online: ONLINE, demo: DEMO, cls: cls }); } catch (e) { console.error('模式設定啟動失敗', e); }   /* 11-02：沒選過＝專家（畫面不變） */
     claimDevice(sid, function () { if (!prof.chosen) openAvatar(true); else enterLobby(); });
   }
 
@@ -314,6 +319,7 @@
     /* 故事板頂列的「🩺 回去訪談」連到 index.html#room=房號：進大廳後直接進那間房（等房間索引載入，最多 15 秒） */
     var hm = /[#&]room=([A-Z0-9]{4})/.exec(location.hash || '');
     if (hm && !window.__ergHashRoom) {
+      var tkm = /[#&]talk=([a-z_0-9]+)/.exec(location.hash || ''); if (tkm) window.__ergTalk = tkm[1];   /* 11-02：故事板新手模式「回去問○○」帶來的，進房後直接開專心對談 */
       window.__ergHashRoom = hm[1]; try { history.replaceState(null, '', location.pathname + location.search); } catch (x) {}
       (function tryHash(code, n) { if (!ONLINE || DB.hasRoom(code)) { joinCode(code); return; } if (n < 30) setTimeout(function () { tryHash(code, n + 1); }, 500); })(hm[1], 0);
     }
@@ -500,6 +506,7 @@
     more.textContent = others.length > CAP ? ('另外還有 ' + (others.length - CAP) + ' 間沒有列出來。要進同學的房間，請他把四個字的房間代碼給你，在上面的「加入」輸入。') : '';
     $('noRooms').style.display = tb.children.length ? 'none' : 'block';
     try { renderStoryboardEntry(); } catch (x) { console.error('故事板入口', x); }
+    try { if (window.ERG_UILV_UI) window.ERG_UILV_UI.lobby(); } catch (x) { console.error('模式（大廳）', x); }   /* 11-02：新手大廳版面＋進大廳詢問；專家什麼都不改 */
   }
 
   /* 第 8 週：大廳兩個入口（進急診室／UX 故事板）＋我進過的房間。資料都來自我自己的房間（已經在監聽的），不另外讀資料庫 */

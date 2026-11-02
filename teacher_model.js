@@ -6,9 +6,9 @@
    輸入全是 teacher.html 已經讀進記憶體的資料，不新增 Firebase 監聽或讀取。currentClass（課表）與 scope（只算某一班）也在這裡，純函式。輸出不含姓名、信箱；學號只放在 sid。
    設計稿：ui/teacher_redesign_1020.md。 */
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory(require('./app_core.js'), require('./checkpoints.js'), require('./achievements.js'), require('./week2.js'));
-  else root.ERG_TMODEL = factory(root.ERG_CORE, root.ERG_CHECKPOINTS, root.ERG_ACH, root.ERG_WEEK2);
-})(typeof self !== 'undefined' ? self : this, function (CORE0, CP0, ACH0, W20) {
+  if (typeof module === 'object' && module.exports) module.exports = factory(require('./app_core.js'), require('./checkpoints.js'), require('./achievements.js'), require('./week2.js'), require('./ui_level.js'));
+  else root.ERG_TMODEL = factory(root.ERG_CORE, root.ERG_CHECKPOINTS, root.ERG_ACH, root.ERG_WEEK2, root.ERG_UILV);
+})(typeof self !== 'undefined' ? self : this, function (CORE0, CP0, ACH0, W20, UILV0) {
   'use strict';
 
   /* 所有門檻集中在這裡；要調只改這一處。classSize＝三班選課人數（10-13 名冊，只有人數、沒有姓名）。 */
@@ -482,9 +482,38 @@
     return res;
   }
 
+
+  /* ───── 11-02 模式（新手／專家）：後台「學生」頁的欄位與總覽。只供觀察，不是成績，也不能說是切換造成的 ─────
+     input：{ profiles:{學號:{cls,uiLevel,uiLevelAt}}, uilv:{學號:{push:{from,to,why,t,cards,days}}}, cards:{學號:現在的訪談卡數}, now }
+     回傳：{ byCls:{班級:{n1,n3,total,shown,accept,decline}}, rows:{學號:{lv,name,remind,last,before,after,note}}, log:[{sid,t,from,to,why}]（新的在前）, totals }
+     切換前每天訪談卡＝切換當時的訪談卡 ÷ 當時玩過的天數；切換後＝(現在 − 切換當時) ÷ 切換後經過的天數（至少 2 天才算，否則不算）。 */
+  function uilvView(input) {
+    input = input || {}; var U0 = UILV0 || { normalize: function (v) { return Number(v) === 1 ? 1 : 3; }, nameOf: function (v) { return Number(v) === 1 ? '新手' : '專家'; }, stateFromLog: function () { return { lastWhy: '', lastSwitch: null, declines: {} }; }, remindText: function () { return '未提醒'; } };
+    var profiles = input.profiles || {}, uilv = input.uilv || {}, cards = input.cards || {}, now = num(input.now, Date.now()), out = { byCls: {}, rows: {}, log: [], totals: { n1: 0, n3: 0, total: 0 } };
+    var sids = {}; keys(profiles).forEach(function (k) { sids[k] = 1; }); keys(uilv).forEach(function (k) { sids[k] = 1; });
+    keys(sids).forEach(function (sid) {
+      var pf = profiles[sid] || {}, lg = uilv[sid] || {}, st = U0.stateFromLog(lg), lv = U0.normalize(pf.uiLevel), cls = pf.cls || '其他';
+      var bc = out.byCls[cls] = out.byCls[cls] || { n1: 0, n3: 0, total: 0, shown: 0, accept: 0, decline: 0 };
+      bc.total += 1; if (lv === 1) bc.n1 += 1; else bc.n3 += 1; out.totals.total += 1; if (lv === 1) out.totals.n1 += 1; else out.totals.n3 += 1;
+      arr(lg).forEach(function (e) { var w = String(e.why || ''); if (/-shown$/.test(w)) bc.shown += 1; else if (/-accept$/.test(w)) bc.accept += 1; else if (/-decline$/.test(w)) bc.decline += 1; if (/^(self|ask-accept|up-accept)$/.test(w)) out.log.push({ sid: sid, t: num(e.t, 0), from: U0.normalize(e.from), to: U0.normalize(e.to), why: w }); });
+      var ls = st.lastSwitch, before = null, after = null, note = '—';
+      if (ls) {
+        var ent = null; arr(lg).forEach(function (e) { if (num(e.t, 0) === ls.t) ent = e; });
+        var days = ent && num(ent.days, 0) > 0 ? num(ent.days, 0) : 0, c0 = ent ? num(ent.cards, NaN) : NaN;
+        if (days && isFinite(c0)) before = Math.round(c0 / days * 10) / 10;
+        var since = (now - ls.t) / 86400000;
+        if (isFinite(c0) && since >= 2 && cards[sid] != null) after = Math.round(Math.max(0, num(cards[sid], 0) - c0) / since * 10) / 10;
+        note = before == null && after == null ? '資料不足' : (after == null ? '切換後不到 2 天，還不能比' : '');
+      }
+      out.rows[sid] = { lv: lv, name: U0.nameOf(lv), remind: U0.remindText(st), last: ls, before: before, after: after, note: note };
+    });
+    out.log.sort(function (a, b) { return b.t - a.t; });
+    return out;
+  }
+
   return { wkName: wkName, RULES: RULES, STAGES: STAGES, HINT_DEFS: HINT_DEFS, build: build, respState: respState, weekNode: weekNode, scope: scope, currentClass: currentClass, SCHEDULE: SCHEDULE, WINDOW_PAD_MIN: WINDOW_PAD_MIN, WEEK_START: WEEK_START, WAVES: WAVES, weekRange: weekRange, weekOf: weekOf, roomClass: roomClass, indexRooms: indexRooms, filterRooms: filterRooms, sumRooms: sumRooms, chatNeighbors: chatNeighbors,
     UNIT_SESS: UNIT_SESS, FILTER_KEY: FILTER_KEY, DEID_KEY: DEID_KEY, CLASS_ORDER: CLASS_ORDER, NAV: NAV, SG_LEVEL: SG_LEVEL, SG_TALK_DOC: SG_TALK_DOC, esc: esc, tpd: tpd, mdOf: mdOf, dayKeyOf: dayKeyOf, classStartMs: classStartMs, validFilter: validFilter,
     menuOptions: menuOptions, filterValue: filterValue, defaultFilter: defaultFilter, resolveFilter: resolveFilter, saveFilter: saveFilter, filterRange: filterRange, dayInFilter: dayInFilter, filterState: filterState, filterLabel: filterLabel, weekNoteBase: weekNoteBase,
     navQuery: navQuery, navHtml: navHtml, classBar: classBar, fmtIn: fmtIn, legendHtml: legendHtml, suggestInterview: suggestInterview, suggestHtml: suggestHtml, sgDocHtml: sgDocHtml, sgSort: sgSort, sgPct: sgPct,
-    skW8Of: skW8Of, skW8Dist: skW8Dist, skW8Cell: skW8Cell, skW8Html: skW8Html, suggestSkillW8: suggestSkillW8, SG_SKW8_DOC: SG_SKW8_DOC, SK_W8: SK_W8 };
+    uilvView: uilvView, skW8Of: skW8Of, skW8Dist: skW8Dist, skW8Cell: skW8Cell, skW8Html: skW8Html, suggestSkillW8: suggestSkillW8, SG_SKW8_DOC: SG_SKW8_DOC, SK_W8: SK_W8 };
 });

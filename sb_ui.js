@@ -54,6 +54,7 @@
   }
   function afterSid(sid) {
     S.sid = sid; if (!sid) { showGate({ ok: false, reason: 'no-sid', msg: '請先從急診室登入，再回來開故事板。' }); return; }
+    try { if (window.ERG_UILV_UI) window.ERG_UILV_UI.boot({ sid: sid, sess: S.sess, online: !LOCAL, demo: false, cls: '' }); } catch (e) { console.error('模式設定啟動失敗', e); }   /* 11-02：新手模式＝一次一格（ui_level_ui.js）；沒選過＝專家，畫面不變 */
     try { S.DB.attach && S.DB.attach(); } catch (e) {}
     loadRoom();
   }
@@ -226,7 +227,9 @@
     $('draftBtn').disabled = ro;
     renderEmptyHint(ro);
     renderSide2();
+    try { if (window.ERG_UILV_UI) window.ERG_UILV_UI.sbRender(sbApi()); } catch (e) { console.error('故事板新手模式', e); }
   }
+  function sbApi() { return { S: S, SB: SB, cellFor: cellFor, cur: cur, toast: toast, twoStep: twoStep, renderAll: renderAll, insertFrag: insertFrag, gameHref: gameHref(), code: CODE }; }
   /* 11-02 空白故事板：主按鈕「幫我排草稿」＋三步提示；目前這一面有任一格有內容就消失。網址帶 draft=1（大廳「幫我排草稿」鈕）時把焦點放到主按鈕，不自動寫入 */
   function renderEmptyHint(ro) {
     var box = $('sbEmpty'); if (!box) return;

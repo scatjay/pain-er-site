@@ -270,7 +270,7 @@
     { id: 'after_hours', icon: '🌆', name: '課後加班', desc: '不是上課時間，也回來訪談（5 題）', test: function (m) { return m.offTurns >= 5; } },
     { id: 'revisit', icon: '🔁', name: '回頭複習', desc: '沒有課的日子又回來訪談（3 題）', test: function (m) { return m.offRest >= 3; } },
     { id: 'late_night', icon: '🦉', name: '深夜研究員', desc: '晚上 10 點到清晨 6 點還在訪談（3 題）——研究很重要，也要睡覺', test: function (m) { return m.offLate >= 3; } },
-    { id: 'bug_hunter', icon: '🐞', name: '抓蟲小幫手', desc: '回報過遊戲的問題，幫大家把它修好', test: function (m) { return m.reports >= 1; } },
+    { id: 'bug_hunter', icon: '🐞', name: '抓蟲小幫手', desc: '回報過遊戲的問題，幫大家把它修好。期末會加分，依回報的數量和質量酌量增加。', test: function (m) { return m.reports >= 1; } },
     { id: 'idea_giver', icon: '💡', name: '出點子', desc: '送出一則建議，讓遊戲更好用', test: function (m) { return !!(m.fb && m.fb.ideas >= 1); } },
     { id: 'clear_report', icon: '📝', name: '說得清楚', desc: '一則回報寫了 20 字以上，還附上畫面狀態', test: function (m) { return !!(m.fb && m.fb.clearState >= 1); } },
     /* 10-23：這兩枚由每晚的審核程式（tools/er_guide_review.py）確認「真的照著做、數字有動」後寫進 score，學生端當作已拿到的成就保留；畫面上自己算不出來，所以 test 一律 false。 */
@@ -295,7 +295,7 @@
     { id: 'w8_solo', icon: '🧱', name: '從空白開始', desc: '第 8～9 週故事板：一面個人板至少 6 格，從空白自己寫，沒有起點、草稿、助教代填，每格有出處並標出關鍵時刻', test: function () { return sbHas('solo'); } },
     { id: 'w6_mat', icon: '📖', name: '翻開 W6 教材', desc: '第 6 週：從遊戲大廳的「往週教材」打開過 W6 的教材（只記有打開，不代表讀完）', test: function () { return matHas('w6'); } },
     { id: 'w7_mat', icon: '📖', name: '翻開 W7 教材', desc: '第 7 週：從遊戲大廳的「往週教材」打開過 W7 的教材（只記有打開，不代表讀完）', test: function () { return matHas('w7'); } },
-    { id: 'w8_mat', icon: '📖', name: '翻開本週教材', desc: '第 8～9 週：從遊戲大廳的「本週教材」打開過 W8~9 的教材（只記有打開，不代表讀完）', test: function () { return matHas('w8'); } },
+    { id: 'w8_mat', icon: '📖', name: '翻開本週教材', desc: '第 8～9 週：從遊戲大廳的「本週教材」打開過 W8~9 的教材（只記有打開，不代表讀完）', test: function () { return matHas('w8') || matHas('w9'); } },
     { id: 'w8_soloall', icon: '🏆', name: '六個主題都從空白做過', desc: '第 8～9 週故事板：六個主題各完成一次「從空白開始」', test: function () { return sbHas('soloall'); } },
     /* 10-27：W8 自己的成就（人物誌、關鍵時刻、猜測有標明）；判準在 skillsW8，資料來源見該處註解 */
     { id: 'w8_people', icon: '🧑‍🤝‍🧑', name: '兩位人物立起來', desc: '第 8～9 週：人物誌做了 2 位，而且你訪談過病人或家屬', test: function (m) { return hasW8(m, 'w8_people'); } },

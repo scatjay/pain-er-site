@@ -194,11 +194,11 @@
     if (!sel && recPid && recFor(recPid) < 0) recPid = null;
     /* 選了現場的人在訪談時，急診室的時間先暫停（不然問到一半他就照班表走掉了） */
     c0.intvHold = !!sel;
-    var html = goNote() + watchNote() + '<div class="muted" style="font-size:var(--fs-2)">這間房裡的人（只有在同一房間才問得到）：</div><div class="row" style="margin:6px 0">' +
-      (here.length ? here.map(function (h) { return '<button class="pill ' + (sel && sel.ent.id === h.ent.id ? 'on' : '') + '" data-npc="' + esc(h.ent.id) + '" style="' + mbtiCss(h.ent.pid) + (sel && sel.ent.id === h.ent.id ? 'box-shadow:0 0 0 3px var(--ink);font-weight:900;' : '') + '">' + esc(h.ent.name) + '・' + ({ free: '可聊', short: '簡短', blocked: '正忙' })[h.av.level] + (window.ERG_TYPE_UI ? window.ERG_TYPE_UI.badge(h.ent.pid, true) : '') + '</button>'; }).join('') : '<span class="muted">現在這間房沒有人。</span>') + '</div>';
+    var html = goNote() + watchNote() + '<div class="ivHide"><div class="muted" style="font-size:var(--fs-2)">這間房裡的人（只有在同一房間才問得到）：</div><div class="row" style="margin:6px 0">' +
+      (here.length ? here.map(function (h) { return '<button class="pill ' + (sel && sel.ent.id === h.ent.id ? 'on' : '') + '" data-npc="' + esc(h.ent.id) + '" style="' + mbtiCss(h.ent.pid) + (sel && sel.ent.id === h.ent.id ? 'box-shadow:0 0 0 3px var(--ink);font-weight:900;' : '') + '">' + esc(h.ent.name) + '・' + ({ free: '可聊', short: '簡短', blocked: '正忙' })[h.av.level] + (window.ERG_TYPE_UI ? window.ERG_TYPE_UI.badge(h.ent.pid, true) : '') + '</button>'; }).join('') : '<span class="muted">現在這間房沒有人。</span>') + '</div></div>';
     /* 其他房間的人：灰色、不能選，後面標在哪間房（10-12 楊老師）。要訪談就先走過去——用地圖或下方的房間按鈕。 */
-    html += '<div class="muted" style="font-size:var(--fs-2);margin-top:8px">其他房間的人（點一下，直接過去找他）：</div><div id="allNpc" style="font-size:var(--fs-2);margin:4px 0 6px">' + allNpcHtml() + '</div>';
-    if (recs.length) html += '<div class="muted" style="font-size:var(--fs-2);margin-top:8px">我問過的人（人不在也可以回來打勾）：</div><div class="row" id="myRecs" style="margin:4px 0 6px">' + recs.map(function (r) { var pr = CL.progress(r); return '<button class="pill ' + (recPid === r.personaId ? 'on' : '') + '" data-rec="' + esc(r.personaId) + '">' + esc(nameOf(r.personaId)) + '　' + pr.done + '/' + pr.total + (pr.complete ? ' ✔' : '') + '</button>'; }).join('') + '</div>';
+    html += '<div class="ivHide"><div class="muted" style="font-size:var(--fs-2);margin-top:8px">其他房間的人（點一下，直接過去找他）：</div><div id="allNpc" style="font-size:var(--fs-2);margin:4px 0 6px">' + allNpcHtml() + '</div></div>';
+    if (recs.length) html += '<div class="ivHide"><div class="muted" style="font-size:var(--fs-2);margin-top:8px">我問過的人（人不在也可以回來打勾）：</div><div class="row" id="myRecs" style="margin:4px 0 6px">' + recs.map(function (r) { var pr = CL.progress(r); return '<button class="pill ' + (recPid === r.personaId ? 'on' : '') + '" data-rec="' + esc(r.personaId) + '">' + esc(nameOf(r.personaId)) + '　' + pr.done + '/' + pr.total + (pr.complete ? ' ✔' : '') + '</button>'; }).join('') + '</div></div>';
     if (!sel && !recPid) { p.innerHTML = html + '<p class="muted">點上面的人，或直接點畫面上的角色。</p>'; bindNpc(p); bindAllNpc(p); return; }
     var ent = sel ? sel.ent : null, pid = recPid, ix = recFor(pid), rec = ix >= 0 ? recs[ix] : null;
     if (sel) {
@@ -216,6 +216,7 @@
       var wr = whereIs(pid);
       html += '<div class="card" id="awayCard" style="margin-top:6px"><b>' + esc(nameOf(pid)) + '</b><div style="font-size:var(--fs-2)">' + (wr ? '他現在在「' + esc(roomNameOf(wr)) + '」，不在這間房。' : '他現在不在急診室裡。') + '要繼續問得走過去；已經問到的事，可以先在下面打勾。</div>' + (wr && wr !== player().loc ? '<button class="ghost" id="goNpc" style="margin-top:6px">走到「' + esc(roomNameOf(wr)) + '」</button>' : '') + '</div>';
     }
+    var ckStart = html.length;
     if (rec) {
       var pr = CL.progress(rec);
       html += ckWhyHtml() + '<div class="row" style="margin-top:10px"><b style="flex:1">訪談檢核 ' + esc(rec.id) + '</b><span>' + pr.done + ' / ' + pr.total + '</span></div><div class="bar"><i style="width:' + Math.round(pr.ratio * 100) + '%"></i></div>' +
@@ -232,7 +233,10 @@
       });
       html += '<label>這段對話的連結（即時訪談會自動帶入；貼到 Gemini 訪談的請貼分享連結）<input id="lnk" placeholder="https://g.co/gemini/share/…" value="' + esc(CORE.getLink(player().links, rec.id)) + '"></label><div class="row" style="margin-top:6px"><button class="ghost" id="lnkSave">儲存連結</button><button id="toConcl" class="ghost">加進我的結論</button><span id="lnkMsg" class="muted"></span></div>';
     } else if (sel && sel.av.level !== 'blocked') html += '<p class="muted" style="margin-top:10px">開始訪談後，就會出現檢核表。</p>';
+    /* 11-02 新手專心對談：檢核表收進可收合的一塊（專家模式不包，HTML 與原本完全一樣） */
+    if (rec && window.ERG_UILV_UI && window.ERG_UILV_UI.talkOn && window.ERG_UILV_UI.talkOn()) html = html.slice(0, ckStart) + '<details class="ivCk" id="ivCk"' + (c0._ivCkClosed ? '' : ' open') + '><summary>聊完記下來（' + CL.progress(rec).done + '/' + CL.progress(rec).total + '）</summary>' + html.slice(ckStart) + '</details>';
     p.innerHTML = html; bindNpc(p); bindAllNpc(p);
+    var ivck = $('ivCk'); if (ivck) ivck.addEventListener('toggle', function () { c0._ivCkClosed = !ivck.open; });
     if ($('goNpc')) $('goNpc').onclick = function () { var wr2 = whereIs(pid); if (wr2) RM.travel(wr2); };
     if (sel && $('chatBox')) bindChat(sel, ent);
     /* 10-27 李彤心、學生回報：「產生訪談指令」按下後約 3 秒就消失。訪談頁會因為人物移動、時間走動重畫，指令區塊跟著被洗掉。
