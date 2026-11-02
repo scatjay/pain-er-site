@@ -77,7 +77,7 @@
     var log = ctl.log = ctl.log || [];   /* 對話記錄放在控制器上：訪談面板重畫（切分頁、換人）後不會消失 */
     function draw() {
       var turn = ctl.state.turn >= MAX_TURNS ? MAX_TURNS : ctl.state.turn + 1;
-      el.innerHTML = '<details class="icchat" style="margin:4px 0"><summary style="cursor:pointer;font-size:var(--fs-2)"><b>💬 跟助教聊怎麼問</b> <span class="muted" style="font-size:var(--fs-1)">（幫你看懂、問得出口；不會替你寫紀錄）</span></summary>' +
+      el.innerHTML = '<details class="icchat" style="margin:4px 0"><summary style="cursor:pointer;font-size:var(--fs-2);min-height:44px"><div><b>💬 跟助教聊怎麼問</b></div><div class="muted" style="font-size:var(--fs-1)">幫你看懂、問得出口；不會替你寫紀錄</div></summary>' +
         '<div class="muted" style="font-size:var(--fs-1);margin:4px 0">一次只聊一件事，一段最多 ' + MAX_TURNS + ' 輪（目前第 <b id="icTurn">' + turn + '</b> 輪），會用掉今天的助教名額。</div>' +
         '<div class="row" style="flex-wrap:wrap;gap:4px">' + CHIPS.map(function (c, i) { return '<button type="button" class="ghost" data-icchip="' + i + '" style="font-size:var(--fs-1)">' + esc(c.label) + '</button>'; }).join('') + '</div>' +
         '<div id="icChatLog" style="margin:6px 0;font-size:var(--fs-2)">' + log.slice(-6).map(function (m) { return '<div class="card" style="margin:4px 0;padding:4px 8px;' + (m.q ? 'background:var(--soft-y,#fff8db)' : '') + '"><div class="muted" style="font-size:var(--fs-1)">' + (m.q ? '我問' : '🤖 助教') + '</div>' + esc(m.text).replace(/\n/g, '<br>') + '</div>'; }).join('') + '</div>' +

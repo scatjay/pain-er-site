@@ -271,7 +271,7 @@
     var c = $('clock'); if (!c) return; var el = $('clockPause'), why = pauseReason();
     if (!el) { el = document.createElement('span'); el.id = 'clockPause'; el.style.cssText = 'font-size:var(--fs-3);margin-left:4px;cursor:help'; el.textContent = '⏸'; c.parentNode.insertBefore(el, c.nextSibling); }
     el.style.visibility = why ? 'visible' : 'hidden'; el.title = why;   /* 10-26：用 visibility 保留位置。用 display 時 ⏸ 一出現，頂列換行、長高 12px，點分頁的捲動就對不準（test_mobile_scroll 360x640） */
-    if (why && !cur.pauseTold) { cur.pauseTold = true; if (!cur.modalOpen) toast(why); } if (!why) cur.pauseTold = false;
+    if (why && !cur.pauseTold) { cur.pauseTold = true; if (!cur.modalOpen && !(cur.tab === 'intv' && cur.intvHold)) toast(why); }   /* 11-03：選了人物訪談時不跳黃色提示（會蓋住對話；訪談頁內已有「⏸ 你在訪談」說明，⏸ 圖示按住也看得到原因） */ if (!why) cur.pauseTold = false;
   }
   function frame() {
     if (!cur) return; var now = Date.now(), dt = cur.tickT ? (now - cur.tickT) / 1000 : 0; cur.tickT = now;

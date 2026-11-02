@@ -392,7 +392,7 @@
     var c = $('clock'); if (!c) return; var el = $('clockPause'), why = pauseReason();
     if (!el) { el = document.createElement('span'); el.id = 'clockPause'; el.style.cssText = 'font-size:var(--fs-3);margin-left:4px;cursor:help'; el.textContent = '⏸'; c.parentNode.insertBefore(el, c.nextSibling); }
     el.style.display = why ? '' : 'none'; el.title = why;
-    if (why && !cur.pauseTold) { cur.pauseTold = true; if (!cur.modalOpen) toast(why); } if (!why) cur.pauseTold = false;
+    if (why && !cur.pauseTold) { cur.pauseTold = true; if (!cur.modalOpen && !(cur.tab === 'intv' && cur.intvHold)) toast(why); }   /* 11-03：選了人物訪談時不跳黃色提示（會蓋住對話；訪談頁內已有「⏸ 你在訪談」說明，⏸ 圖示按住也看得到原因） */ if (!why) cur.pauseTold = false;
   }
   function frame() {
     if (!cur) return;

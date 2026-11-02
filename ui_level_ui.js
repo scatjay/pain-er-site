@@ -123,7 +123,7 @@
   function mountAllSwitchers() {
     if (ENV.demo || !ENV.sid) return;
     var side = $('side'); if (side && !MOB) ensureSwitcher(side, side.firstChild, false, 'uilvSwSide');   /* 電腦版專家的頂列已經滿了（再塞一個會把「回大廳」擠出畫面），專家模式的切換器放右側面板最上面；新手畫面的頂列才放 */
-    var tb = $('topbar'); if (tb) { var fbtn = tb.querySelector('[data-fb]'); ensureSwitcher(tb, fbtn, MOB, 'uilvSwRoom'); Array.prototype.forEach.call(tb.querySelectorAll('[data-fb],#leaveBtn'), function (b) { b.classList.add('nvKeep'); }); }
+    var tb = $('topbar'); if (tb) { var fbtn = tb.querySelector('[data-fb]'); ensureSwitcher(tb, MOB ? tb.firstChild : fbtn, MOB, 'uilvSwRoom'); Array.prototype.forEach.call(tb.querySelectorAll('[data-fb],#leaveBtn'), function (b) { b.classList.add('nvKeep'); }); }
     var lr = document.querySelector('#lobby .row'); if (lr) { lr.classList.add('nvKeep'); var f2 = lr.querySelector('[data-fb]'); ensureSwitcher(lr, f2, false, 'uilvSwLobby'); }
     if (IS_SB) { var line = document.querySelector('#top .line'); if (line) { var rl = $('reviseLink'); ensureSwitcher(line, rl, false, 'uilvSwSb'); } }
   }
@@ -281,7 +281,7 @@
   function renderPaneHead() {
     var side = paneHost(); if (!side) return; var h = $('nvPaneHead');
     if (!h) { h = document.createElement('div'); h.id = 'nvPaneHead'; side.insertBefore(h, side.firstChild); h.addEventListener('click', onHeadClick); }
-    var c = curRoom(), kind = ST.pane, html = '<button type="button" class="nvBtn" data-back="1">回到卡片</button>';
+    var c = curRoom(), kind = ST.pane, html = '<button type="button" class="nvBtn" data-back="1">← 回到人物清單</button>';
     if (kind === 'intv' && c) {
       var w = wlFor(c).filter(function (x) { return c.world.entityById && true; }), ent = null;
       var cand = wlFor(c).filter(function (x) { var it = whereNow(c, x.pid); return it && it.ent.id === c.selNpc; })[0];
@@ -461,10 +461,10 @@
       : (step.kind === 'make' ? '<button type="button" class="nvBtn big" data-make="1">' + esc(step.label) + '</button>' : (step.kind === 'export' ? '<button type="button" class="nvBtn big" data-go-room="' + esc(main.code) + '">回房間做人物誌</button>' : '')));
     var again = step.kind === 'story' && main ? '<button type="button" class="nvBtn" data-go-room="' + esc(main.code) + '">再去問人</button>' : '';
     var html = '<div class="nvBox nvTask"><div class="nvK">本週任務｜W8~9' + (due ? '　期限 ' + esc(due) : '') + '</div><div class="nvT">下一步：' + esc(step.text.replace(/^下一步：/, '')) + '</div><div class="nvRow">' + btn + again + '<span style="flex:1"></span>' +
-      '<button type="button" class="nvBtn" data-toggle="sbCard">看全部</button></div></div>';
+      '' + togBtn('sbCard', '看全部') + '</div></div>';
     html += '<div class="nvBox"><div class="nvRow"><div style="flex:1"><b>我的房間</b><div>' + (main ? esc(cmeta(main.caseId).short || cmeta(main.caseId).name) + '・訪談卡 ' + main.cards + ' 張' : '還沒有房間') + '</div></div>' +
-      (main ? '<button type="button" class="nvBtn" data-go-room="' + esc(main.code) + '">回去</button>' : '') + (others.length || !main ? '<button type="button" class="nvBtn" data-toggle="rooms">' + (others.length ? '其他 ' + others.length + ' 間房' : '開新房間／加入') + '</button>' : '<button type="button" class="nvBtn" data-toggle="rooms">開新房間／加入</button>') + '</div></div>';
-    html += '<div class="nvRow"><span id="nvMatHost" style="flex:1 1 100%"></span>' + (left != null ? '<button type="button" class="nvBtn" data-toggle="past">前幾週還差 ' + left + ' 項</button>' : '<button type="button" class="nvBtn" data-toggle="past">前幾週的事</button>') + '</div>';
+      (main ? '<button type="button" class="nvBtn" data-go-room="' + esc(main.code) + '">回去</button>' : '') + (others.length || !main ? '' + togBtn('rooms', others.length ? '其他 ' + others.length + ' 間房' : '開新房間／加入') + '' : '' + togBtn('rooms', '開新房間／加入') + '') + '</div></div>';
+    html += '<div class="nvRow"><span id="nvMatHost" style="flex:1 1 100%"></span>' + (left != null ? '' + togBtn('past', '前幾週還差 ' + left + ' 項') + '' : '' + togBtn('past', '前幾週的事') + '') + '</div>';
     if (nl.getAttribute('data-sig') !== html) { nl.innerHTML = html; nl.setAttribute('data-sig', html); }
     var mc = $('matCard'), host = $('nvMatHost');
     if (mc && host && !host.contains(mc)) { var det = document.createElement('details'); det.className = 'nvMat'; det.innerHTML = '<summary>本週教材（W8~9）</summary>'; det.appendChild(mc); host.innerHTML = ''; host.appendChild(det); }
@@ -476,10 +476,18 @@
     if (b.dataset.make) { toggleShow(wrap, 'rooms', true); var cb = $('createBtn'); if (cb) { cb.scrollIntoView({ block: 'center' }); cb.focus(); } return; }
     if (b.dataset.toggle) toggleShow(wrap, b.dataset.toggle);
   }
-  function toggleShow(wrap, what, force) {
+  function showEls(wrap, what) {
+    wrap = wrap || document.querySelector('#lobby .wrap'); if (!wrap) return [];
     var els = what === 'sbCard' ? [$('sbCard')] : (what === 'past' ? [$('progressBox') && $('progressBox').closest('.card')] : [$('createBtn') && $('createBtn').closest('.card'), wrap.querySelector('h2'), $('roomRows') && $('roomRows').closest('.card')]);
-    els = els.filter(Boolean); var on = force === undefined ? !els[0].classList.contains('nvShow') : force;
+    return els.filter(Boolean);
+  }
+  function isShown(what) { var els = showEls(null, what); return !!(els[0] && els[0].classList.contains('nvShow')); }
+  function togTxt(what, closed) { return isShown(what) ? '隱藏更多' : closed; }   /* 11-03：展開型按鈕三顆用同一句收合文字 */
+  function togBtn(what, closed) { return '<button type="button" class="nvBtn" data-toggle="' + what + '" data-closed="' + esc(closed) + '" aria-expanded="' + isShown(what) + '">' + togTxt(what, closed) + '</button>'; }
+  function toggleShow(wrap, what, force) {
+    var els = showEls(wrap, what); if (!els.length) return; var on = force === undefined ? !els[0].classList.contains('nvShow') : force;
     els.forEach(function (x) { x.classList.toggle('nvShow', on); });
+    var nl = $('nvLobby'); if (nl) { var tg = nl.querySelector('[data-toggle="' + what + '"]'); if (tg) { tg.textContent = on ? '隱藏更多' : (tg.getAttribute('data-closed') || tg.textContent); tg.setAttribute('aria-expanded', on ? 'true' : 'false'); } }
   }
   function renderNudge(wrap) {
     var old = $('nvNudge'), a = app();
@@ -645,7 +653,8 @@
       'body.nvTalk .ivHide,body.nvTalk #toConcl,body.nvTalk label:has(#lnk),body.nvTalk .row:has(#lnkSave),body.nvTalk #holdNote,body.nvTalk #ckWhy{display:none!important}',
       'body.nvTalk #p-intv>*{grid-column:1}body.nvTalk #p-intv>.ivCk{grid-column:2;grid-row:1 / span 8}body.nvTalk #chatLog{max-height:48vh;min-height:30vh}body.nvTalk #chatIn{min-height:48px}body.nvTalk #chatSend{min-height:48px;background:var(--yellow);color:var(--ink-fixed,#1e1e1e)}',
       'body.nvTalk #p-intv button,body.nvTalk #p-intv summary,body.nvTalk #p-intv input,body.nvTalk #p-intv select{min-height:44px}body.nvTalk #p-intv summary{display:flex;align-items:center}body.nvTalk .ck .box{width:44px;height:44px}body.nvTalk .ivCk summary{min-height:44px;display:flex;align-items:center;cursor:pointer;font-weight:900;font-size:var(--fs-4,18px)}body.nvTalk .pill{min-height:44px;display:inline-flex;align-items:center}body.nvTalk .ivCk input{min-height:44px}',
-      '@media (max-width:860px){#nvRoom{padding:12px}.nvPerson{padding:10px 12px;gap:4px 10px}.nvAv{width:44px;height:44px}.nvPS{width:auto;flex:1}.nvPerson .nvBtn{width:auto;min-width:104px}#nvRoom .nvTitle{font-size:20px;margin:0}.nvNextBox{padding:12px 14px;gap:10px}.nvGrid{gap:10px;margin:8px 0}body.nvTalk #p-intv{grid-template-columns:minmax(0,1fr)}body.nvTalk #p-intv>.ivCk{grid-column:1;grid-row:auto}.nvT{font-size:18px}.nvGrid{grid-template-columns:minmax(0,1fr)}}',
+      '.nvPS{white-space:nowrap}body.nvTalk #chatLog.icEmpty{min-height:0}',
+      '@media (max-width:860px){#nvRoom{padding:12px}.nvPerson{padding:10px 12px;gap:4px 10px}.nvAv{width:44px;height:44px}.nvPS{width:100%;flex:none}.nvPN{min-width:96px}.nvPerson .nvBtn{width:auto;min-width:88px;padding:0 10px}body.nvTalk #chatLog{min-height:16vh}body.nvTalk #chatLog.icEmpty{min-height:0}#nvRoom .nvTitle{font-size:20px;margin:0}.nvNextBox{padding:12px 14px;gap:10px}.nvGrid{gap:10px;margin:8px 0}body.nvTalk #p-intv{grid-template-columns:minmax(0,1fr)}body.nvTalk #p-intv>.ivCk{grid-column:1;grid-row:auto}.nvT{font-size:18px}.nvGrid{grid-template-columns:minmax(0,1fr)}}',
       /* 手機版 m.html：房間畫面用頁面捲動，不是 flex */
       'body.nvM.nvRoom #stage,body.nvM.nvRoom #nav,body.nvM.nvRoom #side,body.nvM.nvRoom #speedSheet{position:absolute;left:-12000px;top:0;width:100vw;max-height:60vh;overflow:hidden;visibility:hidden;pointer-events:none}',
       'body.nvM.nvRoom.nvPane #side{position:static;left:auto;width:auto;max-height:none;overflow:visible;visibility:visible;pointer-events:auto}body.nvM.nvRoom #nvRoom{overflow:visible}',
