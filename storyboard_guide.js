@@ -81,6 +81,7 @@
   /* 11-02：W8 卡只顯示「這位學生最前面沒做的一件」＋直接按鈕。
      m：{ main:{code}（能開故事板的那間）, P:{opened, filled, moment, img, personas, code（寫最多的那間）} 或 null（還讀不到）, mobile }
      順序：開故事板 → 幫我排草稿 → 繼續寫滿六格 → 標關鍵時刻 → 放圖 → 人物誌（要用電腦匯出報告）。goal 對應完成列的項目名稱。回傳 null＝沒有可開的房間或全部做完 */
+  var IMG_GOAL = 'AI 生成圖片：放了圖片';   /* 完成列的第五項（判斷依據：故事板任一格放了圖），game.js 的 w8Steps 用同一個字串 */
   function nextAction(m) {
     m = m || {}; if (!m.main || !m.main.code) return null;
     var P = m.P, GOAL = '故事板 6 格有內容';
@@ -90,7 +91,7 @@
     if (filled === 0) return { kind: 'link', label: '幫我排草稿', href: href + '&draft=1', goal: GOAL };
     if (filled < 6) return { kind: 'link', label: '繼續寫（已寫 ' + filled + '/6 格）', href: href, goal: GOAL };
     if (!P.moment) return { kind: 'link', label: '標出關鍵時刻', href: href, goal: '標出關鍵時刻' };
-    if (!P.img) return { kind: 'link', label: '放一張圖', href: href, goal: '放了圖片' };
+    if (!P.img) return { kind: 'link', label: '放一張圖', href: href, goal: IMG_GOAL };
     if ((Number(P.personas) || 0) < 2) return m.mobile ? { kind: 'pc', label: '人物誌：這步請用電腦', goal: '人物誌 2 位' } : { kind: 'export', label: '匯出訪談報告，做人物誌', code: m.main.code, goal: '人物誌 2 位' };
     return null;
   }
@@ -134,13 +135,46 @@
     if (a.kind === 'pc') return '<span class="sbNext pc" role="note">' + esc(a.label) + '</span>';
     return '<a class="btn sbNext" href="' + esc(a.href) + '">' + esc(a.label) + '</a>';
   }
+  /* 11-02 楊老師「後面都要跟著行動導向的指引」：完成列裡還缺的每一項，都接「缺什麼（一句）→ 現在去做（動詞開頭、25 字內）→ 一顆直接按鈕」。
+     key：cards／persona／cells／moment／img；m：{ main:{code}|null, P, mobile, revisit（沒有訪談卡時可回去的房間，沒有就空）}。
+     回傳 { gap, todo, btn:{ kind: link|revisit|create|export, label, href|code } | null }。手機做不了的步驟 btn 為 null，只說改用電腦。 */
+  function stepGuide(key, m) {
+    m = m || {}; var P = m.P || {}, code = m.main && m.main.code ? m.main.code : '', filled = Number(P.filled) || 0, bc = filled > 0 && P.code ? P.code : code;
+    var room = function (c, extra) { return 'storyboard.html?room=' + encodeURIComponent(c) + (extra || ''); };
+    var toRoom = m.revisit ? { kind: 'revisit', label: '去訪談', code: m.revisit } : { kind: 'create', label: '去訪談' };
+    if (key === 'cards') return { gap: '還沒有訪談卡', todo: '到房間點一位人物，問他並在檢核表勾一項', btn: toRoom };
+    var GAP = { persona: '還缺人物誌（' + Math.min(Number(P.personas) || 0, 2) + '/2 位）', cells: filled > 0 ? '故事板寫了 ' + filled + '/6 格' : (P.opened ? '故事板還是空的' : '還沒開故事板'), moment: '還沒標關鍵時刻', img: '還沒補 AI 生成圖片' };
+    if (!code) return { gap: GAP[key], todo: '先到房間拿到一張訪談卡，才開得了故事板', btn: toRoom };
+    if (key === 'persona') return m.mobile ? { gap: GAP.persona, todo: '這一步請改用電腦做', btn: null } : { gap: GAP.persona, todo: '按「匯出訪談報告」，還原人物誌', btn: { kind: 'export', label: '匯出', code: code } };
+    if (key === 'cells') {
+      if (filled > 0) return { gap: GAP.cells, todo: '回到沒寫的格子，寫誰、在哪、發生什麼事、他怎麼想', btn: { kind: 'link', label: '繼續寫', href: room(bc) } };
+      if (P.opened) return { gap: GAP.cells, todo: '按「幫我排一份草稿」，再改成自己的話', btn: { kind: 'link', label: '幫我排草稿', href: room(code, '&draft=1') } };
+      return { gap: GAP.cells, todo: '打開故事板，按「幫我排一份草稿」', btn: { kind: 'link', label: '開故事板', href: room(code) } };
+    }
+    if (key === 'moment') return { gap: GAP.moment, todo: '找出他最卡的那格，勾「這格是關鍵時刻」', btn: { kind: 'link', label: '去標', href: room(bc) } };
+    if (key === 'img') return { gap: GAP.img, todo: '用同一個人物、同一個場景生成圖片，每格前後一致', btn: { kind: 'link', label: '去補圖', href: room(bc) } };
+    return null;
+  }
+  /* 把 guide 掛到每一個「確定還缺」的項目上（ok===false）；讀不到的（null）維持「打開故事板後更新」 */
+  function guideSteps(steps, m) {
+    return (steps || []).map(function (s) { var o = {}; Object.keys(s).forEach(function (k) { o[k] = s[k]; }); if (s.ok === false && s.key) o.guide = stepGuide(s.key, m); return o; });
+  }
+  function goHtml(b) {
+    if (!b) return '';
+    if (b.kind === 'export') return '<button type="button" class="sbGo" data-export="' + esc(b.code) + '">' + esc(b.label) + '</button>';
+    if (b.kind === 'revisit') return '<button type="button" class="sbGo" data-revisit="' + esc(b.code) + '">' + esc(b.label) + '</button>';
+    if (b.kind === 'create') return '<button type="button" class="sbGo" data-create="1">' + esc(b.label) + '</button>';
+    return '<a class="btn sbGo" href="' + esc(b.href) + '">' + esc(b.label) + '</a>';
+  }
   /* W8 卡頂端的完成列。p：{ steps: [{ label, ok: true | false | null（讀不到）}], act: nextAction 的結果（可省略） }。只顯示最前面沒做的一件＋按鈕，五件全部收進「看全部」 */
   function progHtml(p) {
     if (!p || !p.steps) return '';
     var got = p.steps.filter(function (s) { return s.ok === true; }).length, next = p.steps.filter(function (s) { return s.ok !== true; })[0], unknown = p.steps.some(function (s) { return s.ok === null; });
     var nextLabel = p.act && p.act.goal ? p.act.goal : (next && next.label);
     var head = got === p.steps.length ? '<span class="wkDone ok">✅ 故事板全部完成（' + got + '/' + p.steps.length + '）</span>' : '<span class="wkDone todo">⬜ 完成 ' + got + '/' + p.steps.length + (nextLabel ? '｜下一步：' + esc(nextLabel) : '') + '</span>';
-    return '<div class="sbProg">' + head + (got === p.steps.length ? '' : actHtml(p.act)) + '<details class="sbAll"><summary>看全部 ' + p.steps.length + ' 件</summary><ul>' + p.steps.map(function (s) { return '<li class="' + (s.ok === true ? 'ok' : '') + '">' + (s.ok === true ? '✅ ' : '⬜ ') + esc(s.label) + (s.ok === null ? '<span class="muted">（打開故事板後更新）</span>' : '') + '</li>'; }).join('') + '</ul></details></div>';
+    return '<div class="sbProg">' + head + (got === p.steps.length ? '' : actHtml(p.act)) + '<details class="sbAll"><summary>看全部 ' + p.steps.length + ' 件</summary><ul>' + p.steps.map(function (s) {
+      if (s.guide) return '<li class="todo"><div class="sbGap">⬜ <b>' + esc(s.label) + '</b>：' + esc(s.guide.gap) + '</div><div class="sbDo">現在去做：' + esc(s.guide.todo) + '</div>' + goHtml(s.guide.btn) + '</li>';
+      return '<li class="' + (s.ok === true ? 'ok' : '') + '">' + (s.ok === true ? '✅ ' : '⬜ ') + esc(s.label) + (s.ok === null ? '<span class="muted">（打開故事板後更新）</span>' : '') + '</li>'; }).join('') + '</ul></details></div>';
   }
   function fmtSeen(t) { var d = new Date(t), p = function (n) { return (n < 10 ? '0' : '') + n; }; return (d.getMonth() + 1) + '/' + d.getDate() + ' ' + p(d.getHours()) + ':' + p(d.getMinutes()); }
   function roomRows(rooms, skill, caseNames) {
@@ -168,6 +202,7 @@
     '.sbBox .sbAct{display:inline-flex;gap:var(--s2);flex-wrap:wrap}.sbBox .dis,.sbAct .sbOpen{border-width:var(--bw-t);box-shadow:none;padding:8px 16px;font-weight:700;border-radius:var(--r-m)}.sbAct .dis{opacity:.5;filter:grayscale(1);cursor:not-allowed;background:var(--panel);color:var(--fg);box-shadow:none}.sbBox .sbNeed{flex:1 1 100%;font-size:var(--fs-2);color:var(--bad);margin-top:2px}' +
     '.sbBox .sbMain2{font-weight:900;padding:12px 18px;min-height:52px;background:var(--yellow);color:var(--ink-fixed);border:var(--bw) solid var(--ink);border-radius:var(--r-m);box-shadow:var(--sh) var(--sh) 0 var(--ink);cursor:pointer}' +
     '.sbProg{margin:0 0 var(--s3);padding:var(--s2) var(--s3);border:var(--bw-s) solid var(--ink);border-radius:var(--r-m);background:var(--panel)}.sbProg ul{display:flex;flex-wrap:wrap;gap:4px 14px;margin:6px 0 0;padding:0;list-style:none;font-size:var(--fs-2)}.sbProg .sbAll{margin-top:6px;font-size:var(--fs-2)}.sbProg .sbAll summary{cursor:pointer;color:var(--muted)}.sbBox .sbNext{display:flex;align-items:center;justify-content:center;width:max-content;max-width:100%;min-height:44px;margin:8px 0 0;padding:8px 18px;font-weight:900;font-size:16px;background:var(--yellow);color:var(--ink-fixed);border:var(--bw) solid var(--ink);border-radius:var(--r-m);box-shadow:var(--sh) var(--sh) 0 var(--ink);text-decoration:none;cursor:pointer}.sbBox .sbNext.pc{background:var(--panel);color:var(--fg);box-shadow:none;border-style:dashed;cursor:default}.sbBox .sbPcOnly{font-size:var(--fs-2)}.sbProg li.ok{color:var(--ok);font-weight:700}' +
+    '.sbProg ul li.todo{flex:1 1 100%;display:block;padding:6px 0;border-top:var(--bw-s) dashed var(--line)}.sbProg .sbGap{font-weight:700}.sbProg .sbDo{margin:2px 0 6px;font-size:var(--fs-2)}.sbProg .sbGo{display:inline-flex;align-items:center;justify-content:center;min-height:44px;min-width:44px;padding:6px 16px;box-sizing:border-box;font-weight:900;text-decoration:none;border:var(--bw) solid var(--ink);border-radius:var(--r-m);background:var(--yellow);color:var(--ink-fixed);cursor:pointer}@media (max-width:860px){.sbProg .sbGo{width:100%}}' +
     '.sbRemind{margin:0 0 var(--s3);padding:var(--s2) var(--s3);border-left:6px solid var(--pop);background:var(--panel);font-size:var(--fs-3);line-height:1.6}.sbRemind .sbDue{margin-top:4px;font-size:var(--fs-2);font-weight:700}#sbCard .matLink{display:block;padding:6px 8px}' +
     '.wkBox{border-top:var(--bw-s) dashed var(--ink);padding:8px 0}.wkBox>details>summary{cursor:pointer;list-style-position:inside}.wkDone{display:inline-block;font-size:var(--fs-2);font-weight:900;padding:2px 10px;border-radius:10px;border:var(--bw-s) solid var(--ink);line-height:1.5}.wkBox>details>summary .wkDone{display:block;margin-top:4px}.wkDone.ok{background:var(--mint);color:var(--ink-fixed)}.wkDone.todo{background:var(--soft-y,#fff3bf);color:var(--ink-fixed)}' +
     '@media (max-width:860px){#sbCard .matLink{display:flex;align-items:center;min-height:44px;box-sizing:border-box}#matOld>summary{display:flex;align-items:center;min-height:44px}.sbProg .sbAll summary{display:flex;align-items:center;min-height:44px}.sbBox .sbNext{width:100%}.sbBox .sbAct>.sbPcOnly{flex:1 1 100%;order:3}.sbBox .sbAct{flex-wrap:wrap}.sbBox a.btn.sbOpen,.sbBox button,.sbGuide button{min-height:44px;padding-left:14px;padding-right:14px}.sbBox .rooms li{padding:10px 0}.sbBox .sbMain{width:100%}.sbBox .sbAct{width:100%}.sbBox .sbAct>*{flex:1 1 0;justify-content:center}}';
@@ -239,6 +274,6 @@
     draw(opts.caseId);
   }
 
-  return { TEMPLATES: TEMPLATES, ORDER: ORDER, STEPS: STEPS, PROMPTS: PROMPTS, ERRORS: ERRORS, CSS: CSS, pickMainRoom: pickMainRoom, nextAction: nextAction, w9Reminder: w9Reminder, reminderHtml: reminderHtml, dueText: dueText, keyIds: keyIds, interviewedSummary: interviewedSummary, roomRows: roomRows,
+  return { stepGuide: stepGuide, guideSteps: guideSteps, goHtml: goHtml, IMG_GOAL: IMG_GOAL, TEMPLATES: TEMPLATES, ORDER: ORDER, STEPS: STEPS, PROMPTS: PROMPTS, ERRORS: ERRORS, CSS: CSS, pickMainRoom: pickMainRoom, nextAction: nextAction, w9Reminder: w9Reminder, reminderHtml: reminderHtml, dueText: dueText, keyIds: keyIds, interviewedSummary: interviewedSummary, roomRows: roomRows,
     guideHtml: guideHtml, lobbyHtml: lobbyHtml, need: need, progHtml: progHtml, injectCss: injectCss, mountGuide: mountGuide, esc: esc };
 });

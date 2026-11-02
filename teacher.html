@@ -176,7 +176,7 @@ body.proj .priv{display:none!important}
 <div class="top"><h1>痛點急診室 老師後台</h1><span id="dnavBox"></span>
   <label class="muted">週次・班級 <select id="sessSel"></select></label> <span class="muted small" id="weekNote"></span>
   <button id="deidBtn" title="學號、姓名、信箱換成代號，投影時用">去識別化：關</button><button id="projBtn" title="字放大、藏掉次要資訊">投影模式：關</button>
-  <span class="small muted" id="whoami" style="font-size:.85em"></span><button id="logoutBtn" class="ghost">登出</button></div>
+  <span class="small muted" id="whoami" style="font-size:.85em"></span><a id="demoRotateLink" href="index.html?demo=rotate" target="_blank" rel="noopener" title="開新分頁，三班輪流展示去識別化學生的大廳（不連資料庫、不寫入）" style="display:inline-flex;align-items:center;min-height:32px;padding:0 10px;border:2px solid currentColor;border-radius:8px;text-decoration:none;font-size:.9em">三班輪播展示</a><button id="logoutBtn" class="ghost">登出</button></div>
 
 <div class="clsbar" id="clsBar" role="status" aria-live="polite"><span id="clsOnline" class="onlbig" title="現在有幾位學生在線上（5 分鐘內有心跳）"></span><span id="clsNow">讀取中…</span><span id="clsNext" class="muted"></span><span class="grow"></span><span id="clsUpd" class="muted"></span><button id="clsAuto" class="sm ghost" hidden>回到自動</button><button id="clsRefresh" class="sm" title="重新讀取個人指引，並重算狀態、漏斗、介入清單與所有分頁">立即更新</button></div>
 
@@ -323,17 +323,17 @@ body.proj .priv{display:none!important}
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-<script src="er_firebase.js?v=202611021401"></script>
-<script src="checklist.js?v=202611021401"></script>
-<script src="checkpoints.js?v=202611021401"></script>
-<script src="avatar.js?v=202611021401"></script>
-<script src="local_db.js?v=202611021401"></script>
-<script src="app_core.js?v=202611021401"></script>
-<script src="achievements.js?v=202611021401"></script><script src="remote_db.js?v=202611021401"></script><script src="summary_render.js?v=202611021401"></script>
-<script src="layout.js?v=202611021401"></script>
-<script src="minimap.js?v=202611021401"></script><script src="map_layout.js?v=202611021401"></script><script src="skill_badge.js?v=202611021401"></script>
-<script src="personas_inclusive.js?v=202611021401"></script><script src="er_data.js?v=202611021401"></script><script src="npc_voice.js?v=202611021401"></script><script src="personas.js?v=202611021401"></script>
-<script src="week2.js?v=202611021401"></script><script src="teacher_model.js?v=202611021401"></script>
+<script src="er_firebase.js?v=202611021931"></script>
+<script src="checklist.js?v=202611021931"></script>
+<script src="checkpoints.js?v=202611021931"></script>
+<script src="avatar.js?v=202611021931"></script>
+<script src="local_db.js?v=202611021931"></script>
+<script src="app_core.js?v=202611021931"></script>
+<script src="achievements.js?v=202611021931"></script><script src="remote_db.js?v=202611021931"></script><script src="summary_render.js?v=202611021931"></script>
+<script src="layout.js?v=202611021931"></script>
+<script src="minimap.js?v=202611021931"></script><script src="map_layout.js?v=202611021931"></script><script src="skill_badge.js?v=202611021931"></script>
+<script src="personas_inclusive.js?v=202611021931"></script><script src="er_data.js?v=202611021931"></script><script src="npc_voice.js?v=202611021931"></script><script src="personas.js?v=202611021931"></script>
+<script src="week2.js?v=202611021931"></script><script src="teacher_model.js?v=202611021931"></script>
 <script>
 /* 教師名單：只有這裡的 Google 帳號能進。要加人就加在這裡（改完重新部署；資料庫規則 tools/er_after_google_enabled.py 也要加）。 */
 var TEACHER_EMAILS = ['scatjay@gmail.com', 'prof.chwu@mx.nthu.edu.tw', 'nthuchwu@gapp.nthu.edu.tw'];   /* 10-16 楊老師：清大吳智鴻老師（觀摩用，含後台） */

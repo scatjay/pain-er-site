@@ -25,11 +25,14 @@
     return UNIT_SESS;
   }
 
-  var data = CORE.makeData(window), DB = data.DB, ONLINE = false;
+  /* 三班輪播展示（老師專用，?demo=rotate，邏輯在 demo_rotate.js）：資料層換成記憶體（不碰 localStorage、不連 Firebase 資料庫），所有寫入都被擋下 */
+  var DEMO = /[?&]demo=rotate/.test(location.search);
+  function memWin() { var m = {}; return { Date: Date, console: window.console, localStorage: { getItem: function (k) { return Object.prototype.hasOwnProperty.call(m, k) ? m[k] : null; }, setItem: function (k, v) { m[k] = String(v); }, removeItem: function (k) { delete m[k]; }, key: function (i) { return Object.keys(m)[i] || null; }, get length() { return Object.keys(m).length; } } }; }
+  var data = CORE.makeData(DEMO ? memWin() : window), DB = data.DB, ONLINE = false;
   /* 線上模式：有 Firebase 設定、SDK 載入成功、網址沒有 ?local=1 ⇒ 資料層換成 remote_db（同介面）。否則維持本機。 */
   (function () {
     try {
-      if (/[?&]local=1/.test(location.search) || !window.ERG_FB || !window.firebase || !window.ERG_REMOTE) return;
+      if (DEMO || /[?&]local=1/.test(location.search) || !window.ERG_FB || !window.firebase || !window.ERG_REMOTE) return;
       if (!firebase.apps || !firebase.apps.length) firebase.initializeApp(window.ERG_FB);
       var fdb = firebase.database(), root = fdb.ref('er/' + sess());
       DB = window.ERG_REMOTE.makeRemoteDb({ root: root, sess: sess(), deferred: true, notify: data.fire, log: function (m) { if (/🔴/.test(m)) console.error('[remote_db]', m); else console.warn('[remote_db]', m); }, me: function () { var A = window.ERG_APP; return A && A.me ? A.me.sid : null; } });   /* deferred：登入後才掛監聽（規則要 auth） */
@@ -247,7 +250,7 @@
     $('loginBtn').onclick = doLogin;
     $('sidInput').addEventListener('keydown', function (e) { if (e.key === 'Enter') doLogin(); });
     $('logoutBtn').onclick = function () { try { sessionStorage.removeItem('erg2_sid'); } catch (e) {} APP.me = { sid: null, cls: null, profile: null }; show('login'); };
-    try { var s0 = sessionStorage.getItem('erg2_sid'); if (s0) { $('sidInput').value = s0; $('clsInput').value = sessionStorage.getItem('erg2_cls') || '二甲'; var p0 = CORE.getProfile(APP.storage, s0); if (p0 && p0.email && $('emailInput')) $('emailInput').value = p0.email; setTimeout(doLogin, 0); } } catch (e) {}
+    try { var s0 = DEMO ? null : sessionStorage.getItem('erg2_sid'); if (s0) { $('sidInput').value = s0; $('clsInput').value = sessionStorage.getItem('erg2_cls') || '二甲'; var p0 = CORE.getProfile(APP.storage, s0); if (p0 && p0.email && $('emailInput')) $('emailInput').value = p0.email; setTimeout(doLogin, 0); } } catch (e) {}
     /* 打學號時自動帶出校信箱；學生要改 Gmail 再自己改 */
     if ($('emailInput')) $('sidInput').addEventListener('input', function () { var e = $('emailInput'); if (!e.dataset.touched) e.value = $('sidInput').value.trim().toLowerCase() + '@office.stust.edu.tw'; });
     if ($('emailInput')) $('emailInput').addEventListener('input', function () { $('emailInput').dataset.touched = '1'; });
@@ -411,7 +414,7 @@
     return h;
   }
   function bindMats(card) {
-    Array.prototype.forEach.call(card.querySelectorAll('[data-mat]'), function (a) { a.addEventListener('click', function () { try { window.ERG_MATS.record(localStorage, APP.me.sid, a.getAttribute('data-wk') || 'w8', a.getAttribute('data-mat')); syncMats(); if (a.textContent.indexOf('✓') !== 0) a.textContent = '✓ ' + a.textContent; } catch (e) {} }); });
+    Array.prototype.forEach.call(card.querySelectorAll('[data-mat]'), function (a) { a.addEventListener('click', function () { if (DEMO) return; try { window.ERG_MATS.record(localStorage, APP.me.sid, a.getAttribute('data-wk') || 'w8', a.getAttribute('data-mat')); syncMats(); if (a.textContent.indexOf('✓') !== 0) a.textContent = '✓ ' + a.textContent; } catch (e) {} }); });
   }
   function w8Started() { var q = location.search.match(/[?&]w8=(0|1)/); if (q) return q[1] === '1'; return Date.now() >= W8_START; }
   window.ERG_W8_ON = w8Started;   /* 10-27：成就分頁用它決定哪一組單元排最前面、展開 */
@@ -516,8 +519,8 @@
   }
   function w8Steps(rows) {
     var P = W8P.sid === APP.me.sid ? W8P.data : null;
-    return [{ label: '有訪談卡的房間 ≥1', ok: rows.some(function (x) { return x.open; }) }, { label: '人物誌 2 位', ok: P ? P.personas >= 2 : null }, { label: '故事板 6 格有內容', ok: P ? P.filled >= 6 : null },
-      { label: '標出關鍵時刻', ok: P ? !!P.moment : null }, { label: '放了圖片', ok: P ? !!P.img : null }];
+    return [{ key: 'cards', label: '有訪談卡的房間 ≥1', ok: rows.some(function (x) { return x.open; }) }, { key: 'persona', label: '人物誌 2 位', ok: P ? P.personas >= 2 : null }, { key: 'cells', label: '故事板 6 格有內容', ok: P ? P.filled >= 6 : null },
+      { key: 'moment', label: '標出關鍵時刻', ok: P ? !!P.moment : null }, { key: 'img', label: window.ERG_STORYBOARD.IMG_GOAL, ok: P ? !!P.img : null }];   /* 11-02：第五項＝AI 生成圖片（故事板任一格放了圖）；每個還缺的項目接「現在去做」＋按鈕（SB.guideSteps） */
   }
   function renderStoryboardEntry() {
     var SB = window.ERG_STORYBOARD, RL = window.ERG_REPORT_LEVEL, PER = window.ERG_PERSONAS; if (!SB || !RL || !APP.me.sid) return;
@@ -548,10 +551,18 @@
     var mainPick = SB.pickMainRoom(rows, lastRoom), mainRoom = mainPick ? mainPick.code : '';   /* 11-02：開訪談卡最多的那間（一樣多才看最近進過的）；原本是最近進過的 */
     var bestRow = rows.slice().sort(function (a, b) { return (b.started - a.started) || (b.code === lastRoom) - (a.code === lastRoom); })[0] || null;
     var steps = w8Steps(rows);
-    card.innerHTML = '<div class="row"><b style="flex:1;font-size:var(--fs-4)">' + (w8Started() ? '本週任務（W9）：把訪談接成故事板' : '第 8 週　UX 故事板') + '</b></div>' + (w8Started() ? SB.reminderHtml(SB.w9Reminder({ main: mainRoom ? { code: mainRoom } : null, P: W8P.sid === APP.me.sid ? W8P.data : null, mobile: mobile, cls: APP.me.cls })) : '') + SB.lobbyHtml({ mobile: mobile, entry1: e1, rooms: rows, main: mainRoom ? { code: mainRoom, cards: mainPick.cards, most: openRows.length > 1 } : null, mainRoom: bestRow ? bestRow.code : '', mainNeed: SB.need(bestRow || { cards: 0, started: 0 }), prog: { steps: steps, act: SB.nextAction({ main: mainRoom ? { code: mainRoom } : null, P: W8P.sid === APP.me.sid ? W8P.data : null, mobile: mobile }) } });
-    card.insertAdjacentHTML('beforeend', matsHtml()); bindMats(card); syncMats();
+    card.innerHTML = '<div class="row"><b style="flex:1;font-size:var(--fs-4)">' + (w8Started() ? '本週任務（W9）：把訪談接成故事板' : '第 8 週　UX 故事板') + '</b></div>' + (w8Started() ? SB.reminderHtml(SB.w9Reminder({ main: mainRoom ? { code: mainRoom } : null, P: W8P.sid === APP.me.sid ? W8P.data : null, mobile: mobile, cls: APP.me.cls })) : '') + SB.lobbyHtml({ mobile: mobile, entry1: e1, rooms: rows, main: mainRoom ? { code: mainRoom, cards: mainPick.cards, most: openRows.length > 1 } : null, mainRoom: bestRow ? bestRow.code : '', mainNeed: SB.need(bestRow || { cards: 0, started: 0 }), prog: { steps: SB.guideSteps(steps, { main: mainRoom ? { code: mainRoom } : null, P: W8P.sid === APP.me.sid ? W8P.data : null, mobile: mobile, revisit: bestRow ? bestRow.code : '' }), act: SB.nextAction({ main: mainRoom ? { code: mainRoom } : null, P: W8P.sid === APP.me.sid ? W8P.data : null, mobile: mobile }) } });
+    card.insertAdjacentHTML('beforeend', matsHtml());
+    if (DEMO) {   /* 展示模式：卡片預設收合，只露標題列與一行摘要，點一下才展開；展開狀態只存在記憶體，重整就回到收合 */
+      var dgot = steps.filter(function (x) { return x.ok === true; }).length, dact = SB.nextAction({ main: mainRoom ? { code: mainRoom } : null, P: W8P.sid === APP.me.sid ? W8P.data : null, mobile: mobile });
+      var dline = 'W9 本週任務｜' + (!mainRoom ? '下一步：先去問人，拿到第一張訪談卡' : (dact ? '下一步：' + dact.label : '故事板都完成了')) + '｜完成 ' + dgot + '/' + steps.length;
+      card.innerHTML = '<details id="demoSbFold" class="demoFold"' + (APP.demoOpen && APP.demoOpen.sb ? ' open' : '') + '><summary>' + esc(dline) + '</summary>' + card.innerHTML + '</details>';
+      var df = $('demoSbFold'); if (df) df.ontoggle = function () { APP.demoOpen.sb = df.open; };
+    }
+    bindMats(card); syncMats();
     loadW8P(mine.map(function (x) { return x.code; }));
     var b1 = $('sbEnter1'); if (b1) b1.onclick = function () { var t = $('createBtn'); t.scrollIntoView({ block: 'center' }); t.focus(); };
+    Array.prototype.forEach.call(card.querySelectorAll('[data-create]'), function (b) { b.onclick = function () { var t = $('createBtn'); t.scrollIntoView({ block: 'center' }); t.focus(); }; });   /* 「去訪談」：還沒有房間時，帶去開房間／加入那一欄 */
     var b0 = $('sbMain0'); if (b0) b0.onclick = function () { var t = $('createBtn'); t.scrollIntoView({ block: 'center' }); t.focus(); };   /* 還沒有房間：先去開房間或加入 */
     Array.prototype.forEach.call(card.querySelectorAll('[data-revisit]'), function (b) { b.onclick = function () { joinCode(b.getAttribute('data-revisit')); }; });   /* 🩺 回去訪談＝進這間房（跟大廳原本進房同一個函式） */
     var b2 = $('sbEnter2'); if (b2) b2.onclick = function () {
@@ -573,6 +584,7 @@
   /* 線上模式：別人的房間平常只有索引，要先把整間房載進來才能進去（不然會用空白紀錄蓋掉原本的進度） */
   var openT = null;
   function openRoom(code) {
+    if (DEMO) { if (window.ERG_DEMO && window.ERG_DEMO.note) window.ERG_DEMO.note(); return; }   /* 展示模式不進房間 */
     try { if (code && APP.me.sid) localStorage.setItem('erg_last_room_' + APP.me.sid, code); } catch (x) {}   /* 故事板的主按鈕要開「最近進過的那間」 */
     try { if (code && APP.me.sid) { var sk = 'erg_room_seen_' + APP.me.sid, sm = JSON.parse(localStorage.getItem(sk) || '{}'); sm[code] = Date.now(); localStorage.setItem(sk, JSON.stringify(sm)); } } catch (x) {}   /* 10-27 楊老師：大廳房間列顯示上次進入時間（伺服器只存加入時間，這裡記在這台裝置） */
     if (ONLINE && DB.watchRoom) {
@@ -644,5 +656,25 @@
   function ensureScoreWatch() { if (!ONLINE || !window.firebase || !APP.me.sid || !window.ERG_ACH) return; ensureMyScore(); scoreWatch.ensure(); }
   window.ERG_ENSURE_SCORE_WATCH = ensureScoreWatch;
 
+  /* 三班輪播展示：把 demo_rotate.js 轉好的資料放進記憶體資料層，然後進大廳（大廳程式原樣算畫面）。沒有任何寫入雲端的路徑 */
+  if (DEMO) {
+    APP.demo = true; APP.demoOpen = { sb: false, w2: false };
+    APP.isTeacherEmail = function (e) { return MULTI_LOGIN.indexOf(String(e || '').toLowerCase()) >= 0; };
+    APP.demoPersonaIds = function (cid) { var c = CASELIST.filter(function (x) { return x.meta.id === cid; })[0] || CASELIST[0]; return window.ERG_STORYBOARD.keyIds(c.meta.id, c.meta, c.personas || []); };
+    APP.demoApply = function (pack) {
+      var st = data.storage, ks = [], i; for (i = 0; i < st.length; i++) ks.push(st.key(i)); ks.forEach(function (k) { st.removeItem(k); });
+      var me = pack.me; APP.me.sid = me.sid; APP.me.cls = me.cls; APP.me.name = me.name; APP.me.email = ''; APP.me.uid = null; APP.me.profile = pack.profile; CORE.saveProfile(APP.storage, me.sid, pack.profile);
+      var mainCode = '';
+      pack.rooms.forEach(function (r) {
+        var room = DB.createRoom(APP.SESS, r.host), patch = { case: r.case, dow: 1, shift: 'day', cls: r.cls, hostName: r.hostName };
+        if (r.player) { patch.players = {}; patch.players[r.host] = r.player; }
+        DB.patchRoom(room.code, patch); if (r.main) mainCode = room.code;
+      });
+      var w = {}; Object.keys(pack.w8p).forEach(function (k) { w[k] = pack.w8p[k]; }); w.code = mainCode;
+      W8P = { sid: me.sid, codes: '', busy: false, data: w }; sbTouched = false;
+      GUIDE.loaded = true; GUIDE.sid = me.sid; GUIDE.g = null; GUIDE.r = null; GUIDE.h = null;   /* 展示模式沒有指引資料：別一直顯示「讀取中」 */
+      enterLobby();
+    };
+  }
   window.__ERG_DEBUG = { APP: APP, DB: DB };
 })();
