@@ -94,6 +94,40 @@
     if ((Number(P.personas) || 0) < 2) return m.mobile ? { kind: 'pc', label: '人物誌：這步請用電腦', goal: '人物誌 2 位' } : { kind: 'export', label: '匯出訪談報告，做人物誌', code: m.main.code, goal: '人物誌 2 位' };
     return null;
   }
+  /* 11-02 W9：大廳入口的提醒。依學生目前狀況分群（沿用 nextAction），每群一句「做什麼＋為什麼」；期限只放這個班的日期（判不出班級就不放） */
+  var DUE = { W7: { '二丙': ['11/3 23:59', '2026-11-03T23:59:59+08:00'], '二乙': ['11/3 23:59', '2026-11-03T23:59:59+08:00'], '二甲': ['11/5', '2026-11-05T23:59:59+08:00'] },
+    W8: { '二丙': ['11/17', '2026-11-17T23:59:59+08:00'], '二乙': ['11/17', '2026-11-17T23:59:59+08:00'], '二甲': ['11/19', '2026-11-19T23:59:59+08:00'] } };
+  function classOf(cls) { var c = String(cls || '').replace(/^.*(二[甲乙丙]).*$/, '$1'); return /^二[甲乙丙]$/.test(c) ? c : ''; }
+  /* 只列還沒過的期限；now：毫秒時間 */
+  function dueText(cls, now) {
+    var c = classOf(cls); if (!c) return ''; var t = now == null ? Date.now() : now, out = [];
+    ['W7', 'W8'].forEach(function (w) { var d = DUE[w][c]; if (d && t <= Date.parse(d[1])) out.push(w + ' ' + d[0]); });
+    return out.length ? '你這班的作業期限：' + out.join('、') : '';
+  }
+  var W9_TEXT = {
+    nocard: '先去問人：到房間裡點一位人物，在對話框直接問他（至少問到一位病人或家屬）；聊完到右側「訪談」分頁的檢核表至少勾一項，這才算一張訪談卡，故事板才打得開。',
+    draft: '打開故事板，按「幫我排草稿」，再把草稿改成自己的話：草稿裡每一句都是你訪談的原話、附出處，改成自己的話才是你的故事。',
+    writing: '一格一格寫：誰、在哪、發生什麼事、他怎麼想；寫滿六格，再標出關鍵時刻，看的人才知道痛點發生在哪一格。',
+    img: '六格都寫好了，再放一張圖：把場景畫出來或生成圖片放進故事板，看的人一眼就看得懂。',
+    persona_pc: '故事板寫好了，剩人物誌：按下面的「匯出訪談報告」，還原 2 位人物誌，故事裡的人才有訪談當依據。',
+    persona_mobile: '故事板寫好了，剩人物誌：這一步要用電腦做（手機做不了），回電腦再完成。',
+    done: '故事板都完成了。時間夠的話，回房間再問一位，把還不夠具體的格子補上。'
+  };
+  /* m：{ main, P, mobile, cls, now }；回傳 { group, text, due }。group：nocard／draft／writing／img／persona／done */
+  function w9Reminder(m) {
+    m = m || {}; var a = nextAction(m), g, key;
+    if (!m.main || !m.main.code) g = key = 'nocard';
+    else if (!a) g = key = 'done';
+    else if (a.kind === 'pc' || a.kind === 'export') { g = 'persona'; key = a.kind === 'pc' ? 'persona_mobile' : 'persona_pc'; }
+    else if (a.label === '放一張圖') g = key = 'img';
+    else if (a.label === '開故事板') g = key = 'draft';
+    else g = key = 'writing';   /* 幫我排草稿（已開板、還沒寫）／繼續寫／標出關鍵時刻 */
+    return { group: g, text: W9_TEXT[key], due: dueText(m.cls, m.now) };
+  }
+  function reminderHtml(r) {
+    if (!r) return '';
+    return '<div class="sbRemind" id="w9Remind" data-group="' + esc(r.group) + '"><div>' + esc(r.text) + '</div>' + (r.due ? '<div class="sbDue">' + esc(r.due) + '</div>' : '') + '</div>';
+  }
   function actHtml(a) {
     if (!a) return '';
     if (a.kind === 'export') return '<button type="button" class="sbNext" data-export="' + esc(a.code) + '">' + esc(a.label) + '</button>';
@@ -134,8 +168,9 @@
     '.sbBox .sbAct{display:inline-flex;gap:var(--s2);flex-wrap:wrap}.sbBox .dis,.sbAct .sbOpen{border-width:var(--bw-t);box-shadow:none;padding:8px 16px;font-weight:700;border-radius:var(--r-m)}.sbAct .dis{opacity:.5;filter:grayscale(1);cursor:not-allowed;background:var(--panel);color:var(--fg);box-shadow:none}.sbBox .sbNeed{flex:1 1 100%;font-size:var(--fs-2);color:var(--bad);margin-top:2px}' +
     '.sbBox .sbMain2{font-weight:900;padding:12px 18px;min-height:52px;background:var(--yellow);color:var(--ink-fixed);border:var(--bw) solid var(--ink);border-radius:var(--r-m);box-shadow:var(--sh) var(--sh) 0 var(--ink);cursor:pointer}' +
     '.sbProg{margin:0 0 var(--s3);padding:var(--s2) var(--s3);border:var(--bw-s) solid var(--ink);border-radius:var(--r-m);background:var(--panel)}.sbProg ul{display:flex;flex-wrap:wrap;gap:4px 14px;margin:6px 0 0;padding:0;list-style:none;font-size:var(--fs-2)}.sbProg .sbAll{margin-top:6px;font-size:var(--fs-2)}.sbProg .sbAll summary{cursor:pointer;color:var(--muted)}.sbBox .sbNext{display:flex;align-items:center;justify-content:center;width:max-content;max-width:100%;min-height:44px;margin:8px 0 0;padding:8px 18px;font-weight:900;font-size:16px;background:var(--yellow);color:var(--ink-fixed);border:var(--bw) solid var(--ink);border-radius:var(--r-m);box-shadow:var(--sh) var(--sh) 0 var(--ink);text-decoration:none;cursor:pointer}.sbBox .sbNext.pc{background:var(--panel);color:var(--fg);box-shadow:none;border-style:dashed;cursor:default}.sbBox .sbPcOnly{font-size:var(--fs-2)}.sbProg li.ok{color:var(--ok);font-weight:700}' +
+    '.sbRemind{margin:0 0 var(--s3);padding:var(--s2) var(--s3);border-left:6px solid var(--pop);background:var(--panel);font-size:var(--fs-3);line-height:1.6}.sbRemind .sbDue{margin-top:4px;font-size:var(--fs-2);font-weight:700}#sbCard .matLink{display:block;padding:6px 8px}' +
     '.wkBox{border-top:var(--bw-s) dashed var(--ink);padding:8px 0}.wkBox>details>summary{cursor:pointer;list-style-position:inside}.wkDone{display:inline-block;font-size:var(--fs-2);font-weight:900;padding:2px 10px;border-radius:10px;border:var(--bw-s) solid var(--ink);line-height:1.5}.wkBox>details>summary .wkDone{display:block;margin-top:4px}.wkDone.ok{background:var(--mint);color:var(--ink-fixed)}.wkDone.todo{background:var(--soft-y,#fff3bf);color:var(--ink-fixed)}' +
-    '@media (max-width:860px){.sbProg .sbAll summary{display:flex;align-items:center;min-height:44px}.sbBox .sbNext{width:100%}.sbBox .sbAct>.sbPcOnly{flex:1 1 100%;order:3}.sbBox .sbAct{flex-wrap:wrap}.sbBox a.btn.sbOpen,.sbBox button,.sbGuide button{min-height:44px;padding-left:14px;padding-right:14px}.sbBox .rooms li{padding:10px 0}.sbBox .sbMain{width:100%}.sbBox .sbAct{width:100%}.sbBox .sbAct>*{flex:1 1 0;justify-content:center}}';
+    '@media (max-width:860px){#sbCard .matLink{display:flex;align-items:center;min-height:44px;box-sizing:border-box}#matOld>summary{display:flex;align-items:center;min-height:44px}.sbProg .sbAll summary{display:flex;align-items:center;min-height:44px}.sbBox .sbNext{width:100%}.sbBox .sbAct>.sbPcOnly{flex:1 1 100%;order:3}.sbBox .sbAct{flex-wrap:wrap}.sbBox a.btn.sbOpen,.sbBox button,.sbGuide button{min-height:44px;padding-left:14px;padding-right:14px}.sbBox .rooms li{padding:10px 0}.sbBox .sbMain{width:100%}.sbBox .sbAct{width:100%}.sbBox .sbAct>*{flex:1 1 0;justify-content:center}}';
 
   /* 指令文字裡的【…】要學生換掉：畫面上標黃，複製出去的文字不變 */
   function marked(t) { return esc(t).replace(/【[^】]*】/g, function (m) { return '<mark>' + m + '</mark>'; }); }
@@ -204,6 +239,6 @@
     draw(opts.caseId);
   }
 
-  return { TEMPLATES: TEMPLATES, ORDER: ORDER, STEPS: STEPS, PROMPTS: PROMPTS, ERRORS: ERRORS, CSS: CSS, pickMainRoom: pickMainRoom, nextAction: nextAction, keyIds: keyIds, interviewedSummary: interviewedSummary, roomRows: roomRows,
+  return { TEMPLATES: TEMPLATES, ORDER: ORDER, STEPS: STEPS, PROMPTS: PROMPTS, ERRORS: ERRORS, CSS: CSS, pickMainRoom: pickMainRoom, nextAction: nextAction, w9Reminder: w9Reminder, reminderHtml: reminderHtml, dueText: dueText, keyIds: keyIds, interviewedSummary: interviewedSummary, roomRows: roomRows,
     guideHtml: guideHtml, lobbyHtml: lobbyHtml, need: need, progHtml: progHtml, injectCss: injectCss, mountGuide: mountGuide, esc: esc };
 });

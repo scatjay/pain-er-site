@@ -173,6 +173,14 @@
   }
   /* 10-27 楊老師：重要關係人的按鈕直接用象限顏色（對應 MBTI）。顏色旁一定有四碼文字，不靠顏色分辨 */
   function mbtiCss(pid) { try { var i = window.ERG_TYPE_UI && window.ERG_TYPE_UI.info(pid); return i ? 'background:' + i.q.bg + ';border-color:' + i.q.color + ';color:#1b1b1b;' : ''; } catch (e) { return ''; } }
+  /* 11-02 楊老師：訪談頁檢核表上方的說明「為什麼要勾檢核表？」。預設展開（第一次看到的人要看得到），可收合；收合狀態記在本機，訪談頁每秒重畫也不會被打開 */
+  function ckWhyHtml() {
+    var closed = false; try { closed = localStorage.getItem('erg_ckwhy_closed') === '1'; } catch (e) {}
+    return '<details id="ckWhy" class="card" style="margin-top:10px"' + (closed ? '' : ' open') + '><summary style="cursor:pointer;font-weight:900;padding:11px 0">為什麼要勾檢核表？</summary>' +
+      '<div style="font-size:var(--fs-2);line-height:1.6"><b>檢核表不是在填表，是在替你的故事板備料。</b><ul style="margin:4px 0 0;padding-left:1.3em">' +
+      '<li>勾一項，下面就寫他說的原話。</li><li>之後在故事板按「幫我排草稿」，系統會把這些話放進六格，每句附出處。</li><li>至少勾一項，這間房的故事板才會打開。</li><li>寫得越具體，草稿越像他的故事。</li></ul>' +
+      '<div class="muted" style="margin-top:4px">三項是：他一開始怎麼說、那天發生了什麼事、他真正需要什麼。</div></div></details>';
+  }
   function renderIntv() {
     var p = $('p-intv'), here = RM.entityHere();
     if (cur().role !== 'member') { p.innerHTML = '<p class="muted">旁觀者不能訪談。</p>'; return; }
@@ -210,7 +218,7 @@
     }
     if (rec) {
       var pr = CL.progress(rec);
-      html += '<div class="row" style="margin-top:10px"><b style="flex:1">訪談檢核 ' + esc(rec.id) + '</b><span>' + pr.done + ' / ' + pr.total + '</span></div><div class="bar"><i style="width:' + Math.round(pr.ratio * 100) + '%"></i></div>' +
+      html += ckWhyHtml() + '<div class="row" style="margin-top:10px"><b style="flex:1">訪談檢核 ' + esc(rec.id) + '</b><span>' + pr.done + ' / ' + pr.total + '</span></div><div class="bar"><i style="width:' + Math.round(pr.ratio * 100) + '%"></i></div>' +
         '<div class="muted" style="font-size:var(--fs-1)">問到了就打勾，三項都勾才算問完這一位。每個勾要選這是你親眼見到的、對方說的，還是你猜的。</div>';
       CL.ITEMS.forEach(function (it) {
         var v = rec.items[it.k], done = v.done;
@@ -241,6 +249,7 @@
     };
     if (sel && cur()._pOut && cur()._pOut.pid === ent.pid && $('pOut') && !$('pTxt')) showPrompt(cur()._pOut.text);
     if (rec) {
+      var ckw = $('ckWhy'); if (ckw) ckw.addEventListener('toggle', function () { try { var was = localStorage.getItem('erg_ckwhy_closed') === '1'; if (was === ckw.open) localStorage.setItem('erg_ckwhy_closed', ckw.open ? '0' : '1'); } catch (e) {} });
       Array.prototype.forEach.call(p.querySelectorAll('[data-tick]'), function (b) { b.onclick = function () { var k = b.dataset.tick, v = rec.items[k]; setRec(ix, k, { done: !v.done, trust: v.done ? '' : (v.trust || 'said') }); }; });
       Array.prototype.forEach.call(p.querySelectorAll('[data-trust]'), function (b) { b.onclick = function () { var a = b.dataset.trust.split('|'); setRec(ix, a[0], { trust: a[1] }); }; });
       Array.prototype.forEach.call(p.querySelectorAll('[data-note]'), function (el) { el.onchange = function () { setRec(ix, el.dataset.note, { note: el.value }); }; });

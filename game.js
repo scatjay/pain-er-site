@@ -382,7 +382,7 @@
     var c = week2Ctx(), ev = window.ERG_WEEK2.evaluate(c), r = c.resp || {}, MIN = window.ERG_WEEK2.RESP_MIN;
     var ta = function (k, label, ph) { return '<label style="display:block;margin:6px 0 2px;font-size:var(--fs-2)"><b>' + label + '</b></label><textarea id="gr_' + k + '" rows="2" maxlength="400" placeholder="' + esc(ph) + '" style="width:100%;box-sizing:border-box">' + esc(GUIDE.draft && GUIDE.draft[k] !== undefined ? GUIDE.draft[k] : (r[k] || '')) + '</textarea>'; };
     var w8 = w8Started(), rv = reviewState(GUIDE.r), rvOk = rv.k === 'ok', left = (ev.total - ev.lit) + (rvOk ? 0 : 1);
-    var head = '痛點急診室 2/3（W7）' + (w8 ? '上週的事' : '這週要做的事') + '　' + (w8 ? wkBadge(ev.passed && rvOk, left, ev.lit, ev.total, ev.next ? ev.next.text : (rvOk ? '' : '送出「回應指引」'), '｜回應指引：' + rv.t) : ev.lit + ' / ' + ev.total + (ev.passed ? '　<span class="tag ok">全部完成</span>' : ''));
+    var head = '痛點急診室 2/3（W7）' + (w8 ? '往週的事' : '這週要做的事') + '　' + (w8 ? wkBadge(ev.passed && rvOk, left, ev.lit, ev.total, ev.next ? ev.next.text : (rvOk ? '' : '送出「回應指引」'), '｜回應指引：' + rv.t) : ev.lit + ' / ' + ev.total + (ev.passed ? '　<span class="tag ok">全部完成</span>' : ''));
     return (w8 ? '<details id="week2Box"' + (week2Open ? ' open' : '') + '><summary style="cursor:pointer"><b style="font-size:var(--fs-3)">' + head + '</b></summary>' : '<div id="week2Box"><div class="row"><b style="flex:1;font-size:var(--fs-4)">' + head + '</b></div>') +
       '<div class="muted" style="font-size:var(--fs-2);margin:2px 0 6px">這週繼續升級技能、追加成就，<b>最重要的是照「給你的指引」去做，並寫下你做了什麼</b>。10/20 到 W8 結束全天都可以訪談。1/3（W6）還沒完成的，下面可以繼續做。</div>' +
       (ev.next ? '<div id="w2Next" style="margin:6px 0;padding:6px 10px;border:var(--bw) solid var(--ink);border-radius:var(--r-m);background:var(--yellow);color:var(--ink-fixed);font-size:var(--fs-3)"><b>這週下一步</b>　' + esc(ev.next.text) + '</div>' : '') +
@@ -402,12 +402,12 @@
   function matsHtml() {
     var M = window.ERG_MATS; if (!M || !APP.me.sid) return '';
     function list(wk) { var ls = M.links(wk, APP.me.cls); if (!ls.length) return ''; var done = M.openedIds(localStorage, APP.me.sid, wk);
-      return ls.map(function (l) { return '<a class="ghost" data-mat="' + l.id + '" data-wk="' + wk + '" href="' + l.url + '" target="_blank" rel="noopener" style="display:block;padding:6px 8px">' + (done.indexOf(l.id) >= 0 ? '✓ ' : '') + esc(l.title) + '</a>'; }).join(''); }
-    var h = '', cur = w8Started() ? list('w8') : '';
-    if (cur) h += '<div class="card" id="matCard" style="margin:8px 0 0"><b>📖 本週教材（W8）</b><span class="muted" style="font-size:var(--fs-1)">　打開讀一讀，會拿到成就「翻開本週教材」（只記有打開）</span><div style="display:flex;flex-direction:column;gap:4px;margin-top:6px">' + cur + '</div></div>';
-    var w7 = list('w7'), w6 = list('w6');
-    if (w7 || w6) h += '<details class="card" id="matOld" style="margin:8px 0 0"><summary><b>📚 往週教材（W6、W7）</b><span class="muted" style="font-size:var(--fs-1)">　補讀也會拿到成就</span></summary><div style="display:flex;flex-direction:column;gap:4px;margin-top:6px">'
-      + (w7 ? '<b style="font-size:var(--fs-1)">W7</b>' + w7 : '') + (w6 ? '<b style="font-size:var(--fs-1)">W6</b>' + w6 : '') + '</div></details>';
+      return ls.map(function (l) { return '<a class="ghost matLink" data-mat="' + l.id + '" data-wk="' + wk + '" href="' + l.url + '" target="_blank" rel="noopener">' + (done.indexOf(l.id) >= 0 ? '✓ ' : '') + esc(l.title) + '</a>'; }).join(''); }
+    var h = '', cur = w8Started() ? list('w9') : '';   /* 11-02：本週＝W9；沒有連結（空設定）就整塊不顯示 */
+    if (cur) h += '<div class="card" id="matCard" style="margin:8px 0 0"><b>📖 本週教材（W9）</b><span class="muted" style="font-size:var(--fs-1)">　打開讀一讀，會拿到成就「翻開本週教材」（只記有打開）</span><div style="display:flex;flex-direction:column;gap:4px;margin-top:6px">' + cur + '</div></div>';
+    var w8 = list('w8'), w7 = list('w7'), w6 = list('w6');
+    if (w8 || w7 || w6) h += '<details class="card" id="matOld" style="margin:8px 0 0"><summary><b>📚 往週教材（W6、W7、W8）</b><span class="muted" style="font-size:var(--fs-1)">　補讀也會拿到成就</span></summary><div style="display:flex;flex-direction:column;gap:4px;margin-top:6px">'
+      + (w8 ? '<b style="font-size:var(--fs-1)">W8</b>' + w8 : '') + (w7 ? '<b style="font-size:var(--fs-1)">W7</b>' + w7 : '') + (w6 ? '<b style="font-size:var(--fs-1)">W6</b>' + w6 : '') + '</div></details>';
     return h;
   }
   function bindMats(card) {
@@ -548,7 +548,7 @@
     var mainPick = SB.pickMainRoom(rows, lastRoom), mainRoom = mainPick ? mainPick.code : '';   /* 11-02：開訪談卡最多的那間（一樣多才看最近進過的）；原本是最近進過的 */
     var bestRow = rows.slice().sort(function (a, b) { return (b.started - a.started) || (b.code === lastRoom) - (a.code === lastRoom); })[0] || null;
     var steps = w8Steps(rows);
-    card.innerHTML = '<div class="row"><b style="flex:1;font-size:var(--fs-4)">' + (w8Started() ? '痛點急診室 3/3（W8）這週要做的事：人物誌＋UX 故事板' : '第 8 週　UX 故事板') + '</b></div>' + (w8Started() ? '<div class="muted" style="font-size:var(--fs-2);margin:2px 0 6px">匯出訪談報告 → 還原 2 位人物誌 → 排 6 格故事板、標出關鍵時刻 → 生成圖片放進故事板。不夠的地方回房間再問一位。卡住了，故事板裡有 AI 助教。</div>' : '') + SB.lobbyHtml({ mobile: mobile, entry1: e1, rooms: rows, main: mainRoom ? { code: mainRoom, cards: mainPick.cards, most: openRows.length > 1 } : null, mainRoom: bestRow ? bestRow.code : '', mainNeed: SB.need(bestRow || { cards: 0, started: 0 }), prog: { steps: steps, act: SB.nextAction({ main: mainRoom ? { code: mainRoom } : null, P: W8P.sid === APP.me.sid ? W8P.data : null, mobile: mobile }) } });
+    card.innerHTML = '<div class="row"><b style="flex:1;font-size:var(--fs-4)">' + (w8Started() ? '本週任務（W9）：把訪談接成故事板' : '第 8 週　UX 故事板') + '</b></div>' + (w8Started() ? SB.reminderHtml(SB.w9Reminder({ main: mainRoom ? { code: mainRoom } : null, P: W8P.sid === APP.me.sid ? W8P.data : null, mobile: mobile, cls: APP.me.cls })) : '') + SB.lobbyHtml({ mobile: mobile, entry1: e1, rooms: rows, main: mainRoom ? { code: mainRoom, cards: mainPick.cards, most: openRows.length > 1 } : null, mainRoom: bestRow ? bestRow.code : '', mainNeed: SB.need(bestRow || { cards: 0, started: 0 }), prog: { steps: steps, act: SB.nextAction({ main: mainRoom ? { code: mainRoom } : null, P: W8P.sid === APP.me.sid ? W8P.data : null, mobile: mobile }) } });
     card.insertAdjacentHTML('beforeend', matsHtml()); bindMats(card); syncMats();
     loadW8P(mine.map(function (x) { return x.code; }));
     var b1 = $('sbEnter1'); if (b1) b1.onclick = function () { var t = $('createBtn'); t.scrollIntoView({ block: 'center' }); t.focus(); };
