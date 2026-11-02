@@ -102,7 +102,7 @@
   /* 只列還沒過的期限；now：毫秒時間 */
   function dueText(cls, now) {
     var c = classOf(cls); if (!c) return ''; var t = now == null ? Date.now() : now, out = [];
-    ['W7', 'W8'].forEach(function (w) { var d = DUE[w][c]; if (d && t <= Date.parse(d[1])) out.push(w + ' ' + d[0]); });
+    ['W7', 'W8'].forEach(function (w) { var d = DUE[w][c]; if (d && t <= Date.parse(d[1])) out.push((w === 'W8' ? 'W8~9' : w) + ' ' + d[0]); });
     return out.length ? '你這班的作業期限：' + out.join('、') : '';
   }
   var W9_TEXT = {
@@ -227,8 +227,8 @@
       '<div class="box"><h4>只示範第一格：「' + esc(T.cells[0]) + '」</h4><div class="ph">誰：' + esc(main) + '<br>在哪：' + esc(T.place) + '<br>發生什麼：<span class="pain">' + marked(first) + '</span><br>他怎麼想：「<mark>從訪談原話寫，猜的要標「推測」</mark>」<br>出處：<mark>#__</mark>（自己填訪談編號）</div></div>' +
       '<div class="box"><h4>三個常見的錯</h4><ol style="margin:0;padding-left:1.3em">' + ERRORS.map(function (e) { return '<li><b>' + esc(e.t) + '</b>：' + esc(e.d) + '</li>'; }).join('') + '</ol></div>' +
       '<div class="box"><h4>三個 AI 圖片生成指令（黃色的地方換成你自己的）</h4>' + PROMPTS.map(function (p, i) { return '<div class="ph"><b>' + esc(p.name) + '</b> <button type="button" class="ghost" data-cp="' + i + '">複製</button><span class="cpmsg" data-cpmsg="' + i + '"></span><br>' + marked(p.text) + '<textarea class="cpfb" data-cpfb="' + i + '" readonly>' + esc(p.text) + '</textarea></div>'; }).join('') + '</div>';
-    return '<div class="sbGuide" data-case-now="' + id + '"><div class="row"><b style="flex:1;font-size:var(--fs-4)">第 8 週　UX 故事板：基本教學</b><button type="button" class="ghost" data-close="1">關閉</button></div>' +
-      '<div class="muted" style="font-size:var(--fs-2)">故事板只能從有訪談紀錄的房間開（訪談分頁至少勾一項）：在大廳 W8 卡的房間那一列按「📖 故事板」，或在房間頂列按 📖。</div>' +
+    return '<div class="sbGuide" data-case-now="' + id + '"><div class="row"><b style="flex:1;font-size:var(--fs-4)">第 8～9 週　UX 故事板：基本教學</b><button type="button" class="ghost" data-close="1">關閉</button></div>' +
+      '<div class="muted" style="font-size:var(--fs-2)">故事板只能從有訪談紀錄的房間開（訪談分頁至少勾一項）：在大廳 W8~9 卡的房間那一列按「📖 故事板」，或在房間頂列按 📖。</div>' +
       '<div class="cases" role="group" aria-label="案例">' + cases + '</div>' +
       '<div class="cols"><div><h4 style="margin:0 0 var(--s2)">七個步驟</h4><ol class="steps">' + steps + '</ol></div><div>' + right + '</div></div></div>';
   }
@@ -238,7 +238,7 @@
     var e1 = m.entry1 || { done: [], todo: [], caseName: '' };
     var t1 = '<div class="tile"><h3>入口 1　進急診室</h3><div style="font-size:var(--fs-2)">先去問人。' + esc(e1.caseName) + '：已訪談 <b>' + e1.done.length + '</b> 位（重要人物共 ' + (e1.done.length + e1.todo.length) + ' 位）' + (e1.todo.length ? '<br><span class="muted">還沒問過：' + esc(e1.todo.join('、')) + '</span>' : '，重要人物都問過了') + '</div>' +
       '<div style="margin-top:var(--s2)"><button type="button" id="sbEnter1">進急診室（開房間或加入）</button></div></div>';
-    var t2 = '<div class="tile"><h3>入口 2　第 8 週 UX 故事板</h3><div style="font-size:var(--fs-2)">下面「我進過的房間」每一列都有兩顆鈕：<b>📖 故事板</b>開這間房的故事板，<b>🩺 回去訪談</b>回到這間房再問人。訪談卡打勾之後，灰色的 📖 就會變成可以點。</div>' +
+    var t2 = '<div class="tile"><h3>入口 2　第 8～9 週 UX 故事板</h3><div style="font-size:var(--fs-2)">下面「我進過的房間」每一列都有兩顆鈕：<b>📖 故事板</b>開這間房的故事板，<b>🩺 回去訪談</b>回到這間房再問人。訪談卡打勾之後，灰色的 📖 就會變成可以點。</div>' +
       '<div style="margin-top:var(--s2)"><button type="button" id="sbEnter2">基本教學</button></div></div>';   /* 10-26 二丙全班只有手機：手機也有基本教學與開故事板 */
     var rows = (m.rooms || []).length ? '<ul class="rooms">' + m.rooms.map(function (r) {
       return '<li><span class="sbDot" style="background:' + r.ct + ';color:' + r.on + '" title="案例' + esc(r.letter) + '">' + esc(r.letter) + '</span><b>' + esc(r.name) + '</b><span class="muted">房號 ' + esc(r.code) + '</span>' + (r.seenAt ? '<span class="muted">' + (r.seenKind === 'last' ? '上次進入 ' : '加入於 ') + esc(fmtSeen(r.seenAt)) + '</span>' : '') + '<span>訪談卡 ' + r.cards + ' 張</span>' +

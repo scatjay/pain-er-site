@@ -119,7 +119,9 @@
      房間算在哪一週＝房間建立時間落在該班的哪一週區間（各班上課前一小時起算，二甲比二丙晚兩天，所以邊界分開算）。
      房間的班級＝房主的班級（名單 → 房間自己的 cls → 第一位有班級的成員）；成員來自不同班就標混班。純函式，不碰 Firebase。 */
   var WEEK_START = { '二丙': ['2026-10-13T07:10', '2026-10-20T07:10', '2026-10-27T07:10', '2026-11-03T07:10'], '二乙': ['2026-10-13T11:50', '2026-10-20T11:50', '2026-10-27T11:50', '2026-11-03T11:50'], '二甲': ['2026-10-15T11:50', '2026-10-22T11:50', '2026-10-29T11:50', '2026-11-05T11:50'] };
-  var WAVES = [{ w: 1, label: '第 1 週（W6）' }, { w: 2, label: '第 2 週（W7）' }, { w: 3, label: '第 3 週（W8）' }];
+  /* 11-02：W8 與 W9 是同一單元，畫面上第 3 週叫 W8~9（資料鍵不動） */
+  function wkName(w) { return Number(w) >= 3 ? 'W8~9' : 'W' + (5 + Number(w)); }
+  var WAVES = [{ w: 1, label: '第 1 週（W6）' }, { w: 2, label: '第 2 週（W7）' }, { w: 3, label: '第 3 週（W8~9）' }];
   function weekRange(cls, w) { var a = WEEK_START[cls] || WEEK_START['二丙']; return [w === 1 ? 0 : Date.parse(a[w - 1] + ':00+08:00'), Date.parse(a[w] + ':00+08:00')]; }
   /* 時間 t 落在該班第幾週；第 1 週涵蓋之前的一切，第 3 週結束（11/3）之後或沒有時間 → 0 */
   function weekOf(cls, t) {
@@ -311,10 +313,10 @@
     now = now == null ? Date.now() : Number(now);
     var today = dayKeyOf(now), out = [{ value: UNIT_SESS + '|0|', week: 0, cls: '', today: false, label: '全部（三週累計，三班）' }];
     [1, 2, 3].forEach(function (w) {
-      out.push({ value: UNIT_SESS + '|' + w + '|', week: w, cls: '', today: false, label: w + '/3（W' + (5 + w) + '）三班' });
+      out.push({ value: UNIT_SESS + '|' + w + '|', week: w, cls: '', today: false, label: w + '/3（' + wkName(w) + '）三班' });
       CLASS_ORDER.forEach(function (c) {
         var ms = classStartMs(c, w), isToday = dayKeyOf(ms) === today;
-        out.push({ value: UNIT_SESS + '|' + w + '|' + c, week: w, cls: c, today: isToday, label: '　└ ' + w + '/3（W' + (5 + w) + '）' + c + '（' + mdOf(ms) + ' 上課' + (isToday ? '・今天' : '') + '）' });
+        out.push({ value: UNIT_SESS + '|' + w + '|' + c, week: w, cls: c, today: isToday, label: '　└ ' + w + '/3（' + wkName(w) + '）' + c + '（' + mdOf(ms) + ' 上課' + (isToday ? '・今天' : '') + '）' });
       });
     });
     return out;
@@ -338,11 +340,11 @@
   }
   function dayInFilter(key, f) { if (!/^\d{8}$/.test(String(key))) return false; var r = filterRange(f), s = dayMs(key); return s < r[1] && s + DAY_MS > r[0]; }
   function filterState(f, now) { var w = num(f.week, 0); if (!w) return 'all'; var r = filterRange(f); return now < r[0] ? 'future' : (now >= r[1] ? 'past' : 'current'); }
-  function filterLabel(f) { var w = num(f.week, 0), c = f.cls || ''; return (c || '三班') + '・' + (w ? w + '/3（W' + (5 + w) + '）' + (c ? '，' + mdOf(classStartMs(c, w)) + ' 上課' : '') : '三週累計'); }
-  function weekNoteBase(week) { week = num(week, 0); return week ? week + '/3（W' + (5 + week) + '）：二丙二乙 ' + mdOf(classStartMs('二丙', week)) + ' 起、二甲 ' + mdOf(classStartMs('二甲', week)) + ' 起（上課前一小時起算）。' : '三週累計。'; }
+  function filterLabel(f) { var w = num(f.week, 0), c = f.cls || ''; return (c || '三班') + '・' + (w ? w + '/3（' + wkName(w) + '）' + (c ? '，' + mdOf(classStartMs(c, w)) + ' 上課' : '') : '三週累計'); }
+  function weekNoteBase(week) { week = num(week, 0); return week ? week + '/3（' + wkName(week) + '）：二丙二乙 ' + mdOf(classStartMs('二丙', week)) + ' 起、二甲 ' + mdOf(classStartMs('二甲', week)) + ' 起（上課前一小時起算）。' : '三週累計。'; }
 
   /* 頁首導覽：兩頁互相連結，目前這頁標 aria-current；連結帶著手動選的篩選（?f=），本機測試再帶 test／now 這類參數 */
-  var NAV = [{ id: 'talk', href: 'teacher.html', name: '訪談監看' }, { id: 'sb', href: 'sb_dashboard.html', name: 'W8 故事板' }, { id: 'px', href: 'proposal_dashboard.html', name: 'W10 提案室' }], NAV_KEEP = ['test', 'variant', 'devteacher', 'now', 'sess', 'local'];
+  var NAV = [{ id: 'talk', href: 'teacher.html', name: '訪談監看' }, { id: 'sb', href: 'sb_dashboard.html', name: 'W8~9 故事板' }, { id: 'px', href: 'proposal_dashboard.html', name: 'W10 提案室' }], NAV_KEEP = ['test', 'variant', 'devteacher', 'now', 'sess', 'local'];
   function navQuery(f, search, isLocal) {
     var q = []; if (f && f.manual) q.push('f=' + encodeURIComponent(num(f.week, 0) + '|' + (f.cls || '')));
     if (isLocal) NAV_KEEP.forEach(function (k) { var m = new RegExp('[?&]' + k + '=([^&]*)').exec(search || ''); if (m) q.push(k + '=' + m[1]); });
@@ -461,13 +463,13 @@
   function skW8Html(d, badge) {
     badge = badge || function (lv, t) { return '<span class="pill">' + esc(t) + '</span>'; };
     var mx = Math.max.apply(null, [1].concat(d.story, d.source));
-    return '<div class="skw8"><b>W8 技能等級分布</b> <span class="muted small">（' + d.n + ' 人；「—」＝還沒有資料）</span>' + SK_W8.map(function (k) {
+    return '<div class="skw8"><b>W8~9 技能等級分布</b> <span class="muted small">（' + d.n + ' 人；「—」＝還沒有資料）</span>' + SK_W8.map(function (k) {
       return '<div class="skw8-col"><b>' + esc(k.name) + '</b>' + [0, 1, 2, 3].map(function (i) {
         return '<div class="skw8-row"><span class="skw8-nm">' + (i < 3 ? badge(i + 1, 'Lv.' + (i + 1)) : badge(null, '—')) + '</span><span class="skw8-tr"><i style="width:' + Math.round(d[k.key][i] / mx * 100) + '%"></i></span><span class="skw8-n">' + d[k.key][i] + ' 人</span></div>';
       }).join('') + '</div>';
     }).join('') + '</div>';
   }
-  var SG_SKW8_DOC = { id: 'S_SKW8', name: '說故事或有根據還在 Lv.0／Lv.1', when: 'W8 技能「說故事」「有根據」任一項還沒開始（—）或在 Lv.1；全班都還沒有資料時不列', thr: '≥3 人且 ≥15% 該班', level: '黃' };
+  var SG_SKW8_DOC = { id: 'S_SKW8', name: '說故事或有根據還在 Lv.0／Lv.1', when: 'W8~9 技能「說故事」「有根據」任一項還沒開始（—）或在 Lv.1；全班都還沒有資料時不列', thr: '≥3 人且 ≥15% 該班', level: '黃' };
   function suggestSkillW8(items, cls) {
     var T = RULES.suggest, res = [], classes = cls ? [cls] : CLASS_ORDER.concat(['未分班']);
     classes.forEach(function (c) {
@@ -480,7 +482,7 @@
     return res;
   }
 
-  return { RULES: RULES, STAGES: STAGES, HINT_DEFS: HINT_DEFS, build: build, respState: respState, weekNode: weekNode, scope: scope, currentClass: currentClass, SCHEDULE: SCHEDULE, WINDOW_PAD_MIN: WINDOW_PAD_MIN, WEEK_START: WEEK_START, WAVES: WAVES, weekRange: weekRange, weekOf: weekOf, roomClass: roomClass, indexRooms: indexRooms, filterRooms: filterRooms, sumRooms: sumRooms, chatNeighbors: chatNeighbors,
+  return { wkName: wkName, RULES: RULES, STAGES: STAGES, HINT_DEFS: HINT_DEFS, build: build, respState: respState, weekNode: weekNode, scope: scope, currentClass: currentClass, SCHEDULE: SCHEDULE, WINDOW_PAD_MIN: WINDOW_PAD_MIN, WEEK_START: WEEK_START, WAVES: WAVES, weekRange: weekRange, weekOf: weekOf, roomClass: roomClass, indexRooms: indexRooms, filterRooms: filterRooms, sumRooms: sumRooms, chatNeighbors: chatNeighbors,
     UNIT_SESS: UNIT_SESS, FILTER_KEY: FILTER_KEY, DEID_KEY: DEID_KEY, CLASS_ORDER: CLASS_ORDER, NAV: NAV, SG_LEVEL: SG_LEVEL, SG_TALK_DOC: SG_TALK_DOC, esc: esc, tpd: tpd, mdOf: mdOf, dayKeyOf: dayKeyOf, classStartMs: classStartMs, validFilter: validFilter,
     menuOptions: menuOptions, filterValue: filterValue, defaultFilter: defaultFilter, resolveFilter: resolveFilter, saveFilter: saveFilter, filterRange: filterRange, dayInFilter: dayInFilter, filterState: filterState, filterLabel: filterLabel, weekNoteBase: weekNoteBase,
     navQuery: navQuery, navHtml: navHtml, classBar: classBar, fmtIn: fmtIn, legendHtml: legendHtml, suggestInterview: suggestInterview, suggestHtml: suggestHtml, sgDocHtml: sgDocHtml, sgSort: sgSort, sgPct: sgPct,

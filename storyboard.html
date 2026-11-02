@@ -54,7 +54,7 @@ label{display:block;font-size:12px;font-weight:700;margin-top:4px}
 mark.pain{background:none;color:var(--bad);font-weight:900;text-decoration:underline wavy}
 .painline{font-size:13px}
 .fragpick{margin:-2px 0 6px;font-size:12px}.fragpick select{width:100%;padding:3px 6px;font-size:13px;border:2px dashed var(--ink,#222);border-radius:8px;background:var(--soft,#fffbe8)}.stbox{margin:6px 0 10px;border:3px solid var(--ink,#1e1e1e);border-radius:10px;background:#fffbe8;padding:6px 10px}.stbox summary{font-weight:900;cursor:pointer;font-size:13px}.stcard{border:2px solid var(--ink,#1e1e1e);border-radius:8px;background:#fff;padding:6px 8px;margin:6px 0;font-size:13px;line-height:1.5}.stbar{display:flex;gap:6px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-top:4px}.tg.prn{background:#a5d8ff}.stbadge{margin:6px 0;padding:5px 9px;border:2px solid var(--ink,#1e1e1e);border-radius:8px;font-size:13px;line-height:1.5}.stbadge.todo{background:#ffd9a6}.stbadge.own{background:#b2f2bb}.prin{margin:6px 0 10px;border:3px solid var(--ink,#1e1e1e);border-radius:10px;background:#a5d8ff;padding:8px 10px;font-size:13px;line-height:1.55;color:#1e1e1e}.prin .en{font-size:11px}.prin .pq{background:#fff;border:2px solid var(--ink,#1e1e1e);border-radius:8px;padding:5px 8px;margin:5px 0}.prin .pb select{width:100%;font-size:13px}.prin .pn{font-size:11px;margin-top:4px}.cnt{display:block;text-align:right;font-size:11px;color:var(--muted,#59656d);margin:-2px 2px 4px}.cnt.near{color:#c2410c;font-weight:700}#aiMeter .ml{display:inline-flex;align-items:center;gap:4px;margin-right:10px}#aiMeter .ml i{display:inline-block;width:10px;height:10px;border:2px solid var(--ink,#1e1e1e);border-radius:50%}#aiMeter .mbar{display:flex;height:10px;border:2px solid var(--ink,#1e1e1e);border-radius:99px;overflow:hidden;margin:5px 0}#aiMeter .mbar span{display:block;height:100%}.refs{font-size:12px;margin-top:6px}.refs select{width:auto;max-width:180px;padding:1px 4px;font-size:12px}
-.chip{display:inline-block;border:var(--bw-s) solid var(--ink);border-radius:99px;padding:0 8px;margin:1px 2px;background:var(--mint);color:#1e1e1e;font-size:12px}.chip .x{background:none;border:0;box-shadow:none;padding:0 2px;cursor:pointer;color:#1e1e1e}
+.chip{display:inline-block;border:var(--bw-s) solid var(--ink);border-radius:99px;padding:0 8px;margin:1px 2px;background:var(--mint);color:#1e1e1e;font-size:12px}.chip .x{background:none;border:0;box-shadow:none;padding:0 2px;cursor:pointer;color:inherit}@media (prefers-color-scheme:dark){.frag .who{color:color-mix(in srgb,var(--ct) 45%,#fff)}}
 .gap{background:var(--soft-r);border:var(--bw-s) solid var(--ink);border-radius:var(--r-m);padding:3px 8px;font-size:12px;margin-top:6px}
 .need{color:var(--bad);font-weight:700}.ok{color:var(--ok);font-weight:700}.warn{color:var(--bad)}
 .cell footer{display:flex;justify-content:space-between;gap:6px;flex-wrap:wrap;font-size:11px;margin-top:8px;color:var(--muted)}
@@ -141,15 +141,15 @@ mark.pain{background:none;color:var(--bad);font-weight:900;text-decoration:under
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-<script src="er_firebase.js?v=202611022034"></script>
-<script src="local_db.js?v=202611022034"></script>
-<script src="remote_db.js?v=202611022034"></script>
+<script src="er_firebase.js?v=202611022111"></script>
+<script src="local_db.js?v=202611022111"></script>
+<script src="remote_db.js?v=202611022111"></script>
 <script>document.addEventListener("click",function(e){var f=e.target.closest&&e.target.closest("#coachFab");if(f){document.body.classList.add("coach-open");f.classList.remove("has-new");}var c=e.target.closest&&e.target.closest("#cClose");if(c)document.body.classList.remove("coach-open");});</script>
-<script src="personas.js?v=202611022034"></script>
-<script src="sb_core.js?v=202611022034"></script>
-<script src="sb_store.js?v=202611022034"></script>
-<script src="quota_request.js?v=202611022034"></script><script src="sb_coach.js?v=202611022034"></script>
-<script src="sb_starts.js?v=202611022034"></script>
-<script src="sb_ui.js?v=202611022034"></script>
+<script src="personas.js?v=202611022111"></script>
+<script src="sb_core.js?v=202611022111"></script>
+<script src="sb_store.js?v=202611022111"></script>
+<script src="quota_request.js?v=202611022111"></script><script src="sb_coach.js?v=202611022111"></script>
+<script src="sb_starts.js?v=202611022111"></script>
+<script src="sb_ui.js?v=202611022111"></script>
 </body>
 </html>

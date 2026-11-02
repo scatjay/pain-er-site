@@ -283,24 +283,24 @@
     { id: 'inclusive', icon: '🌈', name: '每個人都算數', desc: '訪談過小薇、恩哥、賴阿嬤、山哥其中三位', test: function (m) { return ['trans_woman', 'gay_partner', 'lonely_elder', 'street_man'].filter(function (id) { return m.interviewIds.indexOf(id) >= 0; }).length >= 3; } },
     { id: 'all_cp', icon: '🏁', name: '六燈全亮', desc: '六個檢核點全部通過', test: function (m) { return m.cpAllOk; } },
     /* 10-26：W8 故事板成就（判準在 sb_core.js；故事板頁寫到 sbx/{場次}/sbach/{學號}，game.js 讀進 window.ERG_MY_SB_ACH） */
-    { id: 'w8_together', icon: '🤝', name: '一起說故事', desc: '第 8 週故事板：同一面牆至少 3 位成員各補 1 格以上，其中有你', test: function () { return sbHas('together'); } },
-    { id: 'w8_relay', icon: '🧩', name: '接力一格', desc: '第 8 週故事板：你寫的格子引用了另一位同學的訪談卡', test: function () { return sbHas('relay'); } },
-    { id: 'w8_fill', icon: '🩹', name: '補位', desc: '第 8 週故事板：別人把格子標成「這格寫不出來」，你補上內容並附出處', test: function () { return sbHas('fill'); } },
-    { id: 'w8_revisit', icon: '🔁', name: '回頭再問', desc: '第 8 週故事板：開了故事板之後回去訪談一位新的人，並把他的話放進故事板', test: function () { return sbHas('revisit'); } },
-    { id: 'w8_premiere', icon: '🎬', name: '首映', desc: '第 8 週故事板：牆上至少 6 格有圖、有內容、有出處，並標出關鍵時刻（至少 2 人一起編）', test: function () { return sbHas('premiere'); } },
-    { id: 'w8_askthenwrite', icon: '💬', name: '問了助教，自己寫完', desc: '第 8 週故事板：問過助教提示、檢查或句型，最後自己寫完且有出處', test: function () { return sbHas('askthenwrite'); } },
-    { id: 'w8_allsourced', icon: '🔗', name: '整張每格都有出處', desc: '第 8 週故事板：一面故事板至少 6 格，每格都有內容也有出處', test: function () { return sbHas('allsourced'); } },
-    { id: 'w8_nofill', icon: '✍️', name: '整張沒有代填', desc: '第 8 週故事板：一面故事板至少 6 格都有內容，沒有任何一格是助教代填', test: function () { return sbHas('nofill'); } },
-    { id: 'w8_reclaim', icon: '♻️', name: '把示範改成自己的', desc: '第 8 週故事板：助教代填的格子，你改寫超過六成', test: function () { return sbHas('reclaim'); } },
-    { id: 'w8_solo', icon: '🧱', name: '從空白開始', desc: '第 8 週故事板：一面個人板至少 6 格，從空白自己寫，沒有起點、草稿、助教代填，每格有出處並標出關鍵時刻', test: function () { return sbHas('solo'); } },
+    { id: 'w8_together', icon: '🤝', name: '一起說故事', desc: '第 8～9 週故事板：同一面牆至少 3 位成員各補 1 格以上，其中有你', test: function () { return sbHas('together'); } },
+    { id: 'w8_relay', icon: '🧩', name: '接力一格', desc: '第 8～9 週故事板：你寫的格子引用了另一位同學的訪談卡', test: function () { return sbHas('relay'); } },
+    { id: 'w8_fill', icon: '🩹', name: '補位', desc: '第 8～9 週故事板：別人把格子標成「這格寫不出來」，你補上內容並附出處', test: function () { return sbHas('fill'); } },
+    { id: 'w8_revisit', icon: '🔁', name: '回頭再問', desc: '第 8～9 週故事板：開了故事板之後回去訪談一位新的人，並把他的話放進故事板', test: function () { return sbHas('revisit'); } },
+    { id: 'w8_premiere', icon: '🎬', name: '首映', desc: '第 8～9 週故事板：牆上至少 6 格有圖、有內容、有出處，並標出關鍵時刻（至少 2 人一起編）', test: function () { return sbHas('premiere'); } },
+    { id: 'w8_askthenwrite', icon: '💬', name: '問了助教，自己寫完', desc: '第 8～9 週故事板：問過助教提示、檢查或句型，最後自己寫完且有出處', test: function () { return sbHas('askthenwrite'); } },
+    { id: 'w8_allsourced', icon: '🔗', name: '整張每格都有出處', desc: '第 8～9 週故事板：一面故事板至少 6 格，每格都有內容也有出處', test: function () { return sbHas('allsourced'); } },
+    { id: 'w8_nofill', icon: '✍️', name: '整張沒有代填', desc: '第 8～9 週故事板：一面故事板至少 6 格都有內容，沒有任何一格是助教代填', test: function () { return sbHas('nofill'); } },
+    { id: 'w8_reclaim', icon: '♻️', name: '把示範改成自己的', desc: '第 8～9 週故事板：助教代填的格子，你改寫超過六成', test: function () { return sbHas('reclaim'); } },
+    { id: 'w8_solo', icon: '🧱', name: '從空白開始', desc: '第 8～9 週故事板：一面個人板至少 6 格，從空白自己寫，沒有起點、草稿、助教代填，每格有出處並標出關鍵時刻', test: function () { return sbHas('solo'); } },
     { id: 'w6_mat', icon: '📖', name: '翻開 W6 教材', desc: '第 6 週：從遊戲大廳的「往週教材」打開過 W6 的教材（只記有打開，不代表讀完）', test: function () { return matHas('w6'); } },
     { id: 'w7_mat', icon: '📖', name: '翻開 W7 教材', desc: '第 7 週：從遊戲大廳的「往週教材」打開過 W7 的教材（只記有打開，不代表讀完）', test: function () { return matHas('w7'); } },
-    { id: 'w8_mat', icon: '📖', name: '翻開本週教材', desc: '第 8 週：從遊戲大廳的「本週教材」打開過 W8 的教材（只記有打開，不代表讀完）', test: function () { return matHas('w8'); } },
-    { id: 'w8_soloall', icon: '🏆', name: '六個主題都從空白做過', desc: '第 8 週故事板：六個主題各完成一次「從空白開始」', test: function () { return sbHas('soloall'); } },
+    { id: 'w8_mat', icon: '📖', name: '翻開本週教材', desc: '第 8～9 週：從遊戲大廳的「本週教材」打開過 W8~9 的教材（只記有打開，不代表讀完）', test: function () { return matHas('w8'); } },
+    { id: 'w8_soloall', icon: '🏆', name: '六個主題都從空白做過', desc: '第 8～9 週故事板：六個主題各完成一次「從空白開始」', test: function () { return sbHas('soloall'); } },
     /* 10-27：W8 自己的成就（人物誌、關鍵時刻、猜測有標明）；判準在 skillsW8，資料來源見該處註解 */
-    { id: 'w8_people', icon: '🧑‍🤝‍🧑', name: '兩位人物立起來', desc: '第 8 週：人物誌做了 2 位，而且你訪談過病人或家屬', test: function (m) { return hasW8(m, 'w8_people'); } },
-    { id: 'w8_moment', icon: '⭐', name: '最卡的那一刻', desc: '第 8 週：標出關鍵時刻，那一格有內容、有紅字痛點句、有出處', test: function (m) { return hasW8(m, 'w8_moment'); } },
-    { id: 'w8_guess', icon: '🤔', name: '猜的我有說', desc: '第 8 週：至少 2 格把自己猜的地方標上「推測」', test: function (m) { return hasW8(m, 'w8_guess'); } },
+    { id: 'w8_people', icon: '🧑‍🤝‍🧑', name: '兩位人物立起來', desc: '第 8～9 週：人物誌做了 2 位，而且你訪談過病人或家屬', test: function (m) { return hasW8(m, 'w8_people'); } },
+    { id: 'w8_moment', icon: '⭐', name: '最卡的那一刻', desc: '第 8～9 週：標出關鍵時刻，那一格有內容、有紅字痛點句、有出處', test: function (m) { return hasW8(m, 'w8_moment'); } },
+    { id: 'w8_guess', icon: '🤔', name: '猜的我有說', desc: '第 8～9 週：至少 2 格把自己猜的地方標上「推測」', test: function (m) { return hasW8(m, 'w8_guess'); } },
     /* 10-27：跨單元銜接（W6 訪談、W7 指引 → W8 故事板）。訪談卡沒有週次欄位，所以用「第一次開故事板時已經有的訪談卡」代表 W6／W7 做的；W8 才訪談的算 w8_revisit。 */
     { id: 'x_bring_old', icon: '🔗', name: '舊訪談派上用場', desc: '故事板至少 3 格，引用你開故事板之前就訪談好的卡片（W6、W7 的功夫沒有白做）', test: function (m) { return hasW8(m, 'x_bring_old'); } },
     { id: 'x_thread', icon: '🧵', name: '同一個人串到底', desc: '同一位人物的訪談卡，在故事板至少 3 格被引用', test: function (m) { return hasW8(m, 'x_thread'); } },
@@ -310,7 +310,7 @@
   function hasW8(m, id) { return !!(m.w8 && m.w8.ids.indexOf(id) >= 0); }
   /* 單元分組（10-27 楊老師：成就要區分單元）。W6＝第一輪訪談、W7＝依指引再推進、W8＝人物誌＋故事板、x＝前後單元銜接、all＝不屬於哪一週。
      沒列在這裡的成就一律歸 all（通用）。 */
-  var UNIT_NAME = { W8: 'W8　人物誌＋UX 故事板', x: '跨單元銜接（W6／W7 → W8）', W7: 'W7　依指引再推進', W6: 'W6　第一輪訪談', all: '通用（任何時候都算）' };
+  var UNIT_NAME = { W8: 'W8~9　人物誌＋UX 故事板', x: '跨單元銜接（W6／W7 → W8~9）', W7: 'W7　依指引再推進', W6: 'W6　第一輪訪談', all: '通用（任何時候都算）' };
   var UNIT_OF = {};
   ['first_talk', 'pry_open', 'five_talks', 'ten_talks', 'all_core', 'deep_dig', 'chatty', 'q_intro', 'q_event', 'q_why', 'q_echo', 'q_chain', 'q_key3', 'q_open10', 'explorer', 'mapper', 'notes', 'witness', 'replay', 'partner', 'thinker', 'all_cp', 'vip', 'boss', 'kid_whisperer', 'translator', 'inclusive', 'case_two', 'case_four', 'case_all'].forEach(function (id) { UNIT_OF[id] = 'W6'; });
   ['guide_followed', 'guide_effect', 'w7_mat'].forEach(function (id) { UNIT_OF[id] = 'W7'; });

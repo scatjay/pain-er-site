@@ -381,6 +381,7 @@
     if (!cur || document.hidden) return '';
     if (cur.clock.paused) return '時間已暫停（你按了「暫停」）。按上方的速度鈕就會繼續。';
     if (cur.tab === 'concl' || cur.tab === 'disc' || cur.tab === 'cp') return '你在「' + ({ concl: '結論', disc: '討論', cp: '檢核' })[cur.tab] + '」分頁，急診室的時間先暫停。切到線索、訪談或筆記就會繼續。';
+    if (cur.tab === 'intv' && cur.intvHold) return '你在「訪談」分頁選了一位現場的人，他說話的時候時間先暫停（不然問到一半他就走了）。切到線索或筆記，或離開這間房，時間就會繼續。';
     if (cur.modalOpen) return '開著視窗的時候，急診室的時間先暫停；關掉視窗就會繼續。';
     return '';
   }

@@ -173,7 +173,7 @@
   function hasSb(f) { return !f.week || f.week >= SB_FIRST_WEEK; }
   function scopeInfo(m, ui) {
     var f = fOf(ui), st = TM.filterState(f, m.now), has = hasSb(f), reason = '';
-    if (!has) reason = '故事板從第 3 週（W8，' + TM.mdOf(TM.classStartMs('二丙', SB_FIRST_WEEK)) + ' 起）才開放，' + f.week + '/3（W' + (5 + f.week) + '）這一週沒有故事板資料。要看資料請把頁首「週次・班級」選成「3/3（W8）」或「全部」。';
+    if (!has) reason = '故事板從第 3 週（W8~9，' + TM.mdOf(TM.classStartMs('二丙', SB_FIRST_WEEK)) + ' 起）才開放，' + f.week + '/3（' + TM.wkName(f.week) + '）這一週沒有故事板資料。要看資料請把頁首「週次・班級」選成「3/3（W8~9）」或「全部」。';
     else if (st === 'future') reason = TM.filterLabel(f) + ' 還沒開始：助教、上傳這類「當天」的數字是 0 是正常的；故事板的狀態是累計到現在。';
     return { f: f, state: st, has: has, reason: reason, label: TM.filterLabel(f) };
   }
@@ -231,7 +231,7 @@
     { id: 'S_NOSRC', name: '沒出處', when: '寫了 3 格以上，且至少 1 格沒有出處', thr: '≥3 人且 ≥15% 該班', level: '黃' },
     { id: 'S_NOTOPENED', name: '訪談了沒開板', when: '有訪談紀錄、但沒開過故事板', thr: '≥3 人且 ≥15% 該班', level: '黃' },
     { id: 'S_TOPIC', name: '大家問同一類', when: '所選日期範圍內，同一主題的助教課程問題', thr: '≥3 則', level: '黃' },
-    { id: 'S_SKW8', name: '說故事或有根據還在 Lv.0／Lv.1', when: 'W8 技能「說故事」「有根據」任一項還沒開始（—）或在 Lv.1；全班都還沒有資料時不列', thr: '≥3 人且 ≥15% 該班', level: '黃' },
+    { id: 'S_SKW8', name: '說故事或有根據還在 Lv.0／Lv.1', when: 'W8~9 技能「說故事」「有根據」任一項還沒開始（—）或在 Lv.1；全班都還沒有資料時不列', thr: '≥3 人且 ≥15% 該班', level: '黃' },
     { id: 'S_DONE', name: '八關全過', when: '八關全部通過（有訪談、6 格有內容有圖有出處、標了關鍵時刻）', thr: '≥1 人', level: '藍' }
   ];
   function suggest(m, ui) {
@@ -278,8 +278,8 @@
   function kp(items, label) { return '<div class="kpi pk" role="group" aria-label="' + esc(label) + '">' + items.map(function (x) { return '<div' + (x[2] ? ' class="' + x[2] + '"' : '') + '><div class="big">' + esc(x[0]) + '</div><div class="muted">' + esc(x[1]) + '</div></div>'; }).join('') + '</div>'; }
   function scopeNote(text, sc) { return '<div class="muted small scopenote">' + esc(text) + '</div>' + (sc && sc.reason ? '<div class="ldnote">' + esc(sc.reason) + '</div>' : ''); }
   var NOTE = {
-    ov: '最上面「現況」是這一刻、全站的狀態，不隨日期與班級變；下面的數字、漏斗與建議隨班級變，故事板只有 W8 一週，所以選 W8 或「全部」看到的一樣。',
-    st: '這一頁是累計到現在的狀態，只隨班級變（故事板只有 W8 一週，選 W8 或「全部」一樣）。學生的日期無法分開：資料庫只記每格最後修改時間。',
+    ov: '最上面「現況」是這一刻、全站的狀態，不隨日期與班級變；下面的數字、漏斗與建議隨班級變，故事板只有 W8~9 一週，所以選 W8~9 或「全部」看到的一樣。',
+    st: '這一頁是累計到現在的狀態，只隨班級變（故事板只有 W8~9 一週，選 W8~9 或「全部」一樣）。學生的日期無法分開：資料庫只記每格最後修改時間。',
     rm: '各房的牆累計到現在，隨班級變（房間的班級＝建房時記的班級，沒有就用房主的班級）。',
     ac: '成就累計到現在，隨班級變；百分比的分母是該班開過故事板的人。',
     sc: '累計到現在，隨班級變。只是試算，不是成績。'
@@ -381,7 +381,7 @@
     var list = pick(m, { cls: ui.cls, q: '', deid: true }), bf = badgeFn(), d = TM.skW8Dist(list.map(function (s) { return s.sk; }));
     var rows = list.slice().sort(function (a, b) { return a.cls < b.cls ? -1 : a.cls > b.cls ? 1 : (a.sid < b.sid ? -1 : 1); }).map(function (s) { return '<tr><td>' + esc(nameOf(s, ui)) + '</td><td>' + esc(s.cls) + '</td><td class="dots">' + TM.skW8Cell(s.sk, bf) + '</td></tr>'; });
     var none = d.story[3] === d.n && d.source[3] === d.n;
-    return '<section class="card"><h3>W8 技能：說故事、有根據（各三級）</h3>' + TM.skW8Html(d, bf) + (none ? '<div class="muted small">還沒有學生的技能資料（遊戲端還沒發布 skStory、skSource），先顯示「—」。</div>' : '') +
+    return '<section class="card"><h3>W8~9 技能：說故事、有根據（各三級）</h3>' + TM.skW8Html(d, bf) + (none ? '<div class="muted small">還沒有學生的技能資料（遊戲端還沒發布 skStory、skSource），先顯示「—」。</div>' : '') +
       '<div class="priv">' + (rows.length ? table(['學生', '班級', '技能'], rows) : '') + '</div></section>';
   }
   function htmlAch(m, ui, sc) {

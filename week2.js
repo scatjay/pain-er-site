@@ -47,7 +47,7 @@
       return { text: it.title + (okNow ? '' : part ? '（做了一部分' + (prog ? '：' + prog : '') + '）' : (prog ? '（' + prog + '）' : '')), ok: okNow, todo: '「' + it.title + '」先做這一小步：' + step };
     });
     var list = [];
-    if (myItems.length) list.push({ id: 0, label: '我的個人檢核點', plain: '照「給你的指引」逐件完成', how: '下面「給你的指引」每一件都寫了怎麼做、怎麼算完成。任何時間都可以做（10/20 到 W8 結束全天開放訪談）；打勾狀態白天每兩小時更新一次（07:15 到 23:15）' + (g.st && g.st.at ? '（上次更新 ' + new Date(g.st.at).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false }) + '）' : '') + '。', items: myItems });
+    if (myItems.length) list.push({ id: 0, label: '我的個人檢核點', plain: '照「給你的指引」逐件完成', how: '下面「給你的指引」每一件都寫了怎麼做、怎麼算完成。任何時間都可以做（10/20 到 W8~9 結束全天開放訪談）；打勾狀態白天每兩小時更新一次（07:15 到 23:15）' + (g.st && g.st.at ? '（上次更新 ' + new Date(g.st.at).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false }) + '）' : '') + '。', items: myItems });
     list = list.concat([
       { id: 1, label: '技能再升一級', plain: '探問、情境感知各升一級', how: '從 1/3（W6）結束時的等級，各再升一級（至少到 Lv.2）。升級條件寫在「成就」分頁的技能卡上。', items: skItems },
       { id: 2, label: '追加成就', plain: '比 1/3（W6）多 ' + BADGE_PLUS + ' 枚', how: '「成就」分頁裡還沒亮的格子就是可以做的事。', items: bdItems },

@@ -429,7 +429,8 @@
     }
     if (recId) { var ref = chatRef(recId), cb = function (s) { draw(s.val()); }; ref.on('value', cb); c.chatOff = function () { ref.off('value', cb); }; } else draw(null);
     function send() {
-      var inp = $('chatIn'), text = (inp.value || '').trim(); if (!text || !liveReady()) return;
+      var inp = $('chatIn'), text = (inp.value || '').trim(); if (!text) return;
+      if (!liveReady()) { RM.toast('這一題先沒有送出去（你打的字還在）：' + liveLabel()); return; }   /* 11-02：代理程式連線瞬間掉線時按 Enter 沒反應也沒說明（10-29 回報「訊息偶爾傳不出去」） */
       var rec = ensureRec(ent); if (!recId) { recId = rec.id; renderIntv(); }
       var ref = chatRef(rec.id), now = Date.now();
       ref.child('prompt').once('value', function (s) {
@@ -615,7 +616,7 @@
     else html += '<div class="card" style="border-color:var(--bad)"><b>已經按過提交，但還有打叉的項目</b><div class="muted" style="font-size:var(--fs-2)">把上面打叉的補完，這裡就會變成綠色的「已通過」。</div></div>';
     /* 10-27 楊老師：檢核點分頁看不到第 8 週要做的事。放一段「下一單元」提示和直接開故事板的連結（沿用頂列 📖 故事板的網址；還不能開時說明還缺什麼）。 */
     var sbTop = $('sbJump'), sbOk = sbTop && sbTop.href && !sbTop.classList.contains('dis') && !sbTop.hidden;
-    var nextCard = '<div class="card" id="cpNextUnit" style="margin-top:8px"><b>下一單元（第 8 週）：用訪談做 UX 故事板</b><div class="muted" style="font-size:var(--fs-2)">把你問來的訪談卡排成 6 格故事：誰、在哪、發生什麼、他怎麼想，最後標出他最卡的那一格。' + (sbOk ? '' : '先在「訪談」分頁至少記一位人物的內容，故事板才會打開。') + '</div>' +
+    var nextCard = '<div class="card" id="cpNextUnit" style="margin-top:8px"><b>下一單元（第 8～9 週）：用訪談做 UX 故事板</b><div class="muted" style="font-size:var(--fs-2)">把你問來的訪談卡排成 6 格故事：誰、在哪、發生什麼、他怎麼想，最後標出他最卡的那一格。' + (sbOk ? '' : '先在「訪談」分頁至少記一位人物的內容，故事板才會打開。') + '</div>' +
       (sbOk ? '<div class="row" style="margin-top:4px"><a class="btn" id="cpGoSb" href="' + esc(sbTop.href) + '">📖 開故事板</a></div>' : '') + '</div>';
     p.innerHTML = html + '</details>' + nextCard;
     var w1d = $('cpW1'); if (w1d) w1d.addEventListener('toggle', function () { var cc = cur(); if (cc) cc.cpW1Open = w1d.open; });   /* 記住這間房開過，重畫時不會又收起來 */
