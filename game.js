@@ -391,7 +391,7 @@
     var c = week2Ctx(), ev = window.ERG_WEEK2.evaluate(c), r = c.resp || {}, MIN = window.ERG_WEEK2.RESP_MIN;
     var ta = function (k, label, ph) { return '<label style="display:block;margin:6px 0 2px;font-size:var(--fs-2)"><b>' + label + '</b></label><textarea id="gr_' + k + '" rows="2" maxlength="400" placeholder="' + esc(ph) + '" style="width:100%;box-sizing:border-box">' + esc(GUIDE.draft && GUIDE.draft[k] !== undefined ? GUIDE.draft[k] : (r[k] || '')) + '</textarea>'; };
     var w8 = w8Started(), rv = reviewState(GUIDE.r), rvOk = rv.k === 'ok', left = (ev.total - ev.lit) + (rvOk ? 0 : 1);
-    var head = '痛點急診室 2/3（W7）' + (w8 ? '往週的事' : '這週要做的事') + '　' + (w8 ? wkBadge(ev.passed && rvOk, left, ev.lit, ev.total, ev.next ? ev.next.text : (rvOk ? '' : '送出「回應指引」'), '｜回應指引：' + rv.t) : ev.lit + ' / ' + ev.total + (ev.passed ? '　<span class="tag ok">全部完成</span>' : ''));
+    var head = '痛點急診室 2/3（W7）' + (w8 ? '前幾週的事' : '這週要做的事') + '　' + (w8 ? wkBadge(ev.passed && rvOk, left, ev.lit, ev.total, ev.next ? ev.next.text : (rvOk ? '' : '送出「回應指引」'), '｜回應指引：' + rv.t) : ev.lit + ' / ' + ev.total + (ev.passed ? '　<span class="tag ok">全部完成</span>' : ''));
     return (w8 ? '<details id="week2Box"' + (week2Open ? ' open' : '') + '><summary style="cursor:pointer"><b style="font-size:var(--fs-3)">' + head + '</b></summary>' : '<div id="week2Box"><div class="row"><b style="flex:1;font-size:var(--fs-4)">' + head + '</b></div>') +
       '<div class="muted" style="font-size:var(--fs-2);margin:2px 0 6px">這週繼續升級技能、追加成就，<b>最重要的是照「給你的指引」去做，並寫下你做了什麼</b>。10/20 到 W8~9 結束全天都可以訪談。1/3（W6）還沒完成的，下面可以繼續做。</div>' +
       (ev.next ? '<div id="w2Next" style="margin:6px 0;padding:6px 10px;border:var(--bw) solid var(--ink);border-radius:var(--r-m);background:var(--yellow);color:var(--ink-fixed);font-size:var(--fs-3)"><b>這週下一步</b>　' + esc(ev.next.text) + '</div>' : '') +
@@ -415,7 +415,7 @@
     var h = '', cw8 = w8Started() ? list('w8') : '', cw9 = w8Started() ? list('w9') : '', cur = (cw8 ? '<b style="font-size:var(--fs-1)">W8</b>' + cw8 : '') + (cw9 ? '<b style="font-size:var(--fs-1)">W9</b>' + cw9 : '');   /* 11-02：本週卡標題 W8~9，裡面 W8、W9 兩小節分開列（各用原資料鍵）；沒有連結（空設定）就整塊不顯示 */
     if (cur) h += '<div class="card" id="matCard" style="margin:8px 0 0"><b>📖 本週教材（W8~9）</b><span class="muted" style="font-size:var(--fs-1)">　打開讀一讀，會拿到成就「翻開本週教材」（只記有打開）</span><div style="display:flex;flex-direction:column;gap:4px;margin-top:6px">' + cur + '</div></div>';
     var w8 = w8Started() ? '' : list('w8'), w7 = list('w7'), w6 = list('w6');
-    if (w8 || w7 || w6) h += '<details class="card" id="matOld" style="margin:8px 0 0"><summary><b>📚 往週教材（W6、W7）</b><span class="muted" style="font-size:var(--fs-1)">　補讀也會拿到成就</span></summary><div style="display:flex;flex-direction:column;gap:4px;margin-top:6px">'
+    if (w8 || w7 || w6) h += '<details class="card" id="matOld" style="margin:8px 0 0"><summary><b>📚 前幾週教材（W6、W7）</b><span class="muted" style="font-size:var(--fs-1)">　補讀也會拿到成就</span></summary><div style="display:flex;flex-direction:column;gap:4px;margin-top:6px">'
       + (w8 ? '<b style="font-size:var(--fs-1)">W8~9</b>' + w8 : '') + (w7 ? '<b style="font-size:var(--fs-1)">W7</b>' + w7 : '') + (w6 ? '<b style="font-size:var(--fs-1)">W6</b>' + w6 : '') + '</div></details>';
     return h;
   }

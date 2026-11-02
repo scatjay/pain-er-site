@@ -293,8 +293,8 @@
     { id: 'w8_nofill', icon: '✍️', name: '整張沒有代填', desc: '第 8～9 週故事板：一面故事板至少 6 格都有內容，沒有任何一格是助教代填', test: function () { return sbHas('nofill'); } },
     { id: 'w8_reclaim', icon: '♻️', name: '把示範改成自己的', desc: '第 8～9 週故事板：助教代填的格子，你改寫超過六成', test: function () { return sbHas('reclaim'); } },
     { id: 'w8_solo', icon: '🧱', name: '從空白開始', desc: '第 8～9 週故事板：一面個人板至少 6 格，從空白自己寫，沒有起點、草稿、助教代填，每格有出處並標出關鍵時刻', test: function () { return sbHas('solo'); } },
-    { id: 'w6_mat', icon: '📖', name: '翻開 W6 教材', desc: '第 6 週：從遊戲大廳的「往週教材」打開過 W6 的教材（只記有打開，不代表讀完）', test: function () { return matHas('w6'); } },
-    { id: 'w7_mat', icon: '📖', name: '翻開 W7 教材', desc: '第 7 週：從遊戲大廳的「往週教材」打開過 W7 的教材（只記有打開，不代表讀完）', test: function () { return matHas('w7'); } },
+    { id: 'w6_mat', icon: '📖', name: '翻開 W6 教材', desc: '第 6 週：從遊戲大廳的「前幾週教材」打開過 W6 的教材（只記有打開，不代表讀完）', test: function () { return matHas('w6'); } },
+    { id: 'w7_mat', icon: '📖', name: '翻開 W7 教材', desc: '第 7 週：從遊戲大廳的「前幾週教材」打開過 W7 的教材（只記有打開，不代表讀完）', test: function () { return matHas('w7'); } },
     { id: 'w8_mat', icon: '📖', name: '翻開本週教材', desc: '第 8～9 週：從遊戲大廳的「本週教材」打開過 W8~9 的教材（只記有打開，不代表讀完）', test: function () { return matHas('w8') || matHas('w9'); } },
     { id: 'w8_soloall', icon: '🏆', name: '六個主題都從空白做過', desc: '第 8～9 週故事板：六個主題各完成一次「從空白開始」', test: function () { return sbHas('soloall'); } },
     /* 10-27：W8 自己的成就（人物誌、關鍵時刻、猜測有標明）；判準在 skillsW8，資料來源見該處註解 */

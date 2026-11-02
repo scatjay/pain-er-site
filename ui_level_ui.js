@@ -363,7 +363,7 @@
       '<button type="button" class="nvBtn" data-toggle="sbCard">看全部</button></div></div>';
     html += '<div class="nvBox"><div class="nvRow"><div style="flex:1"><b>我的房間</b><div>' + (main ? esc(cmeta(main.caseId).short || cmeta(main.caseId).name) + '・訪談卡 ' + main.cards + ' 張' : '還沒有房間') + '</div></div>' +
       (main ? '<button type="button" class="nvBtn" data-go-room="' + esc(main.code) + '">回去</button>' : '') + (others.length || !main ? '<button type="button" class="nvBtn" data-toggle="rooms">' + (others.length ? '其他 ' + others.length + ' 間房' : '開新房間／加入') + '</button>' : '<button type="button" class="nvBtn" data-toggle="rooms">開新房間／加入</button>') + '</div></div>';
-    html += '<div class="nvRow"><span id="nvMatHost" style="flex:1 1 100%"></span>' + (left != null ? '<button type="button" class="nvBtn" data-toggle="past">往週還差 ' + left + ' 項</button>' : '<button type="button" class="nvBtn" data-toggle="past">往週的事</button>') + '</div>';
+    html += '<div class="nvRow"><span id="nvMatHost" style="flex:1 1 100%"></span>' + (left != null ? '<button type="button" class="nvBtn" data-toggle="past">前幾週還差 ' + left + ' 項</button>' : '<button type="button" class="nvBtn" data-toggle="past">前幾週的事</button>') + '</div>';
     if (nl.getAttribute('data-sig') !== html) { nl.innerHTML = html; nl.setAttribute('data-sig', html); }
     var mc = $('matCard'), host = $('nvMatHost');
     if (mc && host && !host.contains(mc)) { var det = document.createElement('details'); det.className = 'nvMat'; det.innerHTML = '<summary>本週教材（W8~9）</summary>'; det.appendChild(mc); host.innerHTML = ''; host.appendChild(det); }
