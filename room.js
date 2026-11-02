@@ -67,6 +67,7 @@
     try { persist(true); } catch (e) { try { console.error('離開房間時存檔失敗', e); } catch (e2) {} }
     clearInterval(cur.timer); clearInterval(cur.slow); clearInterval(cur.wstep); if (cur.raf) cancelAnimationFrame(cur.raf);
     if (cur.resizeObserver) cur.resizeObserver.disconnect(); window.removeEventListener('resize', onResize);
+    if (cur.chatOff) { try { cur.chatOff(); } catch (e) {} cur.chatOff = null; }   /* 11-02：取消即時訪談對話的 Firebase 監聽（panels.js bindChat 設的） */
     if (cur.amb) { try { cur.amb.stop(); } catch (e) {} }
     if (cur.bgm) { try { cur.bgm.stop(); } catch (e) {} }
     if (cur.root) { try { cur.root.unmount(); } catch (e) {} }

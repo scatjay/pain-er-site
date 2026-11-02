@@ -413,6 +413,7 @@
     if (c._icT) { clearInterval(c._icT); c._icT = null; }
     c._icT = setInterval(function () { if (!$('icBox')) { clearInterval(c._icT); c._icT = null; return; } icRun(); }, 30000);
     function draw(v) {
+      if (cur() !== c) return;   /* 11-02：離開房間後（cur 已清空）Firebase 監聽仍會推值 → 讀 cur().player 丟例外；房間不在就安靜返回 */
       try { lastTurns = Object.keys((v && v.turns) || {}).map(function (k) { return v.turns[k]; }).sort(function (a, b) { return a.t - b.t; }); } catch (e) { lastTurns = []; }
       var logEl = $('chatLog'); if (!logEl) return;
       var turns = v && v.turns ? Object.keys(v.turns).map(function (k) { return v.turns[k]; }).sort(function (a, b) { return Number(a.t) - Number(b.t); }) : [];

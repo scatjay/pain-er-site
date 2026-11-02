@@ -280,6 +280,11 @@
     });
     return out;
   }
+  function personaTitle(pid, opts) {
+    var t = opts && opts.titles && opts.titles[pid];
+    if (!t) { try { var P = (typeof window !== 'undefined') && window.ERG_PERSONAS; var p = P && P.byId && P.byId(pid); t = p && p.title; } catch (e) {} }
+    return str(t);
+  }
   function makeDraft(caseId, interviews, opts) {
     opts = opts || {}; var names = opts.names || {}, info = caseInfo(caseId), tpl = template(caseId).slice(0, opts.count || LIMITS.defaultCells);
     var fr = fragments(interviews, names), used = {};
@@ -297,6 +302,10 @@
       if (t.moment) a = momentFrag || take(['need']);
       else if (!firstDone) { firstDone = true; a = take(['surface']); }
       else a = take(['events']);
+      if (a && a.pid && a.pid !== 'patient' && a.pid !== opts.heroId && c.who === (heroDone ? hero : info.hero) && names[a.pid] && names[a.pid] !== a.pid) {
+        /* 11-02：取用的片段來自家屬、護理師等人的訪談卡，「誰」就填那個人（名字＋身分），不用樣板預設的「收到簡訊的病人」 */
+        var ti = personaTitle(a.pid, opts); c.who = clip(names[a.pid] + (ti ? '（' + ti + '）' : ''), LIMITS.field.who);
+      }
       if (a) { refs.push(a.recId); if (t.moment) c.think = clip(a.text, LIMITS.field.think); else c.what = clip(a.text, LIMITS.field.what); }
       c.refs = refs;
       c.draft = hasContent(c) ? { who: c.who, where: c.where, what: c.what, think: c.think } : null;
