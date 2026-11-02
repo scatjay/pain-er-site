@@ -42,9 +42,9 @@
     peds:  { rooms: ['entrance', 'ped', 'nurse', 'family', 'home', 'waiting', 'pharmacy'], pids: ['parent_kui', 'grandma_hui', 'nurse_yu', 'doctor_lin', 'pharm_ning', 'volunteer_mi', 'volunteer'] }
   };
   var MID_MAX = 7;
-  /* 中級的右側分頁（比專家少：沒有「事件簿」「討論」）；順序沿用專家 */
-  var MID_TABS = ['clue', 'intv', 'cards', 'concl', 'cp', 'ach'];
-  var MID_HIDDEN_TABS = ['events', 'disc'];
+  /* 中級的右側分頁（比專家少：沒有「事件簿」）；順序沿用專家。11-03：討論要留著，檢核點 5 要用，藏了會卡住（二乙學生回報） */
+  var MID_TABS = ['clue', 'intv', 'cards', 'concl', 'disc', 'cp', 'ach'];
+  var MID_HIDDEN_TABS = ['events'];
   var GREY_TEXT = '這間房在專家模式才開。';
   var SCOPE_NOTE = '灰色房間和其他人物在專家模式才開。這裡只會遇到開放房間裡的事件。';
   /* 回傳 { rooms:[id], pids:[id], tabs:[…], hiddenTabs:[…] }；只有中級且案例有登記才有；avail（可選）＝{ rooms:fn(id)→bool, pids:fn(id)→bool } 用來略過對不到的 */

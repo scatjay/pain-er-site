@@ -204,7 +204,7 @@
     if (b.dataset.ask) { nvAsk(b.dataset.ask); return; }
     if (b.id === 'nvNextBtn') { var c = curRoom(), s = c && stepFor(c); if (!s) return; if (s.kind === 'ask') nvAsk(s.pid); else if (s.kind === 'export') { var P = window.ERG_PANELS; if (P && P.exportFromLobby) { b.disabled = true; P.exportFromLobby(s.code, function () { b.disabled = false; }); } } return; }
     if (b.dataset.pane) { openPane(b.dataset.pane); return; }
-    if (b.dataset.toExpert) { UI.setLevel(3, 'self'); return; }
+    if (b.dataset.toExpert) { UI.setLevel(2, 'self'); return; }
   }
   var lastSig = {};
   function put(id, html) { if (lastSig[id] === html) return; lastSig[id] = html; var el = $(id); if (el) el.innerHTML = html; }
@@ -216,7 +216,7 @@
     put('nvNext', '<div class="nvNextBox"><div style="flex:1"><div class="nvK">下一步</div><div class="nvT">' + esc(s.text) + '</div></div>' + btn + '</div>');
     put('nvPeople', peopleHtml(c));
     var k = counts(c);
-    put('nvBar', '<button type="button" class="nvBtn" data-pane="clue">線索 ' + k.clues + ' 張</button><button type="button" class="nvBtn" data-pane="cards">筆記卡 ' + k.notes + ' 張</button>' + sbBtnHtml(c) + '<span style="flex:1"></span><button type="button" class="nvLinkBtn" data-to-expert="1">想再問其他人？切到專家模式</button>');
+    put('nvBar', '<button type="button" class="nvBtn" data-pane="clue">線索 ' + k.clues + ' 張</button><button type="button" class="nvBtn" data-pane="cards">筆記卡 ' + k.notes + ' 張</button>' + sbBtnHtml(c) + '<span style="flex:1"></span><button type="button" class="nvLinkBtn" data-to-expert="1">要問其他人或和同學討論？切到中級模式</button>');
     mountAi(c, s);
   }
 
@@ -312,7 +312,7 @@
     var orig = R.switchTab; R.switchTabQuiet = function (t) { UI._inPane = true; try { orig(t); } finally { UI._inPane = false; } };
     R.switchTab = function (t) {
       var args = Array.prototype.slice.call(arguments);
-      if (ST.scope && U.MID_HIDDEN_TABS.indexOf(t) >= 0) { args[0] = t = 'intv'; }   /* 中級沒有「事件簿」「討論」：例如事件提示按「去事件簿」，改開訪談 */
+      if (ST.scope && U.MID_HIDDEN_TABS.indexOf(t) >= 0) { args[0] = t = 'intv'; }   /* 中級沒有「事件簿」：例如事件提示按「去事件簿」，改開訪談 */
       var r = orig.apply(this, args);
       if (ST.roomOn && !UI._inPane && (t === 'intv' || t === 'clue' || t === 'cards')) openPane(t);   /* 例如「事件」提示按去訪談：新手畫面也要開得起來 */
       return r;
@@ -483,6 +483,7 @@
   }
   function renderNudge(wrap) {
     var old = $('nvNudge'), a = app();
+    if (ST.nudge && ST.nudge.to === U.normalize(ST.lv)) { ST.nudge = null; if (old) old.remove(); }   /* 11-03：已經切到建議的模式，卡片要收掉（楊老師回報） */
     if (!ST.nudge) {
       if (Date.now() - (ST.nudgeAt || 0) < 30000) { if (old) old.remove(); return; }   /* 大廳每幾秒重畫一次，判準要掃全部房間；進大廳時算一次，30 秒內不重算 */
       ST.nudgeAt = Date.now();
@@ -659,7 +660,7 @@
       '.nvQuote{background:var(--code,#f1f5f7);color:var(--fg);border:var(--bw-s,2px) solid var(--line,#cfd8de);border-radius:var(--r-m,8px);padding:12px;margin:8px 0;font-size:15px}.nvDone{background:var(--soft-g,#e6fcf0);color:#1e1e1e}',
       /* 中級：房間（有場景）＋故事板 */
       'body.lv2Room #skBtn,body.lv2Room #v3dBtn,body.lv2Room #fitBtn,body.lv2Room #sideBtn{display:none!important}',
-      'body.lv2Room #tabs button[data-t=\"events\"],body.lv2Room #tabs button[data-t=\"disc\"]{display:none!important}',
+      'body.lv2Room #tabs button[data-t=\"events\"]{display:none!important}',
       '#lv2Strip{display:none}body.lv2Room #lv2Strip{display:block;padding:8px 10px;border-bottom:var(--bw-s,2px) solid var(--ink);background:var(--panel);color:var(--fg)}',
       '#lv2Strip .nvNextBox{padding:8px 12px;margin:0 0 6px;gap:10px}#lv2Strip .nvT{font-size:17px}#lv2Strip .nvBtn.big{min-height:44px;padding:0 14px;font-size:var(--fs-3,15px)}',
       '#lv2Strip details>summary{min-height:44px;display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:700}#lv2Strip details>summary::after{content:\"▾\"}#lv2Strip details[open]>summary::after{content:\"▴\"}#lv2Strip .nvAns{margin:6px 0}',
