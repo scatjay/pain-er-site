@@ -326,20 +326,26 @@
     { id: 'x_bring_old', icon: '🔗', name: '舊訪談派上用場', desc: '故事板至少 3 格，引用你開故事板之前就訪談好的卡片（W6、W7 的功夫沒有白做）', test: function (m) { return hasW8(m, 'x_bring_old'); } },
     { id: 'x_thread', icon: '🧵', name: '同一個人串到底', desc: '同一位人物的訪談卡，在故事板至少 3 格被引用', test: function (m) { return hasW8(m, 'x_thread'); } },
     { id: 'x_keyperson', icon: '🩺', name: '從病人或家屬說起', desc: '故事板至少 2 格，引用你訪談病人或家屬的卡片', test: function (m) { return hasW8(m, 'x_keyperson'); } },
-    { id: 'x_ask_write', icon: '✒️', name: '會問也會寫', desc: '探問 Lv.2 以上，而且「有根據」也到 Lv.2 以上', test: function (m) { return hasW8(m, 'x_ask_write'); } }
+    { id: 'x_ask_write', icon: '✒️', name: '會問也會寫', desc: '探問 Lv.2 以上，而且「有根據」也到 Lv.2 以上', test: function (m) { return hasW8(m, 'x_ask_write'); } },
+    /* 11-03：W10 提案室「原型工作台」成就。first／iter 由學生端在條件成立時寫 prx/{場次}/ach/{學號}（規則檢查條件），passed 由審核端寫；game.js 讀進 window.ERG_MY_PX_ACH */
+    { id: 'w10_proto1', icon: '🧪', name: '第一版原型', desc: '第 10 週提案室：做出第一版原型，貼回作品連結並寫下改了什麼', test: function () { return pxHas('first'); } },
+    { id: 'w10_iter', icon: '🔁', name: '改了再改', desc: '第 10 週提案室：中級模式存到 2 版、專家模式存到 3 版，而且每一版的「改了什麼」都不一樣', test: function () { return pxHas('iter'); } },
+    { id: 'w10_passed', icon: '🎯', name: '原型過審', desc: '第 10 週提案室：送審後，對準檢查與迭代檢查都通過', test: function () { return pxHas('passed'); } }
   ];
   function hasW8(m, id) { return !!(m.w8 && m.w8.ids.indexOf(id) >= 0); }
   /* 單元分組（10-27 楊老師：成就要區分單元）。W6＝第一輪訪談、W7＝依指引再推進、W8＝人物誌＋故事板、x＝前後單元銜接、all＝不屬於哪一週。
      沒列在這裡的成就一律歸 all（通用）。 */
-  var UNIT_NAME = { W8: 'W8~9　人物誌＋UX 故事板', x: '跨單元銜接（W6／W7 → W8~9）', W7: 'W7　依指引再推進', W6: 'W6　第一輪訪談', all: '通用（任何時候都算）' };
+  var UNIT_NAME = { W10: 'W10　提案室＋原型', W8: 'W8~9　人物誌＋UX 故事板', x: '跨單元銜接（W6／W7 → W8~9）', W7: 'W7　依指引再推進', W6: 'W6　第一輪訪談', all: '通用（任何時候都算）' };
   var UNIT_OF = {};
   ['first_talk', 'pry_open', 'five_talks', 'ten_talks', 'all_core', 'deep_dig', 'chatty', 'q_intro', 'q_event', 'q_why', 'q_echo', 'q_chain', 'q_key3', 'q_open10', 'explorer', 'mapper', 'notes', 'witness', 'replay', 'partner', 'thinker', 'all_cp', 'vip', 'boss', 'kid_whisperer', 'translator', 'inclusive', 'case_two', 'case_four', 'case_all'].forEach(function (id) { UNIT_OF[id] = 'W6'; });
   ['guide_followed', 'guide_effect', 'w7_mat'].forEach(function (id) { UNIT_OF[id] = 'W7'; });
   UNIT_OF.w6_mat = 'W6';
+  ['w10_proto1', 'w10_iter', 'w10_passed'].forEach(function (id) { UNIT_OF[id] = 'W10'; });
   ['w8_together', 'w8_relay', 'w8_fill', 'w8_premiere', 'w8_askthenwrite', 'w8_allsourced', 'w8_nofill', 'w8_reclaim', 'w8_solo', 'w8_soloall', 'w8_mat', 'w8_people', 'w8_moment', 'w8_guess'].forEach(function (id) { UNIT_OF[id] = 'W8'; });
   ['w8_revisit', 'x_bring_old', 'x_thread', 'x_keyperson', 'x_ask_write', 'bug_hunter', 'idea_giver', 'clear_report'].forEach(function (id) { UNIT_OF[id] = 'x'; });   /* 10-27 楊老師：回報是跨作業的技能，回報成就歸跨單元 */
   DEFS.forEach(function (d) { d.unit = UNIT_OF[d.id] || 'all'; });
   function matHas(w) { try { return ((typeof window !== 'undefined' && window.ERG_MY_MATS) || []).indexOf(w) >= 0; } catch (e) { return false; } }   /* 10-28：week_materials.js 記的「從大廳打開過哪一週的教材」 */
+  function pxHas(k) { try { return ((typeof window !== 'undefined' && window.ERG_MY_PX_ACH) || []).indexOf(k) >= 0; } catch (e) { return false; } }   /* 11-03：提案室原型成就 */
   function sbHas(k) { try { return ((typeof window !== 'undefined' && window.ERG_MY_SB_ACH) || []).indexOf(k) >= 0; } catch (e) { return false; } }
   /* 10-29 學生建議：有數量條件的成就顯示進度 (目前/目標)。只列單純「某個數字 >= 門檻」的；其餘不顯示。 */
   var PROG = {
@@ -412,7 +418,7 @@
     var head = '<p class="muted" style="font-size:var(--fs-1);margin:4px 0">徽章 ' + got + ' / ' + bs.length + '。這不是分數，只是記錄你在急診室裡做過的事。</p>' + stat;
     if (!o) return head + gridOf(bs);
     /* 10-27 依單元分組：本週單元排最前面並展開，前幾週收合（和大廳 W8 置頂、前週收合一致）。o：{ current:'W8'|'W7', sk:{ask,ctx}, fresh, open:{單元:true/false}（重畫前的展開狀態） } */
-    var cur = o.current === 'W7' ? 'W7' : 'W8', order = cur === 'W8' ? ['W8', 'x', 'W7', 'W6', 'all'] : ['W7', 'W6', 'x', 'W8', 'all'], w8 = m.w8;
+    var cur = o.current === 'W7' ? 'W7' : (o.current === 'W10' ? 'W10' : 'W8'), order = cur === 'W10' ? ['W10', 'W8', 'x', 'W7', 'W6', 'all'] : (cur === 'W8' ? ['W8', 'W10', 'x', 'W7', 'W6', 'all'] : ['W7', 'W6', 'x', 'W8', 'W10', 'all']), w8 = m.w8;
     var groups = order.map(function (u, i) {
       var list = bs.filter(function (b) { return b.unit === u; }), g = list.filter(function (b) { return b.ok; }).length, skh = '', skn = '';
       if (u === 'W7' && o.sk) { skh = '<div class="skRow">' + skCard('探問', o.sk.ask, DESC_ASK, esc, o.fresh) + skCard('情境感知', o.sk.ctx, DESC_CTX, esc, o.fresh) + '</div>'; skn = '　技能 探問 Lv.' + o.sk.ask.lv + '・情境感知 Lv.' + o.sk.ctx.lv; }

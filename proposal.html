@@ -62,6 +62,22 @@ label{display:block;font-size:12px;font-weight:700;margin-top:8px}
 #toast.on{opacity:1}
 #coachFab{display:none;position:fixed;right:14px;bottom:calc(14px + env(safe-area-inset-bottom));z-index:24;min-height:56px;padding:0 18px;align-items:center;gap:6px;border-radius:99px;font-size:16px}
 .only-m{display:none}
+
+/* 原型工作台（③） */
+.pt-mode{display:flex;gap:6px;margin:8px 0}.pt-m{flex:1;min-height:44px;border:2px solid var(--line);border-radius:10px;background:var(--panel);color:var(--fg);font-weight:700;cursor:pointer}.pt-m.on{background:var(--ct,#3d6fe0);color:#fff;border-color:var(--ct,#3d6fe0)}
+.pt-blk{border-top:1px dashed var(--line);margin-top:12px;padding-top:10px}.pt-h{font-weight:800;margin:6px 0}.pt-prog{font-weight:700;color:var(--muted)}
+.pt-tools{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}.pt-tool{text-align:left;min-height:56px;border:2px solid var(--line);border-radius:10px;background:var(--panel);color:var(--fg);padding:8px 10px;cursor:pointer}.pt-tool.on{border-color:var(--ct,#3d6fe0)}.pt-tool b,.pt-tool span{display:block}.pt-tool span{font-size:13px;color:var(--muted)}
+.pt-cards{display:grid;gap:6px;margin:8px 0}.pt-card{display:flex;gap:8px;align-items:flex-start;border:2px solid var(--line);border-radius:10px;padding:8px 10px;cursor:pointer;background:var(--panel)}.pt-card.on{border-color:var(--ct,#3d6fe0)}.pt-card input{width:24px;height:24px;flex:0 0 auto;margin-top:2px}.pt-card small{display:block;color:var(--muted)}
+.pt-bar{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.pt-big{min-height:48px;padding:0 16px;border-radius:10px;border:0;background:var(--ct,#3d6fe0);color:#fff;font-weight:800;font-size:16px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center}.pt-big.g{background:var(--panel);color:var(--fg);border:2px solid var(--line)}
+.pt-note{font-size:13px;color:var(--muted);margin:4px 0}.pt-heur{display:flex;gap:6px;flex-wrap:wrap}.pt-h1{min-height:44px;border:2px solid var(--line);border-radius:99px;background:var(--panel);color:var(--fg);padding:0 12px;cursor:pointer}.pt-h1.on{background:var(--ct,#3d6fe0);color:#fff;border-color:var(--ct,#3d6fe0)}
+.pt-miss{margin:8px 0;font-weight:700}.pt-miss.bad{color:var(--bad)}.pt-miss.ok{color:var(--ok)}.pt-ck{display:flex;gap:8px;align-items:center;min-height:44px}
+.pt-h2{font-weight:700;margin:10px 0 4px}.pt-chip{display:inline-block;margin:2px 4px 0 0;padding:1px 8px;border-radius:99px;background:var(--bg);border:1px solid var(--line);font-size:12px}
+.pt-chip.got{background:var(--ct,#3d6fe0);color:#fff;border-color:var(--ct,#3d6fe0)}.pt-ach{margin:8px 0}.pt-vers{margin-top:10px;border-top:1px dashed var(--line);padding-top:8px}
+#lvBar{display:flex;gap:8px;align-items:center;margin-top:6px}.pt-lbl{font-size:13px;color:var(--muted)}#lvBar .pt-mode{margin:0;flex:1;max-width:320px}
+body.lv1 .dirbtn[data-k=mine],body.lv1 #nextLine~#progress{display:none}
+body.lv1 #secProto .pt-mode{display:none}
+#lvNav{margin:10px 0}
+#ptText{width:100%;font-size:16px}
 @media (max-width:860px){
   html,body{overflow-x:hidden;max-width:100vw}
   body{font-size:16px}
@@ -108,6 +124,7 @@ label{display:block;font-size:12px;font-weight:700;margin-top:8px}
         <div id="rows"></div>
         <p><button id="addRow">＋ 新增一列</button> <span class="muted" id="rowsInfo"></span></p>
       </section>
+      <section class="card" id="secProto"></section>
       <section class="card" id="secReal"></section>
       <section class="card" id="secExport"></section>
     </main>
@@ -118,18 +135,22 @@ label{display:block;font-size:12px;font-weight:700;margin-top:8px}
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-<script src="er_firebase.js?v=202611031740"></script>
-<script src="local_db.js?v=202611031740"></script>
-<script src="remote_db.js?v=202611031740"></script>
-<script src="personas_inclusive.js?v=202611031740"></script>
-<script src="personas.js?v=202611031740"></script>
-<script src="case_tone.js?v=202611031740"></script>
-<script src="sb_core.js?v=202611031740"></script>
-<script src="sb_store.js?v=202611031740"></script>
-<script src="sb_coach.js?v=202611031740"></script>
-<script src="proposal_core.js?v=202611031740"></script>
-<script src="proposal_store.js?v=202611031740"></script>
-<script src="proposal_coach.js?v=202611031740"></script>
-<script src="proposal_ui.js?v=202611031740"></script>
+<script src="er_firebase.js?v=202611040048"></script>
+<script src="local_db.js?v=202611040048"></script>
+<script src="remote_db.js?v=202611040048"></script>
+<script src="personas_inclusive.js?v=202611040048"></script>
+<script src="personas.js?v=202611040048"></script>
+<script src="case_tone.js?v=202611040048"></script>
+<script src="sb_core.js?v=202611040048"></script>
+<script src="sb_store.js?v=202611040048"></script>
+<script src="sb_coach.js?v=202611040048"></script>
+<script src="proposal_core.js?v=202611040048"></script>
+<script src="proposal_proto.js?v=202611040048"></script>
+<script src="proposal_store.js?v=202611040048"></script>
+<script src="proposal_coach.js?v=202611040048"></script>
+<script src="ui_level.js?v=202611040048"></script>
+<script src="proposal_proto.js?v=202611040048"></script>
+<script src="proposal_proto_ui.js?v=202611040048"></script>
+<script src="proposal_ui.js?v=202611040048"></script>
 </body>
 </html>

@@ -17,7 +17,7 @@
     var now = typeof opts.now === 'function' ? opts.now : function () { return Date.now(); };
     var rnd = typeof opts.rnd === 'function' ? opts.rnd : Math.random;
     var log = typeof opts.log === 'function' ? opts.log : function () {};
-    var subs = [], CASE = PX.caseOf(opts.caseId);
+    var subs = [], CASE = PX.caseOf(opts.caseId), PXP = opts.proto || (typeof window !== 'undefined' ? window.ERG_PROTO : null) || (typeof require === 'function' ? (function () { try { return require('./proposal_proto.js'); } catch (e) { return null; } })() : null);
     function on(ref, cb) { var h = ref.on('value', function (s) { cb(val(s)); }, function (e) { log('監聽被拒：' + (e && e.message)); }); subs.push([ref, h]); return function () { try { ref.off('value', h); } catch (e) {} }; }
     function docRef(sid) { return root.child('doc/' + sid + '/' + CASE); }
 
@@ -35,6 +35,18 @@
         return Promise.all([docRef(sid).child('rows/' + PX.rowKey(row.n)).set(clean(r)), docRef(sid).child('updatedAt').set(r.t)]).then(function () { return r; });
       },
       removeRow: function (sid, n) { return Promise.all([docRef(sid).child('rows/' + PX.rowKey(n)).remove(), docRef(sid).child('updatedAt').set(now())]); },
+      /* 原型工作台：doc/{學號}/{案例}/proto（連結、改了什麼、自檢；規則見 docs/PROPOSAL_ROOM_RULES_DRAFT.md） */
+      watchProto: function (sid, cb) { return on(docRef(sid).child('proto'), function (v) { cb(PXP ? PXP.normProto(v) : (v || {})); }); },
+      saveProto: function (sid, p, lv) {
+        var o = PXP ? PXP.protoForWrite(p, now(), lv) : p;
+        return Promise.all([docRef(sid).child('proto').set(clean(o)), docRef(sid).child('updatedAt').set(now())]).then(function () { return o; });
+      },
+      /* 原型成就：prx/{場次}/ach/{學號}/{first|iter}＝時間戳，只新增不改（規則另外檢查條件）；passed 只有審核端寫 */
+      setAch: function (sid, k) {
+        var ref = root.child('ach/' + sid + '/' + k);
+        return Promise.resolve(ref.once('value')).then(function (s) { if (val(s)) return false; return Promise.resolve(ref.set(now())).then(function () { return true; }, function () { return false; }); });
+      },
+      watchAch: function (sid, cb) { return on(root.child('ach/' + sid), function (v) { cb(v || {}); }); },
       saveReal: function (sid, key, v) {
         var o = { text: String(v.text || '').slice(0, PX.LIMITS.real), unknown: !!v.unknown, askWho: String(v.askWho || '').slice(0, PX.LIMITS.askWho) };
         return Promise.all([docRef(sid).child('real/' + key).set(clean(o)), docRef(sid).child('updatedAt').set(now())]);

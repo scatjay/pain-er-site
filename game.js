@@ -705,6 +705,7 @@
     myScoreAsked = true;
     syncMats();
     window.firebase.database().ref('er/' + APP.SESS + '/score/' + APP.me.sid).once('value', function (snap) { window.ERG_MY_SCORE = snap.val() || {}; window.ERG_SCORES_READY = true; try { if ($('lobby') && $('lobby').classList.contains('on')) renderLobby(); } catch (x) {} }, function () { myScoreAsked = false; });   /* 10-27：在大廳（還沒進房間）也要讀自己的成績，讀到之後重畫大廳，不然指引卡一直顯示「現在共 0 枚」（曾亮瑜、何詩涵都是在大廳回報） */
+    try { window.firebase.database().ref('prx/' + APP.SESS + '/ach/' + APP.me.sid).once('value', function (snap) { window.ERG_MY_PX_ACH = Object.keys(snap.val() || {}); }, function () {}).catch(function () {}); } catch (e) {}   /* 11-03：提案室原型成就 */
     try { window.firebase.database().ref('sbx/' + APP.SESS + '/sbach/' + APP.me.sid).once('value', function (snap) { var v = snap.val() || {}; window.ERG_MY_SB_ACH = String(v.ids || '').split(',').filter(Boolean); }, function () {}); } catch (e) {}   /* 10-26：W8 故事板成就 */
   }
   function publishScore(force) {

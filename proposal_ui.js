@@ -20,6 +20,7 @@
   var S = { caseId: CASE, sid: '', sess: '', DB: null, store: null, sbStore: null, doc: PX.emptyDoc(), rooms: [], evidence: [], evMap: {}, cells: [], cellMap: {}, boardW: {}, boards: {}, names: {}, st: null,
     cfg: SB.config(null), coachUsed: 0, subs: [], revs: [], dirHist: [], started: false, timers: {}, armed: {}, pendingRender: false, loaded: false, opened: false };
 
+  window.ERG_PX_S = S;
   function toast(msg, ms) { var t = $('toast'); t.textContent = msg; t.className = 'on'; clearTimeout(toast.t); toast.t = setTimeout(function () { t.className = ''; }, ms || 3500); }
   function twoStep(btn, label, run, armText) {
     if (S.armed[label]) { clearTimeout(S.armed[label]); delete S.armed[label]; run(); return; }
@@ -124,7 +125,7 @@
   }
 
   /* ———— 畫面 ———— */
-  function renderAll() { S.pendingRender = false; if (!S.sid || !S.loaded) return; compute(); renderTop(); renderDir(); renderRows(); renderReal(); renderExport(); }
+  function renderAll() { S.pendingRender = false; if (!S.sid || !S.loaded) return; compute(); renderTop(); renderDir(); renderRows(); renderReal(); renderExport(); if (window.ERG_PROTO_UI) { try { window.ERG_PROTO_UI.render(); } catch (e) { console.warn('[proto]', e); } } }
   function progressChips(st) {
     function chip(ok, t) { return '<span class="pchip ' + (ok ? 'ok' : 'bad') + '">' + (ok ? '✓ ' : '✗ ') + esc(t) + '</span>'; }
     return chip(st.dirOk, '方向') + chip(st.rowsDone >= PX.LIMITS.minRows, '對準表 ' + st.rowsDone + '／' + PX.LIMITS.minRows) + chip(st.gaps.length === 0 && st.rowsFilled > 0, st.gaps.length ? '指不回訪談 ' + st.gaps.length + ' 列' : '都有依據') + chip(st.realDone === 3, '現實題 ' + st.realDone + '／3');
@@ -274,8 +275,10 @@
   }
   function submit() {
     var st = compute(); if (!st.canSubmit) { toast('還不能送審：先選方向、寫完至少 ' + PX.LIMITS.minRows + ' 列的決定。'); return; }
+    try { var gap = window.ERG_PROTO_UI && window.ERG_PROTO_UI.iterGap(); if (gap) { toast(gap, 6000); return; } } catch (e) {}   /* 中級、專家要先有迭代的版本 */
     flushAll();
     var snap = PX.snapshotForSubmit(S.doc, S.evidence, S.cells, NOW());
+    try { var pr = window.ERG_PROTO_UI && window.ERG_PROTO_UI.snap(); if (pr) snap.doc.proto = pr; } catch (e) {}   /* 11-03：原型各版本一起送審 */
     S.store.submit(S.sid, snap).then(function (r) {
       if (!r.ok) { toast('今天已經送審過了（一天只能一次），明天 00:00 之後可以再送。', 5000); return; }
       logEvent('submit', r.day); toast('已送審。審核建議出來之後會出現在「④ 交出去」。', 5000);
