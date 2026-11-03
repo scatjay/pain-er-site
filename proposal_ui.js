@@ -139,6 +139,7 @@
     $('progress').innerHTML = progressChips(st);
     var sb = latestBoardRoom(); $('sbLink').href = sb ? 'storyboard.html?room=' + sb + '&board=me' : 'storyboard.html'; $('reviseLink').href = gameHref(latestRoom());
     $('lobbyLink').href = gameHref();
+    if ($('wallLink')) $('wallLink').href = 'wall.html?case=' + CASE + (LOCAL ? '&local=1&sid=' + encodeURIComponent(S.sid) : '');
   }
   function latestRoom() { var withIv = S.rooms.filter(function (r) { return r.interviews.length; }); return (withIv[withIv.length - 1] || S.rooms[S.rooms.length - 1] || {}).code || ''; }
   function latestBoardRoom() { var c = Object.keys(S.boards).filter(function (k) { return (S.boards[k] || []).length; }); return c.length ? c[c.length - 1] : latestRoom(); }

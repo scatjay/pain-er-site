@@ -262,12 +262,28 @@
   }
 
   /* ───── 選角色 ───── */
-  var avDraft = null, avFirst = false;
+  var avDraft = null, avFirst = false, avStageNote = null;
   function charSvg(look, i, mood) { return CH.character(AV.toCharLook(look), { seed: i || 3, mood: mood || 'idle', size: 1.25 }); }
-  APP.progress = function () { var pr = (APP.me && APP.me.profile && APP.me.profile.progress) || {}; return { lit: APP.lit || 0, badges: pr.badges || 0, ask: pr.ask || 1, ctx: pr.ctx || 1 }; };
+  /* 11-04 階段造型：階段訊號在這裡組好交給 AV.stageOf（avatar.js 不碰資料庫）。階段只升不降，最高階段記在本機，避免資料還沒讀回來時暫時掉階。 */
+  function stageSignals() {
+    var sg = { sbFilled: 0, dirPicked: false, rowsDecided: 0, pxAch: window.ERG_MY_PX_ACH || [] };
+    try { ((window.ERG_MY_SBD && window.ERG_MY_SBD.rooms) || []).forEach(function (rm) { var c = rm.mine || {}; Object.keys(c).forEach(function (k) { var x = c[k] || {}; if (String(x.what || '').trim() || String(x.think || '').trim()) sg.sbFilled += 1; }); }); } catch (e) {}
+    try { if ((window.ERG_MY_SB_ACH || []).length) sg.sbFilled = Math.max(sg.sbFilled, 1); } catch (e) {}
+    try { var docs = window.ERG_MY_PX_DOC || {}; Object.keys(docs).forEach(function (cid) { var d = docs[cid] || {}; if (d.dir && d.dir.pick) sg.dirPicked = true; var rows = d.rows || []; (Array.isArray(rows) ? rows : Object.keys(rows).map(function (k) { return rows[k]; })).forEach(function (r) { if (r && String(r.decide || '').trim()) sg.rowsDecided += 1; }); }); } catch (e) {}
+    return sg;
+  }
+  function stageStore(key, val) { try { if (val === undefined) return Number(window.localStorage.getItem(key)) || 1; window.localStorage.setItem(key, String(val)); } catch (e) {} return 1; }
+  APP.stage = function () { var st = AV.stageOf(stageSignals()), k = 'erg_stage_' + (APP.me && APP.me.sid), mx = stageStore(k); if (st > mx) { stageStore(k, st); mx = st; } return mx; };
+  /* 走到新階段時回傳 { stage, labels }（並記下已通知）；沒有新階段回傳 null */
+  APP.stageNotice = function () {
+    var st = APP.stage(), k = 'erg_stageseen_' + (APP.me && APP.me.sid), seen = stageStore(k);
+    if (st <= seen) return null;
+    stageStore(k, st); return { stage: st, labels: AV.newlyUnlocked({ stage: seen }, { stage: st }).map(function (u) { return u.label; }) };
+  };
+  APP.progress = function () { var pr = (APP.me && APP.me.profile && APP.me.profile.progress) || {}; return { lit: APP.lit || 0, badges: pr.badges || 0, ask: pr.ask || 1, ctx: pr.ctx || 1, stage: APP.stage() }; };
   function openAvatar(first) {
     avFirst = !!first; var ev = evaluateAll(); APP.lit = ev ? ev.ev.lit : 0;
-    avDraft = CORE.clone(APP.me.profile.avatar); show('avatar'); renderAvatar();
+    avDraft = CORE.clone(APP.me.profile.avatar); avStageNote = APP.stageNotice(); show('avatar'); renderAvatar();
   }
   function renderAvatar() {
     var look = avDraft.look, lit = APP.progress ? APP.progress() : APP.lit, litN = AV.prog(lit).lit;
@@ -279,24 +295,34 @@
     Array.prototype.forEach.call($('avGrid').querySelectorAll('[data-preset]'), function (b) {
       b.onclick = function () { var p = AV.preset(b.getAttribute('data-preset')); avDraft = { preset: p.id, look: CORE.clone(p.look) }; renderAvatar(); };
     });
-    var html = '';
-    ['head', 'body', 'hair', 'eyes', 'mouth', 'prop', 'pattern', 'cheek'].forEach(function (part) {
+    var P0 = AV.prog(lit), html = '<div style="grid-column:1/-1"><div style="font-size:var(--fs-2);font-weight:900">階段造型　<span class="muted" style="font-weight:700;font-size:var(--fs-1)">目前第 ' + P0.stage + ' 階段・' + esc(AV.stageName(P0.stage)) + '（走得越遠，樣式差越多）</span></div>' +
+      (avStageNote ? '<div id="avStageNew" role="status" style="margin:6px 0;padding:8px 10px;border:var(--bw-s) solid var(--ink);border-radius:var(--r-m);background:var(--yellow);color:var(--ink-fixed);font-weight:900">你走到第 ' + avStageNote.stage + ' 階段「' + esc(AV.stageName(avStageNote.stage)) + '」，解鎖新造型：' + esc(avStageNote.labels.join('、')) + '</div>' : '') +
+      '<div style="display:flex;flex-wrap:wrap;gap:var(--s2);margin-top:6px">' + AV.stageLooks(lit).map(function (g) {
+        return '<button class="avCard' + (g.locked ? ' lock' : '') + '" data-stagelook="' + g.id + '" style="width:104px;min-height:48px;' + (g.locked ? 'opacity:.5' : '') + '"' + (g.locked ? ' disabled title="' + esc(g.hint) + '"' : '') + '>' +
+          (g.locked ? '<div style="font-size:30px;line-height:82px">🔒</div>' : charSvg(AV.applyStage(look, g.id), 21 + g.stage)) +
+          '<div style="font-size:var(--fs-1);font-weight:900">' + esc(g.name) + '</div>' +
+          (g.locked ? '<div class="muted" style="font-size:var(--fs-1)">' + esc(g.hint) + '</div>' : '') + '</button>';
+      }).join('') + '</div></div>';
+    ['head', 'body', 'hair', 'eyes', 'mouth', 'prop', 'cloth', 'pattern', 'cheek'].forEach(function (part) {
       html += '<div><div style="font-size:var(--fs-2);font-weight:900">' + AV.LABEL[part] + '</div><div class="partRow">' +
         AV.options(part, lit).map(function (o) {
           return '<button class="opt pill' + (look[part] === o.value ? ' on' : '') + (o.locked ? ' lock' : '') + '" data-part="' + part + '" data-val="' + esc(o.value) + '"' + (o.locked ? ' disabled title="' + esc(o.hint) + '"' : '') + '>' + esc(o.name) + (o.locked ? ' 🔒' : '') + '</button>';
         }).join('') + '</div></div>';
     });
-    [['skin', '膚色'], ['outfit', '衣服顏色']].concat(look.hair === 'cap' || look.hair === 'beanie' ? [['capColor', '帽子顏色']] : []).concat(['bun', 'pony', 'long', 'spiky'].indexOf(look.hair) >= 0 ? [['hairColor', '髮色']] : []).forEach(function (pc) {
+    [['skin', '膚色'], ['outfit', '衣服顏色']].concat(look.hair === 'cap' || look.hair === 'beanie' || look.hair === 'beret' || look.hair === 'bandana' || look.cloth === 'cape' ? [['capColor', '帽子與披風顏色']] : []).concat(['bun', 'pony', 'long', 'spiky', 'bob', 'afro', 'twinbuns'].indexOf(look.hair) >= 0 ? [['hairColor', '髮色']] : []).forEach(function (pc) {
       html += '<div><div style="font-size:var(--fs-2);font-weight:900">' + pc[1] + '</div><div class="partRow">' + AV.options(pc[0], lit).map(function (o) {
         return '<button class="sw' + (look[pc[0]] === o.value ? ' on' : '') + '" style="background:' + o.value + (o.locked ? ';opacity:.35' : '') + '" data-part="' + pc[0] + '" data-val="' + esc(o.value) + '"' + (o.locked ? ' disabled' : '') + ' aria-label="' + pc[1] + ' ' + o.value + '"></button>';
       }).join('') + '</div></div>';
     });
-    $('avParts').innerHTML = html;
+    $('avParts').innerHTML = html; avStageNote = null;
+    Array.prototype.forEach.call($('avParts').querySelectorAll('[data-stagelook]'), function (b) {
+      b.onclick = function () { try { var nx = AV.applyStage(avDraft.look, b.getAttribute('data-stagelook')); var v = AV.validate(nx, lit); if (!v.ok) throw new Error(v.errors[0].msg); avDraft.look = nx; avDraft.preset = ''; $('avErr').textContent = ''; renderAvatar(); } catch (e) { $('avErr').textContent = e.message; } };
+    });
     Array.prototype.forEach.call($('avParts').querySelectorAll('[data-part]'), function (b) {
       b.onclick = function () { try { avDraft.look = AV.set(avDraft.look, b.getAttribute('data-part'), b.getAttribute('data-val'), lit); avDraft.preset = ''; $('avErr').textContent = ''; renderAvatar(); } catch (e) { $('avErr').textContent = e.message; } };
     });
     var P = AV.prog(lit), left = AV.UNLOCKS.filter(function (u) { return !AV.met(u, P); }), next = left[0];
-    $('avUnlockInfo').textContent = '已點亮 ' + P.lit + ' 個檢核點、拿到 ' + P.badges + ' 個成就、探問 Lv.' + P.ask + '、情境感知 Lv.' + P.ctx + (left.length ? '；還有 ' + left.length + ' 個外觀沒解鎖，例如「' + next.label + '」（' + AV.hint(next).replace('才能用', '解鎖') + '）' : '；外觀全部解鎖');
+    $('avUnlockInfo').textContent = '已點亮 ' + P.lit + ' 個檢核點、拿到 ' + P.badges + ' 個成就、探問 Lv.' + P.ask + '、情境感知 Lv.' + P.ctx + '、第 ' + P.stage + ' 階段' + (left.length ? '；還有 ' + left.length + ' 個外觀沒解鎖，例如「' + next.label + '」（' + AV.hint(next).replace('才能用', '解鎖') + '）' : '；外觀全部解鎖');
   }
   $('avRandom').onclick = function () { avDraft = { preset: '', look: AV.randomize(String(Date.now()), APP.progress ? APP.progress() : APP.lit) }; renderAvatar(); };
   $('avDone').onclick = function () {
@@ -699,13 +725,15 @@
      10-19 降流量：變動判斷不含 playMin（累計滿 5 分鐘或離開頁面才補寫，見 achievements.js scoreDecide）；
      整份 score 節點只在「成就」分頁開著時才訂閱（平時只讀自己那一筆一次，用來避免把之前拿到的成就蓋掉）。 */
   var lastScore = null, myScoreAsked = false;
+  function stageToast() { try { if (!APP.me || !APP.me.sid || $('avatar').classList.contains('on') || !(window.ERG_ROOM && window.ERG_ROOM.cur && window.ERG_ROOM.toast)) return; var n = APP.stageNotice(); if (n) window.ERG_ROOM.toast('你走到第 ' + n.stage + ' 階段「' + AV.stageName(n.stage) + '」，解鎖新造型：' + n.labels.join('、') + '（到「選角色」看看）'); } catch (e) {} }
   function ensureMyScore() {
     try { loadCold(); } catch (x) {}   /* 11-03 冷門清單（成就判定要用；一個很小的節點，3 小時內不重讀） */
     if (myScoreAsked || !ONLINE || !window.firebase || !APP.me.sid) return;
     myScoreAsked = true;
     syncMats();
     window.firebase.database().ref('er/' + APP.SESS + '/score/' + APP.me.sid).once('value', function (snap) { window.ERG_MY_SCORE = snap.val() || {}; window.ERG_SCORES_READY = true; try { if ($('lobby') && $('lobby').classList.contains('on')) renderLobby(); } catch (x) {} }, function () { myScoreAsked = false; });   /* 10-27：在大廳（還沒進房間）也要讀自己的成績，讀到之後重畫大廳，不然指引卡一直顯示「現在共 0 枚」（曾亮瑜、何詩涵都是在大廳回報） */
-    try { window.firebase.database().ref('prx/' + APP.SESS + '/ach/' + APP.me.sid).once('value', function (snap) { window.ERG_MY_PX_ACH = Object.keys(snap.val() || {}); }, function () {}).catch(function () {}); } catch (e) {}   /* 11-03：提案室原型成就 */
+    try { window.firebase.database().ref('prx/' + APP.SESS + '/ach/' + APP.me.sid).once('value', function (snap) { window.ERG_MY_PX_ACH = Object.keys(snap.val() || {}); stageToast(); }, function () {}).catch(function () {}); } catch (e) {}
+    try { window.firebase.database().ref('prx/' + APP.SESS + '/doc/' + APP.me.sid).once('value', function (snap) { window.ERG_MY_PX_DOC = snap.val() || {}; stageToast(); }, function () {}).catch(function () {}); } catch (e) {}   /* 11-04：階段造型的訊號（只讀自己的提案文件） */   /* 11-03：提案室原型成就 */
     try { window.firebase.database().ref('sbx/' + APP.SESS + '/sbach/' + APP.me.sid).once('value', function (snap) { var v = snap.val() || {}; window.ERG_MY_SB_ACH = String(v.ids || '').split(',').filter(Boolean); }, function () {}); } catch (e) {}   /* 10-26：W8 故事板成就 */
   }
   function publishScore(force) {

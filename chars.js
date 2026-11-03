@@ -46,7 +46,9 @@
 
   /* 身形：w、h 是身體的寬高（底部固定在 94）；normal 與舊版完全相同 */
   var BODIES = { normal: { w: 30, h: 34 }, slim: { w: 22, h: 38 }, round: { w: 42, h: 34, shape: 'ellipse' }, broad: { w: 44, h: 30 },
-    short: { w: 34, h: 26 }, pear: { w: 36, h: 34, shape: 'pear' }, tall: { w: 26, h: 40, headDy: -3 } };
+    short: { w: 34, h: 26 }, pear: { w: 36, h: 34, shape: 'pear' }, tall: { w: 26, h: 40, headDy: -3 },
+    /* 11-04 階段造型：剪影差異大的新身形 */
+    bean: { w: 34, h: 42, shape: 'ellipse', headDy: -2 }, boxy: { w: 40, h: 38 }, bell: { w: 44, h: 36, shape: 'bell' }, lanky: { w: 20, h: 44, headDy: -4 }, giant: { w: 46, h: 44, shape: 'ellipse', headDy: -2 } };
 
   function character(look, opts) {
     opts = opts || {};
@@ -58,7 +60,10 @@
     /* 身體：小小一坨，歪的 */
     var lean = (r() - 0.5) * 6;
     var B = BODIES[look.body] || BODIES.normal, bw = B.w, bh = B.h, top = 94 - bh, k = bw / 30;
-    if (B.shape === 'ellipse') out.push(shape(wobblyEllipse(cx + lean, top + bh / 2, bw / 2, bh / 2 + 1, r, 4), outfit));
+    var r2 = rng((seed ^ 0x9e37) >>> 0), cloth = look.cloth;   /* 階段造型的新部件用另一組亂數，不影響舊造型的歪斜 */
+    if (cloth === 'cape') out.push(shape(closedSmooth([[cx + lean - bw / 2 + 2, top + 3], [cx + lean + bw / 2 - 2, top + 3], [cx + lean + bw / 2 + 11, 92 + (r2() - 0.5) * 3], [cx + lean, 96], [cx + lean - bw / 2 - 11, 92 + (r2() - 0.5) * 3]]), look.capColor || '#ff6b4a'));
+    if (B.shape === 'bell') out.push(shape(closedSmooth([[cx + lean - bw * 0.26, top], [cx + lean + bw * 0.26, top], [cx + lean + bw / 2, top + bh * 0.7], [cx + lean + bw / 2 + 1, top + bh], [cx + lean - bw / 2 - 1, top + bh], [cx + lean - bw / 2, top + bh * 0.7]]), outfit));
+    else if (B.shape === 'ellipse') out.push(shape(wobblyEllipse(cx + lean, top + bh / 2, bw / 2, bh / 2 + 1, r, 4), outfit));
     else if (B.shape === 'pear') out.push(shape(closedSmooth([[cx + lean - 10, top], [cx + lean + 10, top], [cx + lean + bw / 2, top + bh * .55], [cx + lean + bw / 2 + 1, top + bh], [cx + lean - bw / 2 - 1, top + bh], [cx + lean - bw / 2, top + bh * .55]]), outfit));
     else out.push(shape(wobblyRect(cx - bw / 2 + lean, top, bw, bh, r, 4), outfit));
     /* 10-18 衣服花紋 */
@@ -66,6 +71,11 @@
     if (pat === 'stripes') { out.push('<g opacity="0.4">' + line(cx - bw / 2 + 4 + lean, top + bh * 0.3, cx + bw / 2 - 4 + lean, top + bh * 0.3, 2.5) + line(cx - bw / 2 + 3 + lean, top + bh * 0.55, cx + bw / 2 - 3 + lean, top + bh * 0.55, 2.5) + line(cx - bw / 2 + 4 + lean, top + bh * 0.8, cx + bw / 2 - 4 + lean, top + bh * 0.8, 2.5) + '</g>'); }
     else if (pat === 'pocket') out.push('<rect x="' + f(cx + lean + bw / 6) + '" y="' + f(top + bh * 0.5) + '" width="10" height="9" rx="2" fill="none" stroke="' + INK + '" stroke-width="2" opacity="0.6"/>');
     else if (pat === 'dots') { out.push('<g opacity="0.35" fill="' + INK + '">' + [[-7, 0.3], [5, 0.4], [-2, 0.62], [9, 0.72], [-9, 0.8]].map(function (d) { return '<circle cx="' + f(cx + lean + d[0] * k) + '" cy="' + f(top + bh * d[1]) + '" r="2"/>'; }).join('') + '</g>'); }
+    else if (pat === 'splatter') { out.push('<g opacity="0.85">' + [[-7, 0.3, '#fa5252', 3], [6, 0.38, '#339af0', 2.4], [-2, 0.62, '#ffd43b', 3.2], [9, 0.74, '#51cf66', 2.2], [-9, 0.8, '#fa5252', 2.2], [2, 0.86, '#339af0', 2.6]].map(function (d) { return '<circle cx="' + f(cx + lean + d[0] * k) + '" cy="' + f(top + bh * d[1]) + '" r="' + d[3] + '" fill="' + d[2] + '"/>'; }).join('') + '</g>'); }
+    /* 11-04 外層衣物（背心、連帽衣、圍裙；披風在身體後面） */
+    if (cloth === 'vest') { out.push(shape(closedSmooth([[cx + lean - bw / 2, top + 1], [cx + lean - 4, top + 1], [cx + lean - 1, top + bh * 0.5], [cx + lean - 4, top + bh], [cx + lean - bw / 2, top + bh]]), '#495057', 2.5)); out.push(shape(closedSmooth([[cx + lean + bw / 2, top + 1], [cx + lean + 4, top + 1], [cx + lean + 1, top + bh * 0.5], [cx + lean + 4, top + bh], [cx + lean + bw / 2, top + bh]]), '#495057', 2.5)); }
+    else if (cloth === 'hoodie') { out.push(shape('M' + f(cx + lean - 9) + ' ' + f(top + bh * 0.58) + ' L' + f(cx + lean + 9) + ' ' + f(top + bh * 0.58) + ' L' + f(cx + lean + 11) + ' ' + f(top + bh * 0.95) + ' L' + f(cx + lean - 11) + ' ' + f(top + bh * 0.95) + 'Z', 'rgba(255,255,255,0.35)', 2.2)); out.push(line(cx + lean - 4, top + 3, cx + lean - 5, top + bh * 0.42, 2)); out.push(line(cx + lean + 4, top + 3, cx + lean + 5, top + bh * 0.42, 2)); }
+    else if (cloth === 'apron') { out.push(shape(closedSmooth([[cx + lean - 8, top + 3], [cx + lean + 8, top + 3], [cx + lean + bw / 2 - 1, top + bh], [cx + lean - bw / 2 + 1, top + bh]]), '#fff3bf', 2.5)); out.push('<rect x="' + f(cx + lean - 5) + '" y="' + f(top + bh * 0.55) + '" width="10" height="8" rx="2" fill="none" stroke="' + INK + '" stroke-width="2" opacity="0.6"/>'); out.push(line(cx + lean - 8, top + 3, cx + lean - 5, top - 3, 2)); out.push(line(cx + lean + 8, top + 3, cx + lean + 5, top - 3, 2)); }
     /* 手腳：粗短的線 */
     out.push(line(cx - (bw / 2 - 1) + lean, top + 8, cx - 24 * k, top + 22 + (r() - 0.5) * 4, 4));
     out.push(line(cx + (bw / 2 - 1) + lean, top + 8, cx + 25 * k, top + 20 + (r() - 0.5) * 4, 4));
@@ -73,6 +83,7 @@
     out.push(line(cx + 7 * k + lean, 94, cx + 10 * k, 100, 4));
     /* 頭：大 */
     var hx = cx + lean * 0.6, hy = 36 + (B.headDy || 0);
+    if (cloth === 'hoodie') out.push(shape(wobblyEllipse(hx, hy + 6, 32, 33, r2, 3), outfit));   /* 連帽衣的帽子：在頭後面 */
     if (look.head === 'square') out.push(shape(wobblyRect(hx - 25, hy - 24, 50, 46, r, 5), skin));
     else if (look.head === 'pear') out.push(shape(wobblyEllipse(hx, hy + 2, 23, 27, r, 5), skin));
     else out.push(shape(wobblyEllipse(hx, hy, 26, 28, r, 4), skin));
@@ -93,6 +104,12 @@
     else if (hair === 'long') { out.push(hcap); out.push(shape(wobblyRect(hx - 31, hy - 12, 10, 42, r, 3), hc)); out.push(shape(wobblyRect(hx + 21, hy - 12, 10, 42, r, 3), hc)); }
     else if (hair === 'spiky') out.push(shape('M' + f(hx - 26) + ' ' + f(hy - 10) + ' L' + f(hx - 22) + ' ' + f(hy - 34) + ' L' + f(hx - 12) + ' ' + f(hy - 24) + ' L' + f(hx - 6) + ' ' + f(hy - 40) + ' L' + f(hx + 2) + ' ' + f(hy - 26) + ' L' + f(hx + 10) + ' ' + f(hy - 40) + ' L' + f(hx + 14) + ' ' + f(hy - 25) + ' L' + f(hx + 24) + ' ' + f(hy - 34) + ' L' + f(hx + 26) + ' ' + f(hy - 10) + ' L' + f(hx + 14) + ' ' + f(hy - 20) + ' L' + f(hx) + ' ' + f(hy - 23) + ' L' + f(hx - 14) + ' ' + f(hy - 20) + 'Z', hc));
     else if (hair === 'beanie') { out.push(shape(closedSmooth([[hx - 27, hy - 12], [hx - 22, hy - 30], [hx, hy - 35], [hx + 22, hy - 30], [hx + 27, hy - 12], [hx, hy - 18]]), look.capColor || '#339af0')); out.push(circ(hx, hy - 38, 6, '#ffffff', 2.5)); }
+    if (hair === 'beret') { out.push(shape(closedSmooth([[hx - 24, hy - 22], [hx - 14, hy - 34], [hx + 8, hy - 36], [hx + 28, hy - 28], [hx + 26, hy - 20], [hx + 4, hy - 18], [hx - 16, hy - 16]]), look.capColor || '#ff6b4a')); out.push(circ(hx + 6, hy - 38, 3.2, look.capColor || '#ff6b4a', 2.2)); }
+    else if (hair === 'bob') out.push(shape(closedSmooth([[hx - 29, hy + 12], [hx - 29, hy - 14], [hx - 20, hy - 31], [hx, hy - 35], [hx + 20, hy - 31], [hx + 29, hy - 14], [hx + 29, hy + 12], [hx + 21, hy + 12], [hx + 21, hy - 13], [hx, hy - 15], [hx - 21, hy - 13], [hx - 21, hy + 12]]), hc));
+    else if (hair === 'afro') [[-24, -12, 12], [-21, -26, 13], [-8, -34, 14], [8, -34, 14], [21, -26, 13], [24, -12, 12]].forEach(function (c2) { out.push(circ(hx + c2[0], hy + c2[1], c2[2], hc, 2.5)); });
+    else if (hair === 'twinbuns') { out.push(circ(hx - 21, hy - 33, 9, hc, 2.5)); out.push(circ(hx + 21, hy - 33, 9, hc, 2.5)); out.push(hcap); }
+    else if (hair === 'bandana') { var bc = look.capColor || '#ff6b4a'; out.push(shape(closedSmooth([[hx - 27, hy - 12], [hx - 18, hy - 30], [hx + 18, hy - 30], [hx + 27, hy - 12], [hx + 18, hy - 17], [hx - 18, hy - 17]]), bc)); out.push(shape('M' + f(hx + 26) + ' ' + f(hy - 14) + ' L' + f(hx + 38) + ' ' + f(hy - 22) + ' L' + f(hx + 36) + ' ' + f(hy - 8) + 'Z', bc, 2.5)); out.push('<g fill="' + INK + '" opacity="0.5"><circle cx="' + f(hx - 10) + '" cy="' + f(hy - 23) + '" r="1.8"/><circle cx="' + f(hx) + '" cy="' + f(hy - 25) + '" r="1.8"/><circle cx="' + f(hx + 10) + '" cy="' + f(hy - 23) + '" r="1.8"/></g>'); }
+    else if (hair === 'crown') { out.push(shape('M' + f(hx - 18) + ' ' + f(hy - 25) + ' L' + f(hx - 19) + ' ' + f(hy - 42) + ' L' + f(hx - 9) + ' ' + f(hy - 33) + ' L' + f(hx) + ' ' + f(hy - 44) + ' L' + f(hx + 9) + ' ' + f(hy - 33) + ' L' + f(hx + 19) + ' ' + f(hy - 42) + ' L' + f(hx + 18) + ' ' + f(hy - 25) + 'Z', '#ffd43b', 2.5)); out.push(circ(hx, hy - 31, 2.6, '#fa5252', 1.5)); out.push(circ(hx - 10, hy - 29, 2, '#339af0', 1.5)); out.push(circ(hx + 10, hy - 29, 2, '#51cf66', 1.5)); }
     /* 眼睛：小、不對稱 */
     var ey = hy - 4, eyes = look.eyes || 'dots';
     var lx = hx - 10, rx2 = hx + 10 + (r() - 0.5) * 2;
@@ -136,6 +153,11 @@
     else if (prop === 'headphones') { out.push('<path d="M' + f(hx - 27) + ' ' + f(hy - 2) + ' Q' + f(hx) + ' ' + f(hy - 54) + ' ' + f(hx + 27) + ' ' + f(hy - 2) + '" stroke="' + INK + '" stroke-width="4" fill="none" stroke-linecap="round"/>'); out.push('<rect x="' + f(hx - 33) + '" y="' + f(hy - 9) + '" width="9" height="16" rx="4" fill="#fa5252" stroke="' + INK + '" stroke-width="2"/><rect x="' + f(hx + 24) + '" y="' + f(hy - 9) + '" width="9" height="16" rx="4" fill="#fa5252" stroke="' + INK + '" stroke-width="2"/>'); }
     else if (prop === 'coffee') { out.push('<rect x="' + f(cx + 21) + '" y="74" width="11" height="13" rx="2" fill="#f8f9fa" stroke="' + INK + '" stroke-width="2"/><path d="M' + f(cx + 32) + ' 78 q5 0 0 6" stroke="' + INK + '" stroke-width="2" fill="none"/><path d="M' + f(cx + 24) + ' 70 q-2 -4 1 -6 M' + f(cx + 29) + ' 70 q-2 -4 1 -6" stroke="#868e96" stroke-width="1.6" fill="none"/>'); }
     else if (prop === 'umbrella') { out.push(line(cx + 28, 62, cx + 28, 96, 2.5)); out.push(shape('M' + f(cx + 15) + ' 62 Q' + f(cx + 28) + ' 44 ' + f(cx + 40) + ' 62 Z', '#fa5252', 2.5)); }
+    else if (prop === 'pencil') { out.push(shape('M' + f(cx + 24) + ' 58 L' + f(cx + 31) + ' 58 L' + f(cx + 31) + ' 88 L' + f(cx + 27.5) + ' 97 L' + f(cx + 24) + ' 88Z', '#ffd43b', 2.2)); out.push(shape('M' + f(cx + 24) + ' 58 L' + f(cx + 31) + ' 58 L' + f(cx + 31) + ' 63 L' + f(cx + 24) + ' 63Z', '#ff8787', 2.2)); out.push(shape('M' + f(cx + 24.6) + ' 90 L' + f(cx + 27.5) + ' 97 L' + f(cx + 30.4) + ' 90Z', '#ffe8cc', 1.6)); }
+    else if (prop === 'stickies') { [['#fff3bf', 0, 0, -8], ['#ffc9c9', 5, 4, 6], ['#d3f9d8', 1, 9, -3]].forEach(function (n) { out.push('<rect x="' + f(cx + 17 + n[1]) + '" y="' + f(66 + n[2]) + '" width="14" height="14" fill="' + n[0] + '" stroke="' + INK + '" stroke-width="2" transform="rotate(' + n[3] + ' ' + f(cx + 24 + n[1]) + ' ' + f(73 + n[2]) + ')"/>'); }); out.push(line(cx + 20, 76, cx + 28, 76, 1.4)); }
+    else if (prop === 'laptop') { out.push(shape('M' + f(cx + 14) + ' 69 L' + f(cx + 34) + ' 69 L' + f(cx + 34) + ' 84 L' + f(cx + 14) + ' 84Z', '#343a40', 2.5)); out.push('<rect x="' + f(cx + 16.5) + '" y="71.5" width="15" height="10" fill="#a5d8ff"/>'); out.push(shape('M' + f(cx + 10) + ' 85 L' + f(cx + 38) + ' 85 L' + f(cx + 36) + ' 90 L' + f(cx + 12) + ' 90Z', '#ced4da', 2.2)); }
+    else if (prop === 'tape') { out.push(circ(cx + 27, 79, 10, '#ffd8a8', 2.5)); out.push(circ(cx + 27, 79, 4.5, '#f8f9fa', 2)); out.push(shape('M' + f(cx + 35) + ' 84 L' + f(cx + 40) + ' 90 L' + f(cx + 33) + ' 89Z', '#ffe8cc', 1.8)); }
+    else if (prop === 'flag') { out.push(line(cx + 26, 97, cx + 26, 52, 2.5)); out.push(shape('M' + f(cx + 26) + ' 52 L' + f(cx + 39) + ' 58 L' + f(cx + 26) + ' 65Z', '#fa5252', 2.2)); out.push(circ(cx + 26, 51, 2.2, '#ffd43b', 1.5)); }
     else if (prop === 'balloon') { out.push(line(cx + 24, 78, cx + 30, 30, 2)); out.push(circ(cx + 30, 24, 9, '#ff8787', 2.5)); }
     /* 情緒記號 */
     var mood = opts.mood || 'idle';

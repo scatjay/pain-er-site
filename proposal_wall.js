@@ -3,7 +3,7 @@
    同學的意見卡只能貼在「別人的卡」上；作者按「採納」，意見就變成下一版「這一版改了什麼」的一行字。
    新手模式只看不貼（介面維持簡潔），中級與專家可以貼卡、留意見。
    學生看得到的字全部用學生的說法；醫院一律叫「呼呼醫院」。
-   資料節點（規則另案）：prw/{場次}/{牆代碼}/{meta|cards}。 */
+   資料節點：prw/{場次}/{牆代碼}/{meta|cards}；meta＝{host, case, at, n（成員人數）, members, req（加入申請）}。 */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
   else root.ERG_WALL = factory();
@@ -19,28 +19,67 @@
     opn:  { k: 'opn',  label: '意見卡', color: '#ffc9c9', max: 160, tab: 'opn' }
   };
   var TABS = ['evid', 'dec', 'proto', 'opn'];
-  var COLX = { evid: 40, dec: 340, proto: 660, note: 340 };
+  var COLX = { evid: 40, dec: 340, proto: 660, note: 980 };   /* 四欄：證據｜決定｜原型｜便利貼（便利貼自己一欄，最右邊、最顯眼） */
 
   function str(v, n) { return String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, n || 200); }
   function isHttps(u) { return /^https:\/\/[^\s]+$/.test(String(u || '')); }
-  function empty(host, caseId, now) { return { meta: { host: String(host), case: caseId || 'sms', at: now || 0, members: {} }, cards: {} }; }
+  /* meta.n＝成員人數（規則引擎沒有 numChildren，成員上限靠這個計數器；見 docs/PROPOSAL_WALL_RULES_DRAFT.md）。
+     empty＋join(牆主) 與 newWallMeta 得到同一個形狀：{host, case, at, n:1, members:{牆主:{name, at}}}；meta.req＝同學按了「申請加入」留下的申請（牆主按一次同意才變成員） */
+  function empty(host, caseId, now) { return { meta: { host: String(host), case: caseId || 'sms', at: now || 0, n: 0, members: {} }, cards: {} }; }
+  function newWallMeta(host, name, caseId, now) { host = String(host); var m = {}; m[host] = { name: str(name, 16) || host, at: now || 0 }; return { host: host, 'case': caseId || 'sms', at: now || 0, n: 1, members: m }; }
+  var CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';   /* 去掉容易看錯的 I、O、0、1 */
+  function genCode(rnd, len) { rnd = rnd || Math.random; len = len || 5; var s = ''; for (var i = 0; i < len; i++) s += CODE_CHARS.charAt(Math.floor(rnd() * CODE_CHARS.length)); return s; }
+  /* 牆代碼：轉大寫、只留英數與 _-，長度 2–24（和規則一致）；不合格回空字串 */
+  function normCode(v) { var c = String(v == null ? '' : v).toUpperCase().replace(/[^A-Z0-9_-]/g, ''); return /^[A-Z0-9_-]{2,24}$/.test(c) ? c : ''; }
   function members(w) { return Object.keys((w && w.meta && w.meta.members) || {}); }
   function isMember(w, sid) { return !!(w && w.meta && w.meta.members && w.meta.members[String(sid)]); }
   /* 新手只看；中級與專家可以貼 */
   function canEdit(lv) { return Number(lv) === 2 || Number(lv) === 3; }
 
+  function memberCount(w) { return Math.max(members(w).length, Number(w && w.meta && w.meta.n) || 0); }
   function join(w, sid, name, now) {
     sid = String(sid);
     if (!w || !w.meta) return { ok: false, reason: 'nowall' };
     if (isMember(w, sid)) return { ok: true, already: true };
-    if (members(w).length >= MAX_MEMBERS) return { ok: false, reason: 'full', spectate: true };
+    if (memberCount(w) >= MAX_MEMBERS) return { ok: false, reason: 'full', spectate: true };
     w.meta.members = w.meta.members || {};
     w.meta.members[sid] = { name: str(name, 16) || sid, at: now || 0 };
+    w.meta.n = members(w).length;
+    if (w.meta.req) delete w.meta.req[sid];
     return { ok: true };
+  }
+  /* 牆主加一位成員要送出的「多路徑更新」（相對於 meta）：n 加 1＋新成員＋（有申請就順手清掉）。不修改 w；加不了回 null */
+  function addMemberUpdate(w, sid, name, now) {
+    sid = String(sid);
+    if (!w || !w.meta || isMember(w, sid) || memberCount(w) >= MAX_MEMBERS) return null;
+    var u = { n: memberCount(w) + 1 }; u['members/' + sid] = { name: str(name, 16) || sid, at: now || 0 };
+    if (w.meta.req && w.meta.req[sid]) u['req/' + sid] = null;
+    return u;
+  }
+  /* 同學想加入：寫 meta/req/{學號}。滿了就是旁觀者（只看） */
+  function requestJoin(w, sid, name, now) {
+    sid = String(sid);
+    if (!w || !w.meta) return { ok: false, reason: 'nowall' };
+    if (isMember(w, sid)) return { ok: false, reason: 'member' };
+    if (memberCount(w) >= MAX_MEMBERS) return { ok: false, reason: 'full', spectate: true };
+    return { ok: true, path: 'req/' + sid, value: { name: str(name, 16) || sid, at: now || 0 } };
+  }
+  function requests(w) {
+    var r = (w && w.meta && w.meta.req) || {};
+    return Object.keys(r).filter(function (k) { return !isMember(w, k) && r[k]; }).map(function (k) { return { sid: k, name: str(r[k].name, 16) || k, at: Number(r[k].at) || 0 }; }).sort(function (a, b) { return a.at - b.at; });
+  }
+  /* 這個人在這面牆的身分：host 牆主｜member 成員｜pending 已申請、等牆主同意｜spectator 旁觀（滿了或還沒申請） */
+  function roleOf(w, sid) {
+    sid = String(sid);
+    if (!w || !w.meta) return 'none';
+    if (String(w.meta.host) === sid && isMember(w, sid)) return 'host';
+    if (isMember(w, sid)) return 'member';
+    if (w.meta.req && w.meta.req[sid]) return 'pending';
+    return 'spectator';
   }
   function nameOf(w, sid) { var m = w && w.meta && w.meta.members && w.meta.members[String(sid)]; return (m && m.name) || String(sid); }
 
-  /* 新卡自動擺位：證據、決定、原型各一欄往下排；便利貼放決定欄右側；意見卡貼在目標卡旁 */
+  /* 新卡自動擺位：證據、決定、原型、便利貼各一欄往下排；意見卡貼在目標卡旁 */
   function autoPos(w, type, target) {
     var cards = (w && w.cards) || {}, ids = Object.keys(cards);
     if (type === 'opn' && target && cards[target]) {
@@ -48,8 +87,7 @@
       return { x: Number(cards[target].x || 0) + 24 + n * 18, y: Number(cards[target].y || 0) + 150 + n * 18 };
     }
     var k = ids.filter(function (i) { return cards[i].t === type; }).length;
-    var base = type === 'note' ? 640 : 70;
-    return { x: (COLX[type] || 340) + (type === 'note' ? (k % 3) * 20 : 0), y: base + k * (type === 'note' ? 70 : 190) };
+    return { x: COLX[type] || 340, y: 70 + k * (type === 'note' ? 160 : 190) };
   }
 
   function newId(w, now) {
@@ -152,5 +190,5 @@
     return { cards: s.evid + s.dec + s.proto + s.note, opinions: s.opn, adopted: s.adopted, voices: s.voices, lines: adoptedLines(w, sid, v) };
   }
 
-  return { MAX_MEMBERS: MAX_MEMBERS, TYPES: TYPES, TABS: TABS, empty: empty, members: members, isMember: isMember, canEdit: canEdit, join: join, nameOf: nameOf, autoPos: autoPos, addCard: addCard, adopt: adopt, adoptedLines: adoptedLines, stats: stats, ach: ach, mobileList: mobileList, summary: summary, isHttps: isHttps };
+  return { MAX_MEMBERS: MAX_MEMBERS, TYPES: TYPES, TABS: TABS, empty: empty, newWallMeta: newWallMeta, genCode: genCode, normCode: normCode, memberCount: memberCount, addMemberUpdate: addMemberUpdate, requestJoin: requestJoin, requests: requests, roleOf: roleOf, members: members, isMember: isMember, canEdit: canEdit, join: join, nameOf: nameOf, autoPos: autoPos, addCard: addCard, adopt: adopt, adoptedLines: adoptedLines, stats: stats, ach: ach, mobileList: mobileList, summary: summary, isHttps: isHttps };
 });

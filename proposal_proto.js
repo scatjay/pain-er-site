@@ -83,6 +83,7 @@
       cards.forEach(function (c, i) { L.push((cards.length > 1 ? (i + 1) + '. ' : '') + c.p); });
     }
     if (opts.extra) L.push(clip(opts.extra, 200));
+    if (tool.k === 'ais') L.push('這是純前端的練習：不要使用任何 API、不要呼叫 Gemini 或其他外部服務、不要需要金鑰，資料都寫在畫面裡就好。');
     L.push('不要放任何真人姓名、病歷號或日期；做完請用一兩句話說明你改了哪裡。');
     return { tool: tool.k, toolName: tool.name, where: tool.where, text: L.join('\n') };
   }
@@ -141,7 +142,17 @@
     }
     return m;
   }
+  /* 前面還沒做完的步驟：只提示、不擋人（學生喜歡先動手，想先做原型可以）。
+     st＝PX.status 的結果；ctx＝{evidence: 訪談證據張數, cells: 故事板格數}。回傳每一項 {k, text, go}，go 給畫面做「帶我去」。 */
+  function prereq(st, ctx) {
+    st = st || {}; ctx = ctx || {}; var out = [];
+    if (!ctx.evidence) out.push({ k: 'iv', text: '還沒訪談任何人', go: 'game' });
+    if (!ctx.cells) out.push({ k: 'sb', text: '還沒排故事板', go: 'story' });
+    if (!st.dirOk) out.push({ k: 'dir', text: '還沒選方向、寫為什麼', go: 'dir' });
+    if ((st.rowsFilled || 0) < 1) out.push({ k: 'row', text: '對準表還沒寫任何一個設計決定', go: 'rows' });
+    return out;
+  }
   function stepName(i) { return ['① 挑一張指引卡', '② 複製指令、貼到工具', '③ 把結果貼回來', '④ 自己檢查'][i] || ''; }
 
-  return { MAXV: MAXV, verKeys: verKeys, iterReq: iterReq, freeze: freeze, TOOLS: TOOLS, CARDS: CARDS, CHK: CHK, HEUR: HEUR, LIMITS: LIMITS, level: level, view: view, cardsFor: cardsFor, cardById: cardById, defaultCard: defaultCard, isHttps: isHttps, buildPrompt: buildPrompt, emptyProto: emptyProto, normProto: normProto, protoForWrite: protoForWrite, missing: missing, stepName: stepName };
+  return { MAXV: MAXV, verKeys: verKeys, iterReq: iterReq, freeze: freeze, TOOLS: TOOLS, CARDS: CARDS, CHK: CHK, HEUR: HEUR, LIMITS: LIMITS, level: level, view: view, cardsFor: cardsFor, cardById: cardById, defaultCard: defaultCard, isHttps: isHttps, buildPrompt: buildPrompt, emptyProto: emptyProto, normProto: normProto, protoForWrite: protoForWrite, missing: missing, prereq: prereq, stepName: stepName };
 });

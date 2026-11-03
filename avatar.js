@@ -9,24 +9,29 @@
 
   var OPT = {
     head:  ['egg', 'pear', 'square'],
-    body:  ['normal', 'slim', 'round', 'broad', 'short', 'pear', 'tall'],
-    hair:  ['bald', 'tuft', 'curl', 'cap', 'bun', 'pony', 'long', 'spiky', 'beanie'],
+    body:  ['normal', 'slim', 'round', 'broad', 'short', 'pear', 'tall', 'bean', 'boxy', 'bell', 'lanky', 'giant'],
+    hair:  ['bald', 'tuft', 'curl', 'cap', 'bun', 'pony', 'long', 'spiky', 'beanie', 'beret', 'bob', 'afro', 'twinbuns', 'bandana', 'crown'],
     eyes:  ['dots', 'droopy', 'spiral', 'sparkle', 'tired', 'happy'],
     mouth: ['flat', 'frown', 'open', 'teeth', 'smile', 'o', 'tongue'],
-    prop:  ['', 'phone', 'clipboard', 'mask', 'bandage', 'balloon', 'glasses', 'headphones', 'coffee', 'umbrella'],
+    prop:  ['', 'phone', 'clipboard', 'mask', 'bandage', 'balloon', 'glasses', 'headphones', 'coffee', 'umbrella', 'pencil', 'stickies', 'laptop', 'tape', 'flag'],
     skin:  ['#f9dcc4', '#f1d6b8', '#e8c7a1', '#d9b38c', '#c08e63', '#8d5a3b'],
     outfit: ['#a5d8ff', '#ffd43b', '#ff8787', '#b2f2bb', '#d0bfff', '#ffa94d', '#99e9f2', '#868e96'],
     capColor: ['#ffffff', '#ff6b4a', '#339af0', '#ffd43b'],
     hairColor: ['#4a3b32', '#2b2b2b', '#a5601f', '#e8b04a', '#868e96', '#c2255c', '#1c7ed6'],
-    pattern: ['none', 'stripes', 'pocket', 'dots'],
-    cheek: ['none', 'blush']
+    pattern: ['none', 'stripes', 'pocket', 'dots', 'splatter'],
+    cheek: ['none', 'blush'],
+    cloth: ['none', 'vest', 'hoodie', 'apron', 'cape']   /* 11-04 外層衣物（階段造型） */
   };
-  var LABEL = { head: '臉型', body: '身形', hair: '頭髮', eyes: '眼睛', mouth: '嘴巴', prop: '手邊的東西', skin: '膚色', outfit: '衣服顏色', capColor: '帽子顏色', hairColor: '髮色', pattern: '衣服花紋', cheek: '臉頰' };
+  /* 舊的造型沒有這些部件時，視為預設值（不算無效） */
+  var OPTIONAL = { cloth: 'none' };
+  var LABEL = { head: '臉型', body: '身形', hair: '頭髮', eyes: '眼睛', mouth: '嘴巴', prop: '手邊的東西', skin: '膚色', outfit: '衣服顏色', capColor: '帽子顏色', hairColor: '髮色', pattern: '衣服花紋', cheek: '臉頰', cloth: '外層衣物' };
   var NAME = { normal: '標準', slim: '瘦長', round: '圓滾滾', broad: '寬肩', short: '矮胖', tall: '高挑', egg: '蛋', pear: '梨', square: '方', bald: '光頭', tuft: '三根毛', curl: '捲', cap: '帽子',
     dots: '小點', droopy: '垂眼', spiral: '蚊香', flat: '一字', frown: '倒彎', open: '張嘴', teeth: '露牙', '': '空手',
     phone: '手機', clipboard: '板夾', mask: '口罩', bandage: '貼布', balloon: '氣球',
     bun: '包子頭', pony: '馬尾', long: '長髮', spiky: '刺蝟頭', beanie: '毛帽', sparkle: '閃亮', tired: '黑眼圈', happy: '彎彎笑', smile: '微笑', o: '小圓', tongue: '吐舌',
-    glasses: '眼鏡', headphones: '耳機', coffee: '咖啡', umbrella: '雨傘', none: '無', stripes: '條紋', pocket: '口袋', dots: '圓點', blush: '腮紅' };
+    glasses: '眼鏡', headphones: '耳機', coffee: '咖啡', umbrella: '雨傘', none: '無', stripes: '條紋', pocket: '口袋', dots: '圓點', blush: '腮紅',
+    bean: '豆豆', boxy: '方塊', bell: '鐘形', lanky: '竹竿', giant: '大隻', beret: '畫家帽', bob: '鮑伯頭', afro: '蓬蓬頭', twinbuns: '雙丸子', bandana: '綁頭巾', crown: '紙皇冠',
+    pencil: '大鉛筆', stickies: '便利貼', laptop: '筆電', tape: '膠帶捲', flag: '小旗子', splatter: '顏料點', vest: '背心', hoodie: '連帽衣', apron: '工作圍裙', cape: '披風' };
 
   /* 起始角色：每位都有一點無奈的個性 */
   var PRESETS = [
@@ -63,11 +68,53 @@
     { by: 'ask', need: 2, part: 'pattern', value: 'pocket', label: '口袋衣服' },
     { by: 'ctx', need: 2, part: 'hair', value: 'long', label: '長髮' },
     { by: 'ctx', need: 2, part: 'pattern', value: 'dots', label: '圓點衣服' },
-    { by: 'lv3', need: 3, part: 'hairColor', value: '#e8b04a', label: '金色髮色' }
+    { by: 'lv3', need: 3, part: 'hairColor', value: '#e8b04a', label: '金色髮色' },
+    /* 11-04 階段造型：走到第 N 階段才解鎖，每一組都是剪影明顯不同的樣式 */
+    { by: 'stage', need: 2, part: 'body', value: 'bean', label: '豆豆身形' },
+    { by: 'stage', need: 2, part: 'hair', value: 'beret', label: '畫家帽' },
+    { by: 'stage', need: 2, part: 'prop', value: 'pencil', label: '大鉛筆' },
+    { by: 'stage', need: 2, part: 'pattern', value: 'splatter', label: '顏料點衣服' },
+    { by: 'stage', need: 3, part: 'body', value: 'boxy', label: '方塊身形' },
+    { by: 'stage', need: 3, part: 'hair', value: 'bob', label: '鮑伯頭' },
+    { by: 'stage', need: 3, part: 'cloth', value: 'vest', label: '背心' },
+    { by: 'stage', need: 3, part: 'prop', value: 'stickies', label: '便利貼' },
+    { by: 'stage', need: 4, part: 'body', value: 'bell', label: '鐘形身形' },
+    { by: 'stage', need: 4, part: 'hair', value: 'twinbuns', label: '雙丸子頭' },
+    { by: 'stage', need: 4, part: 'cloth', value: 'hoodie', label: '連帽衣' },
+    { by: 'stage', need: 4, part: 'prop', value: 'laptop', label: '筆電' },
+    { by: 'stage', need: 5, part: 'body', value: 'lanky', label: '竹竿身形' },
+    { by: 'stage', need: 5, part: 'hair', value: 'bandana', label: '綁頭巾' },
+    { by: 'stage', need: 5, part: 'hair', value: 'afro', label: '蓬蓬頭' },
+    { by: 'stage', need: 5, part: 'cloth', value: 'apron', label: '工作圍裙' },
+    { by: 'stage', need: 5, part: 'prop', value: 'tape', label: '膠帶捲' },
+    { by: 'stage', need: 6, part: 'body', value: 'giant', label: '大隻身形' },
+    { by: 'stage', need: 6, part: 'hair', value: 'crown', label: '紙皇冠' },
+    { by: 'stage', need: 6, part: 'cloth', value: 'cape', label: '披風' },
+    { by: 'stage', need: 6, part: 'prop', value: 'flag', label: '小旗子' }
   ];
+
+  /* 階段（只影響外觀）：1 訪談（一開始就有）、2 排了故事板、3 進了提案室並選好方向或寫了設計決定、4 存出第一版原型、5 改了再改、6 原型過審 */
+  var STAGES = [
+    { n: 1, name: '訪談', desc: '一開始就有' },
+    { n: 2, name: '排故事板', desc: '故事板裡寫了第一格' },
+    { n: 3, name: '進提案室', desc: '選好方向，或寫下第一個設計決定' },
+    { n: 4, name: '存出第一版', desc: '原型存出第一版' },
+    { n: 5, name: '改了再改', desc: '原型改過、存出新版本' },
+    { n: 6, name: '原型過審', desc: '原型通過審核' }
+  ];
+  /* 每個階段一組完整的「階段造型」：只換剪影與穿搭（身形、頭上、外層衣物、手邊、花紋、衣服色），臉型、膚色、眼嘴、臉頰保留學生自己的。
+     只用免費選項的顏色，所以只要走到該階段，整組都能用。 */
+  var STAGE_LOOKS = [
+    { id: 'sketch',  stage: 2, name: '塗鴉不停派',   look: { body: 'bean',  hair: 'beret',    cloth: 'none',   prop: 'pencil',   pattern: 'splatter', outfit: '#b2f2bb', capColor: '#ff6b4a', hairColor: '#4a3b32' } },
+    { id: 'sticky',  stage: 3, name: '貼滿整面牆派', look: { body: 'boxy',  hair: 'bob',      cloth: 'vest',   prop: 'stickies', pattern: 'none',     outfit: '#ffd43b', capColor: '#ffffff', hairColor: '#2b2b2b' } },
+    { id: 'hoodie',  stage: 4, name: '連帽趕工派',   look: { body: 'bell',  hair: 'twinbuns', cloth: 'hoodie', prop: 'laptop',   pattern: 'none',     outfit: '#d0bfff', capColor: '#ffffff', hairColor: '#a5601f' } },
+    { id: 'redo',    stage: 5, name: '改到第三版派', look: { body: 'lanky', hair: 'bandana',  cloth: 'apron',  prop: 'tape',     pattern: 'none',     outfit: '#a5d8ff', capColor: '#ff6b4a', hairColor: '#4a3b32' } },
+    { id: 'victory', stage: 6, name: '過審凱旋派',   look: { body: 'giant', hair: 'crown',    cloth: 'cape',   prop: 'flag',     pattern: 'none',     outfit: '#ff8787', capColor: '#339af0', hairColor: '#4a3b32' } }
+  ];
+  function clampStage(n) { n = Math.floor(Number(n)); return n >= 1 ? Math.min(6, n) : 1; }
   function prog(p) {
-    if (p && typeof p === 'object') return { lit: Number(p.lit) || 0, badges: Number(p.badges) || 0, ask: Number(p.ask) || 1, ctx: Number(p.ctx) || 1 };
-    return { lit: Number(p) || 0, badges: 0, ask: 1, ctx: 1 };
+    if (p && typeof p === 'object') return { lit: Number(p.lit) || 0, badges: Number(p.badges) || 0, ask: Number(p.ask) || 1, ctx: Number(p.ctx) || 1, stage: clampStage(p.stage) };
+    return { lit: Number(p) || 0, badges: 0, ask: 1, ctx: 1, stage: 1 };
   }
   function met(u, p) {
     if (!u.by) return p.lit >= u.need;
@@ -75,6 +122,7 @@
     if (u.by === 'ask') return p.ask >= u.need;
     if (u.by === 'ctx') return p.ctx >= u.need;
     if (u.by === 'lv3') return Math.max(p.ask, p.ctx) >= u.need;
+    if (u.by === 'stage') return p.stage >= u.need;
     return true;
   }
   function hint(u) {
@@ -82,6 +130,7 @@
     if (u.by === 'badges') return '拿到 ' + u.need + ' 個成就才能用';
     if (u.by === 'ask') return '探問升到 Lv.' + u.need + ' 才能用';
     if (u.by === 'ctx') return '情境感知升到 Lv.' + u.need + ' 才能用';
+    if (u.by === 'stage') return '走到第 ' + u.need + ' 階段才能用';
     return '任一項技能升到 Lv.' + u.need + ' 才能用';
   }
 
@@ -115,7 +164,7 @@
     var base = (fallback && fallback.look) || PRESETS[0].look, out = {};
     Object.keys(OPT).forEach(function (k) {
       var v = look && look[k];
-      out[k] = OPT[k].indexOf(v) >= 0 ? v : base[k];
+      out[k] = OPT[k].indexOf(v) >= 0 ? v : (base[k] !== undefined ? base[k] : (OPTIONAL[k] !== undefined ? OPTIONAL[k] : OPT[k][0]));
     });
     return out;
   }
@@ -124,6 +173,7 @@
   function validate(look, lit) {
     var errors = [], locked = unlockedSet(lit || 0);
     Object.keys(OPT).forEach(function (k) {
+      if (look && look[k] === undefined && OPTIONAL[k] !== undefined) return;
       if (!look || OPT[k].indexOf(look[k]) < 0) errors.push({ part: k, msg: LABEL[k] + '的值無效' });
       else if (locked[k + '|' + look[k]]) errors.push({ part: k, msg: LABEL[k] + '「' + (NAME[look[k]] || look[k]) + '」' + hint(locked[k + '|' + look[k]]) });
     });
@@ -159,6 +209,31 @@
     return UNLOCKS.filter(function (u) { return !met(u, b) && met(u, c); });
   }
 
-  return { OPT: OPT, LABEL: LABEL, NAME: NAME, PRESETS: PRESETS, UNLOCKS: UNLOCKS, options: options, defaultFor: defaultFor, preset: preset,
+  /* 階段訊號 → 階段（純函式，畫面端把訊號組好傳進來，這裡不碰資料庫）
+     signals：{ sbFilled：故事板寫了幾格, dirPicked：提案室選好方向, rowsDecided：對準表寫了幾個設計決定, pxAch：['first','iter','passed']… } */
+  function stageOf(signals) {
+    var s = signals || {}, ach = (Array.isArray(s.pxAch) ? s.pxAch : []).map(String), st = 1;
+    if (Number(s.sbFilled) > 0) st = 2;
+    if (s.dirPicked || Number(s.rowsDecided) > 0) st = Math.max(st, 3);
+    if (ach.indexOf('first') >= 0) st = Math.max(st, 4);
+    if (ach.indexOf('iter') >= 0) st = Math.max(st, 5);
+    if (ach.indexOf('passed') >= 0) st = Math.max(st, 6);
+    return st;
+  }
+  function stageName(n) { var x = STAGES.filter(function (g) { return g.n === clampStage(n); })[0]; return x ? x.name : ''; }
+
+  /* 階段造型清單（含鎖定狀態與提示） */
+  function stageLooks(progress) {
+    var p = prog(progress);
+    return STAGE_LOOKS.map(function (g) { var open = p.stage >= g.stage; return { id: g.id, name: g.name, stage: g.stage, stageName: stageName(g.stage), locked: !open, hint: open ? '' : '走到第 ' + g.stage + ' 階段才能用', look: JSON.parse(JSON.stringify(g.look)) }; });
+  }
+  /* 把階段造型套到學生目前的造型上：換剪影與穿搭，保留臉型、膚色、眼睛、嘴巴、臉頰 */
+  function applyStage(look, id) {
+    var g = STAGE_LOOKS.filter(function (x) { return x.id === id; })[0];
+    if (!g) throw new Error('沒有這個階段造型：' + id);
+    var next = normalize(look); Object.keys(g.look).forEach(function (k) { next[k] = g.look[k]; }); return next;
+  }
+
+  return { OPT: OPT, STAGES: STAGES, STAGE_LOOKS: STAGE_LOOKS, stageOf: stageOf, stageName: stageName, stageLooks: stageLooks, applyStage: applyStage, LABEL: LABEL, NAME: NAME, PRESETS: PRESETS, UNLOCKS: UNLOCKS, options: options, defaultFor: defaultFor, preset: preset,
     prog: prog, met: met, hint: hint, normalize: normalize, validate: validate, set: set, randomize: randomize, toCharLook: toCharLook, newlyUnlocked: newlyUnlocked };
 });

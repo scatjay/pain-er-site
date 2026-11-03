@@ -69,6 +69,14 @@
     var items = [['🧪', '第一版原型', !!a.first], ['🔁', '改了再改（' + (need || '中級 2 版／專家 3 版') + (need ? ' 版' : '') + '）', !!a.iter], ['🎯', '原型過審', !!a.passed]];
     return '<div class="pt-ach">' + items.map(function (x) { return '<span class="pt-chip' + (x[2] ? ' got' : '') + '">' + x[0] + ' ' + esc(x[1]) + (x[2] ? ' ✓' : '') + '</span>'; }).join('') + '</div>';
   }
+  /* 前面還沒做完的步驟：提示但不擋，學生想先動手做原型可以直接做 */
+  function preBox() {
+    var s = S(); if (!s) return '';
+    var list = P.prereq(s.st || {}, { evidence: (s.evidence || []).length, cells: (s.cells || []).length });
+    if (!list.length) return '';
+    var href = function (go) { var a = go === 'game' ? $('reviseLink') : go === 'story' ? $('sbLink') : null; return a && a.getAttribute('href') ? a.getAttribute('href') : (go === 'dir' ? '#secDir' : go === 'rows' ? '#secRows' : '#'); };
+    return '<div class="pt-pre" role="note"><b>想先動手可以直接做。</b> 前面這些還沒完成，做完之後指令會更貼你問到的內容：<ul>' + list.map(function (q) { return '<li>' + esc(q.text) + '　<a href="' + esc(href(q.go)) + '">' + (q.go === 'game' ? '回急診室' : q.go === 'story' ? '去排故事板' : '帶我去') + '</a></li>'; }).join('') + '</ul></div>';
+  }
   function toastMsg(m) { var t = $('toast'); if (!t) return; t.textContent = m; t.className = 'on'; clearTimeout(toastMsg.t); toastMsg.t = setTimeout(function () { t.className = ''; }, 3000); }
 
   /* ———— 畫面 ———— */
@@ -138,7 +146,7 @@
     if (v.lv === 1 && T.tool !== 'dsg' && T.tool !== 'ais') T.tool = 'dsg';
     ensureCards(v);
     var head = '<h2>③ 做成能測的原型</h2><div class="muted">用你前面對準的訪談與線索，產生指令，貼到 Claude／Figma／Google AI Studio 做出來，再把結果貼回這裡檢查。全部用練習資料。' +
-      ' <a href="https://claude.ai/code/artifact/a21e7a8b-aefe-4383-a745-0f764a91a1f5#w12x" target="_blank" rel="noopener">學習單有完整流程</a>　<a href="https://scatjay.github.io/wenhua-designjam-site/hh_open.html" target="_blank" rel="noopener">開了樣板檔案先回報</a></div>' + modeBar(lv);
+      ' <a href="https://claude.ai/code/artifact/a21e7a8b-aefe-4383-a745-0f764a91a1f5#w12x" target="_blank" rel="noopener">學習單有完整流程</a>　<a href="https://scatjay.github.io/wenhua-designjam-site/hh_open.html" target="_blank" rel="noopener">開了樣板檔案先回報</a></div>' + modeBar(lv) + preBox();
     var body;
     if (v.oneStep) {
       var steps = [stepPick, stepCopy, stepBack, stepCheck];
