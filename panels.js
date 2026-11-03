@@ -18,7 +18,16 @@
   /* 成就分頁：自己的指標與徽章＋班級「誰最多」（線上模式讀 er/{sess}/score；本機版只有自己） */
   /* 10-29：筆記卡存在畫布（手機是 room.mcards），player.cards 從來沒人寫入 → 便利貼大師與「便利貼最多」永遠 0；改數自己記的卡 */
   function myCardCount() { try { return L.listMarkers(RM.markerEls()).filter(function (m) { return String(m.author) === String(me()); }).length; } catch (e) { return 0; } }
-  function achCtx() { var c = cur(); var cp = (window.ERG_CORE && window.ERG_CP && c) ? (function () { try { var st = window.ERG_CORE.checkpointState(c, me()); return window.ERG_CP.evaluate(st).every(function (x) { return x.ok; }); } catch (e) { return false; } })() : false; return { cards: myCardCount(), cpAllOk: cp, shift: c && c.world && c.world.shift, cases: casesTried(), reports: reportsMade(), fb: fbMine(), keep: keptBadges(), sb: window.ERG_MY_SBD || null, prevSk: prevW8Sk() }; }
+  function achCtx() { var c = cur(); var cp = (window.ERG_CORE && window.ERG_CP && c) ? (function () { try { var st = window.ERG_CORE.checkpointState(c, me()); return window.ERG_CP.evaluate(st).every(function (x) { return x.ok; }); } catch (e) { return false; } })() : false; return { cards: myCardCount(), cpAllOk: cp, shift: c && c.world && c.world.shift, cases: casesTried(), reports: reportsMade(), fb: fbMine(), keep: keptBadges(), sb: window.ERG_MY_SBD || null, prevSk: prevW8Sk(), cold: coldCtx() }; }
+  /* 11-03 冷門房間／人物成就：清單（大廳讀進來的 er/{場次}/cold）＋我在所有房間的玩家紀錄（換案例開新房間也合併算） */
+  function coldCtx() {
+    try {
+      var L = window.ERG_COLD_LIST, c = cur(); if (!L) return null;
+      var sid = String(me()), ps = c && c.player ? [c.player] : [];
+      DB.listRooms(APP.SESS).forEach(function (r) { if (c && r.code === c.code) return; var x = (r && r.members !== undefined) ? r : (DB.getRoom(r.code) || {}); if (x.members && x.members[sid]) { var pl = window.ERG_CORE.getPlayer(x, sid); if (pl) ps.push(pl); } });
+      return { list: L, players: ps };
+    } catch (e) { return null; }
+  }
   /* 10-27 W8 技能：上次已發布的等級（等級不倒退） */
   function prevW8Sk() { try { var s = window.ERG_MY_SCORE || {}; return { story: s.skStory, source: s.skSource }; } catch (e) { return {}; } }
   /* 10-15：成就是照『現在這間房』的紀錄算的，換案例開新房間會歸零；把之前已發布的成就帶回來，已拿到的不收回 */
@@ -446,7 +455,7 @@
         window.firebase.database().ref('er/_queue').push({ sess: APP.SESS, code: c.code, sid: me(), rec: safeKey(rec.id), turn: key, t: now });
       });
       var qc = (window.ERG_ACH && window.ERG_ACH.questionCheck) ? window.ERG_ACH.questionCheck(P.qState, text, now) : { ok: true, state: P.qState }; P.qState = qc.state;   /* 11-02：重複、太快、太短的不算提問數（訊息照送；手機版同一條路徑） */
-      if (qc.ok) { player().chatTurns = (Number(player().chatTurns) || 0) + 1; player().chatUniq = (Number(player().chatUniq) || 0) + 1; }   /* 成就用：即時訪談送出幾題 */
+      if (qc.ok) { player().chatTurns = (Number(player().chatTurns) || 0) + 1; player().chatUniq = (Number(player().chatUniq) || 0) + 1; try { if (window.ERG_ACH.noteValidQuestion) window.ERG_ACH.noteValidQuestion(player(), ent.pid, text); } catch (e) {} }   /* 11-03 冷門人物成就：有效提問（再擋寒暄、太短、同字連打） */   /* 成就用：即時訪談送出幾題 */
       P.skInvalidate();
       try { if (window.ERG_ACH && window.ERG_ACH.noteOffHours) window.ERG_ACH.noteOffHours(player(), now); } catch (e) {}   /* 10-23 課外時間成就 */
       try { if (window.ERG_ACH && window.ERG_ACH.noteQuestion) { var us = lastTurns.filter(function (t) { return t.role === 'u'; }), as = lastTurns.filter(function (t) { return t.role !== 'u'; }); window.ERG_ACH.noteQuestion(player(), { text: text, pid: ent.pid, prev: as.length ? as[as.length - 1].text : '', first: us.length === 0, n: us.length + 1 }); } } catch (e) {}

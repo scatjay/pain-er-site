@@ -129,9 +129,15 @@
       if (r.accent && !isHall) out.push('<rect data-zone="' + esc(r.zone || '') + '" x="' + (r.x + 8) + '" y="' + (r.y + 5) + '" width="' + (r.w - 16) + '" height="' + (compact ? 30 : 9) + '" rx="6" fill="' + esc(r.accent) + '" stroke="#1e1e1e" stroke-width="2"/>');
       if (isHall) {
         var hs = Math.min(compact ? 30 : 18 * F, r.h * .6);
-        out.push(glyph(icon, r.x + 24, r.y + r.h / 2 + hs * .35, hs, '', ' opacity=".7"'));
-        out.push('<text x="' + (r.x + r.w / 2) + '" y="' + num(r.y + r.h / 2 + hs * .4) + '" font-size="' + num(Math.min(compact ? 34 : 20 * F, r.h * .66)) + '" font-weight="800" text-anchor="middle" fill="#3b4a52" letter-spacing="2">' + esc(compact ? (SHORT[r.id] || r.name) : r.name) + '</text>');
-        out.push(glyph(icon, r.x + r.w - 24, r.y + r.h / 2 + hs * .35, hs, 'end', ' opacity=".7"'));
+        /* 11-03：窄走道（救護車道）房名比房間還寬時，兩端圖示會壓在字上（字和圖混在一起）：字太寬就縮小，放不下兩端圖示就不畫 */
+        var hname = esc(compact ? (SHORT[r.id] || r.name) : r.name), hlen = Math.max(1, (compact ? (SHORT[r.id] || r.name) : r.name).length);
+        var hfs = Math.min(compact ? 34 : 20 * F, r.h * .66), hls = 2;
+        var hneed = hfs * hlen + hls * hlen, hside = 2 * (hs + 30);
+        if (hneed > r.w - 8) { hfs = Math.max(8, (r.w - 8) / hlen - hls); hneed = hfs * hlen + hls * hlen; }
+        var hicons = hneed + hside <= r.w;
+        if (hicons) out.push(glyph(icon, r.x + 24, r.y + r.h / 2 + hs * .35, hs, '', ' opacity=".7"'));
+        out.push('<text x="' + (r.x + r.w / 2) + '" y="' + num(r.y + r.h / 2 + hs * .4) + '" font-size="' + num(hfs) + '" font-weight="800" text-anchor="middle" fill="#3b4a52" letter-spacing="' + hls + '">' + hname + '</text>');
+        if (hicons) out.push(glyph(icon, r.x + r.w - 24, r.y + r.h / 2 + hs * .35, hs, 'end', ' opacity=".7"'));
       } else {
         if (compact) {
           /* 小地圖：大圖示＋短名稱，遠看也認得 */

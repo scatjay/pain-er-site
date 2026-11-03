@@ -688,8 +688,12 @@
   }
   function renderMinimap() {
     if (!cur || !$('minimapBox').classList.contains('open')) return;
-    $('mm').innerHTML = MM.svg(LAYOUT, Object.assign(MM.optsFrom(mapSrc()), { width: 420 }));
-    bindMapClicks($('mm'));
+    var html = MM.svg(LAYOUT, Object.assign(MM.optsFrom(mapSrc()), { width: 420 })), box = $('mm');
+    if (box._mmHtml === html) return;   /* 11-03 中級模式地圖閃爍：每 1.5 秒整張重寫會讓 1.8 秒的脈動動畫一直從頭開始；內容沒變就不重畫 */
+    box._mmHtml = html; box.innerHTML = html;
+    var ph = -((Date.now() % 1800) / 1000) + 's';   /* 有變時讓脈動動畫接續原本的相位，不要每次重來 */
+    Array.prototype.forEach.call(box.querySelectorAll('.ermm-pulse'), function (el) { el.style.animationDelay = ph; });
+    bindMapClicks(box);
   }
   S.minimap = renderMinimap;
   $('fitBtn').onclick = function () { if (cur) { cur.stageMode='map';cur.focus = null;refreshStageMode(); } };

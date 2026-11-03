@@ -118,15 +118,19 @@
      「波次」＝單元的第幾週（W6／W7／W8）：資料裡沒有別的波次欄位，三週共用同一個場次，只有週次有各班上課日的明確定義。
      房間算在哪一週＝房間建立時間落在該班的哪一週區間（各班上課前一小時起算，二甲比二丙晚兩天，所以邊界分開算）。
      房間的班級＝房主的班級（名單 → 房間自己的 cls → 第一位有班級的成員）；成員來自不同班就標混班。純函式，不碰 Firebase。 */
-  var WEEK_START = { '二丙': ['2026-10-13T07:10', '2026-10-20T07:10', '2026-10-27T07:10', '2026-11-03T07:10'], '二乙': ['2026-10-13T11:50', '2026-10-20T11:50', '2026-10-27T11:50', '2026-11-03T11:50'], '二甲': ['2026-10-15T11:50', '2026-10-22T11:50', '2026-10-29T11:50', '2026-11-05T11:50'] };
+  var MAXW = 8;   /* 11-03：往後每週都要有獨立篩選（W6 起算到 W13；每班每週 +7 天） */
+  function weekStarts(first) { var out = [], d = Date.parse(first + ':00+08:00'), i, t; for (i = 0; i <= MAXW; i++) { t = new Date(d + i * 7 * 86400000 + 8 * 3600000); out.push(t.toISOString().slice(0, 16)); } return out; }
+  var WEEK_START = { '二丙': weekStarts('2026-10-13T07:10'), '二乙': weekStarts('2026-10-13T11:50'), '二甲': weekStarts('2026-10-15T11:50') };
   /* 11-02：W8 與 W9 是同一單元，畫面上第 3 週叫 W8~9（資料鍵不動） */
-  function wkName(w) { return Number(w) >= 3 ? 'W8~9' : 'W' + (5 + Number(w)); }
-  var WAVES = [{ w: 1, label: '第 1 週（W6）' }, { w: 2, label: '第 2 週（W7）' }, { w: 3, label: '第 3 週（W8~9）' }];
+  function wkName(w) { w = Number(w); return w === 3 ? 'W8' : 'W' + (5 + w); }
+  /* 週次標籤：前三週是「痛點急診室 1/3、2/3、3/3」，之後就只寫週別（W9、W10…） */
+  function wkTag(w) { w = Number(w); return w <= 3 ? w + '/3（' + wkName(w) + (w === 3 ? '，W8~9 單元前半' : '') + '）' : wkName(w) + (w === 4 ? '（W8~9 單元後半）' : ''); }
+  var WAVES = []; (function () { for (var w = 1; w <= MAXW; w++) WAVES.push({ w: w, label: '第 ' + w + ' 週（' + wkName(w) + '）' }); })();
   function weekRange(cls, w) { var a = WEEK_START[cls] || WEEK_START['二丙']; return [w === 1 ? 0 : Date.parse(a[w - 1] + ':00+08:00'), Date.parse(a[w] + ':00+08:00')]; }
   /* 時間 t 落在該班第幾週；第 1 週涵蓋之前的一切，第 3 週結束（11/3）之後或沒有時間 → 0 */
   function weekOf(cls, t) {
     t = num(t, 0); if (!t) return 0;
-    for (var w = 1; w <= 3; w++) { var rg = weekRange(cls, w); if (t >= rg[0] && t < rg[1]) return w; }
+    for (var w = 1; w <= MAXW; w++) { var rg = weekRange(cls, w); if (t >= rg[0] && t < rg[1]) return w; }
     return 0;
   }
   function roomClass(room, profiles) {
@@ -306,19 +310,19 @@
   function dayMs(key) { return Date.parse(key.slice(0, 4) + '-' + key.slice(4, 6) + '-' + key.slice(6, 8) + 'T00:00:00+08:00'); }
   function classStartMs(cls, w) { var a = WEEK_START[cls]; return a && a[w - 1] ? Date.parse(a[w - 1] + ':00+08:00') + WINDOW_PAD_MIN * 60000 : 0; }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
-  function validFilter(w, c) { w = Number(w); return isFinite(w) && w >= 0 && w <= 3 && (c === '' || CLASS_ORDER.indexOf(c) >= 0); }
+  function validFilter(w, c) { w = Number(w); return isFinite(w) && w >= 0 && w <= MAXW && (c === '' || CLASS_ORDER.indexOf(c) >= 0); }
 
   /* 選單：value＝場次|週次|班級（週次 0＝三週累計、班級空＝三班）。今天有課的那一堂標「今天」。 */
   function menuOptions(now) {
     now = now == null ? Date.now() : Number(now);
-    var today = dayKeyOf(now), out = [{ value: UNIT_SESS + '|0|', week: 0, cls: '', today: false, label: '全部（三週累計，三班）' }];
-    [1, 2, 3].forEach(function (w) {
-      out.push({ value: UNIT_SESS + '|' + w + '|', week: w, cls: '', today: false, label: w + '/3（' + wkName(w) + '）三班' });
+    var today = dayKeyOf(now), out = [{ value: UNIT_SESS + '|0|', week: 0, cls: '', today: false, label: '全部（各週累計，三班）' }];
+    for (var w0 = 1; w0 <= MAXW; w0++) (function (w) {
+      out.push({ value: UNIT_SESS + '|' + w + '|', week: w, cls: '', today: false, label: wkTag(w) + ' 三班' });
       CLASS_ORDER.forEach(function (c) {
         var ms = classStartMs(c, w), isToday = dayKeyOf(ms) === today;
-        out.push({ value: UNIT_SESS + '|' + w + '|' + c, week: w, cls: c, today: isToday, label: '　└ ' + w + '/3（' + wkName(w) + '）' + c + '（' + mdOf(ms) + ' 上課' + (isToday ? '・今天' : '') + '）' });
+        out.push({ value: UNIT_SESS + '|' + w + '|' + c, week: w, cls: c, today: isToday, label: '　└ ' + wkTag(w) + ' ' + c + '（' + mdOf(ms) + ' 上課' + (isToday ? '・今天' : '') + '）' });
       });
-    });
+    })(w0);
     return out;
   }
   function filterValue(f) { return UNIT_SESS + '|' + num(f.week, 0) + '|' + (f.cls || ''); }
@@ -341,8 +345,8 @@
   }
   function dayInFilter(key, f) { if (!/^\d{8}$/.test(String(key))) return false; var r = filterRange(f), s = dayMs(key); return s < r[1] && s + DAY_MS > r[0]; }
   function filterState(f, now) { var w = num(f.week, 0); if (!w) return 'all'; var r = filterRange(f); return now < r[0] ? 'future' : (now >= r[1] ? 'past' : 'current'); }
-  function filterLabel(f) { var w = num(f.week, 0), c = f.cls || ''; return (c || '三班') + '・' + (w ? w + '/3（' + wkName(w) + '）' + (c ? '，' + mdOf(classStartMs(c, w)) + ' 上課' : '') : '三週累計'); }
-  function weekNoteBase(week) { week = num(week, 0); return week ? week + '/3（' + wkName(week) + '）：二丙二乙 ' + mdOf(classStartMs('二丙', week)) + ' 起、二甲 ' + mdOf(classStartMs('二甲', week)) + ' 起（上課前一小時起算）。' : '三週累計。'; }
+  function filterLabel(f) { var w = num(f.week, 0), c = f.cls || ''; return (c || '三班') + '・' + (w ? wkTag(w) + (c ? '，' + mdOf(classStartMs(c, w)) + ' 上課' : '') : '各週累計'); }
+  function weekNoteBase(week) { week = num(week, 0); return week ? wkTag(week) + '：二丙二乙 ' + mdOf(classStartMs('二丙', week)) + ' 起、二甲 ' + mdOf(classStartMs('二甲', week)) + ' 起（上課前一小時起算）。' : '各週累計。'; }
 
   /* 頁首導覽：兩頁互相連結，目前這頁標 aria-current；連結帶著手動選的篩選（?f=），本機測試再帶 test／now 這類參數 */
   var NAV = [{ id: 'talk', href: 'teacher.html', name: '訪談監看' }, { id: 'sb', href: 'sb_dashboard.html', name: 'W8~9 故事板' }, { id: 'px', href: 'proposal_dashboard.html', name: 'W10 提案室' }], NAV_KEEP = ['test', 'variant', 'devteacher', 'now', 'sess', 'local'];
@@ -512,7 +516,7 @@
     return out;
   }
 
-  return { wkName: wkName, RULES: RULES, STAGES: STAGES, HINT_DEFS: HINT_DEFS, build: build, respState: respState, weekNode: weekNode, scope: scope, currentClass: currentClass, SCHEDULE: SCHEDULE, WINDOW_PAD_MIN: WINDOW_PAD_MIN, WEEK_START: WEEK_START, WAVES: WAVES, weekRange: weekRange, weekOf: weekOf, roomClass: roomClass, indexRooms: indexRooms, filterRooms: filterRooms, sumRooms: sumRooms, chatNeighbors: chatNeighbors,
+  return { wkName: wkName, wkTag: wkTag, MAXW: MAXW, RULES: RULES, STAGES: STAGES, HINT_DEFS: HINT_DEFS, build: build, respState: respState, weekNode: weekNode, scope: scope, currentClass: currentClass, SCHEDULE: SCHEDULE, WINDOW_PAD_MIN: WINDOW_PAD_MIN, WEEK_START: WEEK_START, WAVES: WAVES, weekRange: weekRange, weekOf: weekOf, roomClass: roomClass, indexRooms: indexRooms, filterRooms: filterRooms, sumRooms: sumRooms, chatNeighbors: chatNeighbors,
     UNIT_SESS: UNIT_SESS, FILTER_KEY: FILTER_KEY, DEID_KEY: DEID_KEY, CLASS_ORDER: CLASS_ORDER, NAV: NAV, SG_LEVEL: SG_LEVEL, SG_TALK_DOC: SG_TALK_DOC, esc: esc, tpd: tpd, mdOf: mdOf, dayKeyOf: dayKeyOf, classStartMs: classStartMs, validFilter: validFilter,
     menuOptions: menuOptions, filterValue: filterValue, defaultFilter: defaultFilter, resolveFilter: resolveFilter, saveFilter: saveFilter, filterRange: filterRange, dayInFilter: dayInFilter, filterState: filterState, filterLabel: filterLabel, weekNoteBase: weekNoteBase,
     navQuery: navQuery, navHtml: navHtml, classBar: classBar, fmtIn: fmtIn, legendHtml: legendHtml, suggestInterview: suggestInterview, suggestHtml: suggestHtml, sgDocHtml: sgDocHtml, sgSort: sgSort, sgPct: sgPct,

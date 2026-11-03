@@ -430,7 +430,7 @@
   function reviewHtml(r) {
     if (!r || !r.t) return '';
     var rev = r.rev, when = new Date(r.t).toLocaleString('zh-TW', { hour12: false });
-    if (!rev || Number(rev.at || 0) < Number(r.t)) return '<div id="grReview" style="margin-top:6px;padding:6px 10px;border:var(--bw-s) solid var(--ink);border-radius:var(--r-m);font-size:var(--fs-2)">🕓 <b>審核中</b>　' + esc(when) + ' 送出。每天晚上審一次，明天進大廳會看到結果。</div>';
+    if (!rev || Number(rev.at || 0) < Number(r.t)) return '<div id="grReview" style="margin-top:6px;padding:6px 10px;border:var(--bw-s) solid var(--ink);border-radius:var(--r-m);font-size:var(--fs-2)">🕓 <b>審核中</b>　' + esc(when) + ' 送出。約每 2 小時審一次（早上 8:30 起到晚上 11:30），審好後回到大廳就會看到結果。</div>';
     return '<div id="grReview" style="margin-top:6px;padding:6px 10px;border:var(--bw) solid ' + (rev.ok ? 'var(--ok)' : 'var(--bad)') + ';border-radius:var(--r-m);font-size:var(--fs-2)">' + (rev.ok ? '✅ <b>通過</b>' : '↩️ <b>需要補強</b>') + '　' + esc(rev.fb || '') + (rev.ok ? '' : '<div class="muted">照上面的建議改好，明天可以再送一次。</div>') + '</div>' + histHtml();
   }
   /* 10-23 楊老師：審核結果要能在自己的頁面備查。每次審核（含重新送出的舊紀錄）都留在 guideHist/{學號}/{送出時間}，只讀、不訂閱。 */
@@ -528,8 +528,58 @@
     more.textContent = others.length > CAP ? ('另外還有 ' + (others.length - CAP) + ' 間沒有列出來。要進同學的房間，請他把四個字的房間代碼給你，在上面的「加入」輸入。') : '';
     $('noRooms').style.display = tb.children.length ? 'none' : 'block';
     try { renderStoryboardEntry(); } catch (x) { console.error('故事板入口', x); }
+    try { loadCold(); renderColdCard(); } catch (x) { console.error('今日推薦', x); }   /* 11-03 冷門房間／人物推薦卡 */
     try { if (window.ERG_UILV_UI) window.ERG_UILV_UI.lobby(); } catch (x) { console.error('模式（大廳）', x); }   /* 11-02：新手大廳版面＋進大廳詢問；專家什麼都不改 */
   }
+
+  /* 11-03 楊老師：比較少人去的房間、比較少人聊的人物給新成就，並隨機推薦給還沒完成的同學，更新在大廳。
+     清單由 tools/er_cold_publish.py 每天算好寫到 er/{場次}/cold（約 0.3～0.6 KB）；這裡只讀這一個小節點，不讀別人的房間或逐字稿。
+     學生自己的紀錄（去過哪些房間、問了幾題）從自己的房間算，成就判定在 achievements.js（panels.js 的 coldCtx 帶清單進去）。 */
+  var COLDX = { busy: false, t: 0, open: false };
+  function loadCold() {
+    if (!ONLINE || !window.firebase || DEMO || !APP.me.sid || COLDX.busy) return;
+    if (COLDX.t && Date.now() - COLDX.t < 3 * 3600000) return;
+    COLDX.busy = true;
+    try {
+      window.firebase.database().ref('er/' + APP.SESS + '/cold').once('value', function (snap) {
+        COLDX.busy = false; COLDX.t = Date.now(); var v = snap.val();
+        window.ERG_COLD_LIST = v && typeof v === 'object' && (v.rooms || v.people) ? v : null;
+        try { if ($('lobby') && $('lobby').classList.contains('on')) renderColdCard(); } catch (x) {}
+      }, function () { COLDX.busy = false; COLDX.t = Date.now() - 170 * 60000; });   /* 讀失敗：10 分鐘後再試 */
+    } catch (e) { COLDX.busy = false; }
+  }
+  function myColdPlayers() {
+    var sid = String(APP.me.sid), ps = [];
+    DB.listRooms(APP.SESS).forEach(function (r) { var full = DB.getRoom(r.code); if (full && full.members && full.members[sid]) { var pl = CORE.getPlayer(full, sid); if (pl) ps.push(pl); } });
+    return ps;
+  }
+  function renderColdCard() {
+    var C = window.ERG_COLD, L = window.ERG_COLD_LIST, card = $('coldCard');
+    if (!C || DEMO || !APP.me.sid || !L) { if (card) card.style.display = 'none'; return; }
+    var sc = window.ERG_MY_SCORE || {}, kept = Array.isArray(sc.badgeIds) ? sc.badgeIds : Object.keys(sc.badgeIds || {}).map(function (k) { return sc.badgeIds[k]; });
+    var have = { cold_room: kept.indexOf('cold_room') >= 0, cold_person: kept.indexOf('cold_person') >= 0 };
+    var hit = C.hits(L, myColdPlayers()), rec = C.recommend(L, APP.me.sid, Date.now(), hit, have);
+    if (!card) {
+      card = document.createElement('div'); card.id = 'coldCard'; card.className = 'card';
+      var sb = $('sbCard'), anchor = $('createBtn') && $('createBtn').closest('.card');
+      if (sb && sb.parentNode) sb.parentNode.insertBefore(card, sb.nextSibling); else if (anchor) anchor.parentNode.insertBefore(card, anchor.nextSibling); else return;
+    }
+    card.style.display = '';
+    var arr = function (a) { return Array.isArray(a) ? a : (a && typeof a === 'object' ? Object.keys(a).map(function (k) { return a[k]; }) : []); };
+    var rooms = arr(L.rooms).filter(function (r) { return r && r.id; }), people = arr(L.people).filter(function (x) { return x && x.id; });
+    var tick = function (ok, t) { return (ok ? '✓ ' : '') + esc(t); };
+    var list = '<details id="coldList"' + (COLDX.open ? ' open' : '') + '><summary class="muted" style="cursor:pointer;font-size:var(--fs-2)">這陣子少有人去的地方和少有人聊的人物</summary><div style="font-size:var(--fs-2);line-height:1.7;margin-top:4px">' +
+      (rooms.length ? '<div><b>房間</b>　' + rooms.map(function (r) { return tick(hit.roomIds.indexOf(r.id) >= 0, r.name || r.id); }).join('、') + '</div>' : '') +
+      (people.length ? '<div><b>人物</b>　' + hit.prog.map(function (x) { return tick(x.v >= x.need, x.name) + (x.v > 0 && x.v < x.need ? '（' + x.v + '/' + x.need + '）' : ''); }).join('、') + '</div>' : '') +
+      '<div class="muted" style="font-size:var(--fs-1)">每天會換一次。拿到成就之後，清單換了也不會收回。</div></div></details>';
+    var body;
+    if (rec.done) body = '<div id="coldReco" style="margin:6px 0;padding:6px 10px;border:var(--bw) solid var(--ok);border-radius:var(--r-m);font-size:var(--fs-3)">✅ <b>已完成</b>　「冷門房探險家」和「冷門人物知音」你都拿到了。之後有新的角落，這裡會再出現。</div>';
+    else body = '<div id="coldReco" style="margin:6px 0;padding:6px 10px;border:var(--bw) solid var(--ink);border-radius:var(--r-m);background:var(--yellow);color:var(--ink-fixed);font-size:var(--fs-3)"><b>' + (rec.kind === 'room' ? '🧗 去走走' : '🎧 去聊聊') + '</b>　' + esc(rec.text) + (rec.kind === 'person' ? '　<b>目前 ' + rec.v + '/' + rec.need + ' 題</b>' : '') + '</div>' +
+      '<div class="muted" style="font-size:var(--fs-1)">完成會拿到成就「' + (rec.kind === 'room' ? '冷門房探險家' : '冷門人物知音') + '」。' + (have.cold_room || have.cold_person ? (have.cold_room ? '「冷門房探險家」你已經拿到了。' : '「冷門人物知音」你已經拿到了。') : '') + '</div>';
+    card.innerHTML = '<div class="row"><b style="flex:1;font-size:var(--fs-4)">🧭 今日推薦：呼呼醫院的角落</b></div>' + body + list;
+    var d = $('coldList'); if (d) d.ontoggle = function () { COLDX.open = d.open; };
+  }
+  window.ERG_RENDER_COLD = renderColdCard;
 
   /* 第 8 週：大廳兩個入口（進急診室／UX 故事板）＋我進過的房間。資料都來自我自己的房間（已經在監聽的），不另外讀資料庫 */
   var sbBound = false, sbTouched = false;
@@ -650,6 +700,7 @@
      整份 score 節點只在「成就」分頁開著時才訂閱（平時只讀自己那一筆一次，用來避免把之前拿到的成就蓋掉）。 */
   var lastScore = null, myScoreAsked = false;
   function ensureMyScore() {
+    try { loadCold(); } catch (x) {}   /* 11-03 冷門清單（成就判定要用；一個很小的節點，3 小時內不重讀） */
     if (myScoreAsked || !ONLINE || !window.firebase || !APP.me.sid) return;
     myScoreAsked = true;
     syncMats();

@@ -59,6 +59,17 @@
     q.last = ((q.last || '') + (greet ? 'g' : Q_YESNO.test(t) ? 'y' : 'o')).slice(-10);   /* 最近十題：g 寒暄、y 是非題、o 其他 */
     return q;
   }
+  /* 11-03 冷門人物成就用的「有效提問」：只在 questionCheck 通過（不重複、不太快、不太短）時呼叫。
+     再擋兩種灌法：寒暄／少於 4 個字、同一個字連打（「啊啊啊啊啊」）。依人物累計在 player.qv（只記次數，不存句子）。回傳這題算不算。 */
+  function noteValidQuestion(player, pid, text) {
+    var b = bareQ(text), chars = Array.from(b);
+    if (!pid || chars.length < 4 || Q_GREET.test(b) || new Set(chars).size < 3) return false;
+    var qv = player.qv && typeof player.qv === 'object' ? player.qv : (player.qv = {});
+    qv[pid] = (qv[pid] || 0) + 1;
+    return true;
+  }
+  /* 冷門清單（cold.js，tools/er_cold_publish.py 每天算好寫到 er/{場次}/cold）。晚一點才查，所以 cold.js 載入順序不拘；沒載入就當沒有。 */
+  function coldMod() { try { return (typeof module === 'object' && module.exports) ? require('./cold.js') : (typeof self !== 'undefined' ? self.ERG_COLD : null) || null; } catch (e) { return null; } }
 
 
   /* ───── 技能等級（10-13 楊老師：就目前學生的探問和情境感知能力，設定技能的等級，分成三級，課後更新）─────
@@ -211,6 +222,11 @@
     return { story: story, source: source, m: m, ids: ids };
   }
 
+  function coldHit(ctx, player) {
+    var C = coldMod(), c = ctx && ctx.cold;
+    if (!C || !c || !c.list) return { rooms: 0, people: 0 };
+    return C.hits(c.list, c.players && c.players.length ? c.players : [player]);
+  }
   /* ctx：{ now, cpAllOk（六個檢核點全亮）, shift（'day'|'night'） } */
   function metrics(player, ctx) {
     ctx = ctx || {}; player = player || {};
@@ -232,6 +248,7 @@
       qEvent: Number((player.q || {}).ev || 0), qWhy: Number((player.q || {}).why || 0), qEcho: Number((player.q || {}).echo || 0), qIntro: Number((player.q || {}).intro || 0), qChain: Number((player.q || {}).chain || 0),
       qKey3: KEY3.filter(function (id) { return Number((((player.q || {}).who) || {})[id] || 0) >= 3; }).length,
       w8: skillsW8(ctx.sb, player),
+      coldRoom: coldHit(ctx, player).rooms, coldPerson: coldHit(ctx, player).people,   /* 11-03：去過幾間冷門房間、問夠了幾位冷門人物（ctx.cold＝{ list, players }，players＝我在所有房間的玩家紀錄） */
       qOpen10: (function (s) { s = String(s || ''); return s.length >= 10 && s.split('y').length - 1 <= 2 && s.split('g').length - 1 === 0; })((player.q || {}).last)
     };
   }
@@ -270,6 +287,10 @@
     { id: 'after_hours', icon: '🌆', name: '課後加班', desc: '不是上課時間，也回來訪談（5 題）', test: function (m) { return m.offTurns >= 5; } },
     { id: 'revisit', icon: '🔁', name: '回頭複習', desc: '沒有課的日子又回來訪談（3 題）', test: function (m) { return m.offRest >= 3; } },
     { id: 'late_night', icon: '🦉', name: '深夜研究員', desc: '晚上 10 點到清晨 6 點還在訪談（3 題）——研究很重要，也要睡覺', test: function (m) { return m.offLate >= 3; } },
+    /* 11-03 楊老師：比較少人去的房間、比較少人聊的人物，給新的成就。「少」由資料算（cold.js），每天重算；拿到之後清單換了也保留（score 的 badgeIds 帶回來）。 */
+    { id: 'cold_room', icon: '🧗', name: '冷門房探險家', desc: '去過大廳「今日推薦」列出的、少有人去的房間（任一間）', test: function (m) { return m.coldRoom >= 1; } },
+    { id: 'cold_person', icon: '🎧', name: '冷門人物知音', desc: '找少有人聊的人物問 3 個問題（打招呼、重複、亂打的不算）', test: function (m) { return m.coldPerson >= 1; } },
+    { id: 'cold_sweep', icon: '🔭', name: '角落巡禮', desc: '少有人去的 3 間房，都走進去過', test: function (m) { return m.coldRoom >= 3; } },
     { id: 'bug_hunter', icon: '🐞', name: '抓蟲小幫手', desc: '回報過遊戲的問題，幫大家把它修好。期末會加分，依回報的數量和質量酌量增加。', test: function (m) { return m.reports >= 1; } },
     { id: 'idea_giver', icon: '💡', name: '出點子', desc: '送出一則建議，讓遊戲更好用', test: function (m) { return !!(m.fb && m.fb.ideas >= 1); } },
     { id: 'clear_report', icon: '📝', name: '說得清楚', desc: '一則回報寫了 20 字以上，還附上畫面狀態', test: function (m) { return !!(m.fb && m.fb.clearState >= 1); } },
@@ -325,7 +346,7 @@
     five_talks: ['interviewees', 5], ten_talks: ['interviewees', 10], all_core: ['coreDone', null], chatty: ['chatTurns', 20],
     q_intro: ['qIntro', 3], q_event: ['qEvent', 5], q_why: ['qWhy', 3], q_echo: ['qEcho', 5], q_chain: ['qChain', 8],
     explorer: ['rooms', 10], mapper: ['rooms', 20], notes: ['cards', 5], witness: ['events', 3], half_hour: ['playMin', 30], marathon: ['playMin', 60],
-    after_hours: ['offTurns', 5], revisit: ['offRest', 3], late_night: ['offLate', 3], case_two: ['cases', 2], case_four: ['cases', 4], case_all: ['cases', 6]
+    after_hours: ['offTurns', 5], revisit: ['offRest', 3], late_night: ['offLate', 3], case_two: ['cases', 2], case_four: ['cases', 4], case_all: ['cases', 6], cold_sweep: ['coldRoom', 3]
   };
   function progOf(id, m) {
     var d = PROG[id]; if (!d) return null;
@@ -402,5 +423,5 @@
     }).join('');
     return head + groups;
   }
-  return { questionCheck: questionCheck, fbStats: fbStats, skillReport: skillReport, skCard: skCard, DESC_REP: DESC_REP, DEFS: DEFS, BOARD: BOARD, CORE_IDS: CORE_IDS, SPECIAL: SPECIAL, metrics: metrics, noteQuestion: noteQuestion, noteOffHours: noteOffHours, offHours: offHours, SCHED: SCHED, chatStats: chatStats, skills: skills, skillsHtml: skillsHtml, skillsW8: skillsW8, UNIT_NAME: UNIT_NAME, SK_STORY: SK_STORY, SK_SOURCE: SK_SOURCE, badges: badges, earned: earned, summary: summary, leaderboard: leaderboard, html: html, scoreSig: scoreSig, scoreDecide: scoreDecide, makeScoreWatch: makeScoreWatch, PLAYMIN_EVERY: PLAYMIN_EVERY };
+  return { questionCheck: questionCheck, fbStats: fbStats, skillReport: skillReport, skCard: skCard, DESC_REP: DESC_REP, DEFS: DEFS, BOARD: BOARD, CORE_IDS: CORE_IDS, SPECIAL: SPECIAL, metrics: metrics, noteQuestion: noteQuestion, noteValidQuestion: noteValidQuestion, noteOffHours: noteOffHours, offHours: offHours, SCHED: SCHED, chatStats: chatStats, skills: skills, skillsHtml: skillsHtml, skillsW8: skillsW8, UNIT_NAME: UNIT_NAME, SK_STORY: SK_STORY, SK_SOURCE: SK_SOURCE, badges: badges, earned: earned, summary: summary, leaderboard: leaderboard, html: html, scoreSig: scoreSig, scoreDecide: scoreDecide, makeScoreWatch: makeScoreWatch, PLAYMIN_EVERY: PLAYMIN_EVERY };
 });
