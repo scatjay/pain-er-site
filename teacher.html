@@ -30,7 +30,7 @@ a{color:var(--info)}
 .pill.ok{background:var(--okbg);color:var(--ok);border-color:var(--ok)}.pill.bad{background:var(--badbg);color:var(--bad);border-color:var(--bad)}.pill.info{background:var(--infobg);color:var(--info);border-color:var(--info)}
 .bub{max-width:80%;padding:6px 10px;border:2px solid var(--ink);border-radius:12px;margin:4px 0}.u{background:var(--yellow);color:var(--onyellow);margin-left:auto}.a{background:var(--panel)}.turn{display:flex}.barrow[data-k]{cursor:pointer}.barrow[data-k]:hover .k{text-decoration:underline}.barrow.sel .k{font-weight:900;text-decoration:underline}.tips{border:2px solid var(--ink);border-radius:10px;padding:8px 12px;margin-bottom:8px;background:var(--panel2)}.tips b{display:block;margin-bottom:2px}.tips ul{margin:2px 0 0 18px;padding:0}.tips li{margin:3px 0}#qDrill{margin-top:10px;border-top:2px dashed var(--line);padding-top:8px}#qDrill .q{margin:3px 0;font-size:.92em}.bub .who{display:block;font-size:11px;font-weight:900;opacity:.72;margin-bottom:1px}.legend{font-size:12px;margin:6px 0 2px}.legend i{display:inline-block;width:1.6em;height:.9em;border:2px solid var(--ink);border-radius:5px;vertical-align:middle;margin:0 4px 0 10px}.legend i.lu{background:var(--yellow)}.legend i.la{background:var(--panel)}
 /* 頂列與狀態列 */
-.top{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.top h1{flex:1;min-width:10em}
+.top{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.top h1{flex:1;min-width:10em}.top label{min-width:0;max-width:100%}.top select{max-width:100%;min-width:0}
 .status{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:8px;margin-top:8px}
 .stat{background:var(--panel);border:2px solid var(--ink);border-radius:12px;padding:8px 12px;min-width:0}
 .stat .lab{font-size:.8em;color:var(--muted)}.stat .val{font-weight:900;font-size:1.1em}
@@ -325,17 +325,17 @@ body.proj .priv{display:none!important}
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-<script src="er_firebase.js?v=202611031456"></script>
-<script src="checklist.js?v=202611031456"></script>
-<script src="checkpoints.js?v=202611031456"></script>
-<script src="avatar.js?v=202611031456"></script>
-<script src="local_db.js?v=202611031456"></script>
-<script src="app_core.js?v=202611031456"></script>
-<script src="cold.js?v=202611031456"></script><script src="achievements.js?v=202611031456"></script><script src="remote_db.js?v=202611031456"></script><script src="summary_render.js?v=202611031456"></script>
-<script src="layout.js?v=202611031456"></script>
-<script src="minimap.js?v=202611031456"></script><script src="map_layout.js?v=202611031456"></script><script src="skill_badge.js?v=202611031456"></script>
-<script src="personas_inclusive.js?v=202611031456"></script><script src="er_data.js?v=202611031456"></script><script src="npc_voice.js?v=202611031456"></script><script src="personas.js?v=202611031456"></script>
-<script src="week2.js?v=202611031456"></script><script src="ui_level.js?v=202611031456"></script><script src="teacher_model.js?v=202611031456"></script>
+<script src="er_firebase.js?v=202611031740"></script>
+<script src="checklist.js?v=202611031740"></script>
+<script src="checkpoints.js?v=202611031740"></script>
+<script src="avatar.js?v=202611031740"></script>
+<script src="local_db.js?v=202611031740"></script>
+<script src="app_core.js?v=202611031740"></script>
+<script src="cold.js?v=202611031740"></script><script src="achievements.js?v=202611031740"></script><script src="remote_db.js?v=202611031740"></script><script src="summary_render.js?v=202611031740"></script>
+<script src="layout.js?v=202611031740"></script>
+<script src="minimap.js?v=202611031740"></script><script src="map_layout.js?v=202611031740"></script><script src="skill_badge.js?v=202611031740"></script>
+<script src="personas_inclusive.js?v=202611031740"></script><script src="er_data.js?v=202611031740"></script><script src="npc_voice.js?v=202611031740"></script><script src="personas.js?v=202611031740"></script>
+<script src="week2.js?v=202611031740"></script><script src="ui_level.js?v=202611031740"></script><script src="teacher_model.js?v=202611031740"></script>
 <script>
 /* 教師名單：只有這裡的 Google 帳號能進。要加人就加在這裡（改完重新部署；資料庫規則 tools/er_after_google_enabled.py 也要加）。 */
 var TEACHER_EMAILS = ['scatjay@gmail.com', 'prof.chwu@mx.nthu.edu.tw', 'nthuchwu@gapp.nthu.edu.tw'];   /* 10-16 楊老師：清大吳智鴻老師（觀摩用，含後台） */
