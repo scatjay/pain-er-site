@@ -64,6 +64,8 @@
     function on(ref, cb) { var h = ref.on('value', function (s) { cb(val(s)); }, function (e) { log('監聽被拒：' + (e && e.message)); }); subs.push([ref, h]); return function () { try { ref.off('value', h); } catch (e) {} }; }
     function fail(e) { return { ok: false, reason: 'denied', message: e && e.message ? String(e.message) : '' }; }
     return {
+      /* 讀一次（不訂閱）：送審附牆摘要用；讀不到、被規則拒絕都回 null，呼叫端自己決定要不要等（逾時由呼叫端處理） */
+      readWall: function (code) { return Promise.resolve(wref(code).once('value')).then(function (s) { return normWall(val(s)); }, function () { return null; }); },
       watchWall: function (code, cb) { return on(wref(code), function (v) { cb(normWall(v)); }); },
       /* 建牆：已經有人用這個代碼就回 exists（呼叫端換一個代碼再試） */
       createWall: function (code, sid, name, caseId) {

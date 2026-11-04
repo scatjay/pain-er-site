@@ -184,10 +184,12 @@
     return rows;
   }
 
-  /* 送審時帶的摘要：有幾張牆上的卡、幾則意見、採納幾則（審核端只看數字與採納行，不看全部內容） */
+  /* 送審時帶的摘要（11-04 改）：只放數字與牆的版本標記，不放任何姓名、學號、信箱、卡片或意見的內文。
+     {members 成員人數, role 本人角色(host|member|pending|spectator|none), cards:{evid,dec,proto,note,opn 各種卡的張數}, mine 本人貢獻的卡片數, adopted 被採納的意見數, ver 'v1'..'v6'}；總大小遠小於 1 KB */
   function summary(w, sid, v) {
-    var s = stats(w);
-    return { cards: s.evid + s.dec + s.proto + s.note, opinions: s.opn, adopted: s.adopted, voices: s.voices, lines: adoptedLines(w, sid, v) };
+    var cards = (w && w.cards) || {}, s = stats(w), mine = 0;
+    Object.keys(cards).forEach(function (i) { if (cards[i] && String(cards[i].by) === String(sid)) mine++; });
+    return { members: memberCount(w), role: roleOf(w, sid), cards: { evid: s.evid, dec: s.dec, proto: s.proto, note: s.note, opn: s.opn }, mine: mine, adopted: s.adopted, ver: /^v[1-6]$/.test(v || '') ? v : 'v1' };
   }
 
   return { MAX_MEMBERS: MAX_MEMBERS, TYPES: TYPES, TABS: TABS, empty: empty, newWallMeta: newWallMeta, genCode: genCode, normCode: normCode, memberCount: memberCount, addMemberUpdate: addMemberUpdate, requestJoin: requestJoin, requests: requests, roleOf: roleOf, members: members, isMember: isMember, canEdit: canEdit, join: join, nameOf: nameOf, autoPos: autoPos, addCard: addCard, adopt: adopt, adoptedLines: adoptedLines, stats: stats, ach: ach, mobileList: mobileList, summary: summary, isHttps: isHttps };

@@ -280,11 +280,38 @@
     flushAll();
     var snap = PX.snapshotForSubmit(S.doc, S.evidence, S.cells, NOW());
     try { var pr = window.ERG_PROTO_UI && window.ERG_PROTO_UI.snap(); if (pr) snap.doc.proto = pr; } catch (e) {}   /* 11-03：原型各版本一起送審 */
-    S.store.submit(S.sid, snap).then(function (r) {
+    attachWall(snap).then(function () { return S.store.submit(S.sid, snap); }).then(function (r) {
       if (!r.ok) { toast('今天已經送審過了（一天只能一次），明天 00:00 之後可以再送。', 5000); return; }
       logEvent('submit', r.day); toast('已送審。審核建議出來之後會出現在「④ 交出去」。', 5000);
       if (LOCAL) { S.subs = S.subs.concat([{ day: r.day, t: snap.t }]); renderExport(); }
     }, failSave);
+  }
+  /* 11-04：已加入共同提案牆的人，送審快照附牆摘要（只有數字與版本標記，沒有姓名與內文）。
+     讀牆最多等 2 秒；沒代碼、讀不到、被規則拒絕、任何例外都吞掉，送審照常進行（永遠 resolve） */
+  function attachWall(snap) {
+    return new Promise(function (resolve) {
+      var done = false, tm = null;
+      function fin() { if (done) return; done = true; if (tm) clearTimeout(tm); resolve(); }
+      try {
+        var code = '', WS = window.ERG_WALL_STORE, W = window.ERG_WALL;
+        try { code = window.localStorage.getItem('erg:wallcode:' + S.sess + ':' + S.sid) || ''; } catch (e) {}
+        if (!code || !WS || !W) { fin(); return; }
+        tm = setTimeout(fin, 2000);
+        var root = LOCAL ? WS.localTree(window.localStorage, 'erg:walltree:LOCAL').ref('prw/LOCAL') : window.firebase.database().ref('prw/' + S.sess);
+        var ws = WS.makeStore({ root: root, now: NOW });
+        ws.readWall(code).then(function (w) {
+          if (done) return;
+          try {
+            if (w) {
+              var n = 1, vs = (snap.doc && snap.doc.proto && snap.doc.proto.vers) || {};
+              Object.keys(vs).forEach(function (k) { var m = /^v([1-6])$/.exec(k); if (m && Number(m[1]) > n) n = Number(m[1]); });
+              snap.doc.wall = W.summary(w, S.sid, 'v' + n);
+            }
+          } catch (e) {}
+          fin();
+        }, fin);
+      } catch (e) { fin(); }
+    });
   }
   function flushAll() { Object.keys(S.flushers).forEach(function (k) { flushKey(k); }); }
 

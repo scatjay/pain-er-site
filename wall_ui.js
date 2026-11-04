@@ -87,8 +87,12 @@
     var c = W.normCode(Q.get('wall')); if (c) setCode(c); else render();
     if (MOBILE_MQ.addEventListener) MOBILE_MQ.addEventListener('change', function () { render(); }); else if (MOBILE_MQ.addListener) MOBILE_MQ.addListener(function () { render(); });
   }
+  /* 11-04：成員身分的牆代碼記在本機，提案室送審時才知道要不要附牆摘要（鍵＝erg:wallcode:場次:學號；離開牆就移除） */
+  function wcKey() { return 'erg:wallcode:' + S.sess + ':' + S.sid; }
+  function saveWallCode(code) { try { if (code) localStorage.setItem(wcKey(), code); else localStorage.removeItem(wcKey()); } catch (e) {} }
   function setCode(code) {
     if (S.unwatch) { S.unwatch(); S.unwatch = null; }
+    if (!code) saveWallCode(''); else { try { if (localStorage.getItem(wcKey()) !== code) saveWallCode(''); } catch (e) {} }
     S.code = code; S.wall = null; S.loaded = false; S.reqSent = ''; S.reqDenied = false; S.sel = ''; S.composerSig = '';
     try { var u = new URL(location.href); if (code) u.searchParams.set('wall', code); else u.searchParams.delete('wall'); history.replaceState(null, '', u.pathname + u.search); } catch (e) {}
     if (!code) { render(); return; }
@@ -98,6 +102,7 @@
   function onWall() {
     var w = S.wall;
     if (w && S.sel && !w.cards[S.sel]) S.sel = '';
+    if (w && (role() === 'host' || role() === 'member')) saveWallCode(S.code);
     if (w && role() === 'spectator' && Q.get('join') === '1' && !S.reqSent && W.memberCount(w) < W.MAX_MEMBERS) sendRequest(true);
     render();
   }
