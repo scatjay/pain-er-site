@@ -541,16 +541,24 @@
     if (window.ERG_SOCIAL && window.ERG_SOCIAL.refreshOnce) window.ERG_SOCIAL.refreshOnce();   /* 10-19：社群面板收合時不聽全班名單，進大廳讀一次（60 秒內不重讀） */
     var on = (window.ERG_SOCIAL && window.ERG_SOCIAL.online && window.ERG_SOCIAL.online()) || {}, nowT = Date.now(), CAP = 20;
     var rows = rooms.map(function (r) { var full = DB.getRoom(r.code); var p = on[r.host]; return { r: r, full: full, mine: !!(full.members && full.members[APP.me.sid]), online: !!(p && nowT - Number(p.t || 0) < ((window.ERG_PRES && window.ERG_PRES.ONLINE_MS) || 300000)), same: !!(full.cls && full.cls === APP.me.cls) }; });
-    var mineRows = rows.filter(function (x) { return x.mine; }), others = rows.filter(function (x) { return !x.mine; });
+    /* 11-05 4b4k0171：去過的房間太多，置頂一長串。「移出清單」只是不再列在大廳（存在這台裝置），進度、成就、檢核點都照舊，要看隨時可以叫回來 */
+    var hideKey = 'erg_hide_rooms_' + APP.me.sid, hid = {}; try { (JSON.parse(localStorage.getItem(hideKey) || '[]') || []).forEach(function (c) { hid[c] = 1; }); } catch (x) {}
+    var setHid = function (code, on) { if (on) hid[code] = 1; else delete hid[code]; try { localStorage.setItem(hideKey, JSON.stringify(Object.keys(hid))); } catch (x) {} renderLobby(); };
+    var showHid = !!window.ERG_SHOW_HIDDEN_ROOMS, nHid = rows.filter(function (x) { return x.mine && hid[x.r.code]; }).length;
+    var mineRows = rows.filter(function (x) { return x.mine && (showHid || !hid[x.r.code]); }), others = rows.filter(function (x) { return !x.mine; });
     others.sort(function (a, b) { return (b.online - a.online) || (b.same - a.same) || (Number(b.full.createdAt || 0) - Number(a.full.createdAt || 0)); });
     mineRows.concat(others.slice(0, CAP)).forEach(function (x) {
       var r = x.r, full = x.full, mine = x.mine;
       var tr = document.createElement('tr');
       tr.innerHTML = '<td><b>' + esc(r.code) + '</b>' + (mine ? ' <span class="tag">我在裡面</span>' : (x.online ? ' <span class="tag ok">在線</span>' : '')) + '</td><td>' + esc(caseMeta(full.case || 'sms').short || caseMeta(full.case || 'sms').name) + '・' + (full.shift === 'night' ? '夜班' : '日班') + '</td><td>' + esc(full.hostName || r.host) + (full.cls ? ' <span class="muted" style="font-size:var(--fs-1)">' + esc(full.cls) + '</span>' : '') + '</td><td title="這間房到現在一共有幾位進來過（滿 4 位之後新來的只能旁觀）">' + r.count + ' 人' + (r.count >= 4 ? '（滿）' : '') + '</td><td></td>';
       var b = document.createElement('button'); b.className = 'ghost'; b.textContent = mine ? '回去' : (r.count >= 4 ? '旁觀' : '加入');
-      b.onclick = function () { joinCode(r.code); }; tr.lastChild.appendChild(b); tb.appendChild(tr);
+      b.onclick = function () { joinCode(r.code); }; tr.lastChild.appendChild(b);
+      if (mine) { var hb = document.createElement('button'); hb.className = 'ghost'; hb.setAttribute('data-hide', r.code); hb.style.marginLeft = '6px'; hb.textContent = hid[r.code] ? '放回清單' : '移出清單'; hb.title = '只是不再列在大廳，進度和成就都保留'; hb.onclick = function () { setHid(r.code, !hid[r.code]); }; tr.lastChild.appendChild(hb); }
+      tb.appendChild(tr);
     });
     var more = $('roomsMore'); if (!more) { more = document.createElement('div'); more.id = 'roomsMore'; more.className = 'muted'; more.style.cssText = 'font-size:var(--fs-2);margin-top:6px'; var nr = $('noRooms'); nr.parentNode.insertBefore(more, nr.nextSibling); }
+    var hl = $('hiddenToggle'); if (!hl) { hl = document.createElement('button'); hl.id = 'hiddenToggle'; hl.className = 'ghost'; hl.style.cssText = 'margin-top:6px'; more.parentNode.insertBefore(hl, more.nextSibling); }
+    hl.style.display = (nHid || showHid) ? '' : 'none'; hl.textContent = showHid ? '收起已移出的房間' : '看已移出清單的房間（' + nHid + ' 間）'; hl.onclick = function () { window.ERG_SHOW_HIDDEN_ROOMS = !window.ERG_SHOW_HIDDEN_ROOMS; renderLobby(); };
     more.textContent = others.length > CAP ? ('另外還有 ' + (others.length - CAP) + ' 間沒有列出來。要進同學的房間，請他把四個字的房間代碼給你，在上面的「加入」輸入。') : '';
     $('noRooms').style.display = tb.children.length ? 'none' : 'block';
     try { renderStoryboardEntry(); } catch (x) { console.error('故事板入口', x); }
@@ -713,6 +721,13 @@
     window.ERG_ROOM.enter(code);
   }
   data.listeners.push(function (topic) { if (topic === 'lobby' && $('lobby').classList.contains('on')) renderLobby(); });
+  /* 11-05：大廳的檢核點要讀各房間的畫布（卡片、便利貼），畫布是第一次問到才開始訂閱、讀回來要一下子。原本讀回來沒有人重畫大廳，
+     重新整理後進大廳會看到檢核點全是 ✘（要點進房間才恢復）；每間房第一次讀回來時，補畫一次大廳（4b4k0020、4b4k0190、4b4k0171）。 */
+  var sceneSeen = {}, sceneT = 0;
+  data.listeners.push(function (topic) {
+    if (typeof topic !== 'string' || topic.indexOf('scene:') !== 0 || sceneSeen[topic]) return; sceneSeen[topic] = 1;
+    clearTimeout(sceneT); sceneT = setTimeout(function () { try { if ($('lobby').classList.contains('on')) renderLobby(); } catch (e) {} }, 400);
+  });
   /* 存檔被資料庫拒絕時要讓人看得到（以前只印在主控台，沒有人知道）。30 秒內只提醒一次。 */
   var dbErrT = 0;
   data.listeners.push(function (topic) {

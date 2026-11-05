@@ -25,6 +25,16 @@
   var Q_YESNO = /(嗎|有沒有|會不會|可不可以|能不能|是否|對不對|是不是)[？?。！!\s]*$/, Q_TEMPLATE = /(他一開始怎麼說|那天發生(了)?什麼|真正需要什麼)/;
   var Q_INTRO = /(我是|我們是|想請問|想問你|想跟你|想了解|訪談|訪問|請教|研究)/, Q_GREET = /^(你好|妳好|您好|哈囉|嗨+|hi+|hello|早安?|午安|謝謝|好的?|ok+|嗯+)[\s\S]{0,4}$/i;
   var KEY3 = ['patient', 'family', 'nurse'];
+  /* 11-05：「找對人」依角色算（各案例的人物 id 不同：小晴、小葵、阿宏…是病患或家長），並把我在所有房間問的題數加總（原本只看這一間房、只認 sms 案例的三個 id；4b4k0041） */
+  var KEY3_ROLE = { patient: ['patient', 'qing_patient', 'parent_kui', 'zhe_patient', 'auntie_lin', 'tremor_ming'], family: ['family', 'mei_family', 'daughter_yu', 'grandma_hui', 'dad_hao', 'mei_guest'], nurse: ['nurse', 'triage_nurse', 'nurse_yu', 'nurse_map', 'nurse_forms', 'charge_lin'] };
+  function key3Count(player, ctx) {
+    var ps = (ctx && ctx.allPl && ctx.allPl.length) ? ctx.allPl : [player];
+    return KEY3.filter(function (role) {
+      var sum = 0;
+      ps.forEach(function (p) { var w = ((p || {}).q || {}).who || {}; KEY3_ROLE[role].forEach(function (id) { sum += Number(w[id] || 0); }); });
+      return sum >= 3;
+    }).length;
+  }
   function bareQ(t) { return String(t || '').replace(/[\s，,。.！!？?～~、：:；;「」『』（）()*]/g, ''); }
   function echoes(q, prev) {   /* 撿起對方剛說的詞：問句裡有連續三個字出現在對方上一句回答裡 */
     q = bareQ(q); prev = bareQ(prev).replace(/（[^）]*）/g, ''); if (q.length < 3 || prev.length < 3) return false;
@@ -134,11 +144,12 @@
     var c2 = [item(rooms >= 8, '走過的房間 ' + Math.min(rooms, 8) + '／8 間'), item(st.whoN >= 4, '訪談過的人物 ' + Math.min(st.whoN, 4) + '／4 位'), item(st.keyKinds >= 1, '病人本人、家人、護理師，至少一種問過 2 題 ' + Math.min(st.keyKinds, 1) + '／1 種'), item(st.sms >= 3, '問到簡訊或手機的題數 ' + Math.min(st.sms, 3) + '／3 題')];
     var c3 = c2.concat([item(st.keyKinds >= 2, '病人本人、家人、護理師，兩種以上各問過 2 題 ' + Math.min(st.keyKinds, 2) + '／2 種'), item(st.whoN >= 5, '訪談過的人物 ' + Math.min(st.whoN, 5) + '／5 位'), item(st.sms >= 8, '問到簡訊或手機的題數 ' + Math.min(st.sms, 8) + '／8 題'), item(iv >= 4, '存下來的訪談紀錄 ' + Math.min(iv, 4) + '／4 份'), item(cc >= 1, '寫下第一條結論 ' + Math.min(cc, 1) + '／1 條'), item(!!m.remote, '去過病患的家或回診門診（用下方「院外」按鈕）')]);
     function lv(l2, l3) { return l3.every(function (i) { return i.ok; }) ? 3 : (l2.every(function (i) { return i.ok; }) ? 2 : 1); }
-    function pack(names, l2, l3) {
-      var L = lv(l2, l3), nxt = L >= 3 ? null : { lv: L + 1, name: names[L], items: L === 1 ? l2 : l3 };
+    function pack(names, l2, l3, floor) {
+      var L = Math.min(3, Math.max(lv(l2, l3), Math.floor(Number(floor)) || 1)), nxt = L >= 3 ? null : { lv: L + 1, name: names[L], items: L === 1 ? l2 : l3 };
       return { lv: L, name: names[L - 1], next: nxt };
     }
-    return { ask: pack(SK_ASK, a2, a3), ctx: pack(SK_CTX, c2, c3) };
+    var fl = m.floor || {};   /* 11-05：等級不倒退。逐字稿只讀『這一間房』，換房或資料還沒讀回來時算出來會是 Lv.1；呼叫端把已知的最高等級（已發布成績、本機進度）傳進來當下限 */
+    return { ask: pack(SK_ASK, a2, a3, fl.ask), ctx: pack(SK_CTX, c2, c3, fl.ctx) };
   }
   function skCard(title, s, desc, esc, fresh) {
     var stars = '★'.repeat(s.lv) + '☆'.repeat(3 - s.lv), todo = s.next ? s.next.items.filter(function (i) { return !i.ok; }) : [];
@@ -246,7 +257,7 @@
       night: !!(player.nightSeen || ctx.shift === 'night'), cpAllOk: !!ctx.cpAllOk,
       offTurns: Number((player.off || {}).n || 0), offRest: Number((player.off || {}).rest || 0), offLate: Number((player.off || {}).late || 0),
       qEvent: Number((player.q || {}).ev || 0), qWhy: Number((player.q || {}).why || 0), qEcho: Number((player.q || {}).echo || 0), qIntro: Number((player.q || {}).intro || 0), qChain: Number((player.q || {}).chain || 0),
-      qKey3: KEY3.filter(function (id) { return Number((((player.q || {}).who) || {})[id] || 0) >= 3; }).length,
+      qKey3: key3Count(player, ctx),
       w8: skillsW8(ctx.sb, player),
       coldRoom: coldHit(ctx, player).rooms, coldPerson: coldHit(ctx, player).people,   /* 11-03：去過幾間冷門房間、問夠了幾位冷門人物（ctx.cold＝{ list, players }，players＝我在所有房間的玩家紀錄） */
       qOpen10: (function (s) { s = String(s || ''); return s.length >= 10 && s.split('y').length - 1 <= 2 && s.split('g').length - 1 === 0; })((player.q || {}).last)

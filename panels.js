@@ -18,14 +18,20 @@
   /* 成就分頁：自己的指標與徽章＋班級「誰最多」（線上模式讀 er/{sess}/score；本機版只有自己） */
   /* 10-29：筆記卡存在畫布（手機是 room.mcards），player.cards 從來沒人寫入 → 便利貼大師與「便利貼最多」永遠 0；改數自己記的卡 */
   function myCardCount() { try { return L.listMarkers(RM.markerEls()).filter(function (m) { return String(m.author) === String(me()); }).length; } catch (e) { return 0; } }
-  function achCtx() { var c = cur(); var cp = (window.ERG_CORE && window.ERG_CP && c) ? (function () { try { var st = window.ERG_CORE.checkpointState(c, me()); return window.ERG_CP.evaluate(st).every(function (x) { return x.ok; }); } catch (e) { return false; } })() : false; return { cards: myCardCount(), cpAllOk: cp, shift: c && c.world && c.world.shift, cases: casesTried(), reports: reportsMade(), fb: fbMine(), keep: keptBadges(), sb: window.ERG_MY_SBD || null, prevSk: prevW8Sk(), cold: coldCtx() }; }
+  function achCtx() { var c = cur(); var cp = (window.ERG_CORE && window.ERG_CP && c) ? (function () { try { var st = window.ERG_CORE.checkpointState(c, me()); return window.ERG_CP.evaluate(st).every(function (x) { return x.ok; }); } catch (e) { return false; } })() : false; return { cards: myCardCount(), cpAllOk: cp, shift: c && c.world && c.world.shift, cases: casesTried(), reports: reportsMade(), fb: fbMine(), keep: keptBadges(), sb: window.ERG_MY_SBD || null, prevSk: prevW8Sk(), cold: coldCtx(), allPl: (function () { try { return allMyPlayers(); } catch (e) { return null; } })() }; }
   /* 11-03 冷門房間／人物成就：清單（大廳讀進來的 er/{場次}/cold）＋我在所有房間的玩家紀錄（換案例開新房間也合併算） */
+  var apMemo = { t: 0, code: '', v: null };   /* 一次重畫會連叫兩次（冷門成就、找對人），1 秒內共用 */
+  function allMyPlayers() {
+    var c = cur(), sid = String(me()), ps = c && c.player ? [c.player] : [];
+    if (apMemo.v && c && apMemo.code === c.code && Date.now() - apMemo.t < 1000) return apMemo.v;
+    DB.listRooms(APP.SESS).forEach(function (r) { if (c && r.code === c.code) return; var x = (r && r.members !== undefined) ? r : (DB.getRoom(r.code) || {}); if (x.members && x.members[sid]) { var pl = window.ERG_CORE.getPlayer(x, sid); if (pl) ps.push(pl); } });
+    apMemo = { t: Date.now(), code: c ? c.code : '', v: ps };
+    return ps;
+  }
   function coldCtx() {
     try {
-      var L = window.ERG_COLD_LIST, c = cur(); if (!L) return null;
-      var sid = String(me()), ps = c && c.player ? [c.player] : [];
-      DB.listRooms(APP.SESS).forEach(function (r) { if (c && r.code === c.code) return; var x = (r && r.members !== undefined) ? r : (DB.getRoom(r.code) || {}); if (x.members && x.members[sid]) { var pl = window.ERG_CORE.getPlayer(x, sid); if (pl) ps.push(pl); } });
-      return { list: L, players: ps };
+      var L = window.ERG_COLD_LIST; if (!L) return null;
+      return { list: L, players: allMyPlayers() };
     } catch (e) { return null; }
   }
   /* 10-27 W8 技能：上次已發布的等級（等級不倒退） */
@@ -59,7 +65,8 @@
     var roomsSeen = Object.keys(pl.roomsSeen || {}).length || (pl.visited || []).length;
     var iv = (pl.interviews || []).filter(function (r) { return r && r.items && Object.keys(r.items).some(function (k) { var x = r.items[k]; return x && ((x.note && String(x.note).trim()) || x.done); }); }).length;
     var concl = (pl.conclusions || []).filter(function (x) { return x && String(x.text || '').trim(); }).length;
-    return A.skills(skillStats(), { rooms: roomsSeen, interviews: iv, conclusions: concl, remote: !!((pl.roomsSeen || {}).home || (pl.roomsSeen || {}).clinic) });
+    var sc = window.ERG_MY_SCORE || {}, pg = (APP.me && APP.me.profile && APP.me.profile.progress) || {}, sl = pl.skillLv || {}, mx = function () { return Math.max.apply(null, [1].concat([].slice.call(arguments).map(function (x) { return Number(x) || 0; }))); };
+    return A.skills(skillStats(), { rooms: roomsSeen, interviews: iv, conclusions: concl, remote: !!((pl.roomsSeen || {}).home || (pl.roomsSeen || {}).clinic), floor: { ask: mx(sl.ask, sc.skAsk, pg.ask), ctx: mx(sl.ctx, sc.skCtx, pg.ctx) } });   /* 11-05：已知最高等級當下限，換房不再掉回 Lv.1（4b4k0171） */
   }
   function skillBlock(A, pl) {
     var sk = computeSk(A, pl);
@@ -589,15 +596,28 @@
   }
 
   /* ───── 討論 ───── */
+  /* 11-05：房裡其他同學寫的結論（唯讀）。討論檢核有一項「我讀過對方的結論」，但以前畫面上沒有地方可以讀（4b4k0118、4B4K0095：進了對方房間看不到對方結論） */
+  function peerConclHtml(room, others) {
+    var rows = [];
+    others.forEach(function (o) {
+      var op = null; try { op = CORE.getPlayer(room, o); } catch (e) {}
+      var cs = ((op && op.conclusions) || []).filter(function (c) { return c && String(c.text || '').trim(); });
+      rows.push('<div class="card" data-peer="' + esc(o) + '" style="margin:4px 0;padding:6px 10px"><b>' + esc(o) + '</b> 的結論（只能讀，不能改）' + (cs.length ? cs.map(function (c, i) {
+        return '<div style="font-size:var(--fs-2);margin-top:4px"><b>' + (i + 1) + '.</b> ' + esc(String(c.text).slice(0, 300)) + (String(c.tradeoff || '').trim() ? '<div class="muted">取捨：' + esc(String(c.tradeoff).slice(0, 200)) + '</div>' : '') + '</div>';
+      }).join('') : '<div class="muted" style="font-size:var(--fs-2)">他還沒有寫結論（可以請他先寫，或留言問他）。</div>') + '</div>');
+    });
+    return rows.length ? '<div id="peerConcl" style="margin-top:8px"><b>房裡同學的結論</b>' + rows.join('') + '</div>' : '';
+  }
   function renderDisc() {
     var p = $('p-disc'), room = DB.getRoom(cur().code), pl = player(), d = pl.discussion, others = Object.keys(room.members || {}).filter(function (k) { return k !== me(); });
     var html = '<div class="card" style="margin-top:0"><b>個人作業，但提交前要和另一位同學討論一次</b><div class="muted" style="font-size:var(--fs-2)">單人也可以玩；你要去一間「別人進去過的房間」，在裡面和房裡的同學討論各自的結論。即時或留言都可以，對方上線按「確認」才算完成。</div></div>';
     if (isHost()) {
-      html += '<p>這是你自己的房間。' + (others.length ? '現在房裡還有：' + others.map(esc).join('、') + '。' : '還沒有別人進來。') + ' 你的討論要到別人的房間做（大廳找一間有人的房間加入）。</p>';
+      html += '<p>這是你自己的房間。' + (others.length ? '現在房裡還有：' + others.map(esc).join('、') + '。' : '還沒有別人進來。') + ' 你的討論要到別人的房間做（大廳找一間有人的房間加入）。</p>' + peerConclHtml(room, others);
     } else {
       html += '<p>你在 <b>' + esc(room.host) + '</b> 的房間，這是你的「討論場次」。</p><div><b>1. 和誰討論</b></div><div>' + (others.length ? others.map(function (o) { return '<button class="pill ' + (d.partners.indexOf(o) >= 0 ? 'on' : '') + '" data-pt="' + esc(o) + '">' + esc(o) + '</button>'; }).join('') : '<span class="muted">房裡只有你，等同學進來或留言給房主。</span>') + '</div>' +
         /* 10-20：對方按了確認，這邊原本只在「檢核」分頁才看得到（二乙回報「同學已經按確認但我這裡沒有顯示」）。討論分頁也列出來。 */
         (d.partners.length ? '<div id="discConf" style="margin-top:6px;font-size:var(--fs-2)">' + d.partners.map(function (o) { var op = (room.players || {})[o], yes = !!(op && op.confirms && op.confirms[me()]); return '<div data-conf="' + esc(o) + '" data-ok="' + (yes ? '1' : '0') + '"><b>' + esc(o) + '</b>：' + (yes ? '<b style="color:var(--ok)">已按確認 ✔</b>' : '還沒按「確認我們討論過」（請他到這間房的「討論」分頁按）') + '</div>'; }).join('') + '</div>' : '') +
+        peerConclHtml(room, others) +
         '<div style="margin-top:8px"><b>2. 討論檢核</b></div>' + [['read', '我讀過對方的結論'], ['diff', '我們有一處看法不同'], ['complement', '我們有一處互相補到對方'], ['outcome', '我因此改了或確認了我的結論']].map(function (x) {
           return '<div class="ck ' + (d.checks[x[0]] ? 'done' : '') + '"><button class="box" data-ck="' + x[0] + '">' + (d.checks[x[0]] ? ic('check', '✔') : '') + '</button><div style="flex:1;min-width:0"><div style="font-weight:900">' + x[1] + '</div>' + (x[0] !== 'read' && d.checks[x[0]] ? '<input data-dn="' + x[0] + '" maxlength="40" value="' + esc(d.notes[x[0]] || '') + '" placeholder="一句話（最多 40 字）">' : '') + '</div></div>'; }).join('') +
         '<button id="discDone" ' + (pl.finished ? 'disabled' : '') + '>' + (pl.finished ? '討論已完成' : '完成這次討論') + '</button> <span id="discErr" class="err"></span>';
