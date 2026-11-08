@@ -1,5 +1,5 @@
 /* 提案室「原型工作台」畫面：掛在 #secProto，讀提案室的狀態（window.ERG_PX_S）與 proposal_proto.js 的純邏輯。
-   三種模式沿用 ui_level 的設定（本機 localStorage）：新手＝一次一步、指令不能改；中級＝四步同頁、指令可改；專家＝全部展開。
+   三種模式沿用 ui_level 的設定（本機 localStorage）：新手＝一次一步、指令可改（改過標「已自行修改」，可還原）；中級＝四步同頁、指令可改；專家＝全部展開。
    手機（寬度 ≤ 860）：單欄、按鈕 ≥ 48px、字級 ≥ 16px；手機上只做「複製指令」與「貼回連結」，實際改設計在各工具裡。 */
 (function () {
   'use strict';
@@ -7,7 +7,7 @@
   if (!P) return;
   var UI = window.ERG_PROTO_UI = {};
   var LINKS = { free: 'https://claude.ai/new', dsg: 'https://claude.ai/artifacts', fig: 'https://www.figma.com/files', ais: 'https://aistudio.google.com/' };
-  var T = { ach: {}, achWatch: '', step: 0, tool: 'dsg', cards: [], rowNs: null, text: null, dirty: false, proto: P.emptyProto(), watching: '', lv: 0 };
+  var T = { ach: {}, achWatch: '', step: 0, tool: 'dsg', cards: [], rowNs: null, text: null, dirty: false, proto: P.emptyProto(), watching: '', lv: 0, gate: 1, start: '', panel: null };
 
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function S() { return window.ERG_PX_S || null; }
@@ -16,10 +16,10 @@
     return P.level(l ? l.lv : 3);
   }
   function toolsFor(lv) { return P.TOOLS.filter(function (t) { return lv !== 1 || t.k === 'dsg' || t.k === 'ais'; }); }
-  function cardList(lv) { return P.cardsFor(T.tool); }
+  function cardList(lv) { return P.cardsFor(T.tool, lv); }   /* 起點卡每種模式只看自己那一張 */
   function ensureCards(v) {
     var ok = T.cards.filter(function (id) { var c = P.cardById(id); return c && c.t === T.tool; });
-    if (!ok.length) ok = [P.defaultCard(T.tool)].filter(Boolean);
+    if (!ok.length) { var gl = P.listFor(T.gate, v.lv).filter(function (c) { return c.t === T.tool; }); ok = [gl.length ? gl[0].id : P.defaultCard(T.tool)].filter(Boolean); }
     T.cards = ok.slice(0, v.pickCards);
   }
   /* 帶進指令的「設計決定卡」：預設前三張有內容的；學生可以自己換（最多 3 張） */
@@ -79,28 +79,42 @@
   }
   function toastMsg(m) { var t = $('toast'); if (!t) return; t.textContent = m; t.className = 'on'; clearTimeout(toastMsg.t); toastMsg.t = setTimeout(function () { t.className = ''; }, 3000); }
 
+  /* ———— 步驟助教（figai_coach.js＋figai_coach_ui.js；沒載入就整塊不出現）———— */
+  function coachHtml(lv) {
+    var FG = window.FigAIUI; if (!FG || !window.FigCoach) return '';
+    var sid = (S() && S().sid) || '';
+    var first = !T.panel; T.panel = FG.ensure(T.panel, lv);
+    if (first && sid) { try { FG.loadCounts(window.localStorage, sid, T.panel); } catch (e) {} }
+    return '<div id="figaiBox">' + FG.render(T.panel) + '</div>';
+  }
+  function coachSave() { var FG = window.FigAIUI, s = S(); if (FG && T.panel && s && s.sid) { try { FG.saveCounts(window.localStorage, s.sid, T.panel); } catch (e) {} } }
+
   /* ———— 畫面 ———— */
   function modeBar(lv) {
     return '<div class="pt-mode" role="group" aria-label="模式">' + [1, 2, 3].map(function (k) { return '<button class="pt-m' + (lv === k ? ' on' : '') + '" data-pt="mode" data-v="' + k + '">' + esc(P.view(k).name) + '</button>'; }).join('') + '</div>';
   }
   function stepPick(v) {
-    var tools = toolsFor(v.lv);
-    var h = '<div class="pt-h">' + esc(P.stepName(0)) + '</div><div class="pt-tools">' + tools.map(function (t) { return '<button class="pt-tool' + (T.tool === t.k ? ' on' : '') + '" data-pt="tool" data-k="' + t.k + '"><b>' + esc(t.name) + '</b><span>' + esc(t.use) + '</span></button>'; }).join('') + '</div>';
+    var FG = window.FigAIUI;
+    var h = '<div class="pt-h">' + esc(P.stepName(0)) + '</div>';
+    h += FG ? FG.gateBar(P, T.gate) : '';
+    if (T.gate === 1 && FG) h += FG.startBlock(P, v.lv, T.start);
     h += evCards(v);
-    var list = cardList(v.lv);
+    var list = P.listFor(T.gate, v.lv).filter(function (c) { return v.lv !== 1 || c.t === 'dsg' || c.t === 'ais'; });   /* 新手只用 Claude Design 與 AI Studio */
+    if (!list.length) return h + '<div class="pt-note">這一關沒有指引卡。做完上一關，到下面「③ 把結果貼回來」貼作品連結、寫這一版改了什麼，再做自己檢查；試用紀錄和交件連結也在那裡。</div>' +
+      '<div class="pt-bar"><button class="pt-big" data-pt="goback">去貼回結果</button></div>';
     h += '<div class="pt-h2">這次用哪張指引卡</div><div class="pt-cards">' + list.map(function (c) {
-      var on = T.cards.indexOf(c.id) >= 0;
-      return '<label class="pt-card' + (on ? ' on' : '') + '"><input type="' + (v.pickCards === 1 ? 'radio' : 'checkbox') + '" name="ptc" data-pt="card" data-id="' + c.id + '"' + (on ? ' checked' : '') + '><span><b>' + esc(c.title) + '</b><small>做完的樣子：' + esc(c.done) + '</small></span></label>';
+      var on = T.cards.indexOf(c.id) >= 0, tn = (P.TOOLS.filter(function (t) { return t.k === c.t; })[0] || {}).name || '';
+      return '<label class="pt-card' + (on ? ' on' : '') + '"><input type="' + (v.pickCards === 1 ? 'radio' : 'checkbox') + '" name="ptc" data-pt="card" data-id="' + c.id + '"' + (on ? ' checked' : '') + '><span><b>' + esc(c.title) + '</b><small>貼到：' + esc(tn) + '　做完的樣子：' + esc(c.done) + '</small></span></label>';
     }).join('') + '</div>';
-    if (v.pickCards > 1) h += '<div class="pt-note">最多挑 ' + v.pickCards + ' 張，一次一個改變最好。</div>';
+    if (v.pickCards > 1) h += '<div class="pt-note">最多挑 ' + v.pickCards + ' 張（要貼到同一個工具），一次一個改變最好。</div>';
     return h;
   }
   function stepCopy(v) {
     var g = genText(), text = T.text != null ? T.text : g.text;
     var tool = P.TOOLS.filter(function (t) { return t.k === T.tool; })[0];
     return '<div class="pt-h">' + esc(P.stepName(1)) + '</div><div class="pt-note">到「' + esc(tool.where) + '」，把下面這段貼進去。' + (T.tool === 'ais' ? '（第一次要附上畫面截圖）' : '') + '</div>' +
-      '<textarea id="ptText" data-pt="text" rows="9" ' + (v.editPrompt ? '' : 'readonly ') + 'aria-label="給 ' + esc(tool.name) + ' 的指令">' + esc(text) + '</textarea>' +
-      '<div class="pt-bar"><button class="pt-big" data-pt="copy">📋 複製指令</button><a class="pt-big pt-a" href="' + esc(LINKS[T.tool]) + '" target="_blank" rel="noopener">開 ' + esc(tool.name) + '</a>' + (v.editPrompt && T.text != null ? '<button class="pt-big g" data-pt="reset">還原</button>' : '') + '</div>';
+      (T.text != null && T.text !== g.text ? '<div class="pt-note"><span class="pt-chip got">已自行修改</span> 這段不是助教原本產生的，按「還原」可以回到原本那段。</div>' : '') + '<textarea id="ptText" data-pt="text" rows="9" aria-label="給 ' + esc(tool.name) + ' 的指令">' + esc(text) + '</textarea>' +
+      '<div class="pt-bar"><button class="pt-big" data-pt="copy">📋 複製指令</button><a class="pt-big pt-a" href="' + esc(LINKS[T.tool]) + '" target="_blank" rel="noopener">開 ' + esc(tool.name) + '</a>' + (T.text != null && T.text !== g.text ? '<button class="pt-big g" data-pt="reset">還原</button>' : '') + '</div>';
   }
   function stepBack(v) {
     var p = T.proto, lk = p.links[T.tool] || { url: '', note: '' };
@@ -155,7 +169,7 @@
     } else {
       body = [stepPick, stepCopy, stepBack, stepCheck].map(function (f) { return '<div class="pt-blk">' + f(v) + '</div>'; }).join('');
     }
-    el.innerHTML = head + body;
+    el.innerHTML = head + body + coachHtml(lv);
     applyFocus(lv);
   };
 
@@ -188,6 +202,9 @@
     if (a === 'fprev' || a === 'fnext') { T.nf = Math.max(0, Math.min(FOCUS.length - 1, (T.nf == null ? 0 : T.nf) + (a === 'fnext' ? 1 : -1))); UI.render(); window.scrollTo(0, 0); return; }
     if (a === 'fall') { U && s.sid && U.writeLocal(window.localStorage, s.sid, 2, Date.now()); T.lv = 0; T.nf = null; UI.render(); return; }
     if (a === 'mode') { var sid = s.sid; if (U && sid) U.writeLocal(window.localStorage, sid, Number(b.dataset.v), Date.now()); T.lv = 0; T.nf = null; UI.render(); }
+    else if (a === 'gate') { T.gate = Math.max(1, Math.min(5, Number(b.dataset.n) || 1)); var gl = P.listFor(T.gate, lvNow()); T.cards = gl.length ? [gl[0].id] : []; if (gl.length) T.tool = gl[0].t; T.text = null; UI.render(); }
+    else if (a === 'start') { T.start = b.dataset.k; if (T.start === 'gen') { T.tool = 'dsg'; T.cards = [P.view(lvNow()).startCard]; T.text = null; } UI.render(); }
+    else if (a === 'goback') { T.step = 2; UI.render(); }
     else if (a === 'tool') { T.tool = b.dataset.k; T.cards = []; T.text = null; UI.render(); }
     else if (a === 'next') { T.step = Math.min(3, T.step + 1); UI.render(); window.scrollTo && $('secProto').scrollIntoView({ block: 'start' }); }
     else if (a === 'prev') { T.step = Math.max(0, T.step - 1); UI.render(); }
@@ -217,6 +234,7 @@
     var a = el.dataset.pt, p = T.proto;
     if (a === 'card') {
       var v = P.view(lvNow()), id = el.dataset.id, i = T.cards.indexOf(id);
+      var cd = P.cardById(id); if (cd && cd.t !== T.tool) { T.tool = cd.t; T.cards = []; }
       if (v.pickCards === 1) T.cards = [id]; else if (el.checked) { if (T.cards.length < v.pickCards) T.cards.push(id); } else if (i >= 0) T.cards.splice(i, 1);
       T.text = null; UI.render();
     }
@@ -238,5 +256,16 @@
     else if (a === 'url' || a === 'note') { var lk = p.links[T.tool] || (p.links[T.tool] = { url: '', note: '', at: 0 }); lk[a] = el.value.trim(); lk.at = Date.now(); }
     else if (a === 'chg') p.chg = el.value;
   });
-  window.addEventListener('pagehide', function () { });
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('#figaiBox [data-fg]'); if (!b || !window.FigAIUI || !T.panel) return;
+    var d = { a: b.dataset.fg, n: b.dataset.n, k: b.dataset.k }, r = window.FigAIUI.act(T.panel, d);
+    if (d.a === 'copy') { var txt = (T.panel.S.f[d.k] || ''); if (r && r.ok && navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(function () { toastMsg('已複製，到工具裡貼上'); }, function () { toastMsg('請手動複製欄位裡的文字'); }); else toastMsg(r && r.ok ? '請手動複製欄位裡的文字' : '先確認這段指令才能複製'); return; }
+    coachSave(); UI.render();
+  });
+  document.addEventListener('input', function (e) { var el = e.target; if (el && el.dataset && el.dataset.ff && window.FigAIUI && T.panel && el.closest('#figaiBox') && el.type !== 'checkbox' && el.tagName !== 'SELECT') window.FigAIUI.setField(T.panel, el.dataset.ff, el.value); });
+  document.addEventListener('change', function (e) {
+    var el = e.target; if (!el || !el.dataset || !el.dataset.ff || !window.FigAIUI || !T.panel || !el.closest('#figaiBox')) return;
+    window.FigAIUI.setField(T.panel, el.dataset.ff, el.type === 'checkbox' ? el.checked : el.value); UI.render();
+  });
+  window.addEventListener('pagehide', function () { coachSave(); });
 })();

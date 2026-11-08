@@ -27,32 +27,50 @@
     { k: 'H7', n: '新手專家都好用' }, { k: 'H8', n: '版面只留必要的' }, { k: 'H9', n: '出錯時說得清楚怎麼辦' }, { k: 'H10', n: '找得到說明' }
   ];
 
-  /* 指引卡：t＝要貼到哪個工具；p＝指令（括號裡的字學生自己換）；done＝做完的樣子 */
+  /* 五關（定案名稱，見 _figma_mcp/三模式教材_1108/五關名稱對照.md）：學生看到的關卡名稱只用這五個 */
+  var GATES = [
+    { n: 1, name: '準備畫面', done: 'Figma 裡有寬 390 的手機畫面' },
+    { n: 2, name: '匯出並交給 AI Studio', done: 'AI Studio 預覽看得到和 Figma 一樣的畫面' },
+    { n: 3, name: '加上互動', done: '至少有按鈕點下去有反應' },
+    { n: 4, name: '檢查與修正', done: '四項檢查打勾' },
+    { n: 5, name: '試用與交件', done: '有試用紀錄，兩個連結都開了分享' }
+  ];
+  function gateName(n) { var g = GATES.filter(function (x) { return x.n === n; })[0]; return g ? g.name : ''; }
+
+  /* 指引卡：t＝要貼到哪個工具；gate＝屬於第幾關；lv＝只給這個模式看（沒寫＝三種模式都看）；p＝指令（括號裡的字學生自己換）；done＝做完的樣子 */
   var CARDS = [
-    { id: 'C1', g: 'edit', t: 'dsg', title: '換皮：換成另一種人用的', p: '把這個畫板改成（長輩／小朋友／夜班護理師）用的版本，字級、顏色、圖示都要配合，內容和功能順序不要動。', done: '兩個畫板並排，你說得出哪裡不一樣、為什麼' },
-    { id: 'C2', g: 'edit', t: 'dsg', title: '換功能：加一個區塊', p: '在首頁加一個（家人共用／用藥打卡／候診時間）區塊，放在最上面三個位置內，其他不要動。', done: '新區塊在第一眼看得到的位置' },
-    { id: 'C3', g: 'edit', t: 'dsg', title: '改流程：少一步', p: '把（掛號）流程從 5 步縮成 3 步，每步只放一個主要按鈕，列出新的步驟順序。', done: '一張流程圖或三個連續畫板' },
-    { id: 'C4', g: 'edit', t: 'dsg', title: '改引導：改提示句', p: '把畫面上的提示句改成只講下一步要做什麼，每句不超過 15 個字，危險要回急診的訊息放在最顯眼的地方。', done: '你指得出每一句「告訴人現在該做什麼」' },
-    { id: 'A1', g: 'play', t: 'ais', title: '還原：變成能點的', p: '照著這張手機畫面做成可以操作的網頁，圖上每一個字都不要改，不要加任何圖上沒有的東西。（要附畫面截圖）', done: '預覽和你的畫面幾乎一樣' },
-    { id: 'A2', g: 'play', t: 'ais', title: '互動：讓按鈕有反應', p: '點（離院須知）會打開一頁寫著這張卡的內容；點返回回到首頁。所有按鈕都只在畫面內反應，不要真的傳任何東西。', done: '每個按鈕都能點，沒有按鈕沒反應' },
-    { id: 'A3', g: 'play', t: 'ais', title: '校正：版面不走樣', p: '只校正版面尺寸，文字、顏色、功能都不要動。（把 Claude 免費版讀你 Figma 畫面列出的尺寸表貼在這句後面）', done: '字大小、間距和 Figma 差 1~2 px 內' },
-    { id: 'A4', g: 'play', t: 'ais', title: '狀態：做出不同情況', p: '加一個切換鈕，可以看到（剛離院／回診前一天／出現警訊）三種畫面，內容各不同。', done: '三種畫面都點得到' },
-    { id: 'A5', g: 'play', t: 'ais', title: '換皮：長輩大字版', p: '改成長輩版本：字放大到至少 18 px，標題 26 px 以上，對比加強，按鈕可點區域至少 56 px 高，內容與順序不要動。', done: '預覽字明顯變大且沒掉字' },
-    { id: 'A6', g: 'play', t: 'ais', title: '加功能：傳給家人', p: '加一個「傳給家人」按鈕，按下去顯示一則範例訊息，內容是今天要做的三件事，文字可以複製。', done: '按鈕有反應、訊息可複製' },
-    { id: 'A7', g: 'play', t: 'ais', title: '修問題：試用發現的毛病', p: '試用時發現（找不到下次回診日期），請把它放大、放到畫面最上方，其他不要動。', done: '你說得出改之前卡在哪、改之後怎樣' },
-    { id: 'F1', g: 'check', t: 'fig', title: '貼回 Figma 做對照', p: '（不是指令）把每一版截圖貼進 Figma，放在原版右邊，用便條寫「這版改了什麼、為什麼」。', done: '一排前後對照，每一版都有便條' },
-    { id: 'K1', g: 'check', t: 'free', title: '請 Claude 讀你的畫面列尺寸表', p: '請讀這個 Figma 畫面：（貼上你的 Figma 連結）。列出每個文字的內容、字級與位置，和每個卡片的內距、圓角、顏色。只要讀，不要改。', done: '你有一張尺寸表，可交給 AI Studio 校正' }
+    { id: 'C1', gate: 1, g: 'edit', t: 'dsg', title: '換皮：換成另一種人用的', p: '把這個畫板改成（長輩／小朋友／夜班護理師）用的版本，字級、顏色、圖示都要配合，內容和功能順序不要動。', done: '兩個畫板並排，你說得出哪裡不一樣、為什麼' },
+    { id: 'C2', gate: 1, g: 'edit', t: 'dsg', title: '換功能：加一個區塊', p: '在首頁加一個（家人共用／用藥打卡／候診時間）區塊，放在最上面三個位置內，其他不要動。', done: '新區塊在第一眼看得到的位置' },
+    { id: 'C3', gate: 1, g: 'edit', t: 'dsg', title: '改流程：少一步', p: '把（掛號）流程從 5 步縮成 3 步，每步只放一個主要按鈕，列出新的步驟順序。', done: '一張流程圖或三個連續畫板' },
+    { id: 'C4', gate: 1, g: 'edit', t: 'dsg', title: '改引導：改提示句', p: '把畫面上的提示句改成只講下一步要做什麼，每句不超過 15 個字，危險要回急診的訊息放在最顯眼的地方。', done: '你指得出每一句「告訴人現在該做什麼」' },
+    { id: 'A1', gate: 2, g: 'play', t: 'ais', title: '還原：變成能點的', p: '照著這張手機畫面做成可以操作的網頁，圖上每一個字都不要改，不要加任何圖上沒有的東西。（要附畫面截圖）', done: '預覽和你的畫面幾乎一樣' },
+    { id: 'A2', gate: 3, g: 'play', t: 'ais', title: '互動：讓按鈕有反應', p: '點（離院須知）會打開一頁寫著這張卡的內容；點返回回到首頁。所有按鈕都只在畫面內反應，不要真的傳任何東西。', done: '每個按鈕都能點，沒有按鈕沒反應' },
+    { id: 'A3', gate: 2, g: 'play', t: 'ais', title: '校正：版面不走樣', p: '只校正版面尺寸，文字、顏色、功能都不要動。（把 Claude 免費版讀你 Figma 畫面列出的尺寸表貼在這句後面）', done: '字大小、間距和 Figma 差 1~2 px 內' },
+    { id: 'A4', gate: 3, g: 'play', t: 'ais', title: '狀態：做出不同情況', p: '加一個切換鈕，可以看到（剛離院／回診前一天／出現警訊）三種畫面，內容各不同。', done: '三種畫面都點得到' },
+    { id: 'A5', gate: 3, g: 'play', t: 'ais', title: '換皮：長輩大字版', p: '改成長輩版本：字放大到至少 18 px，標題 26 px 以上，對比加強，按鈕可點區域至少 56 px 高，內容與順序不要動。', done: '預覽字明顯變大且沒掉字' },
+    { id: 'A6', gate: 3, g: 'play', t: 'ais', title: '加功能：傳給家人', p: '加一個「傳給家人」按鈕，按下去顯示一則範例訊息，內容是今天要做的三件事，文字可以複製。', done: '按鈕有反應、訊息可複製' },
+    { id: 'A7', gate: 4, g: 'play', t: 'ais', title: '修問題：試用發現的毛病', p: '試用時發現（找不到下次回診日期），請把它放大、放到畫面最上方，其他不要動。', done: '你說得出改之前卡在哪、改之後怎樣' },
+    { id: 'F1', gate: 4, g: 'check', t: 'fig', title: '貼回 Figma 做對照', p: '（不是指令）把每一版截圖貼進 Figma，放在原版右邊，用便條寫「這版改了什麼、為什麼」。', done: '一排前後對照，每一版都有便條' },
+    { id: 'K1', gate: 2, g: 'check', t: 'free', title: '請 Claude 讀你的畫面列尺寸表', p: '請讀這個 Figma 畫面：（貼上你的 Figma 連結）。列出每個文字的內容、字級與位置，和每個卡片的內距、圓角、顏色。只要讀，不要改。', done: '你有一張尺寸表，可交給 AI Studio 校正' },
+    /* 第 1 關選用起點：用 Claude 免費版的「設計」在對話裡生成與修改一張草稿畫板（不會改你的 Figma）。每種模式一張，指令寫法來自教材《Claude 免費版畫面草稿：三模式指令範例》 */
+    { id: 'D1', gate: 1, g: 'start', t: 'dsg', lv: 1, optional: true, title: '起點（新手）：填三個空格生出兩個畫板', p: '請做兩個手機畫板，寬 390，一個一般版、一個長輩版（字大 1.3 倍、對比加強）。內容是呼呼醫院的【這份須知的標題，例如：回診提醒】：最上面標題「【標題文字】」；中間三張卡片，分別寫「【卡片一】」「【卡片二】」「【卡片三】」；最底下一個紅色區塊，寫「【出現什麼狀況要回急診】」。白底，主色藍色，圓角卡片。所有文字都用我給的原文，不要改寫、不要增加。', done: '兩個畫板並排，文字都是你填的原文；下一步放進 Figma 調成寬 390' },
+    { id: 'D2', gate: 1, g: 'start', t: 'dsg', lv: 2, optional: true, title: '起點（中級）：自己寫完整描述生出三個畫板', p: '請做三個手機畫板，寬 390：「回診前一週」「回診前一天」「回診當天」。每個畫板最上面是日期倒數（例如「還有 7 天」），中間是這個階段要做的兩件事，最底下一顆按鈕「加入提醒」。「回診當天」的畫板，把「帶健保卡」放在最顯眼的位置。風格乾淨，白底，藍色主色，圓角卡片。所有文字都用我給的原文，原文如下：【把你每個畫板的文字貼在這裡】', done: '三個畫板；之後每次只改一處，並寫「其他部分不要動」' },
+    { id: 'D3', gate: 1, g: 'start', t: 'dsg', lv: 3, optional: true, title: '起點（專家）：先寫規則檔再生成，要求一致', p: '請依照下面的設計規則，做三個手機畫板，寬 390：【畫板一名稱】【畫板二名稱】【畫板三名稱】。【貼上你的設計規則檔全文】每個畫板的內容如下：【貼上每個畫板的原文】所有文字照原文，不要改寫、不要增加；三個畫板的顏色、字級、間距、圓角必須完全一致。生成後請列出每個畫板用到的顏色、字級和間距，我要對照規則檔。', done: '三個畫板風格一致，並有一張實際用到的數值可和規則檔核對' }
   ];
 
   /* 每個模式讓學生看到什麼；專家＝現在的完整畫面，沒有值或亂填一律專家 */
   function level(v) { v = Number(v); return v === 1 ? 1 : (v === 2 ? 2 : 3); }
   function view(lv) {
     lv = level(lv);
-    if (lv === 1) return { lv: 1, name: '新手', oneStep: true, editPrompt: false, pickCards: 1, pickTool: false, checks: 'three', heur: 0 };
-    if (lv === 2) return { lv: 2, name: '中級', oneStep: false, editPrompt: true, pickCards: 3, pickTool: true, checks: 'three', heur: 3 };
-    return { lv: 3, name: '專家', oneStep: false, editPrompt: true, pickCards: 13, pickTool: true, checks: 'three', heur: 10 };
+    if (lv === 1) return { startCard: 'D1', lv: 1, name: '新手', oneStep: true, editPrompt: true, pickCards: 1, pickTool: false, checks: 'three', heur: 0 };
+    if (lv === 2) return { startCard: 'D2', lv: 2, name: '中級', oneStep: false, editPrompt: true, pickCards: 3, pickTool: true, checks: 'three', heur: 3 };
+    return { startCard: 'D3', lv: 3, name: '專家', oneStep: false, editPrompt: true, pickCards: 13, pickTool: true, checks: 'three', heur: 10 };
   }
-  function cardsFor(tool) { return CARDS.filter(function (c) { return c.t === tool; }); }
+  /* lv 給了就只回傳這個模式看得到的卡（起點卡每種模式只看自己那一張）；沒給 lv 就全部（舊呼叫相容） */
+  function cardsFor(tool, lv) { return CARDS.filter(function (c) { return c.t === tool && (!lv || !c.lv || c.lv === level(lv)); }); }
+  /* 卡片清單用：某一關、某個模式看得到的卡，不含第 1 關起點卡（起點卡在第 1 關獨立成起點區塊） */
+  function listFor(n, lv) { return cardsByGate(n, lv).filter(function (c) { return c.g !== 'start'; }); }
+  function cardsByGate(n, lv) { return CARDS.filter(function (c) { return c.gate === n && (!lv || !c.lv || c.lv === level(lv)); }); }
   function cardById(id) { return CARDS.filter(function (c) { return c.id === id; })[0] || null; }
   /* 新手預設挑哪張卡：貼 Claude Design 的第一步是 C1、AI Studio 是 A1 */
   function defaultCard(tool) { var l = cardsFor(tool); return l.length ? l[0].id : ''; }
@@ -154,5 +172,5 @@
   }
   function stepName(i) { return ['① 挑一張指引卡', '② 複製指令、貼到工具', '③ 把結果貼回來', '④ 自己檢查'][i] || ''; }
 
-  return { MAXV: MAXV, verKeys: verKeys, iterReq: iterReq, freeze: freeze, TOOLS: TOOLS, CARDS: CARDS, CHK: CHK, HEUR: HEUR, LIMITS: LIMITS, level: level, view: view, cardsFor: cardsFor, cardById: cardById, defaultCard: defaultCard, isHttps: isHttps, buildPrompt: buildPrompt, emptyProto: emptyProto, normProto: normProto, protoForWrite: protoForWrite, missing: missing, prereq: prereq, stepName: stepName };
+  return { listFor: listFor, GATES: GATES, gateName: gateName, cardsByGate: cardsByGate, MAXV: MAXV, verKeys: verKeys, iterReq: iterReq, freeze: freeze, TOOLS: TOOLS, CARDS: CARDS, CHK: CHK, HEUR: HEUR, LIMITS: LIMITS, level: level, view: view, cardsFor: cardsFor, cardById: cardById, defaultCard: defaultCard, isHttps: isHttps, buildPrompt: buildPrompt, emptyProto: emptyProto, normProto: normProto, protoForWrite: protoForWrite, missing: missing, prereq: prereq, stepName: stepName };
 });

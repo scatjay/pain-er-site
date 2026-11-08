@@ -79,6 +79,15 @@ body.lv1 .dirbtn[data-k=mine],body.lv1 #nextLine~#progress{display:none}
 body.lv1 #secProto .pt-mode{display:none}
 #lvNav{margin:10px 0}
 #ptText{width:100%;font-size:16px}
+/* 五關進度條與 Figma→AI Studio 步驟助教（F⑩ figai_coach_ui.js，11-08） */
+.pt-gates{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}.pt-gate{flex:1 1 120px;min-height:48px;border:2px solid var(--line);border-radius:10px;background:var(--panel);color:var(--fg);padding:6px 8px;text-align:left;cursor:pointer}.pt-gate.on{background:var(--ct,#3d6fe0);color:#fff;border-color:var(--ct,#3d6fe0)}.pt-gate b,.pt-gate span{display:block}.pt-gate span{font-size:13px}
+#figaiBox{margin:12px 0}.fg-box{border:2px solid var(--line);border-radius:12px;background:var(--panel);padding:12px}.fg-h{font-weight:800;font-size:16px;margin:4px 0}.fg-h2{font-weight:700;margin:10px 0 4px}
+.fg-steps{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}.fg-steps button{min-height:48px;font-size:16px;border:2px solid var(--line);border-radius:10px;background:var(--panel);color:var(--fg);padding:4px 10px;cursor:pointer}.fg-steps button.on{background:var(--ct,#3d6fe0);color:#fff;border-color:var(--ct,#3d6fe0)}.fg-steps small{display:block;font-size:12px}
+.fg-row{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.fg-row button{min-height:48px;font-size:16px}.fg-l{display:block;font-weight:700;margin:8px 0 4px}
+.fg-tag{display:inline-block;border:2px solid var(--line);border-radius:99px;padding:0 8px;font-size:12px;background:#e6f4ea}.fg-ai{background:#e6f4ea}
+.fg-bub{border:2px solid var(--line);border-radius:10px;padding:6px 10px;margin:6px 0;font-size:16px;background:#fff}.fg-bub.warn{background:#fde8ec}
+.fg-note{font-size:13px;color:var(--muted);margin:4px 0}.fg-ask{font-weight:700;margin:6px 0}.fg-muted{color:var(--muted)}
+#figaiBox textarea{width:100%;font-size:16px}
 @media (max-width:860px){
   html,body{overflow-x:hidden;max-width:100vw}
   body{font-size:16px}
@@ -137,24 +146,25 @@ body.lv1 #secProto .pt-mode{display:none}
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-<script src="er_firebase.js?v=202611051126"></script>
-<script src="local_db.js?v=202611051126"></script>
-<script src="remote_db.js?v=202611051126"></script>
-<script src="personas_inclusive.js?v=202611051126"></script>
-<script src="personas.js?v=202611051126"></script>
-<script src="case_tone.js?v=202611051126"></script>
-<script src="sb_core.js?v=202611051126"></script>
-<script src="sb_store.js?v=202611051126"></script>
-<script src="sb_coach.js?v=202611051126"></script>
-<script src="proposal_core.js?v=202611051126"></script>
-<script src="proposal_proto.js?v=202611051126"></script>
-<script src="proposal_store.js?v=202611051126"></script>
-<script src="proposal_coach.js?v=202611051126"></script>
-<script src="ui_level.js?v=202611051126"></script>
-<script src="proposal_proto.js?v=202611051126"></script>
-<script src="proposal_proto_ui.js?v=202611051126"></script>
-<script src="proposal_wall.js?v=202611051126"></script>
-<script src="wall_store.js?v=202611051126"></script>
-<script src="proposal_ui.js?v=202611051126"></script>
+<script src="er_firebase.js?v=202611082220"></script>
+<script src="local_db.js?v=202611082220"></script>
+<script src="remote_db.js?v=202611082220"></script>
+<script src="personas_inclusive.js?v=202611082220"></script>
+<script src="personas.js?v=202611082220"></script>
+<script src="case_tone.js?v=202611082220"></script>
+<script src="sb_core.js?v=202611082220"></script>
+<script src="sb_store.js?v=202611082220"></script>
+<script src="sb_coach.js?v=202611082220"></script>
+<script src="proposal_core.js?v=202611082220"></script>
+<script src="proposal_proto.js?v=202611082220"></script>
+<script src="proposal_store.js?v=202611082220"></script>
+<script src="proposal_coach.js?v=202611082220"></script>
+<script src="ui_level.js?v=202611082220"></script>
+<script src="figai_coach.js?v=202611082220"></script>
+<script src="figai_coach_ui.js?v=202611082220"></script>
+<script src="proposal_proto_ui.js?v=202611082220"></script>
+<script src="proposal_wall.js?v=202611082220"></script>
+<script src="wall_store.js?v=202611082220"></script>
+<script src="proposal_ui.js?v=202611082220"></script>
 </body>
 </html>
