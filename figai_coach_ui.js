@@ -107,8 +107,9 @@
   ];
   function startBlock(P, lv, sel) {
     var v = P.view(lv), card = P.cardById(v.startCard), o = START_OPTS.filter(function (x) { return x.k === sel; })[0];
-    var h = '<div class="pt-h2">先選一個起點（三選一，哪個都可以）</div><div class="pt-tools">' + START_OPTS.map(function (x) { return '<button class="pt-tool' + (sel === x.k ? ' on' : '') + '" data-pt="start" data-k="' + x.k + '"><b>' + esc(x.name) + '</b></button>'; }).join('') + '</div>';
+    var h = '<div class="pt-h2">先選一個起點（三選一，哪個都可以）</div><div class="pt-tools">' + START_OPTS.map(function (x) { return '<button class="pt-tool' + (sel === x.k ? ' on' : '') + '" data-pt="start" data-k="' + x.k + '"><b>' + esc(x.name) + '</b>' + (x.k === 'gen' && C.CLAUDE_LIMIT ? '<span style="display:block;font-size:14px">（' + esc(C.CLAUDE_LIMIT.short) + '）</span>' : '') + '</button>'; }).join('') + '</div>';
     if (o) h += '<div class="pt-note">' + esc(o.note) + '</div>';
+    if (sel === 'gen' && C.CLAUDE_LIMIT) h += '<div class="pt-note" style="font-size:16px">⏳ <b>Claude 免費帳號的用量有限</b><ol style="margin:6px 0 6px 20px;padding:0">' + C.CLAUDE_LIMIT.tips.map(function (t) { return '<li style="margin:4px 0">' + esc(t) + '</li>'; }).join('') + '</ol></div>';
     if (sel === 'gen' && C.START_MEDIA) h += mediaHtml(C.mediaList(C.START_MEDIA.gen[0]), C.START_MEDIA.gen[1]);
     if (sel === 'gen' && card) h += '<div class="pt-note"><b>' + esc(card.title) + '</b>　做完的樣子：' + esc(card.done) + '<br>下一步按「複製指令」，把【括號】換成你自己的內容。生出來的是草稿，你還是要在 Figma 裡看過、改過。</div>';
     return h;

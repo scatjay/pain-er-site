@@ -43,9 +43,9 @@ var FigCoach = (function () {
   /* 新手：進入該步驟時自動出現（第 5 步是代填，第 6 步等學生選了互動才代填） */
   var N_ENTER = {
     1: '流程有幾步、哪一句話在告訴你下一步？先寫下數字。',
-    2: '選「複製到草稿」，改你自己的那份，不要改樣板原本的。',
+    2: '把樣板複製成你自己的草稿，只改你自己的那份，不要改樣板原本的。',
     3: '只改三處：標題、一句引導的話、危險訊息挪到最上面。先選哪一處？',
-    4: '選你的畫面，右下角 Export，格式 PNG、大小 1x。',
+    4: '先在左側 Layers（圖層）點整個畫面，再按右側最下面 Export（匯出）旁的 ＋，選 PNG、1x。',
     6: '想加哪一個互動？選一個，我幫你填指令。',
     7: '四項檢查逐項勾，沒過的我再給你一句救火指令。',
     8: '你不能講話，只記三件事：幾秒、點幾下、停在哪一句話。',
@@ -53,7 +53,7 @@ var FigCoach = (function () {
   };
   var N_LEVEL2 = {
     3: '改完問自己：這句話有告訴人現在該做什麼？看到的人知道做完會怎樣？危險訊息一眼看得到嗎？',
-    4: '找不到 Export：先點畫面本身，不是裡面的文字，右邊屬性欄最下面有 Export。',
+    4: '找不到 Export（匯出）：先點整個畫面，不要點裡面的小方塊，右側面板最下面就是 Export（匯出）。',
     5: '送出後一直轉圈：等 5 分鐘；真的沒動靜才重送一次，而且只重送一次。',
     6: '點整個區塊都要有反應，不只是文字；沒反應就把「點哪個」寫得更明確。'
   };
@@ -74,25 +74,42 @@ var FigCoach = (function () {
     9: function (S) { return (!S.f.share1 || !S.f.share2 || isBlank(S.f.summary)) ? '要附匯出的 PNG，AI Studio 連結也要開分享，還要寫這一版做了什麼。' : ''; }
   };
   /* 卡住時（先問卡在哪，再給下一步提示）：每條 [選項文字, 等級1, 等級2] */
+  /* 卡住選項「Claude 說用量快滿」：先停手、等重設、去做不耗額度的事 */
+  var LIMIT_OPT = ['Claude 說用量快滿', '先停手，不要再生成新畫面，看提示裡寫的重設時間。', '等重設的時候，在 Figma 手動調整畫面，再按右側最下面 Export（匯出）旁的 ＋ 輸出 PNG。'];
   var STUCK = {
-    novice: { 4: { export: ['找不到 Export', '先點畫面本身，不是裡面的文字。', '右邊屬性欄最下面有 Export，格式選 PNG、1x。'] },
+    novice: { 1: { limit: LIMIT_OPT }, 2: { limit: LIMIT_OPT }, 3: { limit: LIMIT_OPT }, 4: { export: ['找不到 Export（匯出）', '先在左側 Layers（圖層）點整個畫面，不要點裡面的小方塊。', '右側面板最下面 Export（匯出）旁的 ＋ 按下去，格式選 PNG、1x。'] },
               5: { spin: ['一直轉圈', '先等 5 分鐘，不要重送。', '真的沒動靜才重送一次，而且只重送一次。'] },
               6: { noreact: ['按鈕點了沒反應', '重看你選的互動，點哪個、出現什麼。', '把「點哪個」寫得更明確再重送一次第 6 步。'] },
               7: { missing: ['預覽少了字', '先用第 7 步的救火指令。', '指令後面再加一句「缺少的字是：＿＿」。'] } },
-    mid: { 3: { rewrite: ['說明的字被改寫', '把每一句原文貼進指令。', '加一句「逐字照用，不要改寫」。'] },
-           4: { claude: ['Claude 讀不到畫面', '確認你貼的是自己 Figma 檔案裡畫面的連結。', '貼的要是畫面的連結，不是整個檔案的連結；不行就手抄字級與間距。'] },
-           5: { oldbroke: ['加了新互動，舊的壞掉', '退回上一段存起來的成功指令。', '重新加，指令開頭寫「只修改下面說明的部分，其他完全不要動」。'] } }
+    mid: { 1: { limit: LIMIT_OPT }, 2: { limit: LIMIT_OPT }, 3: { rewrite: ['說明的字被改寫', '把每一句原文貼進指令。', '加一句「逐字照用，不要改寫」。'] },
+           4: { limit: LIMIT_OPT, claude: ['Claude 讀不到畫面', '確認你貼的是自己 Figma 檔案裡畫面的連結。', '貼的要是畫面的連結，不是整個檔案的連結；不行就手抄字級與間距。'] },
+           5: { oldbroke: ['加了新互動，舊的壞掉', '按那次回覆下方的 Restore（還原），退回上一版。', '重新加，指令開頭寫「只修改下面說明的部分，其他完全不要動」。'] } }
   };
   var M_DIR = {
     1: '先寫出：有幾個區塊、點了會怎樣、有哪幾個狀態。', 2: '每個狀態畫成一個畫面，名稱寫清楚。', 3: '三件事：逐字照原文、寬度 390、不接外部服務。',
     4: '兩種做法：用 Claude 取尺寸表，或自己在 Figma 抄字級與間距。', 5: '一次只加一個功能，加完先自己點一遍。', 6: '每改一版，截圖貼回 Figma，寫改了什麼、為什麼。',
     7: '四項檢查逐項看，有沒過的先想原因。', 8: '你不能講話，只記幾秒、點幾下、停在哪一句。', 9: '附匯出的 PNG 和 AI Studio 連結（要開分享），寫每一版改了什麼。'
   };
-  var M_LEVEL2 = { 3: '說明的字被改寫：把每一句原文貼進指令，要求逐字照用。', 5: '舊的壞掉就退回上一段成功的指令，再加新的，並寫「其他功能都不要動」。' };
+  var M_LEVEL2 = { 3: '說明的字被改寫：把每一句原文貼進指令，要求逐字照用。', 5: '舊的壞掉，就按那次回覆下方的 Restore（還原）回到上一版，再加新的，並寫「其他功能都不要動」。' };
   var M_CAUSE = { 1: '常見原因：指令沒要求逐字照原文。', 2: '字體不同會差一點，差在 2 px 以內就不用調。', 3: '常見原因：指令沒寫清楚點哪個、出現什麼。', 4: '先把真人資料換成練習資料，再重新上傳。' };
   var M_NEXT5 = { multi: '一次只加一個功能，這一段先留一個。', save: '成功的這一段指令存起來，壞了才退得回去。', map: '這個按鈕對應你訪談到的哪一句話？' };
   var AVAIL = { novice: { 1: [1], 2: [1], 3: [1, 2], 4: [1, 2], 5: [1, 2, 4], 6: [1, 2, 4], 7: [1, 3, 4], 8: [1], 9: [1] },
                 mid: { 1: [1], 2: [1], 3: [1, 2], 4: [1], 5: [1, 2], 6: [1], 7: [2], 8: [1], 9: [1] } };
+
+  /* ———— 英文介面字樣表：Figma 與 AI Studio 都沒有中文介面，學生會怕英文，所以助教每次提到按鈕都寫「英文（中文意思）」並說位置。
+     字樣與中文意思照 _figma_mcp/英文按鈕中文對照_1108.md（只收 11-08 實測看到的字）；測試會檢查每則提示的寫法。 */
+  var UI_TERMS = { 'Export': '匯出', 'Layers': '圖層', 'Preview': '預覽', 'Restore': '還原', 'Upload Files': '上傳檔案', 'Acknowledge': '我知道了', 'Drafts': '草稿', 'Design': '設計' };
+  var POS_WORDS = /左側|右側|左下|右下|右上|左上|最下面|最上面|輸入框|下方|上方|旁|視窗|回覆|面板|灰字/;
+  /* Claude 免費帳號有 5 小時用量上限：先想好再送，不要一直重試（原文提示例：您的 5 小時限制已使用超過 90% · 將於 上午1:00 重設） */
+  var CLAUDE_LIMIT = {
+    short: '5 小時內約 4～5 次生成、3～4 次小修改，先想好再送',
+    tips: [
+      '免費帳號每 5 小時有用量上限，大約夠做 4～5 次生成＋3～4 次小修改（請 Claude 讀 Figma 約 2 次）。這是估計，因人、因時段而不同。',
+      '一次把指令寫完整：畫板數量、寬度、每個畫板的名稱、主色、文字都寫在同一則，不要分很多則補。',
+      '要改就在同一個對話追加：「只修改『3 回診提醒』畫板，把按鈕改成橘色，其他不要動」，不要開新對話重新生成。',
+      '看到輸入框上方出現「您的 5 小時限制已使用超過 90% · 將於 上午1:00 重設」，就先停手，去做不耗額度的事：在 Figma 手動調整，再按右側最下面 Export（匯出）旁的 ＋ 輸出 PNG。'
+    ]
+  };
 
   /* ———— 步驟素材表：每一步掛 Figma／AI Studio／Claude 免費版的實測截圖與一句指示（圖是檔案，放 demo_data/figai_img/，不塞進 js） ————
      只收 Claude 免費版、官方 Figma 連接器、Figma 免費、AI Studio 免費層實測過的做法；交件用匯出，不寫分享 Design。 */
@@ -104,30 +121,31 @@ var FigCoach = (function () {
     ais_done: 'AI Studio 生成完成', ais_preview: 'AI Studio 右邊的預覽，應該和 Figma 畫面一樣', ais_second: 'AI Studio 第二段互動做完',
     ais_try1: '試用前：畫面上的選項還沒勾', ais_try3: '勾了三項之後的畫面', ais_try4: '按下按鈕後跳出的視窗', ais_try5: '按下「知道了」後視窗關閉',
     free_read: 'Claude 免費版貼上 Figma 畫面連結，讀出每個元件的尺寸（只能讀）', free_connector: 'Claude 設定的連接器頁，Figma 打勾就是接好了',
-    dsg_gen: 'Claude 免費版用一句話生成設計畫板', dsg_edit: '再用一句話修改畫板，一次只改一處', dsg_d1: '新手題生出來的兩個畫板'
+    claude_limit: 'Claude 輸入框上方的提示條：您的 5 小時限制已使用超過 90%，將於 上午1:00 重設', dsg_gen: 'Claude 免費版用一句話生成設計畫板', dsg_edit: '再用一句話修改畫板：只改「回診當天」的卡片，其他部分不要動', dsg_d1: '新手題生出來的兩個畫板'
   };
   var STEP_MEDIA = {
-    novice: { 1: [['ais_try1', 'ais_try3'], '打開樣板，每個按鈕都點一次，數一數流程有幾步。'], 2: [['figma_start'], '把樣板複製成自己的草稿（檔名旁要有你的名字）再開始改。'], 3: [['figma_screen'], '只改標題、一句引導的話，並把危險訊息挪到最上面。'],
-      4: [['figma_select', 'figma_export'], '先在左側圖層點整個畫面，看到藍框再按右下角 Export，選 PNG、1x。'], 5: [['ais_home', 'ais_upload', 'ais_prompt', 'ais_done'], '貼上指令、附上匯出的 PNG 再送出；送出後等 2 到 5 分鐘，生成完成就能看預覽。'],
-      6: [['ais_second', 'ais_try4'], '一次只加一個互動，加完自己點一遍。'], 7: [['ais_preview', 'figma_screen'], '把右邊預覽和 Figma 的畫面並排看，四項逐項打勾。'],
+    novice: { 1: [['ais_try1', 'ais_try3'], '打開樣板，每個按鈕都點一次，數一數流程有幾步。'], 2: [['figma_start'], '把樣板複製成自己的草稿，看檔名下方的灰字，Drafts（草稿）代表放在你自己的草稿夾。'], 3: [['figma_screen'], '只改標題、一句引導的話，並把危險訊息挪到最上面。'],
+      4: [['figma_select', 'figma_export'], '先在左側 Layers（圖層）點整個畫面，看到藍框，再按右側最下面 Export（匯出）旁的 ＋，選 PNG、1x。'], 5: [['ais_home', 'ais_upload', 'ais_prompt', 'ais_done'], '按輸入框左下角的 ＋，選 Upload Files（上傳檔案）附上 PNG，貼上指令，再按右下角的 ↑（送出）；等 2 到 5 分鐘。'],
+      6: [['ais_second', 'ais_try4'], '一次只加一個互動，加完自己點一遍。'], 7: [['ais_preview', 'figma_screen'], '把右側 Preview（預覽）和 Figma 的畫面並排看，四項逐項打勾。'],
       8: [['ais_try4', 'ais_try5'], '請同學照任務點一遍，你只記秒數、點幾下、停在哪一句。'], 9: [['figma_exported', 'ais_preview'], '交出匯出的 PNG 和 AI Studio 連結（連結要開分享）。'] },
-    mid: { 1: [['figma_start'], '先在紙上寫出區塊、互動、狀態，再動手。'], 2: [['figma_select'], '每個狀態畫成一個畫面，名稱寫清楚，寬 390。'], 3: [['figma_export', 'ais_prompt'], '匯出 PNG、1x，貼進 AI Studio，指令要寫逐字照原文。'],
+    mid: { 1: [['figma_start'], '先在紙上寫出區塊、互動、狀態，再動手。'], 2: [['figma_select'], '每個狀態畫成一個畫面，名稱寫清楚，寬 390。'], 3: [['figma_export', 'ais_prompt'], '右側最下面 Export（匯出）旁的 ＋ 輸出 PNG、1x；到 AI Studio 按輸入框左下 ＋ 選 Upload Files（上傳檔案）附上。'],
       4: [['free_connector', 'free_read'], '校正：用 Claude 免費版讀 Figma 尺寸（只能讀），或自己手抄。'], 5: [['ais_second'], '一次只加一個功能，成功的那一段指令存起來。'],
-      6: [['ais_preview', 'figma_screen'], '預覽截圖貼回 Figma，排在原版旁邊，寫改了什麼。'], 7: [['ais_preview'], '四項檢查逐項看，沒過的先想原因。'],
+      6: [['ais_preview', 'figma_screen'], '右側 Preview（預覽）截圖貼回 Figma，排在原版旁邊，寫改了什麼。'], 7: [['ais_preview'], '四項檢查逐項看，沒過的先想原因。'],
       8: [['ais_try4'], '照任務請人試用，你不能講話，只記秒數、點擊和停住的地方。'], 9: [['figma_exported', 'ais_preview'], '交出匯出的 PNG 和 AI Studio 連結（連結要開分享）。'] },
-    expert: { 1: [['figma_select'], '規則裡的色碼、字級、間距，在 Figma 右邊屬性欄都量得到。'], 2: [['figma_start'], '依規則畫多個畫面，全部用同一組樣式。'], 3: [['ais_prompt', 'ais_second'], '把 DESIGN.md 貼進指令，互動一次只加一個功能。'],
+    expert: { 1: [['figma_select'], '規則裡的色碼、字級、間距，在 Figma 右側面板的 Design（設計）分頁都量得到。'], 2: [['figma_start'], '依規則畫多個畫面，全部用同一組樣式。'], 3: [['ais_prompt', 'ais_second'], '把 DESIGN.md 貼進指令，互動一次只加一個功能。'],
       4: [['free_read', 'free_connector'], '選用：Claude 免費版接 Figma 只能讀；連不上就手動比對。'], 5: [['ais_preview'], '自評十項，每項寫符合、不符合或不適用，並加嚴重程度。'],
       6: [['ais_preview', 'figma_screen'], '每一版寫改了什麼、依據、結果；截圖貼回 Figma 對照。'], 7: [['ais_try4'], '找至少兩位試用者，沒解決的問題也要寫。'],
       8: [['figma_exported', 'ais_preview'], '交出匯出的 PNG、AI Studio 連結（要開分享）、DESIGN.md 和三版對照。'] }
   };
   /* 第 1 關「用 Claude 生一張初稿」的示範：一句話生成、再一句話修改（Claude 免費版，只在對話裡生成與修改，不會改你的 Figma） */
-  var START_MEDIA = { gen: [['dsg_gen', 'dsg_d1', 'dsg_edit'], '用一句話生成草稿畫板，再用一句話修改；一次只改一處。'] };
+  var START_MEDIA = { gen: [['dsg_gen', 'dsg_d1', 'dsg_edit', 'claude_limit'], '用一句話生成草稿畫板，再用一句話修改；一次只改一處。'] };
   /* 卡住時選了某個原因：附對應的圖與一句指示 */
+  var LIMIT_MEDIA = [['claude_limit'], '看到「已使用超過 90%」先停手；去做 Figma 手動調整與匯出，等重設時間再繼續。'];
   var STUCK_MEDIA = {
-    novice: { 4: { export: [['figma_select', 'figma_export'], '先點整個畫面（不是裡面的文字），右邊屬性欄最下面有 Export。'] }, 5: { spin: [['ais_prompt'], '送出後一直轉圈：先等 5 分鐘，不要重送。'] },
-      6: { noreact: [['ais_try4'], '按鈕沒反應：把「點哪個、出現什麼」寫得更明確再送一次。'] }, 7: { missing: [['ais_preview', 'figma_screen'], '和 Figma 的畫面並排對，找出哪一句不見了，再補指令。'] } },
-    mid: { 3: { rewrite: [['ais_prompt'], '把每一句原文貼進指令，加一句「逐字照用」。'] }, 4: { claude: [['free_connector', 'free_read'], '設定的連接器頁看到 Figma 打勾；貼的是畫面連結，不是整個檔案的連結。'] },
-      5: { oldbroke: [['ais_second'], '退回上一段成功的指令，再加新的，並寫「其他功能都不要動」。'] } }
+    novice: { 1: { limit: LIMIT_MEDIA }, 2: { limit: LIMIT_MEDIA }, 3: { limit: LIMIT_MEDIA }, 4: { export: [['figma_select', 'figma_export'], '先在左側 Layers（圖層）點整個畫面，再看右側最下面的 Export（匯出）。'] }, 5: { spin: [['ais_prompt'], '送出後一直轉圈：先等 5 分鐘，不要重送。'] },
+      6: { noreact: [['ais_try4'], '按鈕沒反應：把「點哪個、出現什麼」寫得更明確再送一次。'] }, 7: { missing: [['ais_preview', 'figma_screen'], '把右側 Preview（預覽）和 Figma 的畫面並排對，找出哪一句不見了，再補指令。'] } },
+    mid: { 1: { limit: LIMIT_MEDIA }, 2: { limit: LIMIT_MEDIA }, 3: { rewrite: [['ais_prompt'], '把每一句原文貼進指令，加一句「逐字照用」。'] }, 4: { limit: LIMIT_MEDIA, claude: [['free_connector', 'free_read'], '設定的連接器頁看到 Figma 打勾；貼的是畫面連結，不是整個檔案的連結。'] },
+      5: { oldbroke: [['ais_second'], '按那次回覆下方的 Restore（還原）回到上一版，再加新的，並寫「其他功能都不要動」。'] } }
   };
   /* 什麼時候主動冒出圖：新手＝進入步驟、停留過久、卡住選項、「下一步」沒過、再多一點；中級＝只有停留過久、卡住選項、「下一步」沒過、再多一點，加第 4 步預告；專家＝只有主動按「方向」。
      另外「接手」（離開再回來）與「看這一步的示範圖」按鈕三種模式都有。 */
@@ -190,7 +208,7 @@ var FigCoach = (function () {
         if (!isBlank(S.f.prompt1)) { S.used.auto += 1; return out('N5.back', 1, '第一段指令已經填好了，確認後再複製；想重填請按「代填」。'); }   /* 再回到這一步不重填、不多扣代填次數 */
         if (quotaUsed(S) >= COACH_PER_DAY) return no('quota', '今天助教的次數用完了，明天再問。', 'quota');
         var e = doFill(S, 'prompt1', P1); if (e) return e;
-        return attach(out('N5.fill', 4, '指令幫你填好了，確認內容再複製。第一次上傳會跳同意視窗，按 Acknowledge。', { fill: { prompt1: P1 } }), S, 5, 'enter');
+        return attach(out('N5.fill', 4, '指令幫你填好了，確認內容再複製。第一次上傳跳出同意視窗，按裡面的 Acknowledge（我知道了）。', { fill: { prompt1: P1 } }), S, 5, 'enter');
       }
       S.used.auto += 1; return attach(out('N' + step + '.enter', 1, N_ENTER[step]), S, step, 'enter');
     }
@@ -334,7 +352,7 @@ var FigCoach = (function () {
   IDS.push('E.rules.nonumber', 'E.rules.nomust', 'E.rules.conflict', 'E.rules.ok', 'E.screens.norules', 'E.screens.drift', 'E.screens.ok', 'E.heur.count', 'E.heur.noreason', 'E.heur.allok', 'E.heur.ok', 'E.ver.count', 'E.ver.nobasis', 'E.ver.ok');
 
   return { MODES: MODES, STEPS: STEPS, CAPS: CAPS, LEVEL_NAME: LEVEL_NAME, FORBIDDEN: FORBIDDEN, COACH_PER_DAY: COACH_PER_DAY, FILL_CAP: FILL_CAP, IDS: IDS, AVAIL: AVAIL,
-           GATES: GATES, GATE_NAME: GATE_NAME, OPTS: OPTS, P1: P1, IMG_DIR: IMG_DIR, MEDIA: MEDIA, STEP_MEDIA: STEP_MEDIA, STUCK_MEDIA: STUCK_MEDIA, START_MEDIA: START_MEDIA, mediaList: mediaList, MEDIA_ON: MEDIA_ON, stepMedia: stepMedia, showMedia: showMedia, resume: resume, p2: p2, STUCK: STUCK, newState: newState, enter: enter, sent: sent, idle: idle, stuck: stuck, level: level, next: next, review: review,
+           GATES: GATES, GATE_NAME: GATE_NAME, OPTS: OPTS, P1: P1, IMG_DIR: IMG_DIR, UI_TERMS: UI_TERMS, POS_WORDS: POS_WORDS, CLAUDE_LIMIT: CLAUDE_LIMIT, MEDIA: MEDIA, STEP_MEDIA: STEP_MEDIA, STUCK_MEDIA: STUCK_MEDIA, START_MEDIA: START_MEDIA, mediaList: mediaList, MEDIA_ON: MEDIA_ON, stepMedia: stepMedia, showMedia: showMedia, resume: resume, p2: p2, STUCK: STUCK, newState: newState, enter: enter, sent: sent, idle: idle, stuck: stuck, level: level, next: next, review: review,
            confirm: acceptFill, copy: copy, edit: function (S, k, v) { S.f[k] = v; delete S.ai[k]; return S; }, len: len, quotaUsed: quotaUsed };
 })();
 if (typeof module !== 'undefined') module.exports = FigCoach;
