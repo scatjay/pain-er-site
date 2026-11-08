@@ -84,10 +84,10 @@
     var FG = window.FigAIUI; if (!FG || !window.FigCoach) return '';
     var sid = (S() && S().sid) || '';
     var first = !T.panel; T.panel = FG.ensure(T.panel, lv);
-    if (first && sid) { try { FG.loadCounts(window.localStorage, sid, T.panel); } catch (e) {} }
+    if (first && sid) { try { FG.loadCounts(window.localStorage, sid, T.panel); FG.restore(T.panel, window.localStorage, sid, Date.now()); } catch (e) {} }   /* 離開再回來：從上次做到的那一步接手（只讀本機紀錄） */
     return '<div id="figaiBox">' + FG.render(T.panel) + '</div>';
   }
-  function coachSave() { var FG = window.FigAIUI, s = S(); if (FG && T.panel && s && s.sid) { try { FG.saveCounts(window.localStorage, s.sid, T.panel); } catch (e) {} } }
+  function coachSave() { var FG = window.FigAIUI, s = S(); if (FG && T.panel && s && s.sid) { try { FG.saveCounts(window.localStorage, s.sid, T.panel); FG.savePos(window.localStorage, s.sid, T.panel, Date.now()); } catch (e) {} } }
 
   /* ———— 畫面 ———— */
   function modeBar(lv) {
@@ -258,14 +258,16 @@
   });
   document.addEventListener('click', function (e) {
     var b = e.target.closest && e.target.closest('#figaiBox [data-fg]'); if (!b || !window.FigAIUI || !T.panel) return;
-    var d = { a: b.dataset.fg, n: b.dataset.n, k: b.dataset.k }, r = window.FigAIUI.act(T.panel, d);
+    var d = { a: b.dataset.fg, n: b.dataset.n, k: b.dataset.k }, r = window.FigAIUI.act(T.panel, d, Date.now());
     if (d.a === 'copy') { var txt = (T.panel.S.f[d.k] || ''); if (r && r.ok && navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(function () { toastMsg('已複製，到工具裡貼上'); }, function () { toastMsg('請手動複製欄位裡的文字'); }); else toastMsg(r && r.ok ? '請手動複製欄位裡的文字' : '先確認這段指令才能複製'); return; }
     coachSave(); UI.render();
   });
-  document.addEventListener('input', function (e) { var el = e.target; if (el && el.dataset && el.dataset.ff && window.FigAIUI && T.panel && el.closest('#figaiBox') && el.type !== 'checkbox' && el.tagName !== 'SELECT') window.FigAIUI.setField(T.panel, el.dataset.ff, el.value); });
+  document.addEventListener('input', function (e) { var el = e.target; if (el && el.dataset && el.dataset.ff && window.FigAIUI && T.panel && el.closest('#figaiBox') && el.type !== 'checkbox' && el.tagName !== 'SELECT') window.FigAIUI.setField(T.panel, el.dataset.ff, el.value, Date.now()); });
   document.addEventListener('change', function (e) {
     var el = e.target; if (!el || !el.dataset || !el.dataset.ff || !window.FigAIUI || !T.panel || !el.closest('#figaiBox')) return;
-    window.FigAIUI.setField(T.panel, el.dataset.ff, el.type === 'checkbox' ? el.checked : el.value); UI.render();
+    window.FigAIUI.setField(T.panel, el.dataset.ff, el.type === 'checkbox' ? el.checked : el.value, Date.now()); coachSave(); UI.render();
   });
   window.addEventListener('pagehide', function () { coachSave(); });
+  /* 停留過久：每 30 秒看一次，沒動作超過 N 分鐘就主動冒圖；學生正在打字（焦點在欄位）時不打斷 */
+  setInterval(function () { var FG = window.FigAIUI; if (FG && T.panel && !isEditing() && FG.tick(T.panel, Date.now())) { coachSave(); UI.render(); } }, 30000);
 })();
