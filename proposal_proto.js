@@ -158,8 +158,8 @@
     return o;
   }
   /* 這一版夠不夠完整：缺什麼就列什麼（學生看得懂的話） */
-  function missing(p, lv) {
-    p = normProto(p); var m = [], need = iterReq(lv != null ? lv : p.lv), have = verKeys(p).length;
+  function missing(p, lv, needOverride) {   /* needOverride＝這一份的版本要求（每週送審依份×模式，由畫面算好帶進來）；不給就用模式的老要求 */
+    p = normProto(p); var m = [], need = (needOverride != null && isFinite(needOverride)) ? Number(needOverride) : iterReq(lv != null ? lv : p.lv), have = verKeys(p).length;
     if (need && have < need) m.push('這個模式要存到至少 ' + need + ' 版（現在 ' + have + ' 版）：每改一次就按「存成第 N 版」');
     var cur = need && have >= need && !p.chg.trim() && !Object.keys(p.links).length;
     if (!cur) {

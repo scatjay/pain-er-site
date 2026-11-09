@@ -5,6 +5,8 @@
    不用 alert／confirm／prompt：提示一律是頁內 toast，確認一律是兩段式按鈕。 */
 (function () {
   'use strict';
+  var WK = window.ERG_WEEKLY, UN = window.ERG_UNITS;   /* 每週送審（proposal_weekly.js、proposal_units.js）；沒載入就退回舊的送審畫面 */
+  try { if (WK) WK.ensureStyle(document); } catch (e) { /* 樣式注入失敗不影響功能 */ }
   var PX = window.ERG_PX, SB = window.ERG_SB, ST = window.ERG_SB_STORE, XS = window.ERG_PX_STORE, PXC = window.ERG_PX_COACH, CT = window.ERG_CASE_TONE;
   var $ = function (id) { return document.getElementById(id); };
   var esc = SB.esc, clip = SB.clip, tr = PX.tr;
@@ -132,6 +134,14 @@
   }
   function renderTop() {
     var st = S.st || compute(), ns = PX.nextStep(S.doc, S.evidence, S.cells, st, { lastRev: lastRev(), submittedToday: submittedToday() }), act = '';
+    /* 每週送審：不要求整套對準表的份（Figma 1/3、AI Studio 1/3、AI Studio 2/3、Figma 3/3），頂列「下一步」依本週這一份講，不叫學生先去訪談或選方向 */
+    try {
+      var wv = weeklyView();
+      if (wv && ['f2', 'a3'].indexOf(wv.unit.id) < 0) {
+        ns = wv.gate.ok ? { text: submittedToday() ? '今天已經送審了。到「④ 交出去」看建議，改完明天 00:00 之後可以再送；正式繳交要到 flipclass。' : '「' + wv.unit.name + '」要交的東西都齊了。可以送審看看建議（這是建議，不是繳交；繳交要到 flipclass）。', go: 'export' }
+          : { text: '「' + wv.unit.name + '」還差一步：' + wv.gate.why, go: 'proto' };
+      }
+    } catch (e) {}
     if (ns.go === 'game') act = '<a class="btn mini" href="' + esc(gameHref(latestRoom())) + '">🩺 回急診室</a>';
     else if (ns.go === 'row' && ns.row) act = '<button class="mini" data-goto="row-' + ns.row + '">帶我去第 ' + ns.row + ' 列</button>';
     else if (ns.go) act = '<button class="mini" data-goto="' + ns.go + '">帶我去</button>';
@@ -143,7 +153,7 @@
   }
   function latestRoom() { var withIv = S.rooms.filter(function (r) { return r.interviews.length; }); return (withIv[withIv.length - 1] || S.rooms[S.rooms.length - 1] || {}).code || ''; }
   function latestBoardRoom() { var c = Object.keys(S.boards).filter(function (k) { return (S.boards[k] || []).length; }); return c.length ? c[c.length - 1] : latestRoom(); }
-  function refreshLive() { if (!S.sid || !S.loaded) return; compute(); renderTop(); S.doc.rows.forEach(function (r) { var el = document.querySelector('.rstat[data-n="' + r.n + '"]'); if (el) el.innerHTML = rowStat(r); }); var ex = $('exProblems'); if (ex) ex.innerHTML = problemList(); }
+  function refreshLive() { if (!S.sid || !S.loaded) return; compute(); renderTop(); S.doc.rows.forEach(function (r) { var el = document.querySelector('.rstat[data-n="' + r.n + '"]'); if (el) el.innerHTML = rowStat(r); }); var ex = $('exProblems'); if (ex) ex.innerHTML = problemList(); later('wkr', refreshWeekly, 350); }
 
   /* 1 方向 */
   function renderDir() {
@@ -248,15 +258,95 @@
     return '<div class="revc"><b>' + esc(r.day || '') + ' 的審核建議</b> <span class="pchip ' + (r.ok ? 'ok' : 'bad') + '">' + (r.ok ? '對得起來' : '還有地方要補') + '</span>' +
       (al.length ? '<ul>' + al.map(function (p) { return '<li>' + esc(p.msg) + '</li>'; }).join('') + '</ul>' : '') + (r.fb ? '<p>' + esc(r.fb) + '</p>' : '') +
       (PX.arr(r.rows).length ? '<ul>' + PX.arr(r.rows).map(function (x) { return '<li>第 ' + esc(x.n) + ' 列：' + esc(x.note) + '</li>'; }).join('') + '</ul>' : '') +
-      '<div class="muted">這是給你的建議，不是成績。最後怎麼改、怎麼交，由你決定。</div></div>';
+      '<div class="muted">這是給你的建議，不是繳交；正式繳交要到 flipclass。最後怎麼改，由你決定。</div></div>';
+  }
+  /* ———— 每週送審：依份的自查燈、自述按鈕、閘門、審核結果 ———— */
+  function PU() { return window.ERG_PROTO_UI || null; }
+  function setOf(map) { var o = {}; Object.keys(map || {}).forEach(function (k) { o[k] = true; }); return o; }
+  function weeklyView() {
+    var pu = PU(); if (!WK || !UN || !pu || !pu.unitCtx) return null;
+    var u = WK.unitNow(pu.unitCtx()), l = pu.lv(), st = S.st || compute();
+    var snap = { doc: { dir: S.doc.dir, rows: S.doc.rows, real: S.doc.real, proto: pu.snap() || {} } }, sets = { evSet: setOf(S.evMap), cellSet: setOf(S.cellMap) };
+    var v = WK.selfView(snap, u.id, { lv: l.lv, lvChosen: l.chosen, canSubmitOld: st.canSubmit, sets: sets });
+    v.priors = UN.priorUnits(snap, u.id, l.chosen ? l.lv : 0, sets);
+    v.chosen = l.chosen; return v;
+  }
+  function markersHtml(v) {
+    var pu = PU(), h = '';
+    if (v.buttons.length) {
+      h += '<div class="wk-h2"><b>我做過的事（按一下就會記下來）</b></div><div class="muted">' + esc(WK.TXT.selfOnly) + '</div><div class="wk-mk">' + v.buttons.map(function (b) {
+        var ok = pu.linkOk(b.kind), on = ok && WK.markState(pu.linkNote(b.kind), b);
+        return '<button type="button" class="wkmk' + (on ? ' on' : '') + '" data-act="wkmark" data-k="' + b.kind + '" data-fam="' + b.fam + '" data-tok="' + esc(b.tok) + '" aria-pressed="' + (on ? 'true' : 'false') + '"' + (ok ? '' : ' disabled') + '>' + (on ? '✓ ' : '') + esc(b.label) + (on ? '（再按一次取消）' : '') + '</button>';
+      }).join('') + '</div>';
+    }
+    if (v.trial) {
+      var tk = WK.markFam(pu.linkNote(v.kind), 'trial'), tp = WK.trialParts(tk) || { sec: '', taps: '', stop: '' }, ok2 = pu.linkOk(v.kind);
+      h += '<div class="wk-h2"><b>試用紀錄</b></div><div class="muted">找一個沒看過的人試用你的畫面，記下他花了幾秒、點了幾下、停在哪一句。</div>' +
+        '<div class="wk-trial"><label>幾秒<input id="wkTrialSec" type="number" inputmode="numeric" min="1" max="9999" value="' + esc(tp.sec) + '"></label><label>點幾下<input id="wkTrialTaps" type="number" inputmode="numeric" min="1" max="9999" value="' + esc(tp.taps) + '"></label>' +
+        '<label>停在哪一句<input id="wkTrialStop" maxlength="40" value="' + esc(tp.stop) + '" placeholder="例如：回診前一天要帶什麼"></label></div>' +
+        '<div class="wk-mk"><button type="button" data-act="wktrial"' + (ok2 ? '' : ' disabled') + '>記下試用紀錄</button>' + (tk ? '<button type="button" class="ghost" data-act="wkclear">清掉試用紀錄</button>' : '') + '</div>' + (tk ? '<div class="ok">✓ 已記下：' + esc(tk) + '</div>' : '');
+    }
+    if ((v.buttons.length || v.trial) && !pu.linkOk(v.kind)) h += '<div class="muted">' + esc(WK.TXT.needLink) + '</div>';
+    return h;
+  }
+  function weeklyHtml(v) {
+    var u = v.unit, noLinks = v.priors.filter(function (p) { return !p.sent; });
+    var h = '<div class="wk wk-box" id="wkBox"><div class="wk-h">這一週要交：' + esc(u.name) + '（' + esc(u.week) + '）' + esc(u.title) + '</div>' +
+      '<div class="muted">' + esc(WK.TXT.notSubmit) + '</div><ul>' + v.deliver.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>';
+    if (u.modes && !v.chosen) h += '<div class="wk-box wk-warn" id="wkModeAsk2"><b>' + esc(WK.TXT.needMode) + '</b><div class="wk-mode">' + [1, 2, 3].map(function (k) { return '<button type="button" data-pt="mode" data-v="' + k + '">' + ['新手', '中級', '專家'][k - 1] + '</button>'; }).join('') + '</div></div>';
+    h += '<div class="wk-h2"><b>自己先看一眼</b>　<span class="muted">（隨時更新；還沒有送審）</span></div>' + WK.lightsHtml(v.lights);
+    var miss = v.missing.slice(0, 6);
+    if (miss.length) h += '<div class="muted">還缺：</div><ul id="wkMissing">' + miss.map(function (m) { return '<li>' + esc(m) + '</li>'; }).join('') + '</ul>' + (v.missing.length > 6 ? '<div class="muted">…還有 ' + (v.missing.length - 6) + ' 項</div>' : '');
+    else h += '<div class="ok">✓ 這一份該有的都有了。</div>';
+    h += markersHtml(v);
+    if (noLinks.length) h += '<div class="muted" id="wkPrior">前面的份還沒貼連結：' + noLinks.map(function (p) { return esc(WK.unitName(p.unit)); }).join('、') + '。現在送審會以本週這一份的標準來看；前面的份可以之後補。</div>';
+    return h + '</div>';
+  }
+  function curUnitRev(v) {   /* 這一份最新的審核建議；以及這一份有沒有送審了還在等 */
+    var u = v.unit, cls = PU().unitCtx().cls, mine = S.revs.filter(function (r) { return r.unit === u.id; }), rev = mine.length ? mine[mine.length - 1] : null, pend = null;
+    S.subs.forEach(function (x) { if (UN.unitForSub(x.day, x.t, cls).unit.id === u.id && (!rev || Number(rev.at || 0) < x.t)) pend = x; });
+    return { rev: rev, pend: pend };
+  }
+  function revSectionHtml(v) {
+    var r = curUnitRev(v);
+    return '<h3>審核建議</h3><div id="revBox">' + (r.pend ? '<div class="wk-wait" id="wkWait">' + esc(WK.TXT.waitNote) + '</div>' : '') + WK.revCardHtml(r.rev, v.unit.id) + WK.histHtml(S.revs) + '</div>';
   }
   function renderExport() {
-    if (!$('secExport')) return; var st = S.st || compute(), done = submittedToday();
-    $('secExport').innerHTML = '<h2>④ 交出去</h2><div id="exProblems">' + problemList() + '</div>' +
+    if (!$('secExport')) return; var st = S.st || compute(), done = submittedToday(), v = null;
+    try { v = weeklyView(); } catch (e) { console.warn('[weekly]', e); }
+    if (!v) {   /* 沒載入每週送審的檔案：舊畫面 */
+      $('secExport').innerHTML = '<h2>④ 交出去</h2><div id="exProblems">' + problemList() + '</div>' +
+        '<div class="bar"><button id="pdfBtn" data-act="pdf">另存 PDF 交 flipclass</button> <button id="dlBtn" data-act="dl">下載可列印頁（手機用）</button> <span class="muted">PDF 沒完成也能存，頁首會寫還缺什麼。</span></div>' +
+        '<div class="bar"><button id="submitBtn" data-act="submit"' + (st.canSubmit && !done ? '' : ' disabled') + '>' + (done ? '今天已送審' : '送審看建議') + '</button> <span class="muted" id="submitNote">' +
+        (done ? esc(PX.submitNote(S.subs, NOW()).text) : st.canSubmit ? '一天可以送一次（明天 00:00 可再送）。' : '先選方向、並寫完至少 ' + PX.LIMITS.minRows + ' 列的「我決定什麼」才能送審。') + '</span></div>' +
+        '<h3>審核建議</h3><div id="revBox">' + revHtml(lastRev()) + '</div>';
+      return;
+    }
+    var gate = v.gate, alignUnit = UN.DATA.alignGate.indexOf(v.unit.id) >= 0;
+    var note = done ? PX.submitNote(S.subs, NOW()).text : gate.ok ? '可以送審了。一天可以送一次（明天 00:00 可再送）。' + WK.TXT.notSubmit : gate.why + (gate.reasons.length > 1 ? '（還有 ' + (gate.reasons.length - 1) + ' 項）' : '');
+    $('secExport').innerHTML = '<h2>④ 交出去</h2>' + weeklyHtml(v) + (alignUnit ? '<div id="exProblems">' + problemList() + '</div>' : '') +
       '<div class="bar"><button id="pdfBtn" data-act="pdf">另存 PDF 交 flipclass</button> <button id="dlBtn" data-act="dl">下載可列印頁（手機用）</button> <span class="muted">PDF 沒完成也能存，頁首會寫還缺什麼。</span></div>' +
-      '<div class="bar"><button id="submitBtn" data-act="submit"' + (st.canSubmit && !done ? '' : ' disabled') + '>' + (done ? '今天已送審' : '送審看建議') + '</button> <span class="muted" id="submitNote">' +
-      (done ? esc(PX.submitNote(S.subs, NOW()).text) : st.canSubmit ? '先檢查有沒有對準，過了才請 AI 讀；一天可以送一次（明天 00:00 可再送）。' : '先選方向、並寫完至少 ' + PX.LIMITS.minRows + ' 列的「我決定什麼」才能送審。') + '</span></div>' +
-      '<h3>審核建議</h3><div id="revBox">' + revHtml(lastRev()) + '</div>';
+      '<div class="bar"><button id="submitBtn" data-act="submit"' + (gate.ok && !done ? '' : ' disabled') + '>' + (done ? '今天已送審' : '送審看建議') + '</button> <span class="muted" id="submitNote">' + esc(note) + '</span></div>' +
+      revSectionHtml(v);
+  }
+  /* 畫面上輸入框裡有人在打字時不重畫「④ 交出去」（試用紀錄的三個格子），免得字被洗掉 */
+  function refreshWeekly() {
+    if (!S.sid || !S.loaded || !$('secExport')) return;
+    var a = document.activeElement; if (a && /^(TEXTAREA|INPUT)$/.test(a.tagName) && $('secExport').contains(a)) return;
+    compute(); renderExport(); try { renderTop(); } catch (e) {}   /* 頂列「下一步」跟著這一份的狀態走 */
+  }
+  function markClick(b) {
+    var pu = PU(), kind = b.dataset.k, fam = b.dataset.fam, tok = b.dataset.tok, M = WK.DATA.markers, cur = WK.markFam(pu.linkNote(kind), fam), next;
+    if (fam === 'claude') next = tok === M.claude2 ? (cur === M.claude2 ? M.claude1 : M.claude2) : (cur ? '' : M.claude1);   /* 第 2 次再按一次，退回第 1 次；第 1 次再按一次，全部取消 */
+    else next = cur === tok ? '' : tok;
+    if (!pu.setMarker(kind, fam, next)) toast(WK.TXT.needLink); else logEvent('mark', fam + (next ? '' : '-off'));
+  }
+  function trialClick(clear) {
+    var pu = PU(), kind = WK.kindOf(WK.unitNow(pu.unitCtx()).id);
+    if (clear) { pu.setMarker(kind, 'trial', ''); return; }
+    var tok = WK.trialToken($('wkTrialSec').value, $('wkTrialTaps').value, $('wkTrialStop').value);
+    if (!tok) { toast('三格都要填：幾秒、點幾下、停在哪一句。'); return; }
+    if (!pu.setMarker(kind, 'trial', tok)) toast(WK.TXT.needLink); else logEvent('mark', 'trial');
   }
 
   /* ———— 輸出 ———— */
@@ -275,14 +365,19 @@
     document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1500); logEvent('export', 'html');
   }
   function submit() {
-    var st = compute(); if (!st.canSubmit) { toast('還不能送審：先選方向、寫完至少 ' + PX.LIMITS.minRows + ' 列的決定。'); return; }
-    try { var gap = window.ERG_PROTO_UI && window.ERG_PROTO_UI.iterGap(); if (gap) { toast(gap, 6000); return; } } catch (e) {}   /* 中級、專家要先有迭代的版本 */
+    var st = compute(), wv = null; try { wv = weeklyView(); } catch (e) {}
+    if (wv) { if (!wv.gate.ok) { toast('還不能送審：' + wv.gate.why, 6000); return; } }   /* 每週送審：依份的閘門（1/3 不要求對準表；2/3、3/3 要先選模式；3/3 看版本數） */
+    else {
+      if (!st.canSubmit) { toast('還不能送審：先選方向、寫完至少 ' + PX.LIMITS.minRows + ' 列的決定。'); return; }
+      try { var gap = window.ERG_PROTO_UI && window.ERG_PROTO_UI.iterGap(); if (gap) { toast(gap, 6000); return; } } catch (e) {}   /* 中級、專家要先有迭代的版本 */
+    }
     flushAll();
     var snap = PX.snapshotForSubmit(S.doc, S.evidence, S.cells, NOW());
     try { var pr = window.ERG_PROTO_UI && window.ERG_PROTO_UI.snap(); if (pr) snap.doc.proto = pr; } catch (e) {}   /* 11-03：原型各版本一起送審 */
+    if (!snap.doc.dir || !snap.doc.dir.pick) delete snap.doc.dir;   /* 還沒選方向（Figma 1/3、AI Studio 1/3 不要求）：不帶 dir。線上規則要求 dir.pick 是 web／line／app／mine，空字串整筆會被拒 */
     attachWall(snap).then(function () { return S.store.submit(S.sid, snap); }).then(function (r) {
       if (!r.ok) { toast('今天已經送審過了（一天只能一次），明天 00:00 之後可以再送。', 5000); return; }
-      logEvent('submit', r.day); toast('已送審。審核建議出來之後會出現在「④ 交出去」。', 5000);
+      logEvent('submit', r.day); toast('已送審。' + (WK ? '每晚 23:30 審一批，審好後到「④ 交出去」或回大廳就看得到。' : '審核建議出來之後會出現在「④ 交出去」。'), 6000);
       if (LOCAL) { S.subs = S.subs.concat([{ day: r.day, t: snap.t }]); renderExport(); }
     }, failSave);
   }
@@ -367,16 +462,19 @@
       else if (act === 'pdf') printPdf();
       else if (act === 'dl') download();
       else if (act === 'submit') twoStep(b, 'submit', submit, '再按一次送審');
+      else if (act === 'wkmark') markClick(b);
+      else if (act === 'wktrial') trialClick(false);
+      else if (act === 'wkclear') trialClick(true);
     });
     document.addEventListener('click', function (e) { var b = e.target.closest && e.target.closest('#nextLine [data-goto]'); if (b) goTo(b.dataset.goto); });
     document.addEventListener('click', function (e) { var f = e.target.closest && e.target.closest('#coachFab'); if (f) document.body.classList.add('coach-open'); var c = e.target.closest && e.target.closest('#cClose'); if (c) document.body.classList.remove('coach-open'); });
     window.addEventListener('pagehide', flushAll);
   }
   function goTo(where) {
-    var id = where === 'dir' ? 'secDir' : where === 'real' ? 'secReal' : (where === 'export' || where === 'rev') ? 'secExport' : /^row-\d+$/.test(where) ? where : 'secRows';
+    var id = where === 'dir' ? 'secDir' : where === 'real' ? 'secReal' : where === 'proto' ? 'secProto' : (where === 'export' || where === 'rev') ? 'secExport' : /^row-\d+$/.test(where) ? where : 'secRows';
     var el = $(id) || $('secRows'); if (el) { el.scrollIntoView({ block: 'start', behavior: 'smooth' }); var f = el.querySelector('textarea,input,select'); if (f && where !== 'export' && where !== 'rev') setTimeout(function () { f.focus({ preventScroll: true }); }, 350); }
   }
 
-  window.ERG_PX_APP = { S: S, renderAll: renderAll, compute: compute, applyFill: applyFill, printCtx: printCtx, flushAll: flushAll };
+  window.ERG_PX_APP = { S: S, renderAll: renderAll, renderExport: renderExport, refreshWeekly: refreshWeekly, weeklyView: weeklyView, compute: compute, applyFill: applyFill, printCtx: printCtx, flushAll: flushAll };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 })();

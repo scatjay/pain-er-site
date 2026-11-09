@@ -6,6 +6,7 @@
   var P = window.ERG_PROTO, U = window.ERG_UILV, $ = function (id) { return document.getElementById(id); };
   if (!P) return;
   var UI = window.ERG_PROTO_UI = {};
+  var W = window.ERG_WEEKLY || null;   /* 每週送審的標記與字串（proposal_weekly.js）；沒載入就整塊不出現，舊功能照常 */
   var LINKS = { free: 'https://claude.ai/new', dsg: 'https://claude.ai/artifacts', fig: 'https://www.figma.com/files', ais: 'https://aistudio.google.com/' };
   var T = { ach: {}, achWatch: '', step: 0, tool: 'dsg', cards: [], rowNs: null, text: null, dirty: false, proto: P.emptyProto(), watching: '', lv: 0, part: 1, partInit: false, start: '', panel: null };
 
@@ -15,6 +16,7 @@
     var s = S(); var sid = s && s.sid; var l = U && sid ? U.readLocal(window.localStorage, sid) : null;
     return P.level(l ? l.lv : 3);
   }
+  function lvChosen() { var s = S(); var sid = s && s.sid; return !!(U && sid && U.readLocal(window.localStorage, sid)); }   /* 這位學生選過模式了嗎（沒選過時 lvNow 仍是專家，但 2/3、3/3 要先問一次） */
   function toolsFor(lv) { return P.TOOLS.filter(function (t) { return lv !== 1 || t.k === 'dsg' || t.k === 'ais'; }); }
   function cardList(lv) { return P.cardsFor(T.tool, lv); }   /* 起點卡每種模式只看自己那一張 */
   function ensureCards(v) {
@@ -79,6 +81,11 @@
   }
   function toastMsg(m) { var t = $('toast'); if (!t) return; t.textContent = m; t.className = 'on'; clearTimeout(toastMsg.t); toastMsg.t = setTimeout(function () { t.className = ''; }, 3000); }
 
+  /* 這一份、這個模式至少要存幾版（每週送審的矩陣：只有 Figma 3/3 與 AI Studio 3/3 才要求）；沒載入就用模式的老要求 */
+  function unitNeed(lv) {
+    var D = W && W.DATA; if (!D) return P.iterReq(lv);
+    var row = D.iterMin[partId()]; return row ? (row[P.level(lv) - 1] || 0) : P.iterReq(lv);
+  }
   function partKey() { return (P.PARTS[T.part - 1] || P.PARTS[0]).k; }
   function partModes() { return !!(P.PARTS[T.part - 1] || P.PARTS[0]).modes; }
   /* ———— 步驟助教（figai_coach.js＋figai_coach_ui.js；沒載入就整塊不出現）———— */
@@ -93,6 +100,11 @@
   function coachSave() { var FG = window.FigAIUI, s = S(); if (FG && T.panel && s && s.sid) { try { FG.saveCounts(window.localStorage, s.sid, T.panel); FG.savePos(window.localStorage, s.sid, T.panel, Date.now()); } catch (e) {} } }
 
   /* ———— 畫面 ———— */
+  /* Figma 2/3 以後才分模式：還沒選過，進來先問一次（用的是同一個模式設定，選了之後 ③、④ 都照它走） */
+  function modeAsk() {
+    return '<div class="wk-box wk-warn" id="wkModeAsk" role="group" aria-label="先選模式"><b>這一份先選一個模式</b><div>新手：一次做一步，指令寫好給你確認。中級：四步同頁，自己挑指引卡。專家：全部展開，自己安排。選好才能送審，之後隨時可以換。</div><div class="wk-mode">' +
+      [1, 2, 3].map(function (k) { return '<button type="button" data-pt="mode" data-v="' + k + '">' + esc(P.view(k).name) + '</button>'; }).join('') + '</div></div>';
+  }
   function modeBar(lv) {
     return '<div class="pt-mode" role="group" aria-label="模式">' + [1, 2, 3].map(function (k) { return '<button class="pt-m' + (lv === k ? ' on' : '') + '" data-pt="mode" data-v="' + k + '">' + esc(P.view(k).name) + '</button>'; }).join('') + '</div>';
   }
@@ -119,20 +131,30 @@
       (T.text != null && T.text !== g.text ? '<div class="pt-note"><span class="pt-chip got">已自行修改</span> 這段不是助教原本產生的，按「還原」可以回到原本那段。</div>' : '') + '<textarea id="ptText" data-pt="text" rows="9" aria-label="給 ' + esc(tool.name) + ' 的指令">' + esc(text) + '</textarea>' +
       '<div class="pt-bar"><button class="pt-big" data-pt="copy">📋 複製指令</button><a class="pt-big pt-a" href="' + esc(LINKS[T.tool]) + '" target="_blank" rel="noopener">開 ' + esc(tool.name) + '</a>' + (T.text != null && T.text !== g.text ? '<button class="pt-big g" data-pt="reset">還原</button>' : '') + '</div>';
   }
+  /* 這一份要貼哪幾條連結：Figma 的份貼 Figma、AI Studio 的份貼 AI Studio（有些份兩條都要）；新手也看得到（設計稿 G6）。
+     另外，這一份有指引卡、而且卡指定的工具不在這幾條裡（例如 Claude Design）時，再多一欄那個工具的連結 */
+  function partId() { return (P.PARTS[T.part - 1] || P.PARTS[0]).k; }
+  function linkKinds() {
+    var ks = W ? W.linkKinds(partId()) : [T.tool];
+    if (P.listFor(T.part, lvNow()).length && ks.indexOf(T.tool) < 0) ks = ks.concat([T.tool]);
+    return ks;
+  }
+  function linkField(kind, first) {
+    var tool = P.TOOLS.filter(function (t) { return t.k === kind; })[0] || P.TOOLS[0], lk = (T.proto.links[kind]) || { url: '', note: '' }, note = W ? W.splitNote(lk.note).text : lk.note;
+    return '<div class="pt-lk" data-kind="' + kind + '"><label>' + esc(tool.name) + ' 的作品連結（https 開頭，要開分享）<input' + (first ? ' id="ptUrl"' : '') + ' data-pt="url" data-k="' + kind + '" inputmode="url" value="' + esc(lk.url) + '" placeholder="https://…"></label>' +
+      '<label>一句備註（選填，≤' + P.LIMITS.note + ' 字）<input data-pt="note" data-k="' + kind + '" maxlength="' + P.LIMITS.note + '" value="' + esc(note) + '"></label></div>';
+  }
   function stepBack(v) {
-    var p = T.proto, lk = p.links[T.tool] || { url: '', note: '' };
-    var tool = P.TOOLS.filter(function (t) { return t.k === T.tool; })[0];
-    return '<div class="pt-h">' + esc(P.stepName(2)) + '</div>' +
-      '<label>' + esc(tool.name) + ' 的作品連結（https 開頭，要開分享）<input id="ptUrl" data-pt="url" inputmode="url" value="' + esc(lk.url) + '" placeholder="https://…"></label>' +
-      '<label>一句備註（選填，≤' + P.LIMITS.note + ' 字）<input data-pt="note" maxlength="' + P.LIMITS.note + '" value="' + esc(lk.note) + '"></label>' +
+    var p = T.proto, ks = linkKinds();
+    return '<div class="pt-h">' + esc(P.stepName(2)) + '</div>' + ks.map(function (k, i) { return linkField(k, i === 0); }).join('') +
       '<label>這一版改了什麼、回應了哪一條訪談或線索（≤' + P.LIMITS.chg + ' 字）<textarea data-pt="chg" rows="3" maxlength="' + P.LIMITS.chg + '" placeholder="例如：把回診日期放到最上面，因為家屬說找不到">' + esc(p.chg) + '</textarea></label>' +
-      '<div class="pt-note">截圖請貼進你的 Figma，排在原版旁邊。</div>' + verBlock(v);
+      '<div class="pt-note">截圖請貼進你的 Figma，排在原版旁邊。「我用無痕視窗打開過了」「我做了 Claude 整合」這類自述，在下面「④ 交出去」按一下就會記下來，不用自己打。</div>' + verBlock(v);
   }
   function verBlock(v) {
-    var need = P.iterReq(v.lv), ks = P.verKeys(T.proto);
+    var need = P.iterReq(v.lv), ks = P.verKeys(T.proto), req = unitNeed(v.lv);
     if (!need) return '';
     var list = ks.map(function (k) { var x = T.proto.vers[k]; return '<div class="hrow"><b>第 ' + k.slice(1) + ' 版</b>　' + esc(String(x.chg).slice(0, 60)) + '</div>'; }).join('');
-    return '<div class="pt-vers"><div class="pt-h2">改過的版本（' + v.name + '要存到至少 ' + need + ' 版，現在 ' + ks.length + ' 版）</div>' + (list || '<div class="pt-note">還沒有。把上面這一版的連結和「改了什麼」填好，按下面的鈕存成第 1 版；之後每改一次，換掉連結、重寫「改了什麼」，再存成下一版。</div>') +
+    return '<div class="pt-vers"><div class="pt-h2">改過的版本（' + (req ? v.name + '在這一份要存到至少 ' + req + ' 版，現在 ' + ks.length + ' 版' : '這一份不要求版本數，想改幾次都可以存；現在 ' + ks.length + ' 版') + '）</div>' + (list || '<div class="pt-note">還沒有。把上面這一版的連結和「改了什麼」填好，按下面的鈕存成第 1 版；之後每改一次，換掉連結、重寫「改了什麼」，再存成下一版。</div>') +
       '<div class="pt-bar"><button class="pt-big" data-pt="freeze">📌 存成第 ' + (ks.length + 1) + ' 版</button></div></div>';
   }
   function stepCheck(v) {
@@ -141,20 +163,48 @@
       var picked = p.heur ? p.heur.split(',') : [];
       h += '<div class="pt-note">再挑 ' + (v.heur >= 10 ? '至少一項到多項' : v.heur + ' 項') + '看看這一版有沒有顧到：</div><div class="pt-heur">' + P.HEUR.map(function (x) { return '<button class="pt-h1' + (picked.indexOf(x.k) >= 0 ? ' on' : '') + '" data-pt="heur" data-k="' + x.k + '">' + esc(x.k + ' ' + x.n) + '</button>'; }).join('') + '</div>';
     }
-    var miss = P.missing(p, v.lv);
+    var miss = P.missing(p, v.lv, unitNeed(v.lv));
     h += '<div class="pt-miss ' + (miss.length ? 'bad' : 'ok') + '">' + (miss.length ? '還差：' + miss.map(esc).join('；') : '✓ 這一版的紀錄完整了。到上面「為什麼選它」補一句，再送審。') + '</div>';
     h += achBar(v.lv) + '<div class="pt-bar"><button class="pt-big" data-pt="save">💾 記下目前這一版</button></div>';
     return h;
+  }
+  /* 連結欄位寫回：備註欄只放學生自己寫的字，畫面按鈕寫的系統標記留在最前面不動 */
+  function setLinkField(lk, a, v) {
+    if (a === 'url' || !W) { lk[a] = String(v).trim(); return; }
+    lk.note = W.joinNote(W.splitNote(lk.note).marks, v, P.LIMITS.note);
   }
   /* 送審時帶上原型紀錄（沒有任何連結與版本就不帶，避免送出空殼） */
   UI.snap = function () {
     var p = P.normProto(T.proto); if (!P.verKeys(p).length && !Object.keys(p.links).length && !p.chg) return null;
     return P.protoForWrite(p, Date.now(), lvNow());
   };
-  UI.iterGap = function () {
-    var lv = lvNow(), need = P.iterReq(lv), have = P.verKeys(T.proto).length;
-    return need && have < need ? ('還不能送審：' + P.view(lv).name + '模式要先在「③ 做原型」存到至少 ' + need + ' 版（現在 ' + have + ' 版）。') : '';
+  /* 送審前的版本檢查（依份×模式）：不是本週那一份的版本要求，而是「現在送審會被當成哪一份」的要求。unitId 不給就用本週那一份 */
+  UI.iterGap = function (unitId) {
+    var id = unitId || (W ? W.unitNow(unitCtx()).id : ''), D = W && W.DATA, def = D && D.units.filter(function (u) { return u.id === id; })[0];
+    var lv = lvNow(), have = P.verKeys(T.proto).length, need;
+    if (!def) { need = P.iterReq(lv); }
+    else {
+      if (def.modes && !lvChosen()) return W.TXT.needMode;
+      need = (D.iterMin[id] || [0, 0, 0])[lv - 1] || 0;
+    }
+    return need && have < need ? ('還不能送審：' + P.view(lv).name + '模式在這一份要先在「③ 做原型」存到至少 ' + need + ' 版（現在 ' + have + ' 版）。') : '';
   };
+  function unitCtx() {
+    var cls = ''; try { cls = window.sessionStorage.getItem('erg2_cls') || ''; } catch (e) {}
+    return { cls: cls, now: Date.now(), search: location.search, host: location.hostname };
+  }
+  UI.unitCtx = unitCtx;
+  UI.lv = function () { return { lv: lvNow(), chosen: lvChosen() }; };
+  UI.linkNote = function (kind) { var lk = T.proto.links[kind]; return lk ? lk.note : ''; };
+  UI.linkOk = function (kind) { var lk = T.proto.links[kind]; return !!(lk && P.isHttps(lk.url)); };
+  /* 系統標記：由「④ 交出去」的按鈕寫進這條連結備註的最前面（學生不手打）。連結還沒貼好就不寫，回傳 false */
+  UI.setMarker = function (kind, fam, tok) {
+    var lk = T.proto.links[kind]; if (!W || !lk || !P.isHttps(lk.url)) return false;
+    lk.note = W.setMarker(lk.note, fam, tok, P.LIMITS.note); lk.at = Date.now();
+    save(tok ? '已記下' : '已取消'); UI.render(); notify(); return true;
+  };
+  function notify() { try { if (window.ERG_PX_APP && window.ERG_PX_APP.refreshWeekly) window.ERG_PX_APP.refreshWeekly(); } catch (e) {} }
+  UI.touch = notify;
   UI.render = function () {
     var el = $('secProto'), s = S(); if (!el || !s || !s.loaded) return;
     watch();
@@ -162,7 +212,8 @@
     var lv = lvNow(), v = P.view(lv); if (T.lv !== lv) { T.lv = lv; T.step = 0; T.text = null; }
     if (v.lv === 1 && T.tool !== 'dsg' && T.tool !== 'ais') T.tool = 'dsg';
     ensureCards(v);
-    var head = '<h2>③ 做成能測的原型</h2><div class="muted">用你前面對準的訪談與線索，產生指令，貼到 Claude／Figma／Google AI Studio 做出來，再把結果貼回這裡檢查。全部用練習資料。' +
+    var ask = (W && partModes() && !lvChosen()) ? modeAsk() : '';
+    var head = ask + '<h2>③ 做成能測的原型</h2><div class="muted">用你前面對準的訪談與線索，產生指令，貼到 Claude／Figma／Google AI Studio 做出來，再把結果貼回這裡檢查。全部用練習資料。' +
       ' <a href="https://claude.ai/code/artifact/a21e7a8b-aefe-4383-a745-0f764a91a1f5#' + partKey() + '" target="_blank" rel="noopener">學習單有完整流程</a>　<a href="https://scatjay.github.io/wenhua-designjam-site/hh_open.html" target="_blank" rel="noopener">開了樣板檔案先回報</a></div>' + (partModes() ? modeBar(lv) : '<div class="pt-note">這一份全班同一套，不分新手、中級、專家；從下一個有模式的那一份才會選。</div>') + preBox();
     var body;
     if (v.oneStep) {
@@ -174,6 +225,7 @@
     }
     el.innerHTML = head + body + coachHtml(lv);
     applyFocus(lv);
+    notify();
   };
 
   /* ———— 新手：整頁一次只看一步（簡潔）。中級、專家維持全部展開 ———— */
@@ -201,7 +253,7 @@
   /* ———— 事件 ———— */
   function cur() { var s = S(); return s ? s.store : null; }
   document.addEventListener('click', function (e) {
-    var b = e.target.closest && e.target.closest('#secProto [data-pt],#lvBar [data-pt],#lvNav [data-pt]'); if (!b || b.tagName === 'INPUT' || b.tagName === 'TEXTAREA') return;
+    var b = e.target.closest && e.target.closest('#secProto [data-pt],#lvBar [data-pt],#lvNav [data-pt],#wkBox [data-pt=mode]'); if (!b || b.tagName === 'INPUT' || b.tagName === 'TEXTAREA') return;
     var a = b.dataset.pt, s = S(); if (!s) return;
     if (a === 'fprev' || a === 'fnext') { T.nf = Math.max(0, Math.min(FOCUS.length - 1, (T.nf == null ? 0 : T.nf) + (a === 'fnext' ? 1 : -1))); UI.render(); window.scrollTo(0, 0); return; }
     if (a === 'fall') { U && s.sid && U.writeLocal(window.localStorage, s.sid, 2, Date.now()); T.lv = 0; T.nf = null; UI.render(); return; }
@@ -249,15 +301,16 @@
     }
     else if (a === 'chk') { p.chk[el.dataset.k] = el.checked; save('已記下'); UI.render(); }
     else if (a === 'url' || a === 'note') {
-      var lk = p.links[T.tool] || (p.links[T.tool] = { url: '', note: '', at: 0 }); lk[a] = el.value.trim(); lk.at = Date.now();
+      var kd = el.dataset.k || T.tool, lk = p.links[kd] || (p.links[kd] = { url: '', note: '', at: 0 }); setLinkField(lk, a, el.value); lk.at = Date.now();
       if (a === 'url' && lk.url && !P.isHttps(lk.url)) toastMsg('連結要 https 開頭，而且不能有空白');
+      notify();
     }
-    else if (a === 'chg') { p.chg = el.value; }
+    else if (a === 'chg') { p.chg = el.value; notify(); }
   });
   document.addEventListener('input', function (e) {
     var el = e.target; if (!el || !el.dataset || !el.closest || !el.closest('#secProto')) return; var a = el.dataset.pt, p = T.proto;
     if (a === 'text') T.text = el.value;
-    else if (a === 'url' || a === 'note') { var lk = p.links[T.tool] || (p.links[T.tool] = { url: '', note: '', at: 0 }); lk[a] = el.value.trim(); lk.at = Date.now(); }
+    else if (a === 'url' || a === 'note') { var kd = el.dataset.k || T.tool, lk = p.links[kd] || (p.links[kd] = { url: '', note: '', at: 0 }); setLinkField(lk, a, el.value); lk.at = Date.now(); }
     else if (a === 'chg') p.chg = el.value;
   });
   document.addEventListener('click', function (e) {

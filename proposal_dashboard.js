@@ -8,9 +8,9 @@
    列表上只算得出「沒選依據」，「選了但紀錄裡已經找不到」要點進去才核對（為了省流量，不整包讀房間）。
    算不出的指標一律寫「查不到」，不估：沒綁定帳號的學生（只有選課人數）、事件寫入失敗的開頁、每位學生的助手花費（只有全班合計）。 */
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory(require('./sb_core.js'), require('./proposal_core.js'), require('./teacher_model.js'));
-  else root.ERG_PXDASH = factory(root.ERG_SB, root.ERG_PX, root.ERG_TMODEL);
-})(typeof self !== 'undefined' ? self : this, function (SB, PX, TM) {
+  if (typeof module === 'object' && module.exports) module.exports = factory(require('./sb_core.js'), require('./proposal_core.js'), require('./teacher_model.js'), require('./proposal_units.js'));
+  else root.ERG_PXDASH = factory(root.ERG_SB, root.ERG_PX, root.ERG_TMODEL, root.ERG_UNITS || null);
+})(typeof self !== 'undefined' ? self : this, function (SB, PX, TM, UN) {
   'use strict';
   var esc = SB.esc, arr = SB.arr;
   var DEFAULT_SESS = 'ER-20261013';   /* 與 proposal_ui.js 的 UNIT_SESS 同值（提案室和急診室同一個場次） */
@@ -75,7 +75,17 @@
     var stuckReal = dirOk && filled.length >= PX.LIMITS.minRows && !gapRows.length && realDone < 3;
     var idle = stage === 'opened' && openAts.length && raw.now - openAts[0] >= OPENED_IDLE_MS;
     var pc = ctx.prof[sid] || {};
-    return { sid: sid, name: String(pc.name || ''), cls: clsOf(pc), inRoster: !!ctx.prof[sid], doc: doc, hasDoc: hasDoc, opened: opened, firstOpenAt: openAts[0] || 0, lastAt: lastAt, stage: stage, idle: !!idle,
+    /* 每週送審（依份）：這位學生每一份的狀態（wait＝送審了還在等；done＝已有建議）與最新一筆審核的燈號。哪一份由審核自己寫的 unit，沒有就用送審日期＋班級推出 */
+    var units = {};
+    if (UN) {
+      var dset = {}; subDays.forEach(function (d) { dset[d] = 1; }); revDays.forEach(function (d) { dset[d] = 1; });
+      Object.keys(dset).sort().forEach(function (d) {
+        var sb = subNode[d] || null, rv = revNode[d] || null, t = sb ? num(sb.t) : 0, uid = (rv && rv.unit) || UN.unitForSub(d, t, pc.cls).unit.id;
+        var state = (sb && (!rv || (t && num(rv.at) < t))) ? 'wait' : 'done';
+        units[uid] = { day: d, state: state, checks: (rv && state === 'done' && Array.isArray(rv.checks)) ? rv.checks : [] };
+      });
+    }
+    return { sid: sid, units: units, name: String(pc.name || ''), cls: clsOf(pc), inRoster: !!ctx.prof[sid], doc: doc, hasDoc: hasDoc, opened: opened, firstOpenAt: openAts[0] || 0, lastAt: lastAt, stage: stage, idle: !!idle,
       pick: doc.dir.pick, dirOk: dirOk, dirChanges: dirChanges(hist), dirHist: hist, rowsFilled: filled.length, rows3: filled.length >= PX.LIMITS.minRows, gapRows: gapRows, realDone: realDone, stuckReal: stuckReal,
       subDays: subDays, subCount: subDays.length, lastSubT: lastSubT, lastRevDay: lastRevDay, lastRev: lastRev, revOk: lastRev ? lastRev.ok === true : null, revDays: revDays,
       exports: byKind.export, exportKinds: evs.filter(function (e) { return e.k === 'export'; }).map(function (e) { return e.d; }), evCount: byKind, evTotal: evs.length,
@@ -164,8 +174,24 @@
         revFix: list.filter(function (s) { return s.revOk === false; }).map(function (s) { return s.sid; }) };
     }
     var cares = { '全部': care(students) }; clsList.forEach(function (cl) { cares[cl] = care(students.filter(function (s) { return s.cls === cl; })); });
+    /* 每週送審（依份）：誰送了、哪一份已有建議、每顆燈 ✓／△／○ 各幾人、哪些人有燈沒亮。沒有 proposal_units.js 就不出這一塊 */
+    function weeklyOf(list) {
+      return UN.DATA.units.map(function (u) {
+        var lights = UN.DATA.lights.filter(function (L) { return u.lights.indexOf(L.k) >= 0; }), tally = {}, stuck = [], sent = 0, done = 0;
+        lights.forEach(function (L) { tally[L.k] = { ok: 0, part: 0, no: 0 }; });
+        list.forEach(function (s) {
+          var x = s.units[u.id]; if (!x) return; sent += 1; if (x.state !== 'done') return; done += 1;
+          var off = [];
+          lights.forEach(function (L) { var c = x.checks.filter(function (k) { return k.k === L.k; })[0]; if (!c || tally[L.k][c.state] === undefined) return; tally[L.k][c.state] += 1; if (c.state !== 'ok') off.push(L.name); });
+          if (off.length) stuck.push({ sid: s.sid, names: off });
+        });
+        return { id: u.id, name: u.name, week: u.week, lights: lights, sent: sent, done: done, tally: tally, stuck: stuck };
+      });
+    }
+    var weekly = null;
+    if (UN) { weekly = { '全部': weeklyOf(students) }; clsList.forEach(function (cl) { weekly[cl] = weeklyOf(students.filter(function (s) { return s.cls === cl; })); }); }
     errors.forEach(function (e) { anom.push({ sid: '', kind: 'read', text: '讀不到' + e + '：那一塊先不顯示。' }); });
-    return { now: now, sess: R.sess, caseId: CASE, caseName: PX.caseName(CASE), students: students, byId: students.reduce(function (o, s) { o[s.sid] = s; return o; }, {}), alias: alias, classes: clsList, agg: agg, dist: dist, usage: usage, cares: cares, anomalies: anom, errors: errors };
+    return { weekly: weekly, now: now, sess: R.sess, caseId: CASE, caseName: PX.caseName(CASE), students: students, byId: students.reduce(function (o, s) { o[s.sid] = s; return o; }, {}), alias: alias, classes: clsList, agg: agg, dist: dist, usage: usage, cares: cares, anomalies: anom, errors: errors };
   }
 
   /* ———— 依據核對（點開某位學生才做）：每列選的依據是否真的在他現在的紀錄裡 ————
@@ -237,6 +263,19 @@
       careBlock('careReal', '卡在現實題', c.stuckReal, m, deid, '方向、對準表都齊了，現實題還沒答完 3 題。', function (s) { return '（' + m.byId[s].realDone + '／3）'; }) +
       careBlock('careRev', '審核說還要補', c.revFix, m, deid, '最新一次審核（AI 建議）的結果。') + '</section>';
   }
+  /* 每週送審（依份）：只列已經送審的人。燈號是規則式的 ✓做到／△做了一部分／○還沒，沒有分數；無痕、Claude 整合這類只是學生按鈕的自述，沒有驗證 */
+  function htmlWeekly(m, cl, deid) {
+    var list = m.weekly && (m.weekly[cl] || m.weekly['全部']); if (!list) return '';
+    var rows = list.map(function (w) {
+      var lt = w.lights.map(function (L) { var t = w.tally[L.k]; return esc(L.name) + '　✓ ' + t.ok + '　△ ' + t.part + '　○ ' + t.no; }).join('<br>');
+      return '<tr><td><b>' + esc(w.name) + '</b><div class="muted small">' + esc(w.week) + '</div></td><td>' + w.sent + '</td><td>' + w.done + '</td><td>' + (w.done ? lt : '<span class="muted">還沒有審核結果</span>') + '</td></tr>';
+    });
+    var stuck = list.filter(function (w) { return w.stuck.length; }).map(function (w) {
+      return '<div class="line"><b>' + esc(w.name) + '</b>　有燈沒亮（' + w.stuck.length + ' 人）：' + w.stuck.slice(0, 10).map(function (x) { return '<button class="chip pick" data-sel="' + esc(x.sid) + '" aria-label="看 ' + esc(who(m, x.sid, deid)) + ' 的提案">' + esc(who(m, x.sid, deid)) + '（' + esc(x.names.join('、')) + '）</button>'; }).join('') + (w.stuck.length > 10 ? '<span class="muted small">　…還有 ' + (w.stuck.length - 10) + ' 人</span>' : '') + '</div>';
+    });
+    return '<section class="card priv" id="pxWeekly"><h3>每週送審（依份，' + esc(cl === '全部' ? '三班' : cl) + '）</h3><div class="muted small">每一份是哪一份由審核結果自己寫的；舊的審核沒有寫就用送審日期和班級推出來。送審了還沒審好的算「送審」、不算「已有建議」。</div>' +
+      table(['份', '送審', '已有建議', '每顆燈的人數'], rows) + (stuck.join('') || '<div class="muted small">目前沒有人有燈沒亮（或還沒有審核結果）。</div>') + '</section>';
+  }
   function stageChip(s) { return tl(STAGE_TL[s.stage], STAGE_NAME[s.stage]); }
   function htmlStudents(m, ui) {
     var list = m.students.filter(function (s) { return (ui.cls === '全部' || s.cls === ui.cls) && (!ui.q || (ui.deid ? m.alias[s.sid] : s.sid + ' ' + s.name).toLowerCase().indexOf(String(ui.q).toLowerCase()) >= 0); });
@@ -263,7 +302,7 @@
   }
   function html(m, ui) {
     ui = Object.assign({ cls: '全部', q: '', deid: true }, ui || {});
-    return htmlSummary(m) + htmlCase(m) + kpOf(m, ui.cls) + htmlCompare(m, ui.cls) + htmlDirs(m, ui.cls) + htmlCare(m, ui.cls, ui.deid) + '<div id="pxDetail"></div>' + htmlStudents(m, ui) + htmlUsage(m);
+    return htmlSummary(m) + htmlCase(m) + kpOf(m, ui.cls) + htmlCompare(m, ui.cls) + htmlDirs(m, ui.cls) + htmlCare(m, ui.cls, ui.deid) + htmlWeekly(m, ui.cls, ui.deid) + '<div id="pxDetail"></div>' + htmlStudents(m, ui) + htmlUsage(m);
   }
 
   /* 一位學生的完整提案。ver＝verifyRows 的結果（null＝還在讀或讀不到） */

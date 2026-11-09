@@ -513,9 +513,39 @@
     d.appendChild(h); d.appendChild(t); d.appendChild(b); wrap.insertBefore(d, wrap.firstChild);
   }
   APP.setGuideForTest = function (g) { GUIDE.g = g; GUIDE.loaded = true; GUIDE.sid = APP.me.sid; renderLobby(); };   /* 瀏覽器測試用（本機模式沒有指引資料） */
+  /* ───── 提案室每週送審（第二階段）：大廳「這週要做」卡 ─────
+     只顯示本人的、不排名不比較。資料進大廳時各讀一次（不訂閱）：prx/{場次}/rev/{學號}/sms（審核建議，最近 8 天）與 prx/{場次}/sub/{學號}/sms（送審，最新 3 天；只拿來判「審核中」與哪一份送過）。
+     兩個節點規則本來就允許本人讀。讀不到（沒登入、規則拒絕、斷線）就明講讀不到，不假裝「還沒送」。本機模式沒有資料層：顯示沒有資料的狀態。
+     狀態字樣：還沒送／審核中（審核比送審舊或還沒有）／已有建議。審核是每晚 23:30 一批。畫面字串與整理都在 proposal_weekly.js（ERG_WEEKLY）。 */
+  var WEEKLY = { loaded: false, busy: false, failed: false, subs: {}, revs: {}, sid: '' };
+  function loadWeekly() {
+    var sid = APP.me.sid; if (!sid || WEEKLY.busy || (WEEKLY.loaded && WEEKLY.sid === sid)) return;
+    if (!ONLINE || DEMO || !window.firebase) { WEEKLY.loaded = true; WEEKLY.sid = sid; return; }
+    WEEKLY.busy = true; var fdb = firebase.database(), base = 'prx/' + APP.SESS + '/';
+    Promise.all([fdb.ref(base + 'rev/' + sid + '/sms').orderByKey().limitToLast(8).once('value'), fdb.ref(base + 'sub/' + sid + '/sms').orderByKey().limitToLast(3).once('value')]).then(function (v) {
+      var subs = {}, sv = v[1].val() || {}; Object.keys(sv).forEach(function (d) { subs[d] = { t: Number(sv[d] && sv[d].t) || 0 }; });   /* 只留送審時間，不留整份快照 */
+      WEEKLY.revs = v[0].val() || {}; WEEKLY.subs = subs; WEEKLY.sid = sid; WEEKLY.loaded = true; WEEKLY.failed = false; WEEKLY.busy = false;
+      if ($('lobby').classList.contains('on')) renderLobby();
+    }, function () { WEEKLY.sid = sid; WEEKLY.loaded = true; WEEKLY.failed = true; WEEKLY.busy = false; if ($('lobby').classList.contains('on')) renderLobby(); });
+  }
+  function renderWeekly() {
+    var W = window.ERG_WEEKLY, box = $('proposalBox'); if (!W || !box || DEMO) return;
+    loadWeekly(); W.ensureStyle(document);
+    var el = $('weeklyBox');
+    if (!el) { el = document.createElement('div'); el.id = 'weeklyBox'; el.className = 'card wk'; box.parentNode.insertBefore(el, box); }
+    var u = W.unitNow({ cls: APP.me.cls, now: Date.now(), search: location.search, host: location.hostname }), over = /[?&]unit=/.test(location.search) && /^(127\.0\.0\.1|localhost)$/.test(location.hostname);
+    var m = W.lobbyModel({ cls: APP.me.cls, now: Date.now(), unit: u.id, subs: WEEKLY.subs, revs: WEEKLY.revs, loaded: WEEKLY.loaded, failed: WEEKLY.failed });
+    var html = W.lobbyHtml(m, { unitParam: over });
+    if (el.getAttribute('data-sig') === html) return;   /* 大廳每隔幾秒重畫：沒變就不動，免得展開的「看完整建議」被收起來 */
+    var open = !!(el.querySelector('#wkMore') && el.querySelector('#wkMore').open);
+    el.innerHTML = html; el.setAttribute('data-sig', html);
+    if (open && el.querySelector('#wkMore')) el.querySelector('#wkMore').open = true;
+  }
+  APP.setWeeklyForTest = function (d) { d = d || {}; WEEKLY.subs = d.subs || {}; WEEKLY.revs = d.revs || {}; WEEKLY.loaded = true; WEEKLY.failed = !!d.failed; WEEKLY.sid = APP.me.sid; renderLobby(); };   /* 瀏覽器測試用（本機模式沒有資料層） */
   function renderLobby() {
     loadGuide();
     try { renderTeacherNote(); } catch (e) {}
+    try { renderWeekly(); } catch (e) { console.error('每週送審卡', e); }
     /* 老師帳號的前台大廳才有「三班輪播展示」入口（學生看不到；展示模式本身不顯示） */
     (function () { var row = document.querySelector('#lobby .row'), b = $('demoEntry'), ok = !DEMO && multiLoginOk();
       if (!ok) { if (b) b.parentNode.removeChild(b); return; }
