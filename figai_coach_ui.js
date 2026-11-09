@@ -1,6 +1,8 @@
 /* 步驟助教的畫面層（純函式：回傳 HTML 字串、改面板狀態，不碰 DOM、不連網、不寫 Firebase），Node 可測。
    提案室「原型工作台」（proposal_proto_ui.js）負責把這些字串放進頁面、把點擊轉成 act()/setField()。
    次數只存本機（localStorage，見 loadCounts/saveCounts），不寫資料庫。
+   2026-11-09：改成「六份」（Figma 1/3、AI Studio 1/3、Figma 2/3、AI Studio 2/3、Figma 3/3、AI Studio 3/3）。
+   兩個 1/3 全班同一套，面板不顯示模式；2/3、3/3 才依新手／中級／專家分流。
    瀏覽器全域：FigAIUI（要先載入 figai_coach.js 的 FigCoach）。 */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory(require('./figai_coach.js'));
@@ -10,23 +12,32 @@
   var IN = ' style="min-height:48px;font-size:16px"', LB = ' style="font-size:16px"', CK = ' style="width:24px;height:24px;min-height:0;flex:none;margin:0"', LBC = ' style="font-size:16px;display:flex;align-items:center;gap:10px;min-height:48px"';   /* 觸控目標 ≥48px、字 ≥16px：自帶，不依賴頁面樣式 */
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function modeOf(lv) { return lv === 1 ? 'novice' : (lv === 2 ? 'mid' : 'expert'); }
-  var AREA = { prompt1: 1, prompt2: 1, fixPrompt: 1, summary: 1, blocks: 1, inter: 1, states: 1, screens: 1, promptA: 1, promptB: 1, mapping: 1, changelog: 1, rules: 1, screensX: 1, promptX: 1, cmp: 1, heur: 1, verX: 1, trialX: 1 };
-  var CHECK = { copied: '我複製到自己的草稿了', chg1: '改了標題', chg2: '改了一句引導的話', chg3: '危險訊息挪到最上面', ans1: '這句話有告訴人現在該做什麼', ans2: '看到的人知道做完會怎樣', ans3: '危險訊息一眼看得到',
-    exported: '我匯出 PNG 了', confirmed1: '我確認這段指令', sent1: '我附上圖並送出了', confirmed2: '我確認這段指令', c1: '每一句話都在畫面上', c2: '字的大小、間距像 Figma', c3: '按鈕結果和我寫的一樣', c4: '只有練習資料',
-    saved: '成功的指令我存起來了', share1: '我附上了匯出的 PNG', share2: 'AI Studio 連結已開分享' };
-  var LABEL = { n1a: '流程幾步', n1b: '引導的句子幾句', prompt1: '第一段指令（助教填好，確認後才能複製）', opt: '互動選項', prompt2: '第二段指令', missing: '缺少的字', fixPrompt: '救火指令', secs: '秒數', taps: '點擊數', stopAt: '停在哪一句',
-    summary: '這一版做了什麼', blocks: '區塊', inter: '互動', states: '狀態', screens: '畫面清單', promptA: '第一段指令', calib: '校正方式', promptB: '這一段指令', featN: '這一段加了幾個功能', mapping: '對應訪談的哪一句',
-    versions: '版本數', changelog: '每一版改了什麼', rules: '設計規則檔（DESIGN.md）', screensX: '畫面（名稱|色碼|字級|間距，一行一個）', promptX: '給 AI Studio 的指令', cmp: '一致性比對表',
-    heur: '啟發式十項（序號|符合/不符合/不適用|輕微/中等/嚴重|理由）', verX: '版本（改了什麼|依據|結果）', trialX: '試用紀錄' };
+  function lvOf(lv) { return lv === 1 || lv === 2 ? lv : 3; }
+  var AREA = { prompt1: 1, prompt2: 1, fixPrompt: 1, summary: 1, blocks: 1, inter: 1, states: 1, screens: 1, promptA: 1, promptB: 1, mapping: 1, changelog: 1, rules: 1, screensX: 1, promptX: 1, cmp: 1, heur: 1, verX: 1, trialX: 1, note: 1, revNote: 1, trialNote: 1 };
+  var CHECK = { figmaIn: '我登入 Figma 了', copied: '新分頁的檔名後面有「(Copy)」', renamed: '檔名改成「班級＋你的提案」了', chg1: '改了標題', chg2: '改了一句引導的話', chg3: '危險訊息挪到最上面', ans1: '這句話有告訴人現在該做什麼', ans2: '看到的人知道做完這一步之後要做什麼', ans3: '危險訊息一眼看得到',
+    share1: 'Figma 連結已開分享（can view）', share2: 'AI Studio 連結已開分享（Public）', incog: '我用無痕視窗貼上連結，打得開',
+    frame390: '畫面寬 390、高 844，圖層取名「首頁」', three: '三樣都在：一句話、危險訊息、一顆主要按鈕', btn48: '按鈕高度至少 48，危險訊息一眼看得到', font14: '每段文字的字級都在 14 以上', gem: 'Gemini 挑的毛病我處理掉一個（或寫下為什麼不改）',
+    cConn: 'Figma 連接器接好了（顯示已連接）', cWho: 'whoami 回的帳號和我登入 Figma 的一樣', claudeShot: '我放上了 Claude 整合的截圖（看得到它的回覆和我的決定）', claudeShot1: '我截了 Claude 寫第一段指令的那一輪', claudeShot2: '我截了 Claude 找出漏洞的那一輪',
+    pngReady: '我有一張匯出的 PNG（不是自己截螢幕）', uploaded: '輸入框上方出現我的圖的縮圖', confirmed1: '我確認這段指令', sent1: '我附上圖並送出了', restored: '右側預覽看起來和我的圖一樣', confirmed2: '我確認這段指令',
+    c1: '每一句話都在畫面上', c2: '標題和卡片文字的大小，和 Figma 並排看起來差不多', c3: '按鈕結果和我寫的一樣', c4: '只有練習資料', saved: '成功的指令我存起來了', pngBefore: '我輸出了改前那張 PNG', pngAfter: '我輸出了改完那張 PNG', pdf: '我從提案室匯出了 PDF', delivered: '我把 PDF 和截圖交到 flipclass 了' };
+  var LABEL = { prompt1: '第一段指令（助教填好，確認後才能複製）', opt: '互動選項', prompt2: '互動指令', fixPrompt: '救火指令', secs: '秒數', taps: '點擊數', stopAt: '停在哪一句',
+    summary: '這一版做了什麼、改了哪個地方', blocks: '區塊', inter: '互動', states: '狀態', screens: '畫面清單', featN: '這一段加了幾個功能', mapping: '對應訪談的哪一句',
+    versions: '版本數', changelog: '每一版改了什麼', rules: '設計規則檔（DESIGN.md）', screensX: '畫面（名稱|色碼|字級|間距，一行一個）', promptX: '給 AI Studio 的指令（含 DESIGN.md）', cmp: '一致性比對表',
+    heur: '啟發式十項（序號|符合/不符合/不適用|輕微/中等/嚴重|理由）', verX: '版本（改了什麼|依據|結果）', trialX: '試用紀錄（每位試用者一份）', note: '便條（三行：每個元素對得回訪談的哪一句話）', revNote: '這一版改了什麼、為什麼', trialNote: '試用紀錄（試用的人卡在哪、你改了什麼、為什麼）' };
 
   /* ———— 面板狀態 ———— */
-  function create(lv) { lv = lv === 1 || lv === 2 ? lv : 3; return { lv: lv, S: C.newState(modeOf(lv)), step: 1, log: [], askStuck: false, item: 1, note: '', last: 0, idled: false }; }
-  /* 模式變了就重開一個面板，並提醒（母線決定：學生可自己切，切換時畫面提醒）；沒變就原樣回傳 */
-  function ensure(p, lv) {
-    lv = lv === 1 || lv === 2 ? lv : 3;
-    if (p && p.lv === lv) return p;
-    var q = create(lv); if (p) q.note = '換模式後助教提示會不同；已填的內容這個面板不會帶過來。';
-    if (lv === 1) say(q, C.enter(q.S, 1));
+  function create(lv, part) { lv = lvOf(lv); part = C.PARTS[part] ? part : 'f1'; return { lv: lv, part: part, S: C.newState(modeOf(lv), part), step: 1, log: [], askStuck: false, item: 1, note: '', last: 0, idled: false }; }
+  function panelKey(lv, part) { return part + (C.PARTS[part] && C.PARTS[part].modes ? ':' + lvOf(lv) : ''); }
+  /* 份或模式變了就重開一個面板（今天的助教次數帶過來，不能靠換份重置名額）；兩個 1/3 換模式不會重開；沒變就原樣回傳 */
+  function ensure(p, lv, part) {
+    lv = lvOf(lv); part = C.PARTS[part] ? part : 'f1';
+    if (p && panelKey(p.lv, p.part) === panelKey(lv, part)) { p.lv = lv; return p; }
+    var q = create(lv, part);
+    if (p) {
+      q.S.used = JSON.parse(JSON.stringify(p.S.used)); q.S.fillsDone = p.S.fillsDone;
+      if (p.part === part && C.PARTS[part].modes) q.note = '換模式後助教提示會不同；已填的內容這個面板不會帶過來。';
+    }
+    if (q.S.mode === 'novice') say(q, C.enter(q.S, 1));
     return q;
   }
   function say(p, r) { if (r && r.text) p.log.push({ text: r.text, warn: !r.ok, lv: r.level || 0, media: r.media || null, line: r.mediaLine || '' }); return r; }
@@ -34,17 +45,19 @@
   function touch(p, now) { p.last = now || Date.now(); p.idled = false; }
   function setField(p, k, v, now) { C.edit(p.S, k, v); touch(p, now); }
   function quotaLeft(p) { return Math.max(0, C.COACH_PER_DAY - C.quotaUsed(p.S)); }
+  function stepsOf(p) { return C.stepsOf(p.S); }
+  function curStep(p) { return C.stepOf(p.S, p.step); }
 
   /* 按鈕：d＝{ a: 動作, ... }。回傳 true 表示畫面要重畫 */
   function act(p, d, now) {
     var S = p.S, r; touch(p, now);
     switch (d.a) {
-      case 'step': p.step = Math.max(1, Math.min(C.STEPS[S.mode].length, Number(d.n) || 1)); p.askStuck = false; if (S.mode !== 'expert') say(p, C.enter(S, p.step)); return true;
+      case 'step': p.step = Math.max(1, Math.min(stepsOf(p).length, Number(d.n) || 1)); p.askStuck = false; if (S.mode !== 'expert') say(p, C.enter(S, p.step)); return true;
       case 'next': say(p, C.next(S, p.step)); return true;
       case 'stuck': p.askStuck = true; say(p, C.stuck(S, p.step)); return true;
       case 'choice': p.askStuck = false; say(p, C.stuck(S, p.step, d.k)); return true;
       case 'lv': say(p, C.level(S, p.step, Number(d.n), { item: p.item })); return true;
-      case 'item': p.item = Number(d.n) || 1; say(p, C.level(S, 7, 3, { item: p.item })); return true;
+      case 'item': p.item = Number(d.n) || 1; say(p, C.level(S, p.step, S.mode === 'mid' ? 2 : 3, { item: p.item })); return true;
       case 'sent': S.f.sent1 = true; say(p, C.sent(S)); return true;
       case 'idle': say(p, C.idle(S, p.step, Number(d.n) || 5)); return true;
       case 'review': r = C.review(S, d.k); if (r.comments) r.comments.forEach(function (t) { p.log.push({ text: t, warn: false, lv: 0 }); }); else say(p, r); return true;
@@ -59,8 +72,7 @@
   function field(p, k) {
     var S = p.S, v = S.f[k] === undefined ? '' : S.f[k], tag = S.ai[k] ? ' <span class="fg-tag">🤖 助教示範</span>' : '', cls = S.ai[k] ? 'fg-ai' : '';
     if (CHECK[k]) return '<label class="fg-l"' + LBC + '><input type="checkbox"' + CK + ' data-ff="' + k + '"' + (S.f[k] ? ' checked' : '') + '> ' + esc(CHECK[k]) + '</label>';
-    if (k === 'opt') return '<label class="fg-l"' + LB + '>' + esc(LABEL[k]) + '<select' + IN + ' data-ff="opt"><option value="">請選</option><option value="1"' + (v == 1 ? ' selected' : '') + '>點整行的選項換說明</option><option value="2"' + (v == 2 ? ' selected' : '') + '>回診提醒開關</option><option value="3"' + (v == 3 ? ' selected' : '') + '>展開／收起</option></select></label>';
-    if (k === 'calib') return '<label class="fg-l"' + LB + '>' + esc(LABEL[k]) + '<select' + IN + ' data-ff="calib"><option value="">請選</option><option value="claude"' + (v === 'claude' ? ' selected' : '') + '>用 Claude 取尺寸表</option><option value="manual"' + (v === 'manual' ? ' selected' : '') + '>自己手抄</option></select></label>';
+    if (k === 'opt') return '<label class="fg-l"' + LB + '>' + esc(LABEL[k]) + '<select' + IN + ' data-ff="opt"><option value="">請選</option><option value="1"' + (v == 1 ? ' selected' : '') + '>樣板 D 畫面：「有問題　回急診」（紅色按鈕）</option><option value="2"' + (v == 2 ? ' selected' : '') + '>樣板 D 畫面：「一鍵傳給家人」（綠色按鈕）</option><option value="3"' + (v == 3 ? ' selected' : '') + '>我自己畫面上的按鈕（助教不代填）</option></select></label>';
     if (AREA[k]) return '<label class="fg-l"' + LB + '>' + esc(LABEL[k] || k) + tag + '<textarea' + IN + ' class="' + cls + '" rows="4" data-ff="' + k + '">' + esc(v) + '</textarea></label>' +
       (S.ai[k] && /^prompt|^fix/.test(k) ? '<div class="fg-row"><button data-fg="confirm" data-k="' + k + '">確認這段指令</button><button data-fg="copy" data-k="' + k + '">複製</button></div>' : '');
     return '<label class="fg-l"' + LB + '>' + esc(LABEL[k] || k) + tag + '<input type="text"' + IN + ' class="' + cls + '" data-ff="' + k + '" value="' + esc(v) + '"></label>';
@@ -71,22 +83,31 @@
     return '<div class="fg-media">' + list.map(function (x) { return '<a href="' + esc(x.src) + '" target="_blank" rel="noopener" style="display:block" aria-label="放大：' + esc(x.alt) + '"><img src="' + esc(x.src) + '" alt="' + esc(x.alt) + '" loading="lazy" style="display:block;max-width:100%;height:auto;margin:6px 0;border:2px solid #cfd8de;border-radius:8px"></a>'; }).join('') +
       (line ? '<div class="fg-line" style="font-size:16px;font-weight:700;margin:4px 0">👉 ' + esc(line) + '</div><div style="font-size:14px;color:#59656d">點圖可以放大。</div>' : '') + '</div>';
   }
-  function gateOf(p, n) { return C.GATES[p.S.mode][n]; }
+  /* 頁首三句：這份要交什麼、大約多久、做完接哪一份（中級／專家再加一句加做的事） */
+  function introHtml(p) {
+    var I = C.partIntro(p.S);
+    return '<div class="fg-intro" style="border:2px solid #cfd8de;border-radius:10px;padding:10px 12px;margin:8px 0;font-size:16px">' +
+      '<div><b>' + esc(I.week + ' ' + I.name + '：' + I.title) + '</b></div>' +
+      '<div>📦 <b>這份要交什麼</b>：' + esc(I.deliver) + '</div><div>⏱ <b>大約多久</b>：' + esc(I.time) + '</div><div>➡ <b>做完接哪一份</b>：' + esc(I.next) + '</div>' +
+      (I.extra ? '<div>➕ ' + esc(I.extra) + '</div>' : '') + '</div>';
+  }
   function render(p) {
-    var S = p.S, STP = C.STEPS[S.mode], g = gateOf(p, p.step), M = C.FILL_CAP[S.mode], av = (C.AVAIL[S.mode] || {})[p.step] || [];
-    var h = '<div class="fg-box"><div class="fg-h">🤖 步驟助教（' + esc(C.MODES[S.mode].name) + '）</div>';
+    var S = p.S, P = C.PARTS[p.part], STP = stepsOf(p), s = curStep(p), M = C.FILL_CAP[S.mode], av = C.avail(S, p.step);
+    var tag = P.modes ? C.MODES[S.mode].name : '全班同一套';
+    var h = '<div class="fg-box"><div class="fg-h">🤖 步驟助教（' + esc(P.name + '・' + tag) + '）</div>';
     if (p.note) h += '<div class="fg-note">' + esc(p.note) + '</div>';
-    h += '<div class="fg-steps">' + STP.map(function (s) { return '<button data-fg="step" data-n="' + s.n + '" class="' + (p.step === s.n ? 'on' : '') + '">' + s.n + '. ' + esc(s.title) + '<small style="display:block;font-size:14px">第 ' + gateOf(p, s.n).join('、') + ' 關：' + esc(gateOf(p, s.n).map(function (x) { return C.GATE_NAME[x]; }).join('、')) + '</small></button>'; }).join('') + '</div>';
-    h += '<div class="fg-h2">第 ' + g.join('、') + ' 關：' + esc(g.map(function (x) { return C.GATE_NAME[x]; }).join('、')) + '　／　步驟 ' + p.step + '：' + esc(STP[p.step - 1].title) + '</div>';
-    h += STP[p.step - 1].fields.map(function (k) { return field(p, k); }).join('');
+    h += introHtml(p);
+    h += '<div class="fg-steps">' + STP.map(function (x) { return '<button data-fg="step" data-n="' + x.n + '" class="' + (p.step === x.n ? 'on' : '') + '">' + x.n + '. ' + esc(x.title) + '</button>'; }).join('') + '</div>';
+    h += '<div class="fg-h2">步驟 ' + p.step + '／' + STP.length + '：' + esc(s.title) + '</div>';
+    h += s.fields.map(function (k) { return field(p, k); }).join('');
     var b = '';
-    if (S.mode === 'expert') b = ['rules', 'screens', 'heur', 'ver'].map(function (t) { return '<button data-fg="review" data-k="' + t + '">請助教評語：' + { rules: '規則檔', screens: '畫面', heur: '自評', ver: '版本' }[t] + '</button>'; }).join('') + '<button data-fg="lv" data-n="1">方向</button>';
+    if (S.mode === 'expert') b = C.reviewTypes(S, p.step).map(function (t) { return '<button data-fg="review" data-k="' + t + '">請助教評語：' + { rules: '規則檔', screens: '畫面', heur: '自評', ver: '版本' }[t] + '</button>'; }).join('') + '<button data-fg="lv" data-n="1">方向</button>';
     else {
       b = '<button data-fg="next">下一步檢查</button><button data-fg="stuck">我卡住了</button>';
       [1, 2, 3, 4].forEach(function (l) { if (av.indexOf(l) >= 0) b += '<button data-fg="lv" data-n="' + l + '">' + C.LEVEL_NAME[l] + '</button>'; });
-      if (S.mode === 'novice' && p.step === 5) b += '<button data-fg="sent">我送出了</button>';
-      if (S.mode === 'novice' && p.step === 7) b += [1, 2, 3, 4].map(function (i) { return '<button data-fg="item" data-n="' + i + '">第 ' + i + ' 項沒過</button>'; }).join('');
-      if (p.askStuck && (C.STUCK[S.mode] || {})[p.step]) { var tb = C.STUCK[S.mode][p.step]; b += '<div class="fg-ask">卡在哪？</div>' + Object.keys(tb).map(function (k) { return '<button data-fg="choice" data-k="' + k + '">' + esc(tb[k][0]) + '</button>'; }).join(''); }
+      if (S.mode === 'novice' && s.kind === 'fill1') b += '<button data-fg="sent">我送出了</button>';
+      if (s.kind === 'fix') b += (s.items || []).map(function (i) { return '<button data-fg="item" data-n="' + i + '">第 ' + i + ' 項沒過</button>'; }).join('');
+      if (p.askStuck && s.stuck) b += '<div class="fg-ask">卡在哪？</div>' + Object.keys(s.stuck).map(function (k) { return '<button data-fg="choice" data-k="' + k + '">' + esc(s.stuck[k].t[0]) + '</button>'; }).join('');
     }
     b += '<button data-fg="media">看這一步的示範圖</button>';
     h += '<div class="fg-row">' + b + '</div>';
@@ -95,10 +116,10 @@
     return h + '</div>';
   }
 
-  /* ———— 五關進度條與第 1 關起點區塊（P＝ERG_PROTO） ———— */
-  function gateBar(P, cur) {
-    return '<div class="pt-gates" role="group" aria-label="五關">' + P.GATES.map(function (g) { return '<button class="pt-gate' + (cur === g.n ? ' on' : '') + '" data-pt="gate" data-n="' + g.n + '"><b>第 ' + g.n + ' 關</b><span style="display:block;font-size:14px">' + esc(g.name) + '</span></button>'; }).join('') + '</div>' +
-      '<div class="pt-note">做完的樣子：' + esc(P.GATES[cur - 1].done) + '</div>';
+  /* ———— 六份進度條與 Figma 2/3 的起點區塊（P＝ERG_PROTO） ———— */
+  function partBar(P, cur) {
+    return '<div class="pt-gates" role="group" aria-label="六份">' + P.PARTS.map(function (g) { return '<button class="pt-gate' + (cur === g.n ? ' on' : '') + '" data-pt="part" data-n="' + g.n + '"><b>' + esc(g.week + ' ' + g.name) + '</b><span style="display:block;font-size:14px">' + esc(g.title) + '</span></button>'; }).join('') + '</div>' +
+      '<div class="pt-note">做完的樣子：' + esc(P.PARTS[cur - 1].done) + (P.PARTS[cur - 1].modes ? '' : '（這一份全班同一套，不分新手、中級、專家）') + '</div>';
   }
   var START_OPTS = [
     { k: 'tpl', name: '用老師的樣板改', note: '老師會在 flipclass 教材區給樣板連結。複製成你自己的草稿再改，不要改到原本的那份。' },
@@ -115,8 +136,8 @@
     return h;
   }
 
-  /* ———— 停留過久：沒動作超過 N 分鐘就主動冒圖（新手第 4 步 3 分鐘、其他 5 分鐘；專家不出手）。每次沒動作只出手一次 ———— */
-  function idleMin(p) { return p.S.mode === 'novice' && p.step === 4 ? 3 : 5; }
+  /* ———— 停留過久：沒動作超過 N 分鐘就主動冒圖（匯出 PNG 那步 3 分鐘、其他 5 分鐘；專家不出手）。每次沒動作只出手一次 ———— */
+  function idleMin(p) { var s = curStep(p); return p.S.mode === 'novice' && s && s.fast ? 3 : 5; }
   function tick(p, now) {
     now = now || Date.now(); if (!p || p.S.mode === 'expert') return false;
     if (!p.last) { p.last = now; return false; }
@@ -124,10 +145,11 @@
     if (p.idled || mins < idleMin(p)) return false;
     p.idled = true; var r = C.idle(p.S, p.step, mins); if (!r.ok) return false; say(p, r); return true;
   }
-  /* ———— 接手：只記做到第幾步（不記內容），存在本機，不寫資料庫 ———— */
+  /* ———— 接手：只記做到哪一份第幾步（不記內容），存在本機，不寫資料庫 ———— */
   function posKey(sid) { return 'figai1108pos:' + sid; }
-  function savePos(storage, sid, p, now) { try { storage.setItem(posKey(sid), JSON.stringify({ lv: p.lv, step: p.step, t: now || Date.now() })); return true; } catch (e) { return false; } }
-  function loadPos(storage, sid) { try { var o = JSON.parse(storage.getItem(posKey(sid)) || 'null'); return o && typeof o === 'object' && Number(o.step) >= 1 ? { lv: Number(o.lv) || 0, step: Number(o.step), t: Number(o.t) || 0 } : null; } catch (e) { return null; } }
+  function savePos(storage, sid, p, now) { try { storage.setItem(posKey(sid), JSON.stringify({ part: p.part, lv: p.lv, step: p.step, t: now || Date.now() })); return true; } catch (e) { return false; } }
+  function loadPos(storage, sid) { try { var o = JSON.parse(storage.getItem(posKey(sid)) || 'null'); return o && typeof o === 'object' && Number(o.step) >= 1 ? { part: String(o.part || ''), lv: Number(o.lv) || 0, step: Number(o.step), t: Number(o.t) || 0 } : null; } catch (e) { return null; } }
+  function savedPart(storage, sid) { var o = loadPos(storage, sid); return o && C.PARTS[o.part] ? o.part : ''; }
   function restore(p, storage, sid, now) {
     var r = C.resume(p.S, loadPos(storage, sid), now); if (!r.ok) return false;
     p.step = r.step; p.log = []; say(p, r); touch(p, now); return true;
@@ -143,6 +165,6 @@
       ['stuck', 'level', 'fill', 'review', 'auto'].forEach(function (k) { p.S.used[k] = Math.max(0, Number(o[k]) || 0); }); p.S.fillsDone = Math.max(0, Number(o.fillsDone) || 0); return true; } catch (e) { return false; }
   }
 
-  return { tick: tick, idleMin: idleMin, savePos: savePos, loadPos: loadPos, restore: restore, posKey: posKey, mediaHtml: mediaHtml, touch: touch, create: create, ensure: ensure, act: act, setField: setField, render: render, gateBar: gateBar, startBlock: startBlock, START_OPTS: START_OPTS, quotaLeft: quotaLeft,
+  return { tick: tick, idleMin: idleMin, savePos: savePos, loadPos: loadPos, savedPart: savedPart, restore: restore, posKey: posKey, mediaHtml: mediaHtml, introHtml: introHtml, touch: touch, create: create, ensure: ensure, act: act, setField: setField, render: render, partBar: partBar, startBlock: startBlock, START_OPTS: START_OPTS, quotaLeft: quotaLeft,
            counts: counts, saveCounts: saveCounts, loadCounts: loadCounts, countsKey: countsKey, modeOf: modeOf };
 });
