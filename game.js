@@ -326,6 +326,7 @@
   }
   $('avRandom').onclick = function () { avDraft = { preset: '', look: AV.randomize(String(Date.now()), APP.progress ? APP.progress() : APP.lit) }; renderAvatar(); };
   $('avDone').onclick = function () {
+    if (!avDraft) return;   /* 外觀畫面還沒打開（avDraft 還是空的）就被點到：什麼都不做，不丟錯 */
     var v = AV.validate(avDraft.look, APP.progress ? APP.progress() : APP.lit); if (!v.ok) { $('avErr').textContent = v.errors[0].msg; return; }
     APP.me.profile.avatar = avDraft; APP.me.profile.chosen = true; CORE.saveProfile(APP.storage, APP.me.sid, APP.me.profile); enterLobby();
   };
