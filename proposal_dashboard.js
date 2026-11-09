@@ -273,8 +273,8 @@
     var stuck = list.filter(function (w) { return w.stuck.length; }).map(function (w) {
       return '<div class="line"><b>' + esc(w.name) + '</b>　有燈沒亮（' + w.stuck.length + ' 人）：' + w.stuck.slice(0, 10).map(function (x) { return '<button class="chip pick" data-sel="' + esc(x.sid) + '" aria-label="看 ' + esc(who(m, x.sid, deid)) + ' 的提案">' + esc(who(m, x.sid, deid)) + '（' + esc(x.names.join('、')) + '）</button>'; }).join('') + (w.stuck.length > 10 ? '<span class="muted small">　…還有 ' + (w.stuck.length - 10) + ' 人</span>' : '') + '</div>';
     });
-    return '<section class="card priv" id="pxWeekly"><h3>每週送審（依份，' + esc(cl === '全部' ? '三班' : cl) + '）</h3><div class="muted small">每一份是哪一份由審核結果自己寫的；舊的審核沒有寫就用送審日期和班級推出來。送審了還沒審好的算「送審」、不算「已有建議」。</div>' +
-      table(['份', '送審', '已有建議', '每顆燈的人數'], rows) + (stuck.join('') || '<div class="muted small">目前沒有人有燈沒亮（或還沒有審核結果）。</div>') + '</section>';
+    return '<section class="card priv" id="pxWeekly"><h3>各份狀況（依份，' + esc(cl === '全部' ? '三班' : cl) + '）</h3><div class="muted small">11-09 起的節奏：W10–W14 各份只交 flipclass，不到提案室送審；提案室只收最後版本（AI Studio 3/3，W15 起到 W18 下課前）。所以只有 AI Studio 3/3 那一列的「送審」才是學生該做的事；其他列有數字，是舊資料或測試的送審，不代表學生該送。每一份是哪一份由審核結果自己寫的，舊的沒有寫就用送審日期和班級推出來。</div>' +
+      table(['份', '送審（只有 AI Studio 3/3 需要）', '已有建議', '每顆燈的人數'], rows) + (stuck.join('') || '<div class="muted small">目前沒有人有燈沒亮（或還沒有審核結果）。</div>') + '</section>';
   }
   function stageChip(s) { return tl(STAGE_TL[s.stage], STAGE_NAME[s.stage]); }
   function htmlStudents(m, ui) {

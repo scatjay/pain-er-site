@@ -514,9 +514,9 @@
   }
   APP.setGuideForTest = function (g) { GUIDE.g = g; GUIDE.loaded = true; GUIDE.sid = APP.me.sid; renderLobby(); };   /* 瀏覽器測試用（本機模式沒有指引資料） */
   /* ───── 提案室每週送審（第二階段）：大廳「這週要做」卡 ─────
-     只顯示本人的、不排名不比較。資料進大廳時各讀一次（不訂閱）：prx/{場次}/rev/{學號}/sms（審核建議，最近 8 天）與 prx/{場次}/sub/{學號}/sms（送審，最新 3 天；只拿來判「審核中」與哪一份送過）。
-     兩個節點規則本來就允許本人讀。讀不到（沒登入、規則拒絕、斷線）就明講讀不到，不假裝「還沒送」。本機模式沒有資料層：顯示沒有資料的狀態。
-     狀態字樣：還沒送／審核中（審核比送審舊或還沒有）／已有建議。審核是每晚 23:30 一批。畫面字串與整理都在 proposal_weekly.js（ERG_WEEKLY）。 */
+     11-09 20:48 節奏改變：W10–W14 各份只交 flipclass、不到提案室送審；提案室只收最後版本（a3）。卡上寫本週要交什麼、交到 flipclass 的作業區。
+     只有 a3 那一週才讀審核（不是 a3 的週不讀 prx 節點，省流量）：prx/{場次}/rev/{學號}/sms（審核建議，最近 8 天）與 prx/{場次}/sub/{學號}/sms（送審，最新 3 天；只拿來判「審核中」）。
+     兩個節點規則本來就允許本人讀。讀不到（沒登入、規則拒絕、斷線）就明講讀不到。本機模式沒有資料層。審核是每晚 23:30 一批。畫面字串與整理都在 proposal_weekly.js（ERG_WEEKLY）。 */
   var WEEKLY = { loaded: false, busy: false, failed: false, subs: {}, revs: {}, sid: '' };
   function loadWeekly() {
     var sid = APP.me.sid; if (!sid || WEEKLY.busy || (WEEKLY.loaded && WEEKLY.sid === sid)) return;
@@ -530,10 +530,11 @@
   }
   function renderWeekly() {
     var W = window.ERG_WEEKLY, box = $('proposalBox'); if (!W || !box || DEMO) return;
-    loadWeekly(); W.ensureStyle(document);
+    W.ensureStyle(document);
     var el = $('weeklyBox');
     if (!el) { el = document.createElement('div'); el.id = 'weeklyBox'; el.className = 'card wk'; box.parentNode.insertBefore(el, box); }
     var u = W.unitNow({ cls: APP.me.cls, now: Date.now(), search: location.search, host: location.hostname }), over = /[?&]unit=/.test(location.search) && /^(127\.0\.0\.1|localhost)$/.test(location.hostname);
+    if (W.isFinal(u.id)) loadWeekly();   /* 只有最後版本那一週才讀審核（其餘週不讀，省流量） */
     var m = W.lobbyModel({ cls: APP.me.cls, now: Date.now(), unit: u.id, subs: WEEKLY.subs, revs: WEEKLY.revs, loaded: WEEKLY.loaded, failed: WEEKLY.failed });
     var html = W.lobbyHtml(m, { unitParam: over });
     if (el.getAttribute('data-sig') === html) return;   /* 大廳每隔幾秒重畫：沒變就不動，免得展開的「看完整建議」被收起來 */

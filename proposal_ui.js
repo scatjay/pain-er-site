@@ -134,12 +134,13 @@
   }
   function renderTop() {
     var st = S.st || compute(), ns = PX.nextStep(S.doc, S.evidence, S.cells, st, { lastRev: lastRev(), submittedToday: submittedToday() }), act = '';
-    /* 每週送審：不要求整套對準表的份（Figma 1/3、AI Studio 1/3、AI Studio 2/3、Figma 3/3），頂列「下一步」依本週這一份講，不叫學生先去訪談或選方向 */
+    /* 每週送審（11-09 20:48 改節奏）：W10–W14 各份只交 flipclass，頂列「下一步」只講這一份交到 flipclass、最後版本到 W15 再來送審；只有最後版本（AI Studio 3/3）才講送審。
+       最後版本沿用原本的下一步（要整套對準表）。 */
     try {
       var wv = weeklyView();
-      if (wv && ['f2', 'a3'].indexOf(wv.unit.id) < 0) {
-        ns = wv.gate.ok ? { text: submittedToday() ? '今天已經送審了。到「④ 交出去」看建議，改完明天 00:00 之後可以再送；正式繳交要到 flipclass。' : '「' + wv.unit.name + '」要交的東西都齊了。可以送審看看建議（這是建議，不是繳交；繳交要到 flipclass）。', go: 'export' }
-          : { text: '「' + wv.unit.name + '」還差一步：' + wv.gate.why, go: 'proto' };
+      if (wv && !wv.isFinal) {
+        ns = wv.gate.ok ? { text: '「' + wv.unit.name + '」要交的東西都齊了。這一份交到 flipclass 就好；最後版本在 W15 再來送審。', go: 'export' }
+          : { text: '「' + wv.unit.name + '」還差一步：' + wv.gate.why + '（這一份交到 flipclass 就好；最後版本在 W15 再來送審。）', go: 'proto' };
       }
     } catch (e) {}
     if (ns.go === 'game') act = '<a class="btn mini" href="' + esc(gameHref(latestRoom())) + '">🩺 回急診室</a>';
@@ -292,14 +293,14 @@
   function weeklyHtml(v) {
     var u = v.unit, noLinks = v.priors.filter(function (p) { return !p.sent; });
     var h = '<div class="wk wk-box" id="wkBox"><div class="wk-h">這一週要交：' + esc(u.name) + '（' + esc(u.week) + '）' + esc(u.title) + '</div>' +
-      '<div class="muted">' + esc(WK.TXT.notSubmit) + '</div><ul>' + v.deliver.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>';
+      '<div class="muted">' + esc(v.isFinal ? WK.TXT.notSubmit : WK.TXT.flipLine) + '</div><ul>' + v.deliver.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>';
     if (u.modes && !v.chosen) h += '<div class="wk-box wk-warn" id="wkModeAsk2"><b>' + esc(WK.TXT.needMode) + '</b><div class="wk-mode">' + [1, 2, 3].map(function (k) { return '<button type="button" data-pt="mode" data-v="' + k + '">' + ['新手', '中級', '專家'][k - 1] + '</button>'; }).join('') + '</div></div>';
-    h += '<div class="wk-h2"><b>自己先看一眼</b>　<span class="muted">（隨時更新；還沒有送審）</span></div>' + WK.lightsHtml(v.lights);
+    h += '<div class="wk-h2"><b>自己先看一眼</b>　<span class="muted">（隨時更新）</span></div>' + (v.isFinal ? '' : '<div class="muted" id="wkSelfNote">' + esc(WK.TXT.selfNote) + '</div>') + WK.lightsHtml(v.lights);
     var miss = v.missing.slice(0, 6);
     if (miss.length) h += '<div class="muted">還缺：</div><ul id="wkMissing">' + miss.map(function (m) { return '<li>' + esc(m) + '</li>'; }).join('') + '</ul>' + (v.missing.length > 6 ? '<div class="muted">…還有 ' + (v.missing.length - 6) + ' 項</div>' : '');
     else h += '<div class="ok">✓ 這一份該有的都有了。</div>';
     h += markersHtml(v);
-    if (noLinks.length) h += '<div class="muted" id="wkPrior">前面的份還沒貼連結：' + noLinks.map(function (p) { return esc(WK.unitName(p.unit)); }).join('、') + '。現在送審會以本週這一份的標準來看；前面的份可以之後補。</div>';
+    if (v.isFinal && noLinks.length) h += '<div class="muted" id="wkPrior">前面的份還沒貼連結：' + noLinks.map(function (p) { return esc(WK.unitName(p.unit)); }).join('、') + '。現在送審會以本週這一份的標準來看；前面的份可以之後補。</div>';
     return h + '</div>';
   }
   function curUnitRev(v) {   /* 這一份最新的審核建議；以及這一份有沒有送審了還在等 */
@@ -322,12 +323,12 @@
         '<h3>審核建議</h3><div id="revBox">' + revHtml(lastRev()) + '</div>';
       return;
     }
-    var gate = v.gate, alignUnit = UN.DATA.alignGate.indexOf(v.unit.id) >= 0;
-    var note = done ? PX.submitNote(S.subs, NOW()).text : gate.ok ? '可以送審了。一天可以送一次（明天 00:00 可再送）。' + WK.TXT.notSubmit : gate.why + (gate.reasons.length > 1 ? '（還有 ' + (gate.reasons.length - 1) + ' 項）' : '');
-    $('secExport').innerHTML = '<h2>④ 交出去</h2>' + weeklyHtml(v) + (alignUnit ? '<div id="exProblems">' + problemList() + '</div>' : '') +
+    var gate = v.gate, alignUnit = UN.DATA.alignGate.indexOf(v.unit.id) >= 0, fin = v.isFinal, canSend = fin && gate.ok && !done;
+    var note = !fin ? WK.TXT.flipOnly : done ? PX.submitNote(S.subs, NOW()).text : gate.ok ? WK.TXT.finalSend + '一天可以送一次（明天 00:00 可再送）。' : gate.why + (gate.reasons.length > 1 ? '（還有 ' + (gate.reasons.length - 1) + ' 項）' : '');
+    $('secExport').innerHTML = '<h2>④ 交出去</h2>' + weeklyHtml(v) + (alignUnit && fin ? '<div id="exProblems">' + problemList() + '</div>' : '') +
       '<div class="bar"><button id="pdfBtn" data-act="pdf">另存 PDF 交 flipclass</button> <button id="dlBtn" data-act="dl">下載可列印頁（手機用）</button> <span class="muted">PDF 沒完成也能存，頁首會寫還缺什麼。</span></div>' +
-      '<div class="bar"><button id="submitBtn" data-act="submit"' + (gate.ok && !done ? '' : ' disabled') + '>' + (done ? '今天已送審' : '送審看建議') + '</button> <span class="muted" id="submitNote">' + esc(note) + '</span></div>' +
-      revSectionHtml(v);
+      '<div class="bar"><button id="submitBtn" data-act="submit"' + (canSend ? '' : ' disabled') + '>' + (!fin ? '這一份不用送審' : done ? '今天已送審' : '送審最後版本') + '</button> <span class="muted" id="submitNote">' + esc(note) + '</span></div>' +
+      (fin ? revSectionHtml(v) : '<div id="revBox">' + WK.histHtml(S.revs) + '</div>');
   }
   /* 畫面上輸入框裡有人在打字時不重畫「④ 交出去」（試用紀錄的三個格子），免得字被洗掉 */
   function refreshWeekly() {
@@ -366,6 +367,7 @@
   }
   function submit() {
     var st = compute(), wv = null; try { wv = weeklyView(); } catch (e) {}
+    if (wv && !wv.isFinal) { toast(WK.TXT.flipOnly, 6000); return; }   /* 11-09 20:48：只有最後版本送審 */
     if (wv) { if (!wv.gate.ok) { toast('還不能送審：' + wv.gate.why, 6000); return; } }   /* 每週送審：依份的閘門（1/3 不要求對準表；2/3、3/3 要先選模式；3/3 看版本數） */
     else {
       if (!st.canSubmit) { toast('還不能送審：先選方向、寫完至少 ' + PX.LIMITS.minRows + ' 列的決定。'); return; }
