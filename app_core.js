@@ -105,11 +105,18 @@
     }
     var vr = null, vbest = -1; visitRoom.forEach(function (r) { var sc = visitScore(r); if (sc >= vbest) { vbest = sc; vr = r; } });
     var vp = vr ? getPlayer(vr, sid) : null;
-    var disc = vp ? vp.discussion : { partners: [], checks: {} };
-    var partners = (disc.partners || []).map(function (id) {
-      var other = vr ? getPlayer(vr, id) : null;
-      return { id: id, confirmed: !!(other && other.confirms && other.confirms[sid]) };
+    /* 11-10 4b4k0042／4B428012：「勾選、按完成、同學確認」三項原本都要在同一間房，分散在兩間房就永遠不過。
+       改成各房累計（聯集）：四項勾選只要在任何一間同學的房間勾過就算、同學只要在任何一間確認過就算。只會讓更多人過，已過的人不會變不過（聯集一定包含原本挑的那間）。 */
+    var DK = ['read', 'diff', 'complement', 'outcome'], disc = { partners: [], checks: {} }, pmap = {}, porder = [];
+    visitRoom.forEach(function (r) {
+      var pl = getPlayer(r, sid), dd = (pl && pl.discussion) || {}, ch = dd.checks || {};
+      DK.forEach(function (k) { if (ch[k]) disc.checks[k] = true; });
+      (dd.partners || []).forEach(function (id) {
+        var other = getPlayer(r, id), conf = !!(other && other.confirms && other.confirms[sid]);
+        if (!pmap[id]) { pmap[id] = { id: id, confirmed: conf }; porder.push(id); } else if (conf) pmap[id].confirmed = true;
+      });
     });
+    var partners = porder.map(function (id) { return pmap[id]; });
     function build(wr) {
       /* 10-27 陳威霖、陳珈欣：選哪個「再設計方向」都說無效。以前整個評估只用「最後開的那間自己的房」的案例，在別種案例的房間裡寫結論，方向清單就對不上。
          caseInfo 可以是函式（案例代號 → 案例資料），每間房用自己的案例；舊的傳法（直接給一份資料）照舊可用。 */

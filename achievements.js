@@ -246,9 +246,9 @@
     recs.forEach(function (r) { if (!r || !r.personaId) return; var n = filledItems(r); if (n > 0) who[r.personaId] = Math.max(who[r.personaId] || 0, n); if (n > maxItems) maxItems = n; if (n >= 4) complete++; if (CORE_IDS.indexOf(r.personaId) >= 0 && r.items && (itemHasContent(r.items.events) || itemHasContent(r.items.need))) pried[r.personaId] = 1; });
     var ids = keys(who);
     return {
-      interviewees: ids.length, interviewIds: ids, coreOpened: keys(pried).length, interviewsDeep: complete, maxItems: maxItems,
+      interviewees: Math.max(ids.length, Number(ctx.prevInterviewees) || 0), interviewIds: ids,   /* 11-10 4b4k0149：換案例開新房間後統計不歸零——跟已發布的成績取大（prevInterviewees／prevRooms 來自 score/學號） */ coreOpened: keys(pried).length, interviewsDeep: complete, maxItems: maxItems,
       coreDone: CORE_IDS.filter(function (id) { return who[id]; }).length, coreTotal: CORE_IDS.length,
-      rooms: Math.max(keys(player.roomsSeen).length, arr(player.visited).length), cards: Math.max(arr(player.cards).length, Number(ctx.cards) || 0), events: keys(player.seenEv).length,
+      rooms: Math.max(keys(player.roomsSeen).length, arr(player.visited).length, Number(ctx.prevRooms) || 0), cards: Math.max(arr(player.cards).length, Number(ctx.cards) || 0), events: keys(player.seenEv).length,
       keep: arr(ctx.keep),   /* 10-15：之前在別間房已經解開的成就（從 score/{學號} 讀回來）；換案例開新房間時，已拿到的不會不見 */
       reports: Number(ctx.reports) || 0, fb: ctx.fb || null,   /* 10-27：回報技能與回報成就用（fbStats 的結果） */
         /* 10-23：回報過遊戲問題幾次（panels.js 的 achCtx 從本機回報紀錄算；過去的回報者由老師端補寫進 score） */

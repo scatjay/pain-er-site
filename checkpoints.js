@@ -85,11 +85,11 @@
     var picked = (d.partners || []).filter(function (p) { return String(p.id) !== String(s.student.id); });
     var partners = picked.filter(function (p) { return p.confirmed; });
     var allChecked = RULES.discussionChecks.every(function (k) { return !!ch[k]; });
-    var visitRoomOk = visits.some(function (v) { return v.code === d.room; });
+    var visitRoomOk = visits.length >= 1;   /* 11-10：討論可以分散在不同房間累計，不再要求「完成」的那間就是勾選的那間 */
     var items = [
       { text: '自己的房間：在「結論」按「結束這一場」', ok: own.length >= 1, todo: '回到自己開的房間，在「結論」最下面按「結束這一場」' },
       { text: '加入一間同學開的房間', ok: joined.length >= 1 || visits.length >= 1, todo: '回大廳，加入一間同學開的房間（裡面要有人）' },
-      { text: '在那間房的「討論」選一位同學、四項都打勾', ok: picked.length >= 1 && allChecked, todo: '在同學的房間打開「討論」，選一位同學，把四項討論檢核都打勾' },
+      { text: '在那間房的「討論」選一位同學、四項都打勾', ok: picked.length >= 1 && allChecked, todo: '在同學的房間打開「討論」，選一位同學，把四項討論檢核都打勾（分在不同房間勾也會累計）' },
       { text: '按「完成這次討論」', ok: visits.length >= 1 && visitRoomOk, todo: '在同學房間的「討論」按「完成這次討論」' },
       { text: '那位同學按了「確認我們討論過」', ok: partners.length >= 1, todo: '請你選的那位同學到同一間房的「討論」，按「確認我們討論過」' }
     ];
@@ -180,5 +180,12 @@
     return (h.toString(36) + h2.toString(36)).toUpperCase().slice(0, 8);
   }
 
-  return { RULES: RULES, DEFS: DEFS, evaluate: evaluate, canSubmit: canSubmit, listHtml: listHtml, nextText: nextText, verifyCode: verifyCode };
+  /* 11-10 4b4k0118：討論區三步進度條（勾選四項 → 按「完成這次討論」→ 同學按確認）。純函式：回傳 { steps:[{label, ok}], cur（目前在第幾步，1–3；全部做完＝4） } */
+  function discProgress(checks, finished, confirmed) {
+    var ch = checks || {}, allChecked = RULES.discussionChecks.every(function (k) { return !!ch[k]; });
+    var steps = [{ label: '勾選四項討論檢核', ok: allChecked }, { label: '按「完成這次討論」', ok: !!finished }, { label: '同學按「確認我們討論過」', ok: !!confirmed }];
+    var cur = 4; for (var i = 0; i < steps.length; i++) { if (!steps[i].ok) { cur = i + 1; break; } }
+    return { steps: steps, cur: cur };
+  }
+  return { discProgress: discProgress, RULES: RULES, DEFS: DEFS, evaluate: evaluate, canSubmit: canSubmit, listHtml: listHtml, nextText: nextText, verifyCode: verifyCode };
 });
