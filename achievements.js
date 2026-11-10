@@ -21,7 +21,7 @@
      現狀：440 題裡追問具體事件 7%、追問原因 3%、「你好」佔一成多、病患本人只有 1 個人問、每段對話中位 4 題。
      每送出一題呼叫一次 noteQuestion，結果累計在 player.q（只記次數，不存句子）。
      info：{ text, pid, prev（對方上一句回答）, first（這段對話的第一題）, n（這段對話已問到第幾題） } */
-  var Q_EVENT = /(最近一次|上一次|上次|那時|當時|那天|昨天|剛才|剛剛|後來|然後呢|怎麼處理|舉.{0,2}例|具體|印象深刻)/, Q_WHY = /(為什麼|為何|怎麼會|卡在哪|怎麼知道|如果可以改|你當時希望)/;
+  var Q_EVENT = /(最近一次|上一次|上次|那時|當時|那天|昨天|剛才|剛剛|後來|然後呢|怎麼處理|舉.{0,2}例|具體|印象深刻)/, Q_WHY = /(為什麼|為甚麼|為何|怎麼會|卡在哪|怎麼知道|如果可以改|你當時希望)/;
   var Q_YESNO = /(嗎|有沒有|會不會|可不可以|能不能|是否|對不對|是不是)[？?。！!\s]*$/, Q_TEMPLATE = /(他一開始怎麼說|那天發生(了)?什麼|真正需要什麼)/;
   var Q_INTRO = /(我是|我們是|想請問|想問你|想跟你|想了解|訪談|訪問|請教|研究)/, Q_GREET = /^(你好|妳好|您好|哈囉|嗨+|hi+|hello|早安?|午安|謝謝|好的?|ok+|嗯+)[\s\S]{0,4}$/i;
   var KEY3 = ['patient', 'family', 'nurse'];
@@ -106,7 +106,8 @@
   }
 
   var Q_SMS = /(簡訊|訊息|手機|衛教|連結|通知)/, Q_PASTE = /(問到這三件事|點畫面上的人物開始訪談)/;
-  var KEYKIND = { patient: 'patient', family: 'family', nurse: 'nurse', triage_nurse: 'nurse' };
+  /* 11-10 4b4k0042：「病人、家人、護理師至少一種問過 2 題」原本只認 4 個固定 id，候診等案例的人物（auntie_lin、daughter_yu…）全部不算；改成跟「找對人」共用同一份角色表 KEY3_ROLE */
+  var KEYKIND = (function () { var o = { patient: 'patient', family: 'family', nurse: 'nurse', triage_nurse: 'nurse' }; KEY3.forEach(function (r) { (KEY3_ROLE[r] || []).forEach(function (id) { o[id] = r; }); }); return o; })();
   /* chat：{ 記錄鍵: { personaId, turns:{ 鍵: {role,text,t} } } }（er/場次/chat/房間代碼/學號 底下的樣子） */
   function chatStats(chat) {
     var st = { n: 0, dup: 0, tmpl: 0, ev: 0, why: 0, echo: 0, yn: 0, deep: 0, sms: 0, whoN: 0, keyKinds: 0, who: {}, key: {} }, seen = {};

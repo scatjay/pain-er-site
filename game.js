@@ -419,7 +419,7 @@
     var ta = function (k, label, ph) { return '<label style="display:block;margin:6px 0 2px;font-size:var(--fs-2)"><b>' + label + '</b></label><textarea id="gr_' + k + '" rows="2" maxlength="400" placeholder="' + esc(ph) + '" style="width:100%;box-sizing:border-box">' + esc(GUIDE.draft && GUIDE.draft[k] !== undefined ? GUIDE.draft[k] : (r[k] || '')) + '</textarea>'; };
     var w8 = w8Started(), rv = reviewState(GUIDE.r), rvOk = rv.k === 'ok', left = (ev.total - ev.lit) + (rvOk ? 0 : 1);
     var head = '痛點急診室 2/3（W7）' + (w8 ? '前幾週的事' : '這週要做的事') + '　' + (w8 ? wkBadge(ev.passed && rvOk, left, ev.lit, ev.total, ev.next ? ev.next.text : (rvOk ? '' : '送出「回應指引」'), '｜回應指引：' + rv.t) : ev.lit + ' / ' + ev.total + (ev.passed ? '　<span class="tag ok">全部完成</span>' : ''));
-    return (w8 ? '<details id="week2Box"' + (week2Open ? ' open' : '') + '><summary style="cursor:pointer"><b style="font-size:var(--fs-3)">' + head + '</b></summary>' : '<div id="week2Box"><div class="row"><b style="flex:1;font-size:var(--fs-4)">' + head + '</b></div>') +
+    return (w8 ? '<details id="week2Box"' + ((week2Open === null ? !(ev.passed && rvOk) : week2Open) ? ' open' : '') + '><summary style="cursor:pointer"><b style="font-size:var(--fs-3)">' + head + '</b></summary>' : '<div id="week2Box"><div class="row"><b style="flex:1;font-size:var(--fs-4)">' + head + '</b></div>') +
       '<div class="muted" style="font-size:var(--fs-2);margin:2px 0 6px">這週繼續升級技能、追加成就，<b>最重要的是照「給你的指引」去做，並寫下你做了什麼</b>。10/20 到 W8~9 結束全天都可以訪談。1/3（W6）還沒完成的，下面可以繼續做。</div>' +
       (ev.next ? '<div id="w2Next" style="margin:6px 0;padding:6px 10px;border:var(--bw) solid var(--ink);border-radius:var(--r-m);background:var(--yellow);color:var(--ink-fixed);font-size:var(--fs-3)"><b>這週下一步</b>　' + esc(ev.next.text) + '</div>' : '') +
       window.ERG_CHECKPOINTS.listHtml(ev, { compact: true }) +
@@ -432,7 +432,7 @@
       (w8 ? '</details>' : '</div>');
   }
   /* 10-26 楊老師「W7 已經不是本週了」：10/27 07:10 起大廳最上方換成 W8（故事板卡），W7 收成預設摺起來的「上週」，回應指引仍可補送 */
-  var W8_START = Date.parse('2026-10-26T20:00:00+08:00'), week2Open = false;   /* 10-27 楊老師：新單元前一晚就切（原本上課前 1 小時），讓老師先確認 */
+  var W8_START = Date.parse('2026-10-26T20:00:00+08:00'), week2Open = null;   /* 11-10：null＝還沒手動開關過，預設「沒做完就展開」（4b4k0190 找不到回應指引：W8 起它被收進摺起的「前幾週的事」）；10-27 楊老師：新單元前一晚就切（原本上課前 1 小時），讓老師先確認 */
   /* 10-28 楊老師：有開啟閱讀當週教材的成就。大廳「本週教材」連結；點開記在本機（week_materials.js），成就「翻開本週教材」讀它 */
   function syncMats() { try { var M = window.ERG_MATS; if (M && APP.me.sid) window.ERG_MY_MATS = M.weeksOpened(localStorage, APP.me.sid); } catch (e) {} }
   function matsHtml() {
@@ -575,7 +575,7 @@
     var rows = rooms.map(function (r) { var full = DB.getRoom(r.code); var p = on[r.host]; return { r: r, full: full, mine: !!(full.members && full.members[APP.me.sid]), online: !!(p && nowT - Number(p.t || 0) < ((window.ERG_PRES && window.ERG_PRES.ONLINE_MS) || 300000)), same: !!(full.cls && full.cls === APP.me.cls) }; });
     /* 11-05 4b4k0171：去過的房間太多，置頂一長串。「移出清單」只是不再列在大廳（存在這台裝置），進度、成就、檢核點都照舊，要看隨時可以叫回來 */
     var hideKey = 'erg_hide_rooms_' + APP.me.sid, hid = {}; try { (JSON.parse(localStorage.getItem(hideKey) || '[]') || []).forEach(function (c) { hid[c] = 1; }); } catch (x) {}
-    var setHid = function (code, on) { if (on) hid[code] = 1; else delete hid[code]; try { localStorage.setItem(hideKey, JSON.stringify(Object.keys(hid))); } catch (x) {} renderLobby(); };
+    var setHid = function (code, on) { if (on) hid[code] = 1; else delete hid[code]; try { localStorage.setItem(hideKey, JSON.stringify(Object.keys(hid))); } catch (x) {} try { if (ONLINE && window.firebase && window.ERG_SYNC_ME) window.ERG_SYNC_ME.setHide(window.firebase, APP.SESS, APP.me.sid, code, !!on); } catch (x) {} renderLobby(); };   /* 11-10：清單也寫進雲端，手機與電腦同一份 */
     var showHid = !!window.ERG_SHOW_HIDDEN_ROOMS, nHid = rows.filter(function (x) { return x.mine && hid[x.r.code]; }).length;
     var mineRows = rows.filter(function (x) { return x.mine && (showHid || !hid[x.r.code]); }), others = rows.filter(function (x) { return !x.mine; });
     others.sort(function (a, b) { return (b.online - a.online) || (b.same - a.same) || (Number(b.full.createdAt || 0) - Number(a.full.createdAt || 0)); });
@@ -724,6 +724,9 @@
     Array.prototype.forEach.call(card.querySelectorAll('[data-export]'), function (b) {
       b.onclick = function () { b.disabled = true; var old = b.textContent; b.textContent = '整理中…'; window.ERG_PANELS.exportFromLobby(b.getAttribute('data-export'), function () { b.disabled = false; b.textContent = old; }); };
     });
+    Array.prototype.forEach.call(card.querySelectorAll('[data-history]'), function (b) {
+      b.onclick = function () { b.disabled = true; window.ERG_PANELS.historyFromLobby(b.getAttribute('data-history'), function () { b.disabled = false; }); };
+    });
     if (!sbBound && $('caseSel')) { sbBound = true; $('caseSel').addEventListener('change', function () { sbTouched = true; try { renderStoryboardEntry(); } catch (x) {} }); }
   }
   $('createBtn').onclick = function () {
@@ -778,6 +781,7 @@
     if (myScoreAsked || !ONLINE || !window.firebase || !APP.me.sid) return;
     myScoreAsked = true;
     syncMats();
+    try { if (window.ERG_SYNC_ME) window.ERG_SYNC_ME.pull(window.firebase, APP.SESS, APP.me.sid, localStorage, function (ch) { if (ch) { try { if ($('lobby') && $('lobby').classList.contains('on')) renderLobby(); } catch (x) {} } }); } catch (x) {}   /* 11-10 4b4k0171：回報紀錄與清除清單以雲端為準，登入後讀一次（只讀自己的節點） */
     window.firebase.database().ref('er/' + APP.SESS + '/score/' + APP.me.sid).once('value', function (snap) { window.ERG_MY_SCORE = snap.val() || {}; window.ERG_SCORES_READY = true; try { if ($('lobby') && $('lobby').classList.contains('on')) renderLobby(); } catch (x) {} }, function () { myScoreAsked = false; });   /* 10-27：在大廳（還沒進房間）也要讀自己的成績，讀到之後重畫大廳，不然指引卡一直顯示「現在共 0 枚」（曾亮瑜、何詩涵都是在大廳回報） */
     try { window.firebase.database().ref('prx/' + APP.SESS + '/ach/' + APP.me.sid).once('value', function (snap) { window.ERG_MY_PX_ACH = Object.keys(snap.val() || {}); stageToast(); }, function () {}).catch(function () {}); } catch (e) {}
     try { window.firebase.database().ref('prx/' + APP.SESS + '/doc/' + APP.me.sid).once('value', function (snap) { window.ERG_MY_PX_DOC = snap.val() || {}; stageToast(); }, function () {}).catch(function () {}); } catch (e) {}   /* 11-04：階段造型的訊號（只讀自己的提案文件） */   /* 11-03：提案室原型成就 */
@@ -788,7 +792,8 @@
     if (!ONLINE || !window.firebase || !c || !A || !APP.me.sid) return;
     ensureMyScore(); scoreWatch.tick();
     if (!window.ERG_SCORES_READY) return;   /* 10-15：還沒讀到自己之前發布的成就就先不寫，不然會把別間房拿到的蓋成較少 */
-    var s = A.summary(c.player, P && P.achCtx ? P.achCtx() : {}); s.name = APP.me.name || APP.me.sid; s.cls = APP.me.cls || ''; s.t = Date.now();
+    var s = A.summary(c.player, P && P.achCtx ? P.achCtx() : {}); var prevSc = window.ERG_MY_SCORE || {}; s.skAsk = Math.max(Number(s.skAsk) || 1, Number(prevSc.skAsk) || 0); s.skCtx = Math.max(Number(s.skCtx) || 1, Number(prevSc.skCtx) || 0);   /* 11-10 4b4k0171：新房間的技能預設 1 不可蓋掉已發布的較高等級（等級不倒退） */
+    s.name = APP.me.name || APP.me.sid; s.cls = APP.me.cls || ''; s.t = Date.now();
     var d = A.scoreDecide(lastScore, s, force === true);
     if (!d.write) return; lastScore = { sig: d.sig, playMin: Number(s.playMin) || 0 };
     try { window.firebase.database().ref('er/' + APP.SESS + '/score/' + APP.me.sid).set(s); } catch (e) { if (window.console) console.warn('score 寫入失敗', e); }

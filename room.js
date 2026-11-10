@@ -624,7 +624,7 @@
     var html = '<b>' + esc(ent.name) + '</b> <span class="muted">' + esc((ent.persona && ent.persona.title) || ent.kind || '') + '</span>' + (window.ERG_TYPE_UI ? window.ERG_TYPE_UI.badge(ent.pid) : '') +
       '<div class="popLine">正在：' + esc(pos.act || '待著') + (av.fatigue && av.fatigue.level >= 2 ? '　看起來很累' : '') + '</div>' +
       (m ? '<div class="popLine muted">「' + esc(m.text) + '」</div>' : '') +
-      '<div class="popLine">' + (here ? esc(d.levelText) : '在' + esc(d.roomName) + '，要走過去才問得到') + '</div><div class="row popBtns">' +
+      '<div class="popLine">' + (here ? esc(d.levelText) : (d.moving ? '正在走道上移動，等他走進房間再點他' : '在' + esc(d.roomName) + '，要走過去才問得到')) + '</div><div class="row popBtns">' +
       (d.actions.indexOf('intv') >= 0 ? '<button data-act="intv">訪談</button>' : '') +
       (d.actions.indexOf('go') >= 0 ? '<button data-act="go">走過去</button>' : '') +
       '<button class="ghost" data-act="note">記便利貼</button></div>';

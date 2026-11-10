@@ -111,7 +111,7 @@
     draft: '打開故事板，按「幫我排草稿」，再把草稿改成自己的話：草稿裡每一句都是你訪談的原話、附出處，改成自己的話才是你的故事。',
     writing: '一格一格寫：誰、在哪、發生什麼事、他怎麼想；寫滿六格，再標出關鍵時刻，看的人才知道痛點發生在哪一格。',
     img: '六格都寫好了，再放一張圖：把場景畫出來或生成圖片放進故事板，看的人一眼就看得懂。',
-    persona_pc: '故事板寫好了，剩人物誌：按下面的「匯出訪談報告」，還原 2 位人物誌，故事裡的人才有訪談當依據。',
+    persona_pc: '故事板寫好了，剩人物誌：按下面的「匯出訪談報告」，用「複製 Persona 框架」還原 2 位人物誌；整理好後，回故事板點右下角「🤖 助教」，在「我已經還原的人物誌」選 2 位以上，大廳這一項才會亮。',
     persona_mobile: '故事板寫好了，剩人物誌：按下面的「打開訪談報告」，在人物誌素材卡按「複製 Persona 框架」，貼到 Gemini 整理。整理好後，回故事板點右下角「🤖 助教」，在「我已經還原的人物誌」選 2 位以上。',
     done: '故事板都完成了。時間夠的話，回房間再問一位，把還不夠具體的格子補上。'
   };
@@ -244,7 +244,7 @@
     var rows = (m.rooms || []).length ? '<ul class="rooms">' + m.rooms.map(function (r) {
       return '<li><span class="sbDot" style="background:' + r.ct + ';color:' + r.on + '" title="案例' + esc(r.letter) + '">' + esc(r.letter) + '</span><b>' + esc(r.name) + '</b><span class="muted">房號 ' + esc(r.code) + '</span>' + (r.seenAt ? '<span class="muted">' + (r.seenKind === 'last' ? '上次進入 ' : '加入於 ') + esc(fmtSeen(r.seenAt)) + '</span>' : '') + '<span>訪談卡 ' + r.cards + ' 張</span>' +
         (r.open ? '<span class="tag ok" title="' + esc(RL.nextLine(r.level)) + '">' + esc(RL.label(r.level)) + '</span>' : '<span class="tag warn">還沒有訪談卡</span>') +
-        '<span class="sbAct">' + (r.open ? '<a class="btn sbOpen" href="storyboard.html?room=' + encodeURIComponent(r.code) + '">📖 故事板</a>' : '<span class="btn sbOpen dis" role="button" aria-disabled="true" title="' + esc(need(r).text) + '">📖 故事板</span>') + '<button type="button" class="ghost sbRevisit" data-revisit="' + esc(r.code) + '">🩺 回去訪談</button>' + (r.open ? '<button type="button" class="ghost" data-export="' + esc(r.code) + '">' + (m.mobile ? '打開訪談報告（看素材、複製 Persona 框架）' : '匯出訪談報告') + '</button>' + (m.mobile ? '<span class="muted sbPcOnly">手機版無法匯出訪談報告（PDF）。手機可以先看素材、複製 Persona 框架做人物誌；要交的訪談報告 PDF，請用電腦或同組同學的電腦另存。</span>' : '') : '') + '</span>' + (r.open ? '' : '<span class="sbNeed">' + esc(need(r).text) + '</span>') +
+        '<span class="sbAct">' + (r.open ? '<a class="btn sbOpen" href="storyboard.html?room=' + encodeURIComponent(r.code) + '">📖 故事板</a>' : '<span class="btn sbOpen dis" role="button" aria-disabled="true" title="' + esc(need(r).text) + '">📖 故事板</span>') + '<button type="button" class="ghost sbRevisit" data-revisit="' + esc(r.code) + '">🩺 回去訪談</button><button type="button" class="ghost sbHistory" data-history="' + esc(r.code) + '">📜 看訪談紀錄</button>' + (r.open ? '<button type="button" class="ghost" data-export="' + esc(r.code) + '">' + (m.mobile ? '打開訪談報告（看素材、複製 Persona 框架）' : '匯出訪談報告') + '</button>' + (m.mobile ? '<span class="muted sbPcOnly">手機版無法匯出訪談報告（PDF）。手機可以先看素材、複製 Persona 框架做人物誌；要交的訪談報告 PDF，請用電腦或同組同學的電腦另存。</span>' : '') : '') + '</span>' + (r.open ? '' : '<span class="sbNeed">' + esc(need(r).text) + '</span>') +
         '</li>';
     }).join('') + '</ul>' : '<div class="muted" style="margin-top:var(--s2)">還沒有進過的房間。先到入口 1 開一間，去問人。</div>';
     /* 最上面的主按鈕：有房間就直接開最近進過的那間房的故事板；還沒有房間就先去急診室訪談 */

@@ -111,6 +111,7 @@
           save(APP.storage, e);
           /* 線上模式：同時送到 Firebase er/_feedback，老師後台即時看得到（比照文化遊戲松） */
           if (APP.online && win.firebase) { try { win.firebase.database().ref('er/_feedback').push(Object.assign({}, e, { sess: APP.SESS, name: APP.me.name || '', ctx: e.ctx ? Object.assign({}, e.ctx, { ua: String(e.ctx.ua || '').slice(0, 120) }) : null })); } catch (x) { if (win.console) win.console.warn('feedback 上傳失敗', x); } }
+          try { if (APP.online && win.firebase && win.ERG_SYNC_ME) win.ERG_SYNC_ME.pushFb(win.firebase, APP.SESS, APP.me.sid, e); } catch (x) {}   /* 11-10：回報紀錄（回報技能的依據）也存一份在自己的雲端節點，換裝置看得到 */
           open(); doc.getElementById('fbMsg').textContent = ''; var m = doc.getElementById('fbMsg'); m.className = 'muted'; m.textContent = APP.online ? '已送出，老師那邊看得到了，謝謝！' : '已送出，謝謝！';
         } catch (x) { doc.getElementById('fbMsg').textContent = x.message; }
       };

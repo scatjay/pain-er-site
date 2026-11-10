@@ -135,7 +135,7 @@
     if (here && !onHall && av.level !== 'blocked' && ent.kind !== 'bot') actions.push('intv');
     if (!here && !NOT_WALKABLE.test(pos.room)) actions.push('go');
     actions.push('note');
-    return { ent: ent, pos: pos, av: av, here: here, onHall: onHall, mutter: m, levelText: levelText, actions: actions,
+    return { ent: ent, pos: pos, av: av, here: here, onHall: onHall, moving: NOT_WALKABLE.test(pos.room), mutter: m, levelText: levelText, actions: actions,
       roomName: rmName(pos.room), goRoom: pos.room };
   }
   /* 便利貼文字：按下「記便利貼」那一刻才組（時間要用當下的，不是彈窗開啟時的） */

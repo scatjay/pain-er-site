@@ -484,10 +484,15 @@
       var d = new Date(NOW());
       $('printSheet').innerHTML = SB.printHtml({ cells: list }, { caseId: S.caseId, code: CODE, sid: S.sid, boardName: S.boardName === 'wall' ? '房間故事板牆' : '我的故事板', date: d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) }, imgs);
       document.body.classList.add('printing');
-      if (!Q.get('noprint')) { try { window.print(); } catch (e) {} }
-      if (!Q.get('keepprint')) setTimeout(function () { document.body.classList.remove('printing'); }, 500);
-      toast('在列印視窗選「另存為 PDF」，再把檔案交到 flipclass', 6000);
-    });
+      /* 11-09 4B4K0006：圖片進不了 PDF——列印頁剛填好 <img> 就 print()，圖還沒解碼；手機瀏覽器的 print() 又立刻返回，500ms 後列印頁就被藏掉。改成：等列印頁的圖都載入（最多 5 秒）再印，印完（afterprint）或 60 秒後才收起來 */
+      var pimgs = Array.prototype.slice.call(document.querySelectorAll('#printSheet img')), waitImgs = Promise.all(pimgs.map(function (im) { return im.complete && im.naturalWidth ? Promise.resolve() : new Promise(function (res) { im.onload = im.onerror = res; }); }));
+      var cap = new Promise(function (res) { setTimeout(res, 5000); });
+      Promise.race([waitImgs, cap]).then(function () {
+        if (!Q.get('noprint')) { try { window.print(); } catch (e) {} }
+        if (!Q.get('keepprint')) { var hide = function () { document.body.classList.remove('printing'); window.removeEventListener('afterprint', hide); }; window.addEventListener('afterprint', hide); setTimeout(hide, 60000); }
+        toast('在列印視窗選「另存為 PDF」，再把檔案交到 flipclass', 6000);
+      });
+    }).catch(function (e) { toast('列印頁準備失敗，可以改按「存成圖片」', 6000); if (window.console) console.warn('列印頁失敗', e); });
   }
 
   /* ———— 匯出成圖片（手機沒有好用的列印）：用 canvas 把這面故事板畫成一張 PNG，可下載、可分享、可長按存相簿 ———— */

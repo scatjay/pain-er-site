@@ -209,7 +209,8 @@
     var recPid = sel ? sel.ent.pid : (c0.selRecPid || null);
     if (!sel && recPid && recFor(recPid) < 0) recPid = null;
     /* 選了現場的人在訪談時，急診室的時間先暫停（不然問到一半他就照班表走掉了） */
-    c0.intvHold = !!sel;
+    var hallNow = false; try { var ll0 = window.ERG_LAYOUT && window.ERG_LAYOUT.room(c0.player.loc); hallNow = !!(ll0 && ll0.type !== 'room'); } catch (x) {}
+    c0.intvHold = !!sel && !hallNow;   /* 11-10：玩家自己站在走道時不暫停（走道不能訪談，暫停會讓走道上的小雅永遠走不出去：4b4k0056／0201 時間卡住） */
     /* 11-03 人物大頭照（art/portraits_1102/<id>.png）：沒有圖的人物 onerror 就移除，不顯示破圖 */
     function por(pid, px, big) { return '<img alt="" src="art/portraits_1102/' + esc(pid) + '.png" width="' + px + '" height="' + px + '" onerror="this.remove()" style="width:' + px + 'px;height:' + px + 'px;object-fit:cover;border-radius:50%;border:2px solid var(--ink);flex:none;' + (big ? 'float:left;margin:0 8px 2px 0;' : 'vertical-align:middle;margin:0 4px 0 0;') + '">'; }
     var html = goNote() + watchNote() + '<div class="ivHide"><div class="muted" style="font-size:var(--fs-2)">這間房裡的人（只有在同一房間才問得到）：</div><div class="row" style="margin:6px 0">' +
@@ -724,6 +725,25 @@
     var dm = pl.discussion || {};
     fetchChat(code, function (chat) {
       openReportModal({ code: code, world: world, pl: pl, markers: mk, skill: { ask: pr.ask || 1, ctx: pr.ctx || 1 }, passed: !!pl.submitted, chat: chat, partners: (dm.partners || []).map(function (x) { return x.id; }).join('、') });
+      if (done) done(true);
+    });
+  };
+  /* 11-10 4b4k0171：人不在同一個空間時，也要能回頭看以前問過的內容（唯讀；要追問得回到那間房）。只讀自己在這間房的對話節點（er/場次/chat/房間/學號，一次 once，點了才讀） */
+  P.historyFromLobby = function (code, done) {
+    var room = DB.getRoom(code), world = null; try { world = window.ERG_WORLD.makeWorld({ caseId: room.case || 'sms', seed: room.code, dow: room.dow, shift: room.shift === 'night' ? 'night' : 'day' }); } catch (x) {}
+    var esc = APP.esc, nm = function (pid) { return (world && world.personas && world.personas[pid] && world.personas[pid].name) || pid || '對方'; };
+    RM.openModal('<div class="row"><b style="flex:1">📜 訪談紀錄（唯讀）　房間 ' + esc(code) + '</b><button class="ghost" id="hsClose">關閉</button></div><div id="hsBody" class="muted" style="margin-top:8px">讀取中…</div>');
+    $('hsClose').onclick = RM.closeModal;
+    fetchChat(code, function (chat) {
+      var box = $('hsBody'); if (!box) { if (done) done(false); return; }
+      if (chat === null) { box.textContent = '讀不到紀錄（網路或登入的問題），稍後再試一次。'; if (done) done(false); return; }
+      var keys = Object.keys(chat || {}).filter(function (k) { return chat[k] && chat[k].turns; });
+      var recs = keys.map(function (k) { var v = chat[k], ts = Object.keys(v.turns).map(function (x) { return v.turns[x]; }).sort(function (a, b) { return Number(a.t) - Number(b.t); }); return { pid: v.personaId, turns: ts, t0: ts.length ? Number(ts[0].t) : 0 }; }).filter(function (r) { return r.turns.length; }).sort(function (a, b) { return a.t0 - b.t0; });
+      if (!recs.length) { box.textContent = '這間房還沒有問過任何人（或對話沒有存下來）。'; if (done) done(true); return; }
+      box.className = ''; box.style.cssText = 'max-height:65vh;overflow:auto;margin-top:8px';
+      box.innerHTML = '<div class="muted" style="font-size:var(--fs-2);margin-bottom:6px">只能看，不能在這裡發問；要追問，請回到那間房找他。</div>' + recs.map(function (r) {
+        return '<div class="card" style="margin:8px 0;padding:8px 10px"><b>' + esc(nm(r.pid)) + '</b>　<span class="muted" style="font-size:var(--fs-2)">' + r.turns.length + ' 句</span>' + r.turns.map(function (t) {
+          return '<div style="margin-top:4px"><span class="tag">' + (t.role === 'u' ? '我問' : esc(nm(r.pid)) + '答') + '</span> ' + esc(t.text) + '</div>'; }).join('') + '</div>'; }).join('');
       if (done) done(true);
     });
   };
