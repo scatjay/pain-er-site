@@ -110,6 +110,7 @@
     offs.push(S.store.watchMeta(CODE, S.sid, function (m) { S.personas = Number(m.personaCount) || 0; if (CO) CO.render(); }));
     watchQuota(); setInterval(function () { if (S.quota.day && S.quota.day !== SB.dayKey(NOW())) watchQuota(); }, 30000);
     refreshAside(); bindStatic(); renderAll(true);
+    if (Q.get('coach') === '1') document.body.classList.add('coach-open');   /* 11-10：大廳「人物誌」鈕直接打開助教抽屜 */
     if (CO) CO.mount({ S: S, SB: SB, store: S.store, local: LOCAL, code: CODE, cur: cur, cellFor: cellFor, toast: toast, twoStep: twoStep, pnames: pnames,
       commitFill: function (n, fill) { return commit(n, { aiFill: fill }).then(function () { renderAll(true); }); },
       commitCl: function (n, lv) { return commit(n, { cl: lv }).then(function () { renderAll(true); }); },

@@ -118,17 +118,19 @@
     '.lv{border:2px solid #0b7a75;border-radius:8px;padding:6px 10px;margin:8px 0;background:#eef8f7}.lv b{font-size:15px}' +
     '.ok{color:#1d6b3a;font-weight:700}.no{color:#a33}.card{border:1px solid #ccd5da;border-radius:8px;padding:8px 10px;margin:8px 0}.card h3{font-size:13px;margin:0 0 4px}' +
     '.card textarea{display:none;width:100%;height:150px;font:11px/1.5 sans-serif;box-sizing:border-box;margin-top:6px}button{font:inherit;padding:3px 10px;cursor:pointer}' +
+    '.mobnote{display:none}@media (max-width:640px){.mobnote{display:block;border:2px solid #a33;border-radius:8px;background:#fff4f2;color:#7a1f1f;padding:8px 10px;margin:8px 0;font-weight:700}body{font-size:15px;padding:0 8px}h1{font-size:19px}table{display:block;overflow-x:auto}.card textarea{height:220px;font-size:13px}button{font-size:15px;padding:10px 14px;min-height:44px}}' +
     '@media print{h2{break-after:avoid}tr,pre,.card{break-inside:avoid}.noprint,.card textarea{display:none!important}}';
 
   /* 在報告（iframe）裡面按「複製」：先試瀏覽器剪貼簿；不行就把文字框打開並選起來，請學生自己按 Ctrl+C */
   var COPY_JS = 'function cpP(i){var ta=document.getElementById("pt"+i),m=document.getElementById("pm"+i);' +
-    'function fb(){ta.style.display="block";ta.focus();ta.select();m.textContent="沒有自動複製成功，文字已經選起來了，請按 Ctrl+C。";}' +
+    'function fb(){ta.style.display="block";ta.focus();ta.select();m.textContent="沒有自動複製成功，文字已經選起來了，請按 Ctrl+C（手機：長按反白的文字，點「複製」）。";}' +
     'try{navigator.clipboard.writeText(ta.value).then(function(){m.textContent="已複製，貼到 Gemini 就可以。";},fb);}catch(e){fb();}}';
 
   function html(input) {
     var m = model(input), c = m.cover;
     var parts = [];
     parts.push('<h1>' + esc(c.caseName) + '　訪談報告</h1>');
+    parts.push('<div class="mobnote noprint">手機版無法匯出訪談報告（PDF）。手機可以先看素材、複製 Persona 框架做人物誌；要交的訪談報告 PDF，請用電腦或同組同學的電腦另存。</div>');
     parts.push('<div class="note">' + esc(c.cls) + '　學號 ' + esc(c.id) + (c.name ? '　' + esc(c.name) : '') + '　' + esc(c.date) +
       (c.passed ? '　<span class="pass">檢核點全部完成</span>' : '　尚有檢核點未完成') + '</div>');
     parts.push('<div class="note">模擬訪談，人物與情境皆為虛構。</div>');
@@ -166,7 +168,7 @@
     var d = m.discussion;
     parts.push('<h2>討論檢核紀錄</h2><table><tr><th>討論對象</th><td>' + esc(d.partnersText || '') + '</td></tr><tr><th>看法不同的地方</th><td>' + esc(d.diff || '') +
       '</td></tr><tr><th>互相補到的地方</th><td>' + esc(d.complement || '') + '</td></tr><tr><th>我的結論</th><td>' + esc(d.outcome || '') + '</td></tr></table>');
-    return '<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><title>' + esc(c.caseName) + ' 訪談報告</title><style>' + CSS + '</style></head><body>' + parts.join('') + '<script>' + COPY_JS + '</script></body></html>';
+    return '<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + esc(c.caseName) + ' 訪談報告</title><style>' + CSS + '</style></head><body>' + parts.join('') + '<script>' + COPY_JS + '</script></body></html>';
   }
 
   return { esc: esc, model: model, painPoints: painPoints, personaMaterial: personaMaterial, personaPrompt: personaPrompt, storyPieces: storyPieces, html: html, COPY_JS: COPY_JS };

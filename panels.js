@@ -700,8 +700,9 @@
     var html = RP.html({ student: { id: me(), cls: APP.me.cls, name: '' }, caseName: w.meta.name, date: new Date().toISOString().slice(0, 10), passed: c.passed, interviews: c.pl.interviews,
       personaNames: names, markers: c.markers, conclusions: c.pl.conclusions, skill: c.skill, mainPersona: w.meta.mainPersona, keyPersonaIds: caseKeyIds(w), chat: dg, clues: w.clues, roomNames: roomNameMap(),
       discussion: { partnersText: c.partners, diff: d.notes.diff, complement: d.notes.complement, outcome: d.notes.outcome } });
-    RM.openModal('<div class="row"><b style="flex:1">訪談報告</b><button id="rpPrint">列印／另存 PDF</button><button class="ghost" id="rpClose">關閉</button></div><iframe id="rpFrame" allow="clipboard-write" style="width:100%;height:70vh;border:var(--bw) solid var(--ink);background:#fff;margin-top:8px"></iframe>');
+    RM.openModal('<div class="row"><b style="flex:1">訪談報告</b><button id="rpPrint">列印／另存 PDF</button><span id="rpMobNote" class="muted" hidden style="font-size:var(--fs-1)">手機版無法匯出訪談報告（PDF）。手機可以先看素材、複製 Persona 框架做人物誌；要交的訪談報告 PDF，請用電腦或同組同學的電腦另存。</span><button class="ghost" id="rpClose">關閉</button></div><iframe id="rpFrame" allow="clipboard-write" style="width:100%;height:70vh;border:var(--bw) solid var(--ink);background:#fff;margin-top:8px"></iframe>');
     $('rpFrame').srcdoc = html;
+    try { if (window.matchMedia && window.matchMedia('(max-width:860px)').matches) { $('rpPrint').hidden = true; $('rpMobNote').hidden = false; } } catch (x) {}
     $('rpPrint').onclick = function () { try { $('rpFrame').contentWindow.focus(); $('rpFrame').contentWindow.print(); } catch (x) {} };
     $('rpClose').onclick = RM.closeModal;
   }

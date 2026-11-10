@@ -82,6 +82,7 @@
      m：{ main:{code}（能開故事板的那間）, P:{opened, filled, moment, img, personas, code（寫最多的那間）} 或 null（還讀不到）, mobile }
      順序：開故事板 → 幫我排草稿 → 繼續寫滿六格 → 標關鍵時刻 → 放圖 → 人物誌（要用電腦匯出報告）。goal 對應完成列的項目名稱。回傳 null＝沒有可開的房間或全部做完 */
   var IMG_GOAL = 'AI 生成圖片：放了圖片';   /* 完成列的第五項（判斷依據：故事板任一格放了圖），game.js 的 w8Steps 用同一個字串 */
+  var PERSONA_HINT = '整理好後，回故事板點「🤖 助教」選人數';
   function nextAction(m) {
     m = m || {}; if (!m.main || !m.main.code) return null;
     var P = m.P, GOAL = '故事板 6 格有內容';
@@ -92,7 +93,7 @@
     if (filled < 6) return { kind: 'link', label: '繼續寫（已寫 ' + filled + '/6 格）', href: href, goal: GOAL };
     if (!P.moment) return { kind: 'link', label: '標出關鍵時刻', href: href, goal: '標出關鍵時刻' };
     if (!P.img) return { kind: 'link', label: '放一張圖', href: href, goal: IMG_GOAL };
-    if ((Number(P.personas) || 0) < 2) return m.mobile ? { kind: 'pc', label: '人物誌：這步請用電腦', goal: '人物誌 2 位' } : { kind: 'export', label: '匯出訪談報告，做人物誌', code: m.main.code, goal: '人物誌 2 位' };
+    if ((Number(P.personas) || 0) < 2) return m.mobile ? { kind: 'export', label: '打開訪談報告（看素材、複製 Persona 框架）', hint: PERSONA_HINT, code: m.main.code, goal: '人物誌 2 位' } : { kind: 'export', label: '匯出訪談報告，做人物誌', code: m.main.code, goal: '人物誌 2 位' };
     return null;
   }
   /* 11-02 W9：大廳入口的提醒。依學生目前狀況分群（沿用 nextAction），每群一句「做什麼＋為什麼」；期限只放這個班的日期（判不出班級就不放） */
@@ -111,7 +112,7 @@
     writing: '一格一格寫：誰、在哪、發生什麼事、他怎麼想；寫滿六格，再標出關鍵時刻，看的人才知道痛點發生在哪一格。',
     img: '六格都寫好了，再放一張圖：把場景畫出來或生成圖片放進故事板，看的人一眼就看得懂。',
     persona_pc: '故事板寫好了，剩人物誌：按下面的「匯出訪談報告」，還原 2 位人物誌，故事裡的人才有訪談當依據。',
-    persona_mobile: '故事板寫好了，剩人物誌：這一步要用電腦做（手機做不了），回電腦再完成。',
+    persona_mobile: '故事板寫好了，剩人物誌：按下面的「打開訪談報告」，在人物誌素材卡按「複製 Persona 框架」，貼到 Gemini 整理。整理好後，回故事板點右下角「🤖 助教」，在「我已經還原的人物誌」選 2 位以上。',
     done: '故事板都完成了。時間夠的話，回房間再問一位，把還不夠具體的格子補上。'
   };
   /* m：{ main, P, mobile, cls, now }；回傳 { group, text, due }。group：nocard／draft／writing／img／persona／done */
@@ -119,7 +120,7 @@
     m = m || {}; var a = nextAction(m), g, key;
     if (!m.main || !m.main.code) g = key = 'nocard';
     else if (!a) g = key = 'done';
-    else if (a.kind === 'pc' || a.kind === 'export') { g = 'persona'; key = a.kind === 'pc' ? 'persona_mobile' : 'persona_pc'; }
+    else if (a.kind === 'pc' || a.kind === 'export') { g = 'persona'; key = a.kind === 'export' && !m.mobile ? 'persona_pc' : 'persona_mobile'; }
     else if (a.label === '放一張圖') g = key = 'img';
     else if (a.label === '開故事板') g = key = 'draft';
     else g = key = 'writing';   /* 幫我排草稿（已開板、還沒寫）／繼續寫／標出關鍵時刻 */
@@ -131,7 +132,7 @@
   }
   function actHtml(a) {
     if (!a) return '';
-    if (a.kind === 'export') return '<button type="button" class="sbNext" data-export="' + esc(a.code) + '">' + esc(a.label) + '</button>';
+    if (a.kind === 'export') return '<button type="button" class="sbNext" data-export="' + esc(a.code) + '">' + esc(a.label) + '</button>' + (a.hint ? '<span class="muted sbHint">' + esc(a.hint) + '</span>' : '');
     if (a.kind === 'pc') return '<span class="sbNext pc" role="note">' + esc(a.label) + '</span>';
     return '<a class="btn sbNext" href="' + esc(a.href) + '">' + esc(a.label) + '</a>';
   }
@@ -145,7 +146,7 @@
     if (key === 'cards') return { gap: '還沒有訪談卡', todo: '到房間點一位人物，問他並在檢核表勾一項', btn: toRoom };
     var GAP = { persona: '還缺人物誌（' + Math.min(Number(P.personas) || 0, 2) + '/2 位）', cells: filled > 0 ? '故事板寫了 ' + filled + '/6 格' : (P.opened ? '故事板還是空的' : '還沒開故事板'), moment: '還沒標關鍵時刻', img: '還沒補 AI 生成圖片' };
     if (!code) return { gap: GAP[key], todo: '先到房間拿到一張訪談卡，才開得了故事板', btn: toRoom };
-    if (key === 'persona') return m.mobile ? { gap: GAP.persona, todo: '這一步請改用電腦做', btn: null } : { gap: GAP.persona, todo: '按「匯出訪談報告」，還原人物誌', btn: { kind: 'export', label: '匯出', code: code } };
+    if (key === 'persona') return m.mobile ? { gap: GAP.persona, todo: '打開訪談報告，複製 Persona 框架貼到 Gemini；整理好回故事板「🤖 助教」選人數', btn: { kind: 'export', label: '打開訪談報告', code: code } } : { gap: GAP.persona, todo: '按「匯出訪談報告」，還原人物誌', btn: { kind: 'export', label: '匯出', code: code } };
     if (key === 'cells') {
       if (filled > 0) return { gap: GAP.cells, todo: '回到沒寫的格子，寫誰、在哪、發生什麼事、他怎麼想', btn: { kind: 'link', label: '繼續寫', href: room(bc) } };
       if (P.opened) return { gap: GAP.cells, todo: '按「幫我排一份草稿」，再改成自己的話', btn: { kind: 'link', label: '幫我排草稿', href: room(code, '&draft=1') } };
@@ -243,7 +244,7 @@
     var rows = (m.rooms || []).length ? '<ul class="rooms">' + m.rooms.map(function (r) {
       return '<li><span class="sbDot" style="background:' + r.ct + ';color:' + r.on + '" title="案例' + esc(r.letter) + '">' + esc(r.letter) + '</span><b>' + esc(r.name) + '</b><span class="muted">房號 ' + esc(r.code) + '</span>' + (r.seenAt ? '<span class="muted">' + (r.seenKind === 'last' ? '上次進入 ' : '加入於 ') + esc(fmtSeen(r.seenAt)) + '</span>' : '') + '<span>訪談卡 ' + r.cards + ' 張</span>' +
         (r.open ? '<span class="tag ok" title="' + esc(RL.nextLine(r.level)) + '">' + esc(RL.label(r.level)) + '</span>' : '<span class="tag warn">還沒有訪談卡</span>') +
-        '<span class="sbAct">' + (r.open ? '<a class="btn sbOpen" href="storyboard.html?room=' + encodeURIComponent(r.code) + '">📖 故事板</a>' : '<span class="btn sbOpen dis" role="button" aria-disabled="true" title="' + esc(need(r).text) + '">📖 故事板</span>') + '<button type="button" class="ghost sbRevisit" data-revisit="' + esc(r.code) + '">🩺 回去訪談</button>' + (r.open ? (m.mobile ? '<span class="muted sbPcOnly">匯出訪談報告：這步請用電腦</span>' : '<button type="button" class="ghost" data-export="' + esc(r.code) + '">匯出訪談報告</button>') : '') + '</span>' + (r.open ? '' : '<span class="sbNeed">' + esc(need(r).text) + '</span>') +
+        '<span class="sbAct">' + (r.open ? '<a class="btn sbOpen" href="storyboard.html?room=' + encodeURIComponent(r.code) + '">📖 故事板</a>' : '<span class="btn sbOpen dis" role="button" aria-disabled="true" title="' + esc(need(r).text) + '">📖 故事板</span>') + '<button type="button" class="ghost sbRevisit" data-revisit="' + esc(r.code) + '">🩺 回去訪談</button>' + (r.open ? '<button type="button" class="ghost" data-export="' + esc(r.code) + '">' + (m.mobile ? '打開訪談報告（看素材、複製 Persona 框架）' : '匯出訪談報告') + '</button>' + (m.mobile ? '<span class="muted sbPcOnly">手機版無法匯出訪談報告（PDF）。手機可以先看素材、複製 Persona 框架做人物誌；要交的訪談報告 PDF，請用電腦或同組同學的電腦另存。</span>' : '') : '') + '</span>' + (r.open ? '' : '<span class="sbNeed">' + esc(need(r).text) + '</span>') +
         '</li>';
     }).join('') + '</ul>' : '<div class="muted" style="margin-top:var(--s2)">還沒有進過的房間。先到入口 1 開一間，去問人。</div>';
     /* 最上面的主按鈕：有房間就直接開最近進過的那間房的故事板；還沒有房間就先去急診室訪談 */
