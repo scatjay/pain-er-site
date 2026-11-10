@@ -18,7 +18,11 @@
   /* 成就分頁：自己的指標與徽章＋班級「誰最多」（線上模式讀 er/{sess}/score；本機版只有自己） */
   /* 10-29：筆記卡存在畫布（手機是 room.mcards），player.cards 從來沒人寫入 → 便利貼大師與「便利貼最多」永遠 0；改數自己記的卡 */
   function myCardCount() { try { return L.listMarkers(RM.markerEls()).filter(function (m) { return String(m.author) === String(me()); }).length; } catch (e) { return 0; } }
-  function achCtx() { var c = cur(); var cp = (window.ERG_CORE && window.ERG_CP && c) ? (function () { try { var st = window.ERG_CORE.checkpointState(c, me()); return window.ERG_CP.evaluate(st).every(function (x) { return x.ok; }); } catch (e) { return false; } })() : false; var psc = window.ERG_MY_SCORE || {}; return { prevRooms: Number(psc.rooms) || 0, prevInterviewees: Number(psc.interviewees) || 0, cards: myCardCount(), cpAllOk: cp, shift: c && c.world && c.world.shift, cases: casesTried(), reports: reportsMade(), fb: fbMine(), keep: keptBadges(), sb: window.ERG_MY_SBD || null, prevSk: prevW8Sk(), cold: coldCtx(), allPl: (function () { try { return allMyPlayers(); } catch (e) { return null; } })() }; }
+  /* 11-10：「六燈全亮」成就一直拿不到——這裡原本呼叫不存在的全域 window.ERG_CP（真正是 ERG_CHECKPOINTS），而且 checkpointState 的參數、evaluate 的回傳（物件、不是陣列）都寫錯，所以 cpAllOk 永遠是 false（全班 91 人六燈全過、0 人拿到）。改用大廳已經在算的 APP.evaluate()（同一份狀態），5 秒內共用。 */
+  var cpMemo = { t: 0, v: false };
+  function cpAllOkNow() { var n = Date.now(); if (n - cpMemo.t < 5000) return cpMemo.v; cpMemo.t = n; try { var e = APP.evaluate && APP.evaluate(); cpMemo.v = !!(e && e.ev && e.ev.passed); } catch (x) { cpMemo.v = false; } return cpMemo.v; }
+  P.cpAllOkNow = cpAllOkNow;
+  function achCtx() { var c = cur(); var cp = c ? cpAllOkNow() : false; var psc = window.ERG_MY_SCORE || {}; return { prevRooms: Number(psc.rooms) || 0, prevInterviewees: Number(psc.interviewees) || 0, cards: myCardCount(), cpAllOk: cp, shift: c && c.world && c.world.shift, cases: casesTried(), reports: reportsMade(), fb: fbMine(), keep: keptBadges(), sb: window.ERG_MY_SBD || null, prevSk: prevW8Sk(), cold: coldCtx(), allPl: (function () { try { return allMyPlayers(); } catch (e) { return null; } })() }; }
   /* 11-03 冷門房間／人物成就：清單（大廳讀進來的 er/{場次}/cold）＋我在所有房間的玩家紀錄（換案例開新房間也合併算） */
   var apMemo = { t: 0, code: '', v: null };   /* 一次重畫會連叫兩次（冷門成就、找對人），1 秒內共用 */
   function allMyPlayers() {
