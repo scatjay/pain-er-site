@@ -1,0 +1,756 @@
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>v9 大同學習單學員版1112</title><meta name="color-scheme" content="light dark">
+<style>
+:root{
+  --bg:#f4f1ea;--surface:#fffdf8;--surface2:#efeadf;--ink:#211e1a;--muted:#6f685d;--hair:#e0d9cb;
+  --accent:#7a2f6a;--accent2:#b0679f;--accent-soft:#ecd6e6;--warn:#b4552c;--onbrand:#fffdf8;
+  --shadow:0 1px 2px rgba(30,25,15,.06),0 6px 18px rgba(30,25,15,.05);
+  --mono:"IBM Plex Mono","Cascadia Mono",Consolas,ui-monospace,monospace;
+  --sans:"Noto Sans TC","Microsoft JhengHei","PingFang TC",system-ui,-apple-system,sans-serif;
+  --u1:#2f6fb0;--u2:#3f8f80;--u3:#8a6aa8;--u4:#c2703d;--u5:#a8522f;--u6:#7a2f6a;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#18160f;--surface:#211e18;--surface2:#2a261e;--ink:#ece6d9;--muted:#a49b8b;--hair:#39342a;
+  --accent:#d99ac8;--accent2:#e8b6da;--accent-soft:#40243a;--warn:#e0824f;--onbrand:#16130f;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.35);--u1:#7fb0e6;--u2:#7fcabc;--u3:#c0a6dc;--u4:#e0a37f;--u5:#e8a083;--u6:#d99ac8;}}
+:root[data-theme="dark"]{
+  --bg:#18160f;--surface:#211e18;--surface2:#2a261e;--ink:#ece6d9;--muted:#a49b8b;--hair:#39342a;
+  --accent:#d99ac8;--accent2:#e8b6da;--accent-soft:#40243a;--warn:#e0824f;--onbrand:#16130f;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.35);--u1:#7fb0e6;--u2:#7fcabc;--u3:#c0a6dc;--u4:#e0a37f;--u5:#e8a083;--u6:#d99ac8;}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:880px;margin:0 auto;padding:clamp(24px,5vw,56px) clamp(16px,4vw,40px)}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.14em;color:var(--accent);font-weight:600;margin:0 0 10px}
+h1{font-size:clamp(26px,5vw,44px);font-weight:900;line-height:1.15;margin:0 0 14px;text-wrap:balance;letter-spacing:-.01em}
+.lede{font-size:clamp(16px,2.2vw,19px);max-width:62ch;margin:0}
+.lede b{color:var(--accent)}
+.meta{font-family:var(--mono);font-size:12.5px;color:var(--muted);margin-top:16px;display:flex;flex-wrap:wrap;gap:6px 16px}
+.meta b{color:var(--ink);font-weight:600}
+.sub{color:var(--muted);font-size:14.5px;margin:6px 0 16px}
+section{margin-top:clamp(34px,6vw,60px);scroll-margin-top:60px}
+h2{font-size:clamp(19px,2.6vw,25px);font-weight:900;margin:0 0 6px;letter-spacing:-.01em;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+h2 .num{font-family:var(--mono);color:var(--onbrand);background:var(--uc,var(--accent));font-weight:700;font-size:.62em;border-radius:6px;padding:2px 9px}
+h3{font-size:15px;font-weight:700;color:var(--uc,var(--accent));margin:22px 0 8px}
+p{margin:0 0 10px}
+.tabs{position:sticky;top:0;z-index:30;display:flex;gap:4px;overflow-x:auto;background:var(--bg);border-bottom:1px solid var(--hair);padding:8px 0;margin-top:20px;-webkit-overflow-scrolling:touch}
+.tabs a{flex:0 0 auto;font-size:13.5px;color:var(--muted);text-decoration:none;padding:6px 12px;border-radius:7px;white-space:nowrap;font-weight:500}
+.tabs a:hover{color:var(--ink);background:var(--surface2)}
+.tabs a.on{color:var(--onbrand);background:var(--accent);font-weight:700}
+.tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:16px}
+.btn{font-family:var(--mono);font-size:12px;font-weight:600;background:var(--surface);color:var(--muted);border:1px solid var(--hair);border-radius:8px;padding:6px 12px;cursor:pointer}
+.btn:hover{color:var(--ink);border-color:var(--accent2)}
+.btn:focus-visible,.copybtn:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+/* 進度與報告地圖 */
+.pbar{height:8px;background:var(--surface2);border-radius:99px;overflow:hidden;margin-top:8px}
+.pbar i{display:block;height:100%;width:0;background:var(--accent);transition:width .25s}
+.pnum{font-family:var(--mono);font-size:13px;color:var(--muted)}
+.pnum b{color:var(--accent);font-size:16px}
+.card{background:var(--surface);border:1px solid var(--hair);border-radius:12px;padding:16px 18px;box-shadow:var(--shadow)}
+.map{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:12px}
+.cell{border:1px solid var(--hair);border-radius:10px;padding:8px 10px;background:var(--surface);font-size:12.5px;line-height:1.35;border-top:4px solid var(--cu);min-width:0;overflow-wrap:anywhere;opacity:.55;transition:all .2s}
+.cell small{display:block;font-family:var(--mono);font-size:10.5px;color:var(--muted);margin-top:3px}
+.cell.on{opacity:1;background:color-mix(in srgb,var(--cu) 14%,var(--surface));border-color:var(--cu)}
+.cell.on::after{content:" ✓";color:var(--cu);font-weight:700}
+@media(max-width:640px){.map{grid-template-columns:repeat(2,1fr)}}
+/* 時間表 */
+.sched{width:100%;border-collapse:collapse;font-size:14px}
+.sched td{padding:8px 8px;border-bottom:1px solid var(--hair);vertical-align:top}
+.sched td:first-child{font-family:var(--mono);font-size:12.5px;color:var(--muted);white-space:nowrap}
+.sched tr.br td{color:var(--muted);background:var(--surface2);font-size:13px}
+.sched .m{font-family:var(--mono);text-align:right;white-space:nowrap}
+.sched .tg{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px;background:var(--cu)}
+.sched-wrap{overflow-x:auto}
+/* 步驟卡 */
+.steps{list-style:none;counter-reset:s;padding:0;margin:0;display:grid;gap:12px}
+.steps li{counter-increment:s;background:var(--surface);border:1px solid var(--hair);border-left:4px solid var(--uc,var(--accent));border-radius:12px;padding:15px 16px 14px 54px;position:relative;box-shadow:var(--shadow);min-width:0}
+.steps li::before{content:counter(s);position:absolute;left:14px;top:14px;width:28px;height:28px;border-radius:50%;background:var(--uc,var(--accent));color:var(--onbrand);font-family:var(--mono);font-weight:700;display:flex;align-items:center;justify-content:center;font-size:14px}
+.steps li.done{opacity:.72}
+.steps li.done .st{text-decoration:line-through;text-decoration-color:color-mix(in srgb,var(--muted) 60%,transparent)}
+.st{font-weight:700;font-size:15.5px;overflow-wrap:anywhere}
+.sd{color:var(--muted);font-size:14px;margin-top:4px;overflow-wrap:anywhere}
+.ok{display:flex;gap:9px;align-items:flex-start;margin-top:10px;padding-top:9px;border-top:1px dashed var(--hair);font-size:13.5px;cursor:pointer}
+.ok input{margin-top:5px;width:17px;height:17px;flex:0 0 auto;accent-color:var(--uc,var(--accent))}
+.ok b{font-family:var(--mono);font-size:11px;color:var(--uc,var(--accent));letter-spacing:.03em;margin-right:4px}
+/* 提示框 */
+.promptbox{position:relative;background:color-mix(in srgb,var(--uc,var(--accent)) 6%,var(--surface));border:1px solid color-mix(in srgb,var(--uc,var(--accent)) 28%,var(--hair));border-left:4px solid var(--uc,var(--accent));border-radius:10px;padding:10px 13px 12px;margin-top:12px}
+.plabel{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;color:var(--uc,var(--accent));font-weight:700;margin-bottom:6px;display:block;padding-right:62px;overflow-wrap:anywhere}
+.ptxt{font-size:13px;line-height:1.65;white-space:pre-wrap;overflow-wrap:anywhere}
+.copybtn{position:absolute;top:9px;right:9px;background:var(--uc,var(--accent));color:var(--onbrand);border:0;border-radius:6px;padding:4px 11px;font-family:var(--mono);font-size:11.5px;font-weight:700;cursor:pointer}
+.copybtn:hover{opacity:.88}
+/* 風險、報告盒 */
+.warn{background:color-mix(in srgb,var(--warn) 9%,var(--surface));border:1px solid color-mix(in srgb,var(--warn) 32%,var(--hair));border-left:5px solid var(--warn);border-radius:10px;padding:12px 16px;font-size:14px;margin:14px 0}
+.warn .wt{font-family:var(--mono);font-size:11.5px;font-weight:700;letter-spacing:.06em;color:var(--warn);display:block;margin-bottom:4px}
+.warn ul{margin:0;padding-left:20px}.warn li{margin-bottom:5px}
+.report{background:color-mix(in srgb,var(--uc,var(--accent)) 9%,var(--surface));border:1px solid color-mix(in srgb,var(--uc,var(--accent)) 35%,var(--hair));border-radius:12px;padding:14px 18px;margin-top:18px}
+.report .rt{font-family:var(--mono);font-size:11.5px;font-weight:700;letter-spacing:.06em;color:var(--uc,var(--accent))}
+.report .rs{font-weight:800;font-size:16px;margin:3px 0}
+.report p{font-size:14px;margin:0 0 4px}
+.tipbox{background:var(--surface);border:1px solid var(--hair);border-left:4px solid var(--accent);border-radius:10px;padding:12px 16px;font-size:14px;margin:12px 0}
+.tipbox b{color:var(--accent)}
+.note{font-family:var(--mono);font-size:12px;color:var(--muted);line-height:1.7;margin-top:12px}
+.goal{font-size:15.5px;margin:6px 0 4px}
+.split{font-family:var(--mono);font-size:12px;color:var(--muted);margin:2px 0 10px}
+/* 折疊 */
+details.dd{background:var(--surface);border:1px solid var(--hair);border-radius:10px;margin-top:10px;overflow:hidden}
+details.dd>summary{cursor:pointer;list-style:none;padding:11px 14px;font-weight:700;font-size:14.5px;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+details.dd>summary::-webkit-details-marker{display:none}
+details.dd>summary::after{content:"▸";margin-left:auto;color:var(--uc,var(--accent))}
+details.dd[open]>summary::after{content:"▾"}
+details.dd>.body{padding:2px 14px 12px}
+.qa{border-top:1px dashed var(--hair);padding:8px 0;font-size:13.5px}
+.qa:first-child{border-top:0}
+.qa b{display:block;font-size:13.5px}
+.qa span{color:var(--muted);overflow-wrap:anywhere}
+/* 自評 */
+.self{margin-top:18px;border:1px solid var(--hair);border-radius:12px;padding:14px 16px;background:var(--surface)}
+.self .stitle{font-family:var(--mono);font-size:11.5px;font-weight:700;letter-spacing:.06em;color:var(--uc,var(--accent))}
+.sq{padding:9px 0;border-top:1px dashed var(--hair);font-size:14px}
+.sq:first-of-type{border-top:0}
+.chips{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
+.chips label{cursor:pointer}
+.chips input{position:absolute;opacity:0;pointer-events:none}
+.chips span{display:inline-block;border:1px solid var(--hair);border-radius:99px;padding:3px 13px;font-size:12.5px;background:var(--surface2);color:var(--muted)}
+.chips input:checked+span{background:var(--uc,var(--accent));border-color:var(--uc,var(--accent));color:var(--onbrand);font-weight:700}
+.chips input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}
+/* 範例、清單 */
+.ref{font-size:13px;margin:8px 0;padding:9px 12px;background:var(--surface2);border-radius:8px;overflow-wrap:anywhere}
+.ref em{display:block;font-style:normal;font-family:var(--mono);font-size:11.5px;color:var(--accent);margin-top:3px}
+.chk{list-style:none;padding:0;margin:0;display:grid;gap:8px}
+.chk li{display:flex;gap:10px;align-items:flex-start;background:var(--surface);border:1px solid var(--hair);border-radius:10px;padding:10px 13px;font-size:14px}
+.chk input{margin-top:5px;width:17px;height:17px;accent-color:var(--accent);flex:0 0 auto}
+.dtab{width:100%;border-collapse:collapse;font-size:13px}
+.dtab th{font-family:var(--mono);font-size:11px;text-align:left;color:var(--muted);padding:6px 6px;border-bottom:1px solid var(--hair)}
+.dtab td{padding:7px 6px;border-bottom:1px solid var(--hair);vertical-align:top;overflow-wrap:anywhere}
+.dtab td:first-child{font-family:var(--mono);font-size:12px}
+.teacher{border-left:5px solid #888;background:var(--surface2)}
+.foot{margin-top:44px;padding-top:14px;border-top:1px solid var(--hair);font-family:var(--mono);font-size:11.5px;color:var(--muted);text-align:center;line-height:1.8}
+.wrap>*,.steps>*,.map>*{min-width:0}
+pre.tpl{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;font-family:var(--mono);font-size:12px;line-height:1.7}
+@media(max-width:480px){
+  .steps li{padding-left:46px}.steps li::before{left:10px;width:25px;height:25px;font-size:13px}
+  .copybtn{padding:3px 8px;font-size:10.5px}.plabel{padding-right:54px}
+  .tabs a{padding:6px 10px}
+}
+.where{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;background:color-mix(in srgb,var(--uc,var(--accent)) 10%,var(--surface));border:1px solid color-mix(in srgb,var(--uc,var(--accent)) 35%,var(--hair));border-radius:12px;padding:10px 14px;margin:10px 0 14px;font-size:13.5px}
+.where .dots{display:flex;gap:5px}.where .dots i{width:22px;height:8px;border-radius:99px;background:var(--hair)}.where .dots i.here{background:var(--uc,var(--accent))}.where .dots i.past{background:color-mix(in srgb,var(--uc,var(--accent)) 40%,var(--hair))}
+.where b{color:var(--uc,var(--accent))}.where .w2{flex:1 1 100%;color:var(--muted);font-size:13px}
+.nxt{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;margin-top:9px;font-size:12.5px;color:var(--muted)}
+.nxt a{color:var(--uc,var(--accent));text-decoration:none;font-weight:600}
+.nxt a:hover{text-decoration:underline}
+.nxt a.lost{background:color-mix(in srgb,var(--warn) 12%,var(--surface));border:1px solid color-mix(in srgb,var(--warn) 35%,var(--hair));border-radius:99px;padding:1px 10px;color:var(--warn);font-weight:600}
+.vid{display:inline-block;font-family:var(--mono);font-size:11px;font-weight:700;border:1px dashed var(--uc,var(--accent));color:var(--uc,var(--accent));border-radius:6px;padding:1px 8px;text-decoration:none}
+.vid[href]{border-style:solid}
+.flash{animation:fl 1.6s ease-out}@keyframes fl{0%{background:color-mix(in srgb,var(--warn) 28%,transparent)}100%{background:transparent}}
+.gate{margin-top:18px;border:2px solid var(--uc,var(--accent));border-radius:12px;padding:13px 16px;background:var(--surface)}
+.gate .gt{font-family:var(--mono);font-size:11.5px;font-weight:700;letter-spacing:.06em;color:var(--uc,var(--accent))}
+.gate ul{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:7px}
+.gate li label{display:flex;gap:9px;align-items:flex-start;font-size:14px;cursor:pointer}
+.gate input{margin-top:5px;width:17px;height:17px;accent-color:var(--uc,var(--accent));flex:0 0 auto}
+.gate .gs{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px}
+.gate.pass{background:color-mix(in srgb,var(--uc,var(--accent)) 10%,var(--surface))}
+.gate.pass .gs{color:var(--uc,var(--accent));font-weight:700}
+.warnbar{display:none;background:color-mix(in srgb,var(--warn) 12%,var(--surface));border:1px solid var(--warn);border-radius:10px;padding:8px 12px;font-size:13px;margin-top:12px}
+.fgrp{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--accent);margin:16px 0 8px;border-left:5px solid var(--accent);padding-left:9px}
+.ptable{width:100%;border-collapse:collapse;font-size:13px}
+.ptable th,.ptable td{border:1px solid var(--hair);padding:4px 5px;text-align:center}
+.ptable th{font-family:var(--mono);font-size:11px;background:var(--surface2)}
+.ptable input.sid{width:100%;min-width:70px;border:0;background:transparent;color:var(--ink);font:inherit;font-size:13px}
+.ptable button.pc{width:100%;min-width:34px;height:26px;border:0;border-radius:6px;padding:0;font-weight:700;background:var(--surface2);color:var(--muted);cursor:pointer}
+.ptable button.pc[data-s="1"]{background:#3f8f80;color:#fff}.ptable button.pc[data-s="2"]{background:var(--warn);color:#fff}.ptable button.pc[data-s="3"]{background:#c9a227;color:#222}
+.ptable tr.sum td{font-family:var(--mono);font-size:12px;background:var(--surface2)}
+@media print{.tabs,.tools,.copybtn{display:none}body{background:#fff}}
+.uprog{margin-top:12px;display:grid;gap:6px}.urow{display:grid;grid-template-columns:78px 1fr 64px 76px;gap:8px;align-items:center;font-size:13px}.urow .un{font-weight:700;color:var(--uc,var(--ink))}.urow .ub{height:8px;background:var(--surface2);border-radius:99px;overflow:hidden}.urow .ub i{display:block;height:100%;width:0;background:var(--uc,var(--accent));transition:width .25s}.urow .ur,.urow .uc{font-family:var(--mono);font-size:12px;color:var(--muted);text-align:right}.urow.done .ur{color:var(--accent);font-weight:700}.uphead{display:grid;grid-template-columns:78px 1fr 64px 76px;gap:8px;font-size:11px;color:var(--muted);text-align:right}.uphead span:nth-child(2){text-align:left}@media(max-width:480px){.urow,.uphead{grid-template-columns:64px 1fr 52px 62px}}
+details.pcard{padding:0}details.pcard>summary{list-style:none;cursor:pointer;padding:14px 16px;display:block}details.pcard>summary::-webkit-details-marker{display:none}.pcard .psum-h{display:flex;justify-content:space-between;align-items:center;gap:8px}.pcard .chev{font-size:12px;color:var(--muted);border:1px solid var(--line,#8884);border-radius:99px;padding:2px 10px;white-space:nowrap}.pcard .chev::before{content:"收合 ▴"}details.pcard:not([open]) .chev::before{content:"展開 ▾"}.pcard .pbody{padding:0 16px 14px}
+</style></head><body><div class="wrap">
+<header id="top"><p class="eyebrow">設計學特論 · 2026-11-16 · 學習單</p><h1>從零開始的 Claude Code：六小時完成一篇 AI 協作報告</h1><p class="lede">從安裝開始。今天結束前，你要交出<b>一篇投稿格式的 AI 協作報告</b>：它不是 Claude 寫的，而是<b>你和 Claude 一起做、而且每一步你都驗收過</b>的研究文獻回顧與計畫草稿。報告分六個單元，一節一節長出來。</p><div class="meta"><span>10:00 – 16:30</span><span>淨授課 <b>300 分</b></span><span>六單元 × 50 分</span><span>平台：<b>Claude 桌面版</b>（程式碼分頁）</span><span>授課：楊智傑 老師</span></div><div class="tools"><button class="btn" id="theme" type="button">切換亮／暗</button><button class="btn" id="reset" type="button">清除勾選</button></div><details class="card pcard" id="pcard" open style="margin-top:16px"><summary><div class="psum-h"><div class="pnum">已勾選 <b id="pn">0</b> / <span id="pt">0</span> 個步驟與開始前項目</div><span class="chev"></span></div><div class="pbar"><i id="pf"></i></div></summary><div class="pbody"><div class="uphead"><span>分段</span><span></span><span>本段</span><span>累計</span></div><div class="uprog" id="uprog"></div><p class="note" style="margin-top:10px">勾選只存在你自己的瀏覽器，講師看不到，僅供自檢。</p></div></details><div class="warnbar" id="nostore">這個瀏覽器不讓本頁儲存勾選（可能是無痕或封鎖），頁面仍可使用，但重新整理後勾選會清空。</div>
+<h3 style="margin-top:20px">你的報告，怎麼一單元長一節</h3><p class="sub" style="margin:0">每單元最後勾「本單元寫進報告」，下面對應的節就亮起來。目前完成 <b id="secn">0</b> / 10 節。</p><div class="map">
+<div class="cell" data-u="1" style="--cu:var(--u1)">題目<small>單元 1</small></div>
+<div class="cell" data-u="6" style="--cu:var(--u6)">摘要<small>單元 6</small></div>
+<div class="cell" data-u="1" style="--cu:var(--u1)">關鍵詞<small>單元 1</small></div>
+<div class="cell" data-u="4" style="--cu:var(--u4)">1 前言與文獻回顧<small>單元 4</small></div>
+<div class="cell" data-u="2" style="--cu:var(--u2)">2 方法<small>單元 2</small></div>
+<div class="cell" data-u="3" style="--cu:var(--u3)">3 AI 協作過程與紀錄<small>單元 3</small></div>
+<div class="cell" data-u="5" style="--cu:var(--u5)">4 結果<small>單元 5</small></div>
+<div class="cell" data-u="6" style="--cu:var(--u6)">5 討論與限制<small>單元 6</small></div>
+<div class="cell" data-u="6" style="--cu:var(--u6)">6 AI 使用聲明<small>單元 6</small></div>
+<div class="cell" data-u="5" style="--cu:var(--u5)">參考文獻（DOI 查證）<small>單元 5</small></div>
+</div>
+<div class="tipbox" style="margin-top:16px"><b>全頁最重要的一件事：</b>新版桌面版預設是「自動」模式，Claude 會直接做事、不先問你。想讓它每一步都先問，要把模式切到「<b>手動</b>」，而且每次送出前看一眼底列。</div>
+<p class="sub" style="margin:10px 0 0">卡住時，每一步旁邊和畫面右下角都有「問助教」。助教只回答這份學習單和 Claude 桌面版的操作，不會幫你寫報告；它的答案要你自己驗證。</p></header>
+<nav class="tabs" id="tb"><a href="#top">總覽</a><a href="#sched">時間表</a><a href="#pre">開始前</a><a href="#u1">單元1</a><a href="#u2">單元2</a><a href="#u3">單元3</a><a href="#u4">單元4</a><a href="#u5">單元5</a><a href="#u6">單元6</a><a href="#tpl">報告模板</a><a href="#decl">聲明範例</a><a href="#fin">總檢核</a><a href="#after">課後</a></nav>
+<section id="sched"><h2><span class="num" style="background:var(--accent)">時間</span>今天的時間表</h2><p class="sub">六個單元，每單元 50 分，加起來正好淨授課 300 分。</p><div class="sched-wrap"><table class="sched">
+<tr class="br"><td>09:40–10:00</td><td>到場、開機、連網、確認訂閱</td><td class="m">—</td></tr>
+<tr><td>10:00–10:50</td><td><span class="tg" style="--cu:var(--u1)"></span>單元 1　安裝與第一次對話（含開場 5 分）</td><td class="m">50 分</td></tr>
+<tr class="br"><td>10:50–11:05</td><td>休息</td><td class="m">—</td></tr>
+<tr><td>11:05–11:55</td><td><span class="tg" style="--cu:var(--u2)"></span>單元 2　讓 Claude 讀你的資料夾</td><td class="m">50 分</td></tr>
+<tr><td>11:55–12:45</td><td><span class="tg" style="--cu:var(--u3)"></span>單元 3　規則檔、任務檔、進度檔</td><td class="m">50 分</td></tr>
+<tr class="br"><td>12:45–13:45</td><td>午休</td><td class="m">—</td></tr>
+<tr><td>13:45–14:35</td><td><span class="tg" style="--cu:var(--u4)"></span>單元 4　讀文獻：讀取程度與出處</td><td class="m">50 分</td></tr>
+<tr class="br"><td>14:35–14:50</td><td>休息</td><td class="m">—</td></tr>
+<tr><td>14:50–15:40</td><td><span class="tg" style="--cu:var(--u5)"></span>單元 5　DOI 查證、取全文、文獻 dashboard</td><td class="m">50 分</td></tr>
+<tr><td>15:40–16:30</td><td><span class="tg" style="--cu:var(--u6)"></span>單元 6　研究問題、討論、聲明與定稿（含分享與收尾 16 分）</td><td class="m">50 分</td></tr>
+</table></div>
+</section>
+<section id="pre" style="--uc:var(--accent)"><h2><span class="num" style="background:var(--accent)">開始前</span>先確認這六件事</h2><p class="sub">09:40–10:00。任何一項沒過，先舉手，不要自己卡著。</p><ol class="steps">
+<li class="stp"><div class="st">筆電有電、有充電器</div><div class="sd">可以開機。Windows 或 Mac 都可以；安裝畫面以 Windows 實錄為準，Mac 當場帶。</div><label class="ok"><input type="checkbox" class="prechk stepchk" data-k="pre1"><span><b>做完的樣子</b>這一項確認過了。</span></label></li>
+<li class="stp"><div class="st">有個人 Gmail，能打開 claude.ai 並登入</div><div class="sd">用個人 Gmail，不要用學校信箱（學校帳號常擋第三方授權）。帳號、密碼、授權都由你自己輸入。</div><label class="ok"><input type="checkbox" class="prechk stepchk" data-k="pre2"><span><b>做完的樣子</b>這一項確認過了。</span></label></li>
+<li class="stp"><div class="st">已訂閱 Claude 付費方案</div><div class="sd">還沒訂的先舉手，現場安排。今天的練習以付費方案為前提。</div><label class="ok"><input type="checkbox" class="prechk stepchk" data-k="pre3"><span><b>做完的樣子</b>這一項確認過了。</span></label></li>
+<li class="stp"><div class="st">連上場地 Wi-Fi</div><div class="sd">打開任一網頁能載入。連不上就開自己手機的熱點。</div><label class="ok"><input type="checkbox" class="prechk stepchk" data-k="pre4"><span><b>做完的樣子</b>這一項確認過了。</span></label></li>
+<li class="stp"><div class="st">桌面上建好資料夾「大同練習」</div><div class="sd">之後所有練習都放這裡；只放可以公開的練習檔，不放個資、未發表稿、受訪者資料。</div><label class="ok"><input type="checkbox" class="prechk stepchk" data-k="pre5"><span><b>做完的樣子</b>這一項確認過了。</span></label></li>
+<li class="stp"><div class="st">準備 3–5 份可公開的文獻（PDF 或文字檔）</div><div class="sd">自己帶，或領講師的預備包。單元 2 會用到。沒有的話先舉手，不要自己去網路亂抓。</div><label class="ok"><input type="checkbox" class="prechk stepchk" data-k="pre6"><span><b>做完的樣子</b>這一項確認過了。</span></label></li>
+</ol></section>
+<section id="u1" style="--uc:var(--u1)">
+<h2><span class="num">單元 1</span>安裝與第一次對話</h2>
+<div class="where"><span class="dots"><i class="here"></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i></span><span>你在：<b>單元 1 / 6</b>　10:00–10:50</span><span>這節要長出報告：<b>題目、關鍵詞</b></span><span class="w2">起點：09:40 開始前確認　→　下一單元：讓 Claude 讀你的資料夾</span></div>
+<p class="split">開場 5｜安裝登入 20｜第一句話 5｜模型與手動模式 10｜報告骨架與題目 10</p>
+<p class="goal"><b>目標</b>　從官網裝好 Claude 桌面版、登入，在「程式碼」分頁用「手動」模式說第一句話；建好報告檔的骨架，寫下題目與關鍵詞。</p>
+<div class="warn"><span class="wt">動手前，先知道這些風險</span><ul><li><b>只從 claude.com/download 下載</b>，不要從搜尋結果裡別的網站下載。</li><li>系統問「是否允許變更」時，先看「已驗證的發行者」，寫 <b>Anthropic, PBC</b> 才按「是」。畫面預設反白的是「否」，要自己點。</li><li>登入的帳號、密碼、授權由你自己輸入，不貼進任何對話，也不請別人代打。</li><li>新版預設是「自動」模式，Claude 會直接做事、不先問你。這一單元結束前要切到「手動」，之後每次送出前看底列。</li></ul></div>
+<h3>步驟與驗收句</h3><ol class="steps">
+<li class="stp" id="u1-s1"><div class="st">開場：Claude Code 是什麼</div><div class="sd">講師 5 分。重點：它不只是聊天，它能讀你資料夾裡的檔案、也能寫檔。今天要用它做出一篇報告。</div><label class="ok"><input type="checkbox" class="stepchk" data-k="u1s1"><span><b>做完的樣子</b>你能用一句話說出「它能讀我資料夾裡的檔案」。</span></label><div class="nxt"><span>下一步 → <a href="#u1-s2">步驟 2</a></span><a class="lost" href="#u1-bk" data-bk="1">其他卡關</a></div></li>
+<li class="stp" id="u1-s2"><div class="st">瀏覽器進 claude.com/download，按「Download for Windows」</div><div class="sd">一般筆電選這個，不是 arm64。Mac 的按鈕與安裝方式當場帶。下載完在瀏覽器的下載清單點開「Claude Setup」。</div><label class="ok"><input type="checkbox" class="stepchk" data-k="u1s2"><span><b>做完的樣子</b>下載清單裡出現「Claude Setup」。</span></label><div class="nxt"><a class="vid" data-video="Z4" title="影片連結待填">▶ 影片 Z4</a><span>下一步 → <a href="#u1-s3">步驟 3</a></span><a class="lost" href="#u1-b6" data-bk="1">卡在這？看備案 6</a><a class="lost" href="#u1-b4" data-bk="1">卡在這？看備案 4</a></div></li>
+<li class="stp" id="u1-s3"><div class="st">系統問是否允許變更：先看發行者再按「是」</div><div class="sd">看「已驗證的發行者」那一行。不是 Anthropic, PBC 或寫「未知」，就按「否」並舉手。</div><label class="ok"><input type="checkbox" class="stepchk" data-k="u1s3"><span><b>做完的樣子</b>你親眼讀到發行者是 Anthropic, PBC，才按了「是」。</span></label><div class="nxt"><a class="vid" data-video="Z4" title="影片連結待填">▶ 影片 Z4</a><span>下一步 → <a href="#u1-s4">步驟 4</a></span><a class="lost" href="#u1-b2" data-bk="1">卡在這？看備案 2</a><a class="lost" href="#u1-b1" data-bk="1">卡在這？看備案 1</a></div></li>
+<li class="stp" id="u1-s4"><div class="st">等它自己打開，歡迎頁按「開始使用」</div><div class="sd">安裝要等一下，按「是」之後沒有進度條、直接跳出歡迎頁是正常的。</div><label class="ok"><input type="checkbox" class="stepchk" data-k="u1s4"><span><b>做完的樣子</b>看到歡迎頁並進入登入畫面。</span></label><div class="nxt"><a class="vid" data-video="Z4" title="影片連結待填">▶ 影片 Z4</a><span>下一步 → <a href="#u1-s5">步驟 5</a></span><a class="lost" href="#u1-b1" data-bk="1">卡在這？看備案 1</a></div></li>
+<li class="stp" id="u1-s5"><div class="st">自己登入（個人 Gmail）</div><div class="sd">登入後若跳出相機權限詢問，今天用不到，選「否」。</div><label class="ok"><input type="checkbox" class="stepchk" data-k="u1s5"><span><b>做完的樣子</b>進到主畫面，下方有可以打字的輸入框。</span></label><div class="nxt"><a class="vid" data-video="Z4" title="影片連結待填">▶ 影片 Z4</a><span>下一步 → <a href="#u1-s6">步驟 6</a></span><a class="lost" href="#u1-b3" data-bk="1">卡在這？看備案 3</a><a class="lost" href="#u1-b5" data-bk="1">卡在這？看備案 5</a></div></li>
+<li class="stp" id="u1-s6"><div class="st">在「對話」分頁說第一句話</div><div class="sd">左上有兩個分頁：「對話」和「程式碼」。先在「對話」分頁，把下面第一個提示句貼上，按 Enter。</div><label class="ok"><input type="checkbox" class="stepchk" data-k="u1s6"><span><b>做完的樣子</b>它回了一句話，表示安裝與登入都完成了。</span></label><div class="nxt"><a class="vid" data-video="Z4" title="影片連結待填">▶ 影片 Z4</a><a class="vid" data-video="V42" title="影片連結待填">▶ 影片 V42</a><span>下一步 → <a href="#u1-s7">步驟 7</a></span><a class="lost" href="#u1-b3" data-bk="1">卡在這？看備案 3</a><a class="lost" href="#u1-b5" data-bk="1">卡在這？看備案 5</a></div></li>
+<li class="stp" id="u1-s7"><div class="st">到「程式碼」分頁→「新增」，看輸入框下方那一排</div><div class="sd">資料夾、模型、模式各一個按鈕。點模型名稱展開清單，選 Sonnet（清單與預設以你螢幕為準）；「投入程度」只讀不改。</div><label class="ok"><input type="checkbox" class="stepchk" data-k="u1s7"><span><b>做完的樣子</b>你說得出現在用的是哪個模型。</span></label><div class="nxt"><a class="vid" data-video="V62" title="影片連結待填">▶ 影片 V62</a><span>下一步 → <a href="#u1-s8">步驟 8</a></span><a class="lost" href="#u1-bk" data-bk="1">其他卡關</a></div></li>
+<li class="stp" id="u1-s8"><div class="st">把模式切成「手動」</div><div class="sd">不要選「略過權限確認」。新的工作階段，模式有時會自己回到「自動」，所以每次送出前先看底列。</div><label class="ok"><input type="checkbox" class="stepchk" data-k="u1s8"><span><b>做完的樣子</b>輸入框下方底列顯示「手動」。</span></label><div class="nxt"><a class="vid" data-video="V61" title="影片連結待填">▶ 影片 V61</a><span>下一步 → <a href="#u1-s9">步驟 9</a></span><a class="lost" href="#u1-bk" data-bk="1">其他卡關</a></div></li>
+<li class="stp" id="u1-s9"><div class="st">資料夾選「大同練習」，信任框先讀路徑再按</div><div class="sd">信任工作區的框預設反白是「取消」。讀完路徑確認是你桌面上的「大同練習」才按「信任工作區」。</div><label class="ok"><input type="checkbox" class="stepchk" data-k="u1s9"><span><b>做完的樣子</b>輸入框下方顯示資料夾名稱，底列是「手動」。</span></label><div class="nxt"><a class="vid" data-video="V63" title="影片連結待填">▶ 影片 V63</a><span>下一步 → <a href="#u1-s10">步驟 10</a></span><a class="lost" href="#u1-bk" data-bk="1">其他卡關</a></div></li>
+<li class="stp" id="u1-s10"><div class="st">請 Claude 建立報告骨架與協作紀錄（先給你看，再存）</div><div class="sd">貼下面第二個提示句。寫入檔案的詢問跳出來時，選範圍最小的「允許一次」。</div><label class="ok"><input type="checkbox" class="stepchk" data-k="u1s10"><span><b>做完的樣子</b>資料夾出現「報告.md」與「協作紀錄.md」；打開報告.md 看到十個標題。</span></label><div class="nxt"><a class="vid" data-video="V80" title="影片連結待填">▶ 影片 V80</a><span>下一步 → <a href="#u1-s11">步驟 11</a></span><a class="lost" href="#u1-bk" data-bk="1">其他卡關</a></div></li>
+<li class="stp" id="u1-s11"><div class="st">寫下你的題目與 3–5 個關鍵詞</div><div class="sd">沒有自己的題目就用範例題。請 Claude 只列寫法，題目由你選。把題目與關鍵詞貼進報告.md 的「題目」「關鍵詞」下。</div><label class="ok"><input type="checkbox" class="stepchk" data-k="u1s11"><span><b>做完的樣子</b>報告.md 的題目與關鍵詞是你自己選定的，不是 Claude 代決定的。</span></label><div class="nxt"><a class="vid" data-video="V81" title="影片連結待填">▶ 影片 V81</a><span>做完了 → <a href="#u1-gate">過關檢核</a></span><a class="lost" href="#u1-bk" data-bk="1">其他卡關</a></div></li>
+</ol>
+<div class="report"><div class="rt">本單元寫進報告</div><div class="rs">題目、關鍵詞</div><p>報告檔的十節骨架，以及「題目」「關鍵詞」兩節。</p><label class="ok"><input type="checkbox" class="rchk" data-u="1" data-k="u1r"><span><b>做完的樣子</b>報告.md 打開有十個標題，題目與 3–5 個關鍵詞已填。</span></label></div>
+<div class="tipbox"><b>沒有自己的題目？</b>範例題（虛構研究，沒有自己題目時用）：以可供性觀點檢視長者數位學習介面：文獻回顧與研究計畫草稿。關鍵詞：可供性、長者、數位學習、介面設計、文獻回顧。</div>
+<h3>可複製的提示句</h3>
+<div class="promptbox"><span class="plabel">第一句話（在「對話」分頁）</span><button class="copybtn" type="button">複製</button><div class="ptxt">你好，請用一句話介紹你自己。</div></div>
+<div class="promptbox"><span class="plabel">建立報告骨架（在「程式碼」分頁）</span><button class="copybtn" type="button">複製</button><div class="ptxt">請在這個資料夾建立「報告.md」，內容是一篇研究報告的骨架，依序只放這些標題，每個標題下面先寫「（待寫）」：題目、摘要、關鍵詞、1 前言與文獻回顧、2 方法、3 AI 協作過程與紀錄、4 結果、5 討論與限制、6 AI 使用聲明、參考文獻（含 DOI 查證）。
+另外建立「協作紀錄.md」，內容是一張表，欄位：單元、我下的提示（摘要）、Claude 做了什麼、我怎麼驗證、發現的問題與修正。
+先把內容給我看，我說可以再存檔。</div></div>
+<div class="promptbox"><span class="plabel">題目寫法（括號換成你的題目）</span><button class="copybtn" type="button">複製</button><div class="ptxt">我的研究題目暫定是：〈在這裡寫你的題目〉。請不要幫我決定，只列出三種不同的寫法（更具體、更短、更像論文標題），各用一句話說差別。我自己選。</div></div>
+<p class="note">每個提示句最好開在同一個資料夾的工作階段裡執行；括號〈 〉裡的字換成你自己的。</p>
+<div class="gate" id="u1-gate" data-gate="1"><div class="gt">過關檢核・單元 1（看得到的證據，不是感覺）</div><ul><li><label><input type="checkbox" class="gatechk" data-g="1" data-k="u1g1"><span>「大同練習」資料夾裡看得到 報告.md 與 協作紀錄.md。</span></label></li><li><label><input type="checkbox" class="gatechk" data-g="1" data-k="u1g2"><span>輸入框下方底列顯示「手動」。</span></label></li><li><label><input type="checkbox" class="gatechk" data-g="1" data-k="u1g3"><span>報告.md 有題目與 3–5 個關鍵詞，是我自己選的。</span></label></li><li><label><input type="checkbox" class="gatechk" data-g="1" data-k="u1g4"><span>我親眼讀到發行者是 Anthropic, PBC 才按「是」。</span></label></li></ul><div class="gs" data-gs="1" data-tot="4">0 / 4　全部勾完才進下一單元；沒過的，回到上面對應步驟或備案。</div></div>
+<details class="dd" id="u1-bk"><summary>卡住了？備案分流（步驟下方的「卡在這」會跳到對應那一條）</summary><div class="body"><div class="qa" id="u1-b1"><b>備案 1　跳出「Claude 未安裝」或錯誤碼 0x80073CF6／0x800703FA</b><span>先登出再登入或重新開機，再跑一次安裝檔（11-10 實錄）。仍不行：與鄰座共看，講師帶示範機繼續。</span></div><div class="qa" id="u1-b2"><b>備案 2　發行者不是 Anthropic, PBC</b><span>按「否」，截圖舉手。不要繼續安裝。</span></div><div class="qa" id="u1-b3"><b>備案 3　登入被擋</b><span>確認用的是個人 Gmail，不是學校信箱。</span></div><div class="qa" id="u1-b4"><b>備案 4　公務或學校筆電不讓裝／沒有管理員權限</b><span>與旁邊同學共看，或改用網頁版 claude.ai（沒有資料夾功能，後面單元改成上傳附件，講師會示範差異）。</span></div><div class="qa" id="u1-b5"><b>備案 5　還沒訂閱</b><span>舉手。講師帶已登入的示範機；不共用帳號。</span></div><div class="qa" id="u1-b6"><b>備案 6　Mac</b><span>按鈕與安裝方式當場帶，目前沒有實錄圖文。</span></div><div class="qa"><b>以上都不是</b><span>舉手，並在收尾回饋表寫下卡關代碼：A 安裝／登入／裝置　B 授權框看不懂或按錯　C 提示語太模糊　D 不知道怎麼驗收　E 帳號／訂閱／模型選項　F 資料夾、檔案、PDF 讀不到　G 概念看不懂　H 其他</span></div></div></details>
+<div class="self"><div class="stitle">自評三題（只存在你的瀏覽器，講師看不到）</div>
+<div class="sq">我能說出 Claude Code 跟一般聊天差在哪（它能讀我資料夾裡的檔案）。<div class="chips"><label><input type="radio" name="u1q1" value="2" data-k="u1q1"><span>做到了</span></label><label><input type="radio" name="u1q1" value="1" data-k="u1q1"><span>做到一半</span></label><label><input type="radio" name="u1q1" value="0" data-k="u1q1"><span>還沒</span></label></div></div>
+<div class="sq">我親眼看過發行者才按「是」，而且現在底列顯示「手動」。<div class="chips"><label><input type="radio" name="u1q2" value="2" data-k="u1q2"><span>做到了</span></label><label><input type="radio" name="u1q2" value="1" data-k="u1q2"><span>做到一半</span></label><label><input type="radio" name="u1q2" value="0" data-k="u1q2"><span>還沒</span></label></div></div>
+<div class="sq">我的報告.md 有十個標題，題目與關鍵詞是我自己選的。<div class="chips"><label><input type="radio" name="u1q3" value="2" data-k="u1q3"><span>做到了</span></label><label><input type="radio" name="u1q3" value="1" data-k="u1q3"><span>做到一半</span></label><label><input type="radio" name="u1q3" value="0" data-k="u1q3"><span>還沒</span></label></div></div>
+</div></section>
+<section id="u2" style="--uc:var(--u2)">
+<h2><span class="num">單元 2</span>讓 Claude 讀你的資料夾</h2>
+<div class="where"><span class="dots"><i class="past"></i><i class="here"></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i></span><span>你在：<b>單元 2 / 6</b>　11:05–11:55</span><span>這節要長出報告：<b>2 方法</b></span><span class="w2">上一單元：安裝與第一次對話　→　下一單元：規則檔、任務檔、進度檔</span></div>
+<p class="split">五原則 5｜放檔案與授權 10｜列清單與摘要查證 20｜寫「方法」10｜緩衝 5</p>
+<p class="goal"><b>目標</b>　把 3–5 份可公開的文獻放進資料夾，請 Claude 列清單並摘要，你自己對照原文找錯；用「授權五原則」處理每個詢問框；寫出報告的「方法」兩小節。</p>
+<div class="warn"><span class="wt">動手前，先知道這些風險</span><ul><li><b>授權五原則</b>：①讀第一句看它要做什麼 ②讀路徑確認是練習資料夾 ③看檔案會不會離開電腦（對話分頁的雲端框會寫） ④選範圍最小的選項（允許一次、本次工作階段） ⑤遇到「永遠」「不再詢問」「Don't ask again」就不選。</li><li>資料夾裡不放個資、身分證件、未發表稿、受訪者資料、學生名單。<b>不確定某個檔能不能放，就不要放。</b></li><li>密碼、金鑰、token 絕對不貼進對話。</li><li>授權框放著不按，約 4 分鐘會逾時，回「提示已處理，請再試一次」。點「允許一次」沒反應時按 Ctrl+Enter。</li></ul></div>
+<h3>步驟與驗收句</h3><ol class="steps">
+<li class="stp" id="u2-s1"><div class="st">先檢查「大同練習」沒有不能放的檔</div><div class="sd">逐一看過檔名；有疑慮的先移出去。</div><label class="ok"><input type="checkbox" class="stepchk" data-k="u2s1"><span><b>做完的樣子</b>你確認過，資料夾裡全是可公開的練習檔。</span></label><div class="nxt"><span>下一步 → <a href="#u2-s2">步驟 2</a></span><a class="lost" href="#u2-bk" data-bk="1">其他卡關</a></div></li>
+<li class="stp" id="u2-s2"><div class="st">放進 3–5 份可公開的文獻或你自己的筆記</div><div class="sd">PDF、Word、文字檔都可以。盡量有一份是掃描圖片的 PDF，後面會看到「影像辨識」的差別。</div><label class="ok"><input type="checkbox" class="stepchk" data-k="u2s2"><span><b>做完的樣子</b>資料夾看得到這幾份檔案。</span></label><div class="nxt"><a class="vid" data-video="V69" title="影片連結待填">▶ 影片 V69</a><span>下一步 → <a href="#u2-s3">步驟 3</a></span><a class="lost" href="#u2-b4" data-bk="1">卡在這？看備案 4</a></div></li>
+<li class="stp" id="u2-s3"><div class="st">「程式碼」→「新增」，資料夾「大同練習」，模式「手動」</div><div class="sd">信任框先讀路徑再按。送出前看底列是不是「手動」。</div><label class="ok"><input type="checkbox" class="stepchk" data-k="u2s3"><span><b>做完的樣子</b>輸入框下方顯示資料夾名稱，底列是「手動」。</span></label><div class="nxt"><a class="vid" data-video="V63" title="影片連結待填">▶ 影片 V63</a><span>下一步 → <a href="#u2-s4">步驟 4</a></span><a class="lost" href="#u2-b3" data-bk="1">卡在這？看備案 3</a></div></li>
+<li class="stp" id="u2-s4"><div class="st">請它列出資料夾裡的檔案</div><div class="sd">貼第一個提示句。遇到讀取詢問，用五原則處理。</div><label class="ok"><input type="checkbox" class="stepchk" data-k="u2s4"><span><b>做完的樣子</b>它列出的檔名與數量，跟你在資料夾看到的一致。</span></label><div class="nxt"><a class="vid" data-video="V08" title="影片連結待填">▶ 影片 V08</a><span>下一步 → <a href="#u2-s5">步驟 5</a></span><a class="lost" href="#u2-b1" data-bk="1">卡在這？看備案 1</a><a class="lost" href="#u2-b2" data-bk="1">卡在這？看備案 2</a><a class="lost" href="#u2-b5" data-bk="1">卡在這？看備案 5</a></div></li>
+<li class="stp" id="u2-s5"><div class="st">請它摘要其中一份，每一點附原文位置</div><div class="sd">貼第二個提示句，把〈檔名〉換成你的檔案。</div><label class="ok"><input type="checkbox" class="stepchk" data-k="u2s5"><span><b>做完的樣子</b>三點，每點都有它讀到的位置（頁碼或段落）。</span></label><div class="nxt"><a class="vid" data-video="V70" title="影片連結待填">▶ 影片 V70</a><span>下一步 → <a href="#u2-s6">步驟 6</a></span><a class="lost" href="#u2-b1" data-bk="1">卡在這？看備案 1</a><a class="lost" href="#u2-b4" data-bk="1">卡在這？看備案 4</a></div></li>
+<li class="stp" id="u2-s6"><div class="st">自己對照原文，找出一處說錯或說太滿</div><div class="sd">這是整天最重要的習慣：摘要要驗收，不要直接相信。</div><label class="ok"><input type="checkbox" class="stepchk" data-k="u2s6"><span><b>做完的樣子</b>你能指出一處不對的地方；或確認三點都對，並寫下「抽查 1 篇、無誤」。</span></label><div class="nxt"><a class="vid" data-video="V70" title="影片連結待填">▶ 影片 V70</a><span>下一步 → <a href="#u2-s7">步驟 7</a></span><a class="lost" href="#u2-bk" data-bk="1">其他卡關</a></div></li>
+<li class="stp" id="u2-s7"><div class="st">看清楚這份檔案有沒有離開電腦</div><div class="sd">講師示範：對話分頁加資料夾會跳雲端版的框，框數與按鈕和「程式碼」分頁不同。</div><label class="ok"><input type="checkbox" class="stepchk" data-k="u2s7"><span><b>做完的樣子</b>你看得懂：讀第一句、讀路徑、看檔案是否離開電腦。</span></label><div class="nxt"><span>下一步 → <a href="#u2-s8">步驟 8</a></span><a class="lost" href="#u2-b2" data-bk="1">卡在這？看備案 2</a><a class="lost" href="#u2-b5" data-bk="1">卡在這？看備案 5</a></div></li>
+<li class="stp" id="u2-s8"><div class="st">請 Claude 起草報告的「2 方法」兩小節，先不要存</div><div class="sd">貼第三個提示句。內容只寫事實，不知道的標「待補」。</div><label class="ok"><input type="checkbox" class="stepchk" data-k="u2s8"><span><b>做完的樣子</b>它列出 2.1 資料來源與邊界、2.2 讀取程度標準的草稿，並等你確認。</span></label><div class="nxt"><a class="vid" data-video="V82" title="影片連結待填">▶ 影片 V82</a><span>下一步 → <a href="#u2-s9">步驟 9</a></span><a class="lost" href="#u2-bk" data-bk="1">其他卡關</a></div></li>
+<li class="stp" id="u2-s9"><div class="st">你改過再存進報告.md，並補一列協作紀錄</div><div class="sd">「我怎麼驗證」那欄由你自己寫，不要請 Claude 代寫。</div><label class="ok"><input type="checkbox" class="stepchk" data-k="u2s9"><span><b>做完的樣子</b>報告.md 的第 2 節有檔名清單、不放哪些資料、四級讀取程度的定義；協作紀錄多了一列。</span></label><div class="nxt"><a class="vid" data-video="V84" title="影片連結待填">▶ 影片 V84</a><span>做完了 → <a href="#u2-gate">過關檢核</a></span><a class="lost" href="#u2-bk" data-bk="1">其他卡關</a></div></li>
+</ol>
+<div class="report"><div class="rt">本單元寫進報告</div><div class="rs">2 方法（2.1 資料來源與邊界、2.2 讀取程度標準）</div><p>你放了哪幾份文獻、哪些資料你選擇不放、「全文／僅摘要／影像辨識／未讀」各代表什麼。</p><label class="ok"><input type="checkbox" class="rchk" data-u="2" data-k="u2r"><span><b>做完的樣子</b>第 2 節有檔名清單與四級讀取程度的定義。</span></label></div>
+<h3>可複製的提示句</h3>
+<div class="promptbox"><span class="plabel">列出資料夾的檔案</span><button class="copybtn" type="button">複製</button><div class="ptxt">請列出「大同練習」資料夾裡有哪些檔案，每個檔案用一句話說它在講什麼。</div></div>
+<div class="promptbox"><span class="plabel">摘要並附出處（把〈檔名〉換掉）</span><button class="copybtn" type="button">複製</button><div class="ptxt">請讀「〈檔名〉」，用三點摘要它在講什麼，每一點都附上你是從哪一頁或哪一段讀到的。原文沒寫的不要補，告訴我哪些地方你不確定。</div></div>
+<div class="promptbox"><span class="plabel">起草「方法」（先不要存）</span><button class="copybtn" type="button">複製</button><div class="ptxt">請依照我們剛才做的事，幫我起草報告「2 方法」的兩小節：
+2.1 資料來源與邊界：列出資料夾裡的檔案名稱，說明我沒有放個資、未發表稿、受訪者資料與學生名單。
+2.2 讀取程度標準：定義「全文」「僅摘要」「影像辨識（需抽查）」「未讀」各代表什麼。
+只寫事實，不知道的地方標「待補」。先給我看，我確認後再存入報告.md。</div></div>
+<div class="promptbox"><span class="plabel">補協作紀錄（驗證欄你自己填）</span><button class="copybtn" type="button">複製</button><div class="ptxt">請在「協作紀錄.md」的表格加一列：單元 2、我下的提示（摘要）、Claude 做了什麼。「我怎麼驗證」與「發現的問題與修正」兩欄先留空白，我自己寫。</div></div>
+<p class="note">每個提示句最好開在同一個資料夾的工作階段裡執行；括號〈 〉裡的字換成你自己的。</p>
+<div class="gate" id="u2-gate" data-gate="2"><div class="gt">過關檢核・單元 2（看得到的證據，不是感覺）</div><ul><li><label><input type="checkbox" class="gatechk" data-g="2" data-k="u2g1"><span>資料夾裡有 3–5 份可公開的文獻檔。</span></label></li><li><label><input type="checkbox" class="gatechk" data-g="2" data-k="u2g2"><span>協作紀錄多了單元 2 的一列，驗證欄是我自己寫的。</span></label></li><li><label><input type="checkbox" class="gatechk" data-g="2" data-k="u2g3"><span>報告.md 第 2 節有檔名清單與四級讀取程度的定義。</span></label></li><li><label><input type="checkbox" class="gatechk" data-g="2" data-k="u2g4"><span>我有一次抽查摘要的紀錄（找到一處錯，或寫「抽查 1 篇、無誤」）。</span></label></li></ul><div class="gs" data-gs="2" data-tot="4">0 / 4　全部勾完才進下一單元；沒過的，回到上面對應步驟或備案。</div></div>
+<details class="dd" id="u2-bk"><summary>卡住了？備案分流（步驟下方的「卡在這」會跳到對應那一條）</summary><div class="body"><div class="qa" id="u2-b1"><b>備案 1　讀不到檔案</b><span>確認授權框都按了允許、選的資料夾是「大同練習」。</span></div><div class="qa" id="u2-b2"><b>備案 2　授權框放著沒按，逾時</b><span>回「提示已處理，請再試一次」重送。</span></div><div class="qa" id="u2-b3"><b>備案 3　裝不了桌面版</b><span>網頁版 claude.ai：把檔案拖進對話，請它「依附件順序標出處，我稍後對照檔名」。沒有資料夾、沒有規則檔。</span></div><div class="qa" id="u2-b4"><b>備案 4　PDF 是掃描圖片</b><span>桌面版通常讀得到（影像辨識），但辨識會有錯字或截斷，必須抽查，讀取程度標「影像辨識（需抽查）」。</span></div><div class="qa" id="u2-b5"><b>備案 5　點「允許一次」沒反應</b><span>按 Ctrl+Enter。</span></div><div class="qa"><b>以上都不是</b><span>舉手，並在收尾回饋表寫下卡關代碼：A 安裝／登入／裝置　B 授權框看不懂或按錯　C 提示語太模糊　D 不知道怎麼驗收　E 帳號／訂閱／模型選項　F 資料夾、檔案、PDF 讀不到　G 概念看不懂　H 其他</span></div></div></details>
+<div class="self"><div class="stitle">自評三題（只存在你的瀏覽器，講師看不到）</div>
+<div class="sq">我能說出授權五原則裡至少三條，而且沒有按「永遠」或「不再詢問」。<div class="chips"><label><input type="radio" name="u2q1" value="2" data-k="u2q1"><span>做到了</span></label><label><input type="radio" name="u2q1" value="1" data-k="u2q1"><span>做到一半</span></label><label><input type="radio" name="u2q1" value="0" data-k="u2q1"><span>還沒</span></label></div></div>
+<div class="sq">我找到（或確認沒有）摘要裡一處說錯或說太滿的地方。<div class="chips"><label><input type="radio" name="u2q2" value="2" data-k="u2q2"><span>做到了</span></label><label><input type="radio" name="u2q2" value="1" data-k="u2q2"><span>做到一半</span></label><label><input type="radio" name="u2q2" value="0" data-k="u2q2"><span>還沒</span></label></div></div>
+<div class="sq">報告.md 的第 2 節有檔名清單和四級讀取程度的定義。<div class="chips"><label><input type="radio" name="u2q3" value="2" data-k="u2q3"><span>做到了</span></label><label><input type="radio" name="u2q3" value="1" data-k="u2q3"><span>做到一半</span></label><label><input type="radio" name="u2q3" value="0" data-k="u2q3"><span>還沒</span></label></div></div>
+</div></section>
+<section id="u3" style="--uc:var(--u3)">
+<h2><span class="num">單元 3</span>規則檔、任務檔、進度檔</h2>
+<div class="where"><span class="dots"><i class="past"></i><i class="past"></i><i class="here"></i><i class=""></i><i class=""></i><i class=""></i></span><span>你在：<b>單元 3 / 6</b>　11:55–12:45</span><span>這節要長出報告：<b>3 AI 協作過程與紀錄</b></span><span class="w2">上一單元：讓 Claude 讀你的資料夾　→　下一單元：讀文獻：讀取程度與出處</span></div>
+<p class="split">規則檔 15｜任務檔與驗收句 15｜進度檔與接續 10｜寫進報告第 3 節 10</p>
+<p class="goal"><b>目標</b>　把你的工作習慣寫成 CLAUDE.md，開新工作階段後它仍照辦；把「文獻整理」寫成帶驗收句的任務檔；用進度檔接續。這些過程本身，就是報告第 3 節的內容。</p>
+<div class="warn"><span class="wt">動手前，先知道這些風險</span><ul><li>打斜線指令前，<b>先切英文輸入</b>：中文輸入法會把「/」變成注音符號。</li><li>規則檔的檔名必須是 <b>CLAUDE.md</b>，不是 CLAUDE.md.txt；而且要放在你選的資料夾裡。</li><li>信任工作區的框預設反白是「取消」，先讀路徑再按。</li><li>規則寫的是「你的」規則，不要把別人的指令整段貼進來。</li></ul></div>
+<h3>步驟與驗收句</h3><ol class="steps">
+<li class="stp" id="u3-s1"><div class="st">新增工作階段（資料夾「大同練習」，模式「手動」）</div><div class="sd">讀信任框的路徑後才按「信任工作區」。</div><label class="ok"><input type="checkbox" class="stepchk" data-k="u3s1"><span><b>做完的樣子</b>輸入框下方顯示資料夾名稱，底列顯示「手動」。</span></label><div class="nxt"><a class="vid" data-video="V63" title="影片連結待填">▶ 影片 V63</a><span>下一步 → <a href="#u3-s2">步驟 2</a></span><a class="lost" href="#u3-b2" data-bk="1">卡在這？看備案 2</a><a class="lost" href="#u3-b4" data-bk="1">卡在這？看備案 4</a></div></li>
+<li class="stp" id="u3-s2"><div class="st">請 Claude 起草 CLAUDE.md，先不要存</div><div class="sd">貼第一個提示句。三條起手規則：繁體中文、引用要標出處、不確定要明說。</div><label class="ok"><input type="checkbox" class="stepchk" data-k="u3s2"><span><b>做完的樣子</b>它列出草稿並等你確認。</span></label><div class="nxt"><a class="vid" data-video="V83" title="影片連結待填">▶ 影片 V83</a><span>下一步 → <a href="#u3-s3">步驟 3</a></span><a class="lost" href="#u3-b3" data-bk="1">卡在這？看備案 3</a></div></li>
+<li class="stp" id="u3-s3"><div class="st">加一條只有你會想要的規則，請它存檔</div><div class="sd">例如「文獻的 DOI 只能寫文獻本身載明的，沒有就寫『待查』」。寫入詢問按「允許一次」。</div><label class="ok"><input type="checkbox" class="stepchk" data-k="u3s3"><span><b>做完的樣子</b>資料夾出現 CLAUDE.md，你打開看過內容。</span></label><div class="nxt"><a class="vid" data-video="V83" title="影片連結待填">▶ 影片 V83</a><span>下一步 → <a href="#u3-s4">步驟 4</a></span><a class="lost" href="#u3-b1" data-bk="1">卡在這？看備案 1</a></div></li>
+<li class="stp" id="u3-s4"><div class="st">按「新增」開新工作階段（同一資料夾），問它你的規則</div><div class="sd">貼第二個提示句，驗證規則真的被讀進去。</div><label class="ok"><input type="checkbox" class="stepchk" data-k="u3s4"><span><b>做完的樣子</b>它逐條說出規則，包含你加的那條。</span></label><div class="nxt"><a class="vid" data-video="V83" title="影片連結待填">▶ 影片 V83</a><span>下一步 → <a href="#u3-s5">步驟 5</a></span><a class="lost" href="#u3-b1" data-bk="1">卡在這？看備案 1</a></div></li>
+<li class="stp" id="u3-s5"><div class="st">把「文獻整理」寫成任務檔「任務-文獻.md」</div><div class="sd">貼第三個提示句，請它起草。每一步都要有一句「怎麼知道做對了」，最後一步寫「到這裡就停」。</div><label class="ok"><input type="checkbox" class="stepchk" data-k="u3s5"><span><b>做完的樣子</b>任務檔每一步都有可以勾選的驗收句，沒有寫「用哪個工具」之類的實作細節。</span></label><div class="nxt"><a class="vid" data-video="V02" title="影片連結待填">▶ 影片 V02</a><a class="vid" data-video="V46" title="影片連結待填">▶ 影片 V46</a><span>下一步 → <a href="#u3-s6">步驟 6</a></span><a class="lost" href="#u3-b5" data-bk="1">卡在這？看備案 5</a></div></li>
+<li class="stp" id="u3-s6"><div class="st">對 Claude 說「讀 任務-文獻.md 照做」，只做到第一個停點</div><div class="sd">看它是否在停點停下來，不要主動延伸。</div><label class="ok"><input type="checkbox" class="stepchk" data-k="u3s6"><span><b>做完的樣子</b>它做完第一步就停，並說出怎麼驗收。</span></label><div class="nxt"><span>下一步 → <a href="#u3-s7">步驟 7</a></span><a class="lost" href="#u3-b5" data-bk="1">卡在這？看備案 5</a></div></li>
+<li class="stp" id="u3-s7"><div class="st">請它把今天的決定寫進「進度.md」，再開新工作階段接續</div><div class="sd">貼第四個提示句。進度檔寫：已完成、待辦、下次要讀的檔。</div><label class="ok"><input type="checkbox" class="stepchk" data-k="u3s7"><span><b>做完的樣子</b>新工作階段讀完進度.md 後，說得出你的待辦。</span></label><div class="nxt"><a class="vid" data-video="V52" title="影片連結待填">▶ 影片 V52</a><span>下一步 → <a href="#u3-s8">步驟 8</a></span><a class="lost" href="#u3-b1" data-bk="1">卡在這？看備案 1</a><a class="lost" href="#u3-b5" data-bk="1">卡在這？看備案 5</a></div></li>
+<li class="stp" id="u3-s8"><div class="st">把三條規則、任務檔的驗收句、協作紀錄前三列整理進報告第 3 節</div><div class="sd">貼第五個提示句。「我怎麼驗證」仍由你自己寫。</div><label class="ok"><input type="checkbox" class="stepchk" data-k="u3s8"><span><b>做完的樣子</b>報告.md 第 3 節有：規則三條、任務檔驗收句、協作紀錄表（單元 1–3 共三列）。</span></label><div class="nxt"><a class="vid" data-video="V84" title="影片連結待填">▶ 影片 V84</a><span>做完了 → <a href="#u3-gate">過關檢核</a></span><a class="lost" href="#u3-b5" data-bk="1">卡在這？看備案 5</a></div></li>
+</ol>
+<div class="report"><div class="rt">本單元寫進報告</div><div class="rs">3 AI 協作過程與紀錄（第一版）</div><p>你怎麼設定 Claude 的工作規則、怎麼把任務拆成可驗收的步驟、怎麼跨工作階段接續；附協作紀錄表。</p><label class="ok"><input type="checkbox" class="rchk" data-u="3" data-k="u3r"><span><b>做完的樣子</b>第 3 節有規則、驗收句、協作紀錄三列。</span></label></div>
+<h3>可複製的提示句</h3>
+<div class="promptbox"><span class="plabel">起草規則檔（先不要存）</span><button class="copybtn" type="button">複製</button><div class="ptxt">請在這個資料夾建立 CLAUDE.md，內容寫三條我的工作規則：
+1. 一律用繁體中文回答
+2. 引用資料時要標出處
+3. 不確定的地方要明說，不要猜
+寫完給我看，先不要存檔。</div></div>
+<div class="promptbox"><span class="plabel">驗證規則被讀進去（在新的工作階段）</span><button class="copybtn" type="button">複製</button><div class="ptxt">你知道我的工作規則嗎？請逐條說出來。</div></div>
+<div class="promptbox"><span class="plabel">起草任務檔</span><button class="copybtn" type="button">複製</button><div class="ptxt">請幫我起草「任務-文獻.md」，目的：把資料夾裡的文獻整理成讀取紀錄表。格式：每一步一個標題，標題下寫要做什麼，再用一句「怎麼知道做對了」收尾。步驟包含：①列出檔案 ②逐篇標讀取程度與三個重點（附位置） ③列出讀不到的檔案。最後一步寫「這一段到這裡就結束了，然後停下來，不要主動延伸」。不要指定用什麼工具。先給我看，不要存檔。</div></div>
+<div class="promptbox"><span class="plabel">進度檔</span><button class="copybtn" type="button">複製</button><div class="ptxt">請把我們今天的決定寫進「進度.md」，包含：已完成、待辦、下次要讀的檔。</div></div>
+<div class="promptbox"><span class="plabel">整理進報告第 3 節（先給我看）</span><button class="copybtn" type="button">複製</button><div class="ptxt">請依照「CLAUDE.md」「任務-文獻.md」和「協作紀錄.md」，幫我起草報告「3 AI 協作過程與紀錄」：①我設定的工作規則 ②任務檔如何拆步驟與驗收句 ③協作紀錄表（保留我自己寫的『我怎麼驗證』欄，不要改）。只寫已經發生的事，不要補沒發生的。先給我看，我確認後再存入報告.md。</div></div>
+<p class="note">每個提示句最好開在同一個資料夾的工作階段裡執行；括號〈 〉裡的字換成你自己的。</p>
+<div class="tipbox"><b>條件式</b>「糾正一次」──故意說一句不合理的指示，看 Claude 怎麼回、你怎麼糾正，約 5 分鐘。（時間夠才做，不夠就課後。）</div>
+<div class="gate" id="u3-gate" data-gate="3"><div class="gt">過關檢核・單元 3（看得到的證據，不是感覺）</div><ul><li><label><input type="checkbox" class="gatechk" data-g="3" data-k="u3g1"><span>資料夾裡有 CLAUDE.md、任務-文獻.md、進度.md 三個檔。</span></label></li><li><label><input type="checkbox" class="gatechk" data-g="3" data-k="u3g2"><span>新開一次工作階段，Claude 說得出我加的那條規則。</span></label></li><li><label><input type="checkbox" class="gatechk" data-g="3" data-k="u3g3"><span>報告.md 第 3 節有規則三條與至少三列協作紀錄。</span></label></li></ul><div class="gs" data-gs="3" data-tot="3">0 / 3　全部勾完才進下一單元；沒過的，回到上面對應步驟或備案。</div></div>
+<details class="dd" id="u3-bk"><summary>卡住了？備案分流（步驟下方的「卡在這」會跳到對應那一條）</summary><div class="body"><div class="qa" id="u3-b1"><b>備案 1　它沒照規則</b><span>檔名要是 CLAUDE.md（不是 CLAUDE.md.txt），資料夾要和新工作階段相同；再問一次「請先讀 CLAUDE.md」。</span></div><div class="qa" id="u3-b2"><b>備案 2　沒看到信任工作區的框</b><span>可能以前信任過這個資料夾，屬正常。</span></div><div class="qa" id="u3-b3"><b>備案 3　斜線指令打不出來</b><span>先切英文輸入再打。</span></div><div class="qa" id="u3-b4"><b>備案 4　滑鼠點允許沒反應</b><span>按 Ctrl+Enter。</span></div><div class="qa" id="u3-b5"><b>備案 5　落後：12:30 還沒存出 CLAUDE.md</b><span>任務檔改看講師示範，你只要抄走驗收句的寫法；進度檔留到下午午休後補。</span></div><div class="qa"><b>以上都不是</b><span>舉手，並在收尾回饋表寫下卡關代碼：A 安裝／登入／裝置　B 授權框看不懂或按錯　C 提示語太模糊　D 不知道怎麼驗收　E 帳號／訂閱／模型選項　F 資料夾、檔案、PDF 讀不到　G 概念看不懂　H 其他</span></div></div></details>
+<div class="self"><div class="stitle">自評三題（只存在你的瀏覽器，講師看不到）</div>
+<div class="sq">新開一次對話，Claude 仍照我的規則行事（我親眼看到它說出我加的那條）。<div class="chips"><label><input type="radio" name="u3q1" value="2" data-k="u3q1"><span>做到了</span></label><label><input type="radio" name="u3q1" value="1" data-k="u3q1"><span>做到一半</span></label><label><input type="radio" name="u3q1" value="0" data-k="u3q1"><span>還沒</span></label></div></div>
+<div class="sq">我的任務檔每一步都有一句我自己看得懂、別人也能核對的驗收句。<div class="chips"><label><input type="radio" name="u3q2" value="2" data-k="u3q2"><span>做到了</span></label><label><input type="radio" name="u3q2" value="1" data-k="u3q2"><span>做到一半</span></label><label><input type="radio" name="u3q2" value="0" data-k="u3q2"><span>還沒</span></label></div></div>
+<div class="sq">報告.md 第 3 節有規則、驗收句和至少三列協作紀錄。<div class="chips"><label><input type="radio" name="u3q3" value="2" data-k="u3q3"><span>做到了</span></label><label><input type="radio" name="u3q3" value="1" data-k="u3q3"><span>做到一半</span></label><label><input type="radio" name="u3q3" value="0" data-k="u3q3"><span>還沒</span></label></div></div>
+</div></section>
+<section id="u4" style="--uc:var(--u4)">
+<h2><span class="num">單元 4</span>讀文獻：讀取程度與出處</h2>
+<div class="where"><span class="dots"><i class="past"></i><i class="past"></i><i class="past"></i><i class="here"></i><i class=""></i><i class=""></i></span><span>你在：<b>單元 4 / 6</b>　13:45–14:35</span><span>這節要長出報告：<b>1 前言與文獻回顧</b></span><span class="w2">上一單元：規則檔、任務檔、進度檔　→　下一單元：DOI 查證、取全文、文獻 dashboard</span></div>
+<p class="split">Deep Research 與 Claude Code 分工 5｜讀取紀錄 15｜抽查 10｜前言與文獻回顧草稿 15｜緩衝 5</p>
+<p class="goal"><b>目標</b>　請 Claude 逐篇讀你資料夾裡的文獻，標明讀取程度與出處；你抽查兩篇；再請它只依這些文獻起草報告的前言與文獻回顧，並由你改寫。</p>
+<div class="warn"><span class="wt">動手前，先知道這些風險</span><ul><li><b>不准說「讀了 N 篇」</b>，只准說「N 篇全文、N 篇僅摘要、N 篇未讀」。摘要看過就寫「僅摘要」。</li><li>提示一定要限定「只依資料夾裡的文獻」，不然模型會把自己記憶裡的內容混進來。<b>不要叫它憑空『找幾篇相關論文』。</b></li><li>Claude 可能產出格式像樣、但出處不存在的引文。這正是單元 5 的 DOI 查證要抓的。</li><li>代寫與修飾的界線由你自己決定，而且要在 AI 使用聲明裡如實寫出來（單元 6）。</li></ul></div>
+<h3>步驟與驗收句</h3><ol class="steps">
+<li class="stp" id="u4-s1"><div class="st">Deep Research 與 Claude Code 的分工</div><div class="sd">講師口述 5 分。Deep Research：幫你找方向、列候選。Claude Code：讀你手上已有的檔案，並寫成你指定的格式。找到的候選，仍要自己取得並驗證。</div><label class="ok"><input type="checkbox" class="stepchk" data-k="u4s1"><span><b>做完的樣子</b>你能說出誰負責「找」、誰負責「讀」。</span></label><div class="nxt"><a class="vid" data-video="V44" title="影片連結待填">▶ 影片 V44</a><span>下一步 → <a href="#u4-s2">步驟 2</a></span><a class="lost" href="#u4-bk" data-bk="1">其他卡關</a></div></li>
+<li class="stp" id="u4-s2"><div class="st">確認資料夾裡有 3–5 份文獻，新增工作階段（手動）</div><div class="sd">沿用單元 3 的規則檔與任務檔。對 Claude 說「讀 任務-文獻.md 照做」。</div><label class="ok"><input type="checkbox" class="stepchk" data-k="u4s2"><span><b>做完的樣子</b>底列是「手動」，它依任務檔開始工作。</span></label><div class="nxt"><span>下一步 → <a href="#u4-s3">步驟 3</a></span><a class="lost" href="#u4-bk" data-bk="1">其他卡關</a></div></li>
+<li class="stp" id="u4-s3"><div class="st">請它逐篇做讀取紀錄表，存成「讀取紀錄.md」</div><div class="sd">貼第一個提示句。欄位：檔名、讀取程度、三個重點（附位置）、DOI（檔內有才填）。</div><label class="ok"><input type="checkbox" class="stepchk" data-k="u4s3"><span><b>做完的樣子</b>表有幾列就是幾份文獻，而且「讀取程度」欄不是全部「全文」。</span></label><div class="nxt"><a class="vid" data-video="V70" title="影片連結待填">▶ 影片 V70</a><a class="vid" data-video="V41" title="影片連結待填">▶ 影片 V41</a><span>下一步 → <a href="#u4-s4">步驟 4</a></span><a class="lost" href="#u4-b4" data-bk="1">卡在這？看備案 4</a><a class="lost" href="#u4-b5" data-bk="1">卡在這？看備案 5</a></div></li>
+<li class="stp" id="u4-s4"><div class="st">抽查兩篇</div><div class="sd">打開原檔，核對作者、年份，再對一個重點的原文位置。</div><label class="ok"><input type="checkbox" class="stepchk" data-k="u4s4"><span><b>做完的樣子</b>協作紀錄寫上「抽查 2 篇，發現 N 處不符」或「無誤」。</span></label><div class="nxt"><a class="vid" data-video="V70" title="影片連結待填">▶ 影片 V70</a><span>下一步 → <a href="#u4-s5">步驟 5</a></span><a class="lost" href="#u4-b2" data-bk="1">卡在這？看備案 2</a></div></li>
+<li class="stp" id="u4-s5"><div class="st">請它只依這些文獻，起草前言與文獻回顧第一版</div><div class="sd">貼第二個提示句。三段：背景、已知、缺口；每一句標檔名；不確定要說。</div><label class="ok"><input type="checkbox" class="stepchk" data-k="u4s5"><span><b>做完的樣子</b>每一段、每一句都有檔名；沒有檔名的句子就是它自己編的。</span></label><div class="nxt"><a class="vid" data-video="V92" title="影片連結待填">▶ 影片 V92</a><span>下一步 → <a href="#u4-s6">步驟 6</a></span><a class="lost" href="#u4-b1" data-bk="1">卡在這？看備案 1</a><a class="lost" href="#u4-b2" data-bk="1">卡在這？看備案 2</a><a class="lost" href="#u4-b3" data-bk="1">卡在這？看備案 3</a></div></li>
+<li class="stp" id="u4-s6"><div class="st">你動手改寫，至少改一句成你自己的話，刪掉查不到依據的句子</div><div class="sd">把你改了什麼，記在協作紀錄裡。</div><label class="ok"><input type="checkbox" class="stepchk" data-k="u4s6"><span><b>做完的樣子</b>報告.md 第 1 節有你改過的痕跡，協作紀錄寫了你改了哪裡、為什麼。</span></label><div class="nxt"><a class="vid" data-video="V43" title="影片連結待填">▶ 影片 V43</a><span>下一步 → <a href="#u4-s7">步驟 7</a></span><a class="lost" href="#u4-b5" data-bk="1">卡在這？看備案 5</a></div></li>
+<li class="stp" id="u4-s7"><div class="st">把讀取紀錄的重點放進報告第 1 節末尾</div><div class="sd">只放表的摘要（幾篇全文、幾篇僅摘要、幾篇未讀），完整表另附。</div><label class="ok"><input type="checkbox" class="stepchk" data-k="u4s7"><span><b>做完的樣子</b>第 1 節末尾有一句：全文 N、僅摘要 N、影像辨識 N、未讀 N。</span></label><div class="nxt"><span>做完了 → <a href="#u4-gate">過關檢核</a></span><a class="lost" href="#u4-bk" data-bk="1">其他卡關</a></div></li>
+</ol>
+<div class="report"><div class="rt">本單元寫進報告</div><div class="rs">1 前言與文獻回顧（草稿）</div><p>研究背景、已有文獻怎麼說、沒人處理的缺口；每句標出自哪份文獻，讀取程度要寫清楚。</p><label class="ok"><input type="checkbox" class="rchk" data-u="4" data-k="u4r"><span><b>做完的樣子</b>第 1 節三段都有檔名，末尾有讀取程度統計。</span></label></div>
+<h3>可複製的提示句</h3>
+<div class="promptbox"><span class="plabel">讀取紀錄表</span><button class="copybtn" type="button">複製</button><div class="ptxt">請逐份讀資料夾裡的文獻，產出一張表：檔名、讀取程度（全文／僅摘要／影像辨識（需抽查）／未讀，並說明為什麼）、三個重點（每點附原文位置）、DOI（檔內有載明才填，沒有就寫「待查」，不要猜）。原文沒寫的不要補，讀不到的要列出。存成「讀取紀錄.md」。</div></div>
+<div class="promptbox"><span class="plabel">前言與文獻回顧（先給我看）</span><button class="copybtn" type="button">複製</button><div class="ptxt">請只依「讀取紀錄.md」和資料夾裡的文獻，幫我起草報告的「1 前言與文獻回顧」，分三段：研究背景、已有文獻怎麼說、尚未處理的缺口。每一句後面用括號標出依據的檔名。資料夾裡沒有依據的句子不要寫。告訴我哪些地方你不確定。先給我看，不要存檔。</div></div>
+<div class="promptbox"><span class="plabel">記錄我的改寫（驗證欄我自己填）</span><button class="copybtn" type="button">複製</button><div class="ptxt">請在「協作紀錄.md」加一列：單元 4、我下的提示（摘要）、Claude 做了什麼。後兩欄留白，我自己寫。</div></div>
+<p class="note">每個提示句最好開在同一個資料夾的工作階段裡執行；括號〈 〉裡的字換成你自己的。</p>
+<div class="gate" id="u4-gate" data-gate="4"><div class="gt">過關檢核・單元 4（看得到的證據，不是感覺）</div><ul><li><label><input type="checkbox" class="gatechk" data-g="4" data-k="u4g1"><span>讀取紀錄.md 存在，而且「讀取程度」欄不是全部「全文」。</span></label></li><li><label><input type="checkbox" class="gatechk" data-g="4" data-k="u4g2"><span>協作紀錄寫了「抽查 2 篇」的結果。</span></label></li><li><label><input type="checkbox" class="gatechk" data-g="4" data-k="u4g3"><span>報告.md 第 1 節三段每句有檔名，末尾有讀取程度統計。</span></label></li><li><label><input type="checkbox" class="gatechk" data-g="4" data-k="u4g4"><span>我自己改寫過至少一句，並記在協作紀錄。</span></label></li></ul><div class="gs" data-gs="4" data-tot="4">0 / 4　全部勾完才進下一單元；沒過的，回到上面對應步驟或備案。</div></div>
+<details class="dd" id="u4-bk"><summary>卡住了？備案分流（步驟下方的「卡在這」會跳到對應那一條）</summary><div class="body"><div class="qa" id="u4-b1"><b>備案 1　文獻只有 3 篇，缺口寫得很空</b><span>這是預期內的。讓 Claude 寫「依據不足，缺〈什麼〉」，比硬湊缺口好。</span></div><div class="qa" id="u4-b2"><b>備案 2　它交出很像樣、但檔名對不上的句子</b><span>刪掉。這正是要抓的東西，記進協作紀錄。</span></div><div class="qa" id="u4-b3"><b>備案 3　想直接叫它寫完整的文獻回顧</b><span>今天只做表與三段草稿。是否更深度地交給 AI 寫，由你決定，並如實寫進聲明。</span></div><div class="qa" id="u4-b4"><b>備案 4　PDF 讀很慢或讀不完</b><span>先只做 2 份；其餘留給課後。</span></div><div class="qa" id="u4-b5"><b>備案 5　落後</b><span>只做步驟 3、4、5；改寫留到單元 6 的組裝時間。</span></div><div class="qa"><b>以上都不是</b><span>舉手，並在收尾回饋表寫下卡關代碼：A 安裝／登入／裝置　B 授權框看不懂或按錯　C 提示語太模糊　D 不知道怎麼驗收　E 帳號／訂閱／模型選項　F 資料夾、檔案、PDF 讀不到　G 概念看不懂　H 其他</span></div></div></details>
+<div class="self"><div class="stitle">自評三題（只存在你的瀏覽器，講師看不到）</div>
+<div class="sq">我的讀取紀錄裡，讀取程度不是全部「全文」，而且我知道為什麼。<div class="chips"><label><input type="radio" name="u4q1" value="2" data-k="u4q1"><span>做到了</span></label><label><input type="radio" name="u4q1" value="1" data-k="u4q1"><span>做到一半</span></label><label><input type="radio" name="u4q1" value="0" data-k="u4q1"><span>還沒</span></label></div></div>
+<div class="sq">我抽查了兩篇原文，並把結果寫進協作紀錄。<div class="chips"><label><input type="radio" name="u4q2" value="2" data-k="u4q2"><span>做到了</span></label><label><input type="radio" name="u4q2" value="1" data-k="u4q2"><span>做到一半</span></label><label><input type="radio" name="u4q2" value="0" data-k="u4q2"><span>還沒</span></label></div></div>
+<div class="sq">前言與文獻回顧每一句都有檔名，且我自己改過至少一句。<div class="chips"><label><input type="radio" name="u4q3" value="2" data-k="u4q3"><span>做到了</span></label><label><input type="radio" name="u4q3" value="1" data-k="u4q3"><span>做到一半</span></label><label><input type="radio" name="u4q3" value="0" data-k="u4q3"><span>還沒</span></label></div></div>
+</div></section>
+<section id="u5" style="--uc:var(--u5)">
+<h2><span class="num">單元 5</span>DOI 查證、取全文、文獻 dashboard</h2>
+<div class="where"><span class="dots"><i class="past"></i><i class="past"></i><i class="past"></i><i class="past"></i><i class="here"></i><i class=""></i></span><span>你在：<b>單元 5 / 6</b>　14:50–15:40</span><span>這節要長出報告：<b>4 結果、參考文獻（DOI 查證）</b></span><span class="w2">上一單元：讀文獻：讀取程度與出處　→　下一單元：研究問題、討論、聲明與定稿</span></div>
+<p class="split">DOI 查證 12｜合法取全文 8｜dashboard 10｜共識矛盾缺口 12｜寫進報告 8</p>
+<p class="goal"><b>目標</b>　DOI 逐個用外部來源查證（查得到才算）；至少一篇以合法管道取得全文；做出文獻 dashboard；整理共識、矛盾、缺口，連同參考文獻（含 DOI 查證狀態）寫進報告。</p>
+<div class="warn"><span class="wt">動手前，先知道這些風險</span><ul><li><b>DOI 不准猜</b>。只寫文獻本身載明的；找不到就填「待查」。AI 會編出看起來很真的 DOI。</li><li><b>查證用外部來源</b>（doi.org 或 Crossref），不要請 Claude 自己「確認一下」就算數。</li><li>取全文只走合法管道：圖書館、Unpaywall、機構典藏、寫信給作者。<b>不碰 Sci-Hub。</b></li><li>拿不到的要列出來、附 DOI，讓人自取，不要靜默跳過。</li><li>成品（dashboard 網頁）預設只有你看得到；今天不按分享、不改一般存取權。</li></ul></div>
+<h3>步驟與驗收句</h3><ol class="steps">
+<li class="stp" id="u5-s1"><div class="st">取出讀取紀錄裡的 DOI 清單</div><div class="sd">沒有 DOI 的標「待查」，不要請 Claude 補。</div><label class="ok"><input type="checkbox" class="stepchk" data-k="u5s1"><span><b>做完的樣子</b>清單上的 DOI 都是檔案裡載明的。</span></label><div class="nxt"><span>下一步 → <a href="#u5-s2">步驟 2</a></span><a class="lost" href="#u5-bk" data-bk="1">其他卡關</a></div></li>
+<li class="stp" id="u5-s2"><div class="st">練習：這三個 DOI 哪個查得到？</div><div class="sd">先做下面「DOI 查證小練習」，再回頭查你自己的。</div><label class="ok"><input type="checkbox" class="stepchk" data-k="u5s2"><span><b>做完的樣子</b>你說得出哪一個是假的、怎麼知道的。</span></label><div class="nxt"><a class="vid" data-video="V85" title="影片連結待填">▶ 影片 V85</a><span>下一步 → <a href="#u5-s3">步驟 3</a></span><a class="lost" href="#u5-b1" data-bk="1">卡在這？看備案 1</a></div></li>
+<li class="stp" id="u5-s3"><div class="st">逐個貼在 doi.org 後面</div><div class="sd">網址是 https://doi.org/〈DOI〉。跳到出版商頁，題名與表中相符才算「已查證」；不符或查不到標「待查」，不要改成你覺得對的。</div><label class="ok"><input type="checkbox" class="stepchk" data-k="u5s3"><span><b>做完的樣子</b>每個 DOI 都有「已查證」或「待查」，沒有第三種。</span></label><div class="nxt"><a class="vid" data-video="V41" title="影片連結待填">▶ 影片 V41</a><a class="vid" data-video="V85" title="影片連結待填">▶ 影片 V85</a><span>下一步 → <a href="#u5-s4">步驟 4</a></span><a class="lost" href="#u5-b1" data-bk="1">卡在這？看備案 1</a></div></li>
+<li class="stp" id="u5-s4"><div class="st">至少一篇用合法管道取得全文</div><div class="sd">順序：doi.org→出版商頁→圖書館電子資源→Unpaywall／Google Scholar 全文連結→機構典藏→寫信給作者。校外連不到圖書館資源是常見狀況，列入「拿不到」清單。</div><label class="ok"><input type="checkbox" class="stepchk" data-k="u5s4"><span><b>做完的樣子</b>你記下了是從哪個管道拿到；拿不到的有清單與 DOI。</span></label><div class="nxt"><a class="vid" data-video="V86" title="影片連結待填">▶ 影片 V86</a><span>下一步 → <a href="#u5-s5">步驟 5</a></span><a class="lost" href="#u5-b2" data-bk="1">卡在這？看備案 2</a><a class="lost" href="#u5-b3" data-bk="1">卡在這？看備案 3</a><a class="lost" href="#u5-b5" data-bk="1">卡在這？看備案 5</a></div></li>
+<li class="stp" id="u5-s5"><div class="st">請 Claude 做文獻 dashboard 網頁</div><div class="sd">貼第一個提示句。表格加「複製全部 DOI」按鈕。</div><label class="ok"><input type="checkbox" class="stepchk" data-k="u5s5"><span><b>做完的樣子</b>把複製出來的東西貼到記事本，是一行一個 DOI。</span></label><div class="nxt"><a class="vid" data-video="V55" title="影片連結待填">▶ 影片 V55</a><span>下一步 → <a href="#u5-s6">步驟 6</a></span><a class="lost" href="#u5-b4" data-bk="1">卡在這？看備案 4</a><a class="lost" href="#u5-b6" data-bk="1">卡在這？看備案 6</a></div></li>
+<li class="stp" id="u5-s6"><div class="st">請它整理共識、矛盾、缺口，每項標依據檔案</div><div class="sd">貼第二個提示句。</div><label class="ok"><input type="checkbox" class="stepchk" data-k="u5s6"><span><b>做完的樣子</b>每一項都有依據檔名；不確定的它有明說。</span></label><div class="nxt"><a class="vid" data-video="V87" title="影片連結待填">▶ 影片 V87</a><span>下一步 → <a href="#u5-s7">步驟 7</a></span><a class="lost" href="#u5-bk" data-bk="1">其他卡關</a></div></li>
+<li class="stp" id="u5-s7"><div class="st">寫進報告第 4 節與參考文獻</div><div class="sd">貼第三個提示句。參考文獻只放你查證過的；「待查」的列在表格並標明。格式見報告模板。</div><label class="ok"><input type="checkbox" class="stepchk" data-k="u5s7"><span><b>做完的樣子</b>報告.md 的第 4 節有文獻表與共識／矛盾／缺口；參考文獻每條都有 DOI 查證狀態。</span></label><div class="nxt"><a class="vid" data-video="V88" title="影片連結待填">▶ 影片 V88</a><span>做完了 → <a href="#u5-gate">過關檢核</a></span><a class="lost" href="#u5-b6" data-bk="1">卡在這？看備案 6</a></div></li>
+</ol>
+<h3>DOI 查證小練習</h3><div class="card"><p style="margin:0 0 8px;font-size:14px">下面三個 DOI，請你自己貼到 <b>https://doi.org/〈DOI〉</b> 看看，再展開對答案。</p><table class="dtab"><tr><th>DOI</th><th>來源</th></tr><tr><td>10.1080/01449290310001592587</td><td>Hartson（2003）</td></tr><tr><td>10.1145/108844.108856</td><td>Gaver（1991）</td></tr><tr><td>10.9999/fake.0000</td><td>本學習單虛構</td></tr></table><details class="dd"><summary>對答案</summary><div class="body"><div class="qa"><b>10.1080/01449290310001592587</b><span>查得到。題名：Cognitive, physical, sensory, and functional affordances in interaction design（Crossref 11-11 核對）</span></div><div class="qa"><b>10.1145/108844.108856</b><span>查得到。題名：Technology affordances（Crossref 11-11 核對）</span></div><div class="qa"><b>10.9999/fake.0000</b><span>查不到。Crossref 11-11 回 404；doi.org 現場的畫面請以你看到的為準</span></div></div></details></div>
+<div class="report"><div class="rt">本單元寫進報告</div><div class="rs">4 結果（文獻表、共識／矛盾／缺口）與 參考文獻（含 DOI 查證）</div><p>這份文獻回顧「找到了什麼」：文獻表、共識、矛盾、缺口；以及每一條參考文獻的 DOI 是否查證。</p><label class="ok"><input type="checkbox" class="rchk" data-u="5" data-k="u5r"><span><b>做完的樣子</b>第 4 節有文獻表與缺口；參考文獻每條都標「已查證」或「待查」。</span></label></div>
+<h3>可複製的提示句</h3>
+<div class="promptbox"><span class="plabel">文獻 dashboard</span><button class="copybtn" type="button">複製</button><div class="ptxt">請把我資料夾裡的文獻整理成一個 dashboard 網頁，表格欄位：題名、作者、年份、核心結論（一句）、讀取程度、DOI。
+DOI 只能寫文獻本身載明的；找不到就填「待查」，絕對不要猜。
+頁面上加一個「複製全部 DOI」按鈕，每行一個 DOI。</div></div>
+<div class="promptbox"><span class="plabel">共識、矛盾、缺口</span><button class="copybtn" type="button">複製</button><div class="ptxt">請整理這幾份文獻之間的共識、矛盾，以及沒人處理的缺口。每一項都標出依據的檔案；不確定的要說。存成「缺口.md」。</div></div>
+<div class="promptbox"><span class="plabel">寫進報告第 4 節與參考文獻（先給我看）</span><button class="copybtn" type="button">複製</button><div class="ptxt">請依「讀取紀錄.md」「缺口.md」和我剛才在 doi.org 查證的結果（〈把你的查證結果貼在這裡：每個 DOI 已查證或待查〉），幫我起草報告「4 結果」與「參考文獻」。參考文獻只能放我貼給你的、載明 DOI 的條目；沒查證的標「待查」，不要補任何我沒給的 DOI。先給我看，不要存檔。</div></div>
+<p class="note">每個提示句最好開在同一個資料夾的工作階段裡執行；括號〈 〉裡的字換成你自己的。</p>
+<div class="gate" id="u5-gate" data-gate="5"><div class="gt">過關檢核・單元 5（看得到的證據，不是感覺）</div><ul><li><label><input type="checkbox" class="gatechk" data-g="5" data-k="u5g1"><span>每個 DOI 都標了「已查證」或「待查」。</span></label></li><li><label><input type="checkbox" class="gatechk" data-g="5" data-k="u5g2"><span>至少一篇取得全文並記下管道；拿不到的有清單。</span></label></li><li><label><input type="checkbox" class="gatechk" data-g="5" data-k="u5g3"><span>缺口.md 存在，每一項有依據檔名。</span></label></li><li><label><input type="checkbox" class="gatechk" data-g="5" data-k="u5g4"><span>報告.md 第 4 節與參考文獻已寫入。</span></label></li></ul><div class="gs" data-gs="5" data-tot="4">0 / 4　全部勾完才進下一單元；沒過的，回到上面對應步驟或備案。</div></div>
+<details class="dd" id="u5-bk"><summary>卡住了？備案分流（步驟下方的「卡在這」會跳到對應那一條）</summary><div class="body"><div class="qa" id="u5-b1"><b>備案 1　doi.org 跳出來的題名跟表上不一樣</b><span>標「待查」。把兩個題名並排貼在協作紀錄，這就是一個很好的「發現的問題」。</span></div><div class="qa" id="u5-b2"><b>備案 2　校外連不上圖書館資源</b><span>改試 Unpaywall、機構典藏、寫信給作者。大同圖書館的校外代理流程課前待確認。</span></div><div class="qa" id="u5-b3"><b>備案 3　付費牆</b><span>誠實列在「拿不到」清單，不繞路。</span></div><div class="qa" id="u5-b4"><b>備案 4　複製按鈕沒反應</b><span>再按一次，或手動框選複製。</span></div><div class="qa" id="u5-b5"><b>備案 5　有人問 Sci-Hub</b><span>一句話回答：不碰，也不討論。</span></div><div class="qa" id="u5-b6"><b>備案 6　落後</b><span>只做 DOI 查證與一篇全文；dashboard 看講師示範，只複製 DOI。</span></div><div class="qa"><b>以上都不是</b><span>舉手，並在收尾回饋表寫下卡關代碼：A 安裝／登入／裝置　B 授權框看不懂或按錯　C 提示語太模糊　D 不知道怎麼驗收　E 帳號／訂閱／模型選項　F 資料夾、檔案、PDF 讀不到　G 概念看不懂　H 其他</span></div></div></details>
+<div class="self"><div class="stitle">自評三題（只存在你的瀏覽器，講師看不到）</div>
+<div class="sq">我的參考文獻裡，沒有一條是沒查證卻被我當成已查證的。<div class="chips"><label><input type="radio" name="u5q1" value="2" data-k="u5q1"><span>做到了</span></label><label><input type="radio" name="u5q1" value="1" data-k="u5q1"><span>做到一半</span></label><label><input type="radio" name="u5q1" value="0" data-k="u5q1"><span>還沒</span></label></div></div>
+<div class="sq">我至少拿到一篇全文，並且記下了管道；拿不到的有清單。<div class="chips"><label><input type="radio" name="u5q2" value="2" data-k="u5q2"><span>做到了</span></label><label><input type="radio" name="u5q2" value="1" data-k="u5q2"><span>做到一半</span></label><label><input type="radio" name="u5q2" value="0" data-k="u5q2"><span>還沒</span></label></div></div>
+<div class="sq">報告.md 的缺口每一項都有依據的檔名。<div class="chips"><label><input type="radio" name="u5q3" value="2" data-k="u5q3"><span>做到了</span></label><label><input type="radio" name="u5q3" value="1" data-k="u5q3"><span>做到一半</span></label><label><input type="radio" name="u5q3" value="0" data-k="u5q3"><span>還沒</span></label></div></div>
+</div></section>
+<section id="u6" style="--uc:var(--u6)">
+<h2><span class="num">單元 6</span>研究問題、討論、聲明與定稿</h2>
+<div class="where"><span class="dots"><i class="past"></i><i class="past"></i><i class="past"></i><i class="past"></i><i class="past"></i><i class="here"></i></span><span>你在：<b>單元 6 / 6</b>　15:40–16:30</span><span>這節要長出報告：<b>摘要、5 討論與限制、6 AI 使用聲明</b></span><span class="w2">上一單元：DOI 查證、取全文、文獻 dashboard　→　下一步：交出報告、填回饋表</span></div>
+<p class="split">研究問題 10｜討論與限制 8｜摘要與聲明 8｜組裝終檢 8｜分享 8｜收尾 8</p>
+<p class="goal"><b>目標</b>　只依文獻擬研究問題；寫討論與限制、摘要與 AI 使用聲明；逐條終檢；分享成果並收尾。完成一篇投稿格式的 AI 協作報告。</p>
+<div class="warn"><span class="wt">動手前，先知道這些風險</span><ul><li>研究想法若是未發表的，課堂一律用假題目；本報告不收集任何真人資料。</li><li><b>AI 使用聲明由你寫、你負責</b>；Claude 不列為作者。各期刊對 AI 揭露的規定不同，投稿前以該期刊最新規定為準。</li><li>摘要最後寫，且只能放正文裡有的內容。</li><li>終檢時，任何沒有依據的句子，寧可刪掉。</li></ul></div>
+<h3>步驟與驗收句</h3><ol class="steps">
+<li class="stp" id="u6-s1"><div class="st">請它只依文獻擬三個研究問題</div><div class="sd">貼第一個提示句。每個問題要說依據哪份文獻，沒有依據就說明。</div><label class="ok"><input type="checkbox" class="stepchk" data-k="u6s1"><span><b>做完的樣子</b>每個問題都有依據檔名；沒有的它承認沒有。</span></label><div class="nxt"><a class="vid" data-video="V10" title="影片連結待填">▶ 影片 V10</a><a class="vid" data-video="V45" title="影片連結待填">▶ 影片 V45</a><span>下一步 → <a href="#u6-s2">步驟 2</a></span><a class="lost" href="#u6-b1" data-bk="1">卡在這？看備案 1</a></div></li>
+<li class="stp" id="u6-s2"><div class="st">挑最弱的一題，逼它說「依據不足，缺什麼」</div><div class="sd">貼第二個提示句，觀察它是補強還是承認缺口。</div><label class="ok"><input type="checkbox" class="stepchk" data-k="u6s2"><span><b>做完的樣子</b>改寫後依據具體，或它明講缺什麼。把這題放進第 4 節末尾。</span></label><div class="nxt"><a class="vid" data-video="V45" title="影片連結待填">▶ 影片 V45</a><span>下一步 → <a href="#u6-s3">步驟 3</a></span><a class="lost" href="#u6-b1" data-bk="1">卡在這？看備案 1</a></div></li>
+<li class="stp" id="u6-s3"><div class="st">寫「5 討論與限制」</div><div class="sd">至少三條：①本次協作中你抓到 AI 的錯（來自協作紀錄）②AI 做不到、需要人做的事 ③你的研究限制（例如只有 3–5 篇、部分只有摘要）。這一節由你自己動手寫。</div><label class="ok"><input type="checkbox" class="stepchk" data-k="u6s3"><span><b>做完的樣子</b>有三條以上，其中一條有協作紀錄裡的具體例子。</span></label><div class="nxt"><a class="vid" data-video="V67" title="影片連結待填">▶ 影片 V67</a><span>下一步 → <a href="#u6-s4">步驟 4</a></span><a class="lost" href="#u6-bk" data-bk="1">其他卡關</a></div></li>
+<li class="stp" id="u6-s4"><div class="st">寫「摘要」（約 200–300 字）</div><div class="sd">貼第三個提示句請它起草，你改。摘要只放正文裡有的內容。</div><label class="ok"><input type="checkbox" class="stepchk" data-k="u6s4"><span><b>做完的樣子</b>摘要裡每個數字、每個主張，都能在正文找到。</span></label><div class="nxt"><a class="vid" data-video="V89" title="影片連結待填">▶ 影片 V89</a><span>下一步 → <a href="#u6-s5">步驟 5</a></span><a class="lost" href="#u6-b2" data-bk="1">卡在這？看備案 2</a></div></li>
+<li class="stp" id="u6-s5"><div class="st">寫「6 AI 使用聲明」</div><div class="sd">用報告模板後面的聲明範例，改成你實際做的事；工具名稱與版本以你螢幕上看到的為準。</div><label class="ok"><input type="checkbox" class="stepchk" data-k="u6s5"><span><b>做完的樣子</b>聲明寫了：用了什麼、做了什麼、你怎麼驗證、責任由誰負。</span></label><div class="nxt"><a class="vid" data-video="V90" title="影片連結待填">▶ 影片 V90</a><span>下一步 → <a href="#u6-s6">步驟 6</a></span><a class="lost" href="#u6-b3" data-bk="1">卡在這？看備案 3</a></div></li>
+<li class="stp" id="u6-s6"><div class="st">逐條終檢</div><div class="sd">跑下面的「投稿前總檢核表」（格式、AI 使用聲明、引用查證、個資與機密、簡體字）。可以請 Claude 先檢查一輪，但最後勾選的是你。</div><label class="ok"><input type="checkbox" class="stepchk" data-k="u6s6"><span><b>做完的樣子</b>總檢核表都勾，或把沒過的寫在報告末尾「待補」。</span></label><div class="nxt"><a class="vid" data-video="V91" title="影片連結待填">▶ 影片 V91</a><span>下一步 → <a href="#u6-s7">步驟 7</a></span><a class="lost" href="#u6-b4" data-bk="1">卡在這？看備案 4</a></div></li>
+<li class="stp" id="u6-s7"><div class="st">分享：每人一分鐘</div><div class="sd">說一個成果，或一個卡關點。</div><label class="ok"><input type="checkbox" class="stepchk" data-k="u6s7"><span><b>做完的樣子</b>完成一次。</span></label><div class="nxt"><span>下一步 → <a href="#u6-s8">步驟 8</a></span><a class="lost" href="#u6-b4" data-bk="1">卡在這？看備案 4</a></div></li>
+<li class="stp" id="u6-s8"><div class="st">收尾：帶走什麼</div><div class="sd">帶走：CLAUDE.md、報告.md、協作紀錄.md、這份學習單。講師說明費用與用量、課後延伸（連接器、子 session、終端機版，見最後一節）。填回饋表三欄。</div><label class="ok"><input type="checkbox" class="stepchk" data-k="u6s8"><span><b>做完的樣子</b>回饋表交出。</span></label><div class="nxt"><span>做完了 → <a href="#u6-gate">過關檢核</a></span><a class="lost" href="#u6-b4" data-bk="1">卡在這？看備案 4</a></div></li>
+</ol>
+<div class="report"><div class="rt">本單元寫進報告</div><div class="rs">摘要、5 討論與限制、6 AI 使用聲明、4 結果中的研究問題</div><p>報告最後一塊：研究問題、限制、摘要、聲明；然後定稿。</p><label class="ok"><input type="checkbox" class="rchk" data-u="6" data-k="u6r"><span><b>做完的樣子</b>報告十節全部有內容，投稿前總檢核表勾完。</span></label></div>
+<h3>可複製的提示句</h3>
+<div class="promptbox"><span class="plabel">擬研究問題</span><button class="copybtn" type="button">複製</button><div class="ptxt">請只依資料夾裡的文獻與「缺口.md」，擬三個研究問題與各自的依據。每個問題說明依據哪份文獻；沒有依據就明說。告訴我哪些地方你不確定。存成「研究計畫草稿.md」。</div></div>
+<div class="promptbox"><span class="plabel">逼問最弱的一題</span><button class="copybtn" type="button">複製</button><div class="ptxt">請檢查這三個研究問題，挑依據最弱的一題，告訴我缺什麼證據，並改寫成更站得住的版本。依據不足就直接說依據不足，不要補一個看起來合理的。</div></div>
+<div class="promptbox"><span class="plabel">摘要（我再改）</span><button class="copybtn" type="button">複製</button><div class="ptxt">請依報告.md 現在的內容，幫我起草一段 200–300 字的摘要：研究目的、做了什麼、主要發現（只能寫正文有的）、限制。不要加正文沒有的數字或主張。先給我看。</div></div>
+<div class="promptbox"><span class="plabel">請它先幫我終檢一輪（我最後自己勾）</span><button class="copybtn" type="button">複製</button><div class="ptxt">請依下面的檢核表逐條檢查「報告.md」，每一條回答「通過／沒過」，沒過的指出在哪一節、缺什麼。不要自己動手修改報告，只回報。
+（把下面「投稿前總檢核表」貼在這裡）</div></div>
+<p class="note">每個提示句最好開在同一個資料夾的工作階段裡執行；括號〈 〉裡的字換成你自己的。</p>
+<div class="gate" id="u6-gate" data-gate="6"><div class="gt">過關檢核・單元 6（看得到的證據，不是感覺）</div><ul><li><label><input type="checkbox" class="gatechk" data-g="6" data-k="u6g1"><span>研究計畫草稿.md 存在，每個研究問題有依據或明講沒有。</span></label></li><li><label><input type="checkbox" class="gatechk" data-g="6" data-k="u6g2"><span>報告.md 的摘要、第 5 節、第 6 節都有內容。</span></label></li><li><label><input type="checkbox" class="gatechk" data-g="6" data-k="u6g3"><span>投稿前總檢核表已勾完，或把沒過的寫在報告末尾「待補」。</span></label></li><li><label><input type="checkbox" class="gatechk" data-g="6" data-k="u6g4"><span>已完成一次分享，回饋表已交。</span></label></li></ul><div class="gs" data-gs="6" data-tot="4">0 / 4　全部勾完才進下一單元；沒過的，回到上面對應步驟或備案。</div></div>
+<details class="dd" id="u6-bk"><summary>卡住了？備案分流（步驟下方的「卡在這」會跳到對應那一條）</summary><div class="body"><div class="qa" id="u6-b1"><b>備案 1　研究問題太大</b><span>用「一次只問一件事」改寫，並讓它說明這個問題需要什麼資料才能回答。</span></div><div class="qa" id="u6-b2"><b>備案 2　摘要寫出正文沒有的東西</b><span>整句刪掉；摘要最後寫就是為了避免這件事。</span></div><div class="qa" id="u6-b3"><b>備案 3　不確定聲明要寫多細</b><span>寫到別人能重做的程度：用了哪個工具、哪些步驟、你怎麼驗證。</span></div><div class="qa" id="u6-b4"><b>備案 4　時間不夠</b><span>砍分享為 5 分、收尾 8 分不動；終檢留到課後，把沒過的寫在報告末尾「待補」。</span></div><div class="qa" id="u6-b5"><b>備案 5　想繼續做下去</b><span>課後延伸見最後一節；今天以完成這一篇為準。</span></div><div class="qa"><b>以上都不是</b><span>舉手，並在收尾回饋表寫下卡關代碼：A 安裝／登入／裝置　B 授權框看不懂或按錯　C 提示語太模糊　D 不知道怎麼驗收　E 帳號／訂閱／模型選項　F 資料夾、檔案、PDF 讀不到　G 概念看不懂　H 其他</span></div></div></details>
+<div class="self"><div class="stitle">自評三題（只存在你的瀏覽器，講師看不到）</div>
+<div class="sq">報告十節都有內容，而且每一節我都知道是哪一個單元寫的。<div class="chips"><label><input type="radio" name="u6q1" value="2" data-k="u6q1"><span>做到了</span></label><label><input type="radio" name="u6q1" value="1" data-k="u6q1"><span>做到一半</span></label><label><input type="radio" name="u6q1" value="0" data-k="u6q1"><span>還沒</span></label></div></div>
+<div class="sq">我的 AI 使用聲明如實寫出 Claude 做了什麼、我怎麼驗證、責任由我負。<div class="chips"><label><input type="radio" name="u6q2" value="2" data-k="u6q2"><span>做到了</span></label><label><input type="radio" name="u6q2" value="1" data-k="u6q2"><span>做到一半</span></label><label><input type="radio" name="u6q2" value="0" data-k="u6q2"><span>還沒</span></label></div></div>
+<div class="sq">我能說出這篇報告裡，哪一處最需要在投稿前再人工查證。<div class="chips"><label><input type="radio" name="u6q3" value="2" data-k="u6q3"><span>做到了</span></label><label><input type="radio" name="u6q3" value="1" data-k="u6q3"><span>做到一半</span></label><label><input type="radio" name="u6q3" value="0" data-k="u6q3"><span>還沒</span></label></div></div>
+</div></section>
+<section id="tpl" style="--uc:var(--accent)"><h2><span class="num" style="background:var(--accent)">附錄 A</span>投稿格式報告模板</h2><p class="sub">十節順序：題目、摘要、關鍵詞、前言與文獻回顧、方法、AI 協作過程與紀錄、結果、討論與限制、AI 使用聲明、參考文獻（含 DOI 查證）。可整份複製，貼進「報告.md」。</p>
+<div class="promptbox"><span class="plabel">報告模板（Markdown）</span><button class="copybtn" type="button">複製</button><div class="ptxt"># 〈題目：寫你自己選定的題目〉
+（作者：〈姓名〉　單位：〈單位〉　日期：2026-11-16）
+
+## 摘要
+〈約 200–300 字：研究目的、做了什麼、主要發現、限制。只放正文有的內容。〉
+
+## 關鍵詞
+〈3–5 個，以頓號分隔〉
+
+## 1 前言與文獻回顧
+〈三段：研究背景；已有文獻怎麼說（每句標出處）；尚未處理的缺口。〉
+〈末尾一句：本文共納入 N 份文獻，其中全文 N、僅摘要 N、影像辨識 N、未讀 N。〉
+
+## 2 方法
+### 2.1 資料來源與邊界
+〈放進資料夾的檔案清單；沒有放的資料類型（個資、未發表稿、受訪者資料、學生名單）。〉
+### 2.2 讀取程度標準
+〈全文／僅摘要／影像辨識（需抽查）／未讀的定義。〉
+### 2.3 AI 協作設定
+〈使用的工具與版本；模式（手動）；規則檔重點。〉
+
+## 3 AI 協作過程與紀錄
+〈規則、任務檔如何拆步驟與驗收句、跨工作階段如何接續。〉
+| 單元 | 我下的提示（摘要） | Claude 做了什麼 | 我怎麼驗證 | 發現的問題與修正 |
+|---|---|---|---|---|
+| 1 | | | | |
+
+## 4 結果
+### 4.1 文獻表
+〈題名、作者、年份、核心結論、讀取程度、DOI 查證狀態。〉
+### 4.2 共識、矛盾與缺口
+〈每一項標依據檔案。〉
+### 4.3 研究問題與計畫草稿
+〈三個研究問題；每個說明依據；依據不足的明說。〉
+
+## 5 討論與限制
+〈至少三條：本次協作中抓到的 AI 錯誤（附協作紀錄例子）；AI 做不到而需人做的事；研究本身的限制。〉
+
+## 6 AI 使用聲明
+〈見「AI 使用聲明範例」，改成你實際做的事。〉
+
+## 參考文獻（含 DOI 查證）
+〈只放你查證過的；格式依投稿期刊調整。每條後面加：[DOI 查證：已查證／待查，日期，來源]〉
+</div></div>
+<h3>參考文獻格式範例（三筆都用 Crossref 於 2026-11-11 核對過）</h3><p class="note" style="margin-top:0">只示範格式與 DOI 查證標記；不代表這三篇對你的題目已經讀完。格式請依投稿期刊規定調整。</p>
+<div class="ref">Braun, V., &amp; Clarke, V. (2006). Using thematic analysis in psychology. Qualitative Research in Psychology, 3(2), 77–101. https://doi.org/10.1191/1478088706qp063oa<em>[DOI 查證：已查證，2026-11-11，Crossref]</em></div>
+<div class="ref">Gaver, W. W. (1991). Technology affordances. In Proceedings of the SIGCHI Conference on Human Factors in Computing Systems (pp. 79–84). ACM. https://doi.org/10.1145/108844.108856<em>[DOI 查證：已查證，2026-11-11，Crossref；論文集全名依 Crossref 登錄，請依期刊規定調整]</em></div>
+<div class="ref">Hartson, R. (2003). Cognitive, physical, sensory, and functional affordances in interaction design. Behaviour &amp; Information Technology, 22(5), 315–338. https://doi.org/10.1080/01449290310001592587<em>[DOI 查證：已查證，2026-11-11，Crossref；作者名依 Crossref 登錄]</em></div>
+</section>
+<section id="decl" style="--uc:var(--accent)"><h2><span class="num" style="background:var(--accent)">附錄 B</span>AI 使用聲明範例</h2><p class="sub">這是範例，要改成「你實際做的事」。不確定的寫「待確認」，不要寫沒做過的。</p>
+<div class="promptbox"><span class="plabel">AI 使用聲明（範例）</span><button class="copybtn" type="button">複製</button><div class="ptxt">本報告於 2026 年 11 月 16 日的工作坊中，使用 Anthropic 的 Claude（桌面版「程式碼」分頁，模式：手動；模型名稱與版本：〈填入畫面顯示的名稱〉）協助下列工作：
+（1）讀取我放進資料夾的 N 份文獻，並製作讀取紀錄表；
+（2）起草前言與文獻回顧、共識／矛盾／缺口的初稿；
+（3）製作文獻 dashboard，並協助起草研究問題。
+AI 起草的內容，均由我逐句對照原文；與原文不符者已改寫或刪除（見「3 AI 協作過程與紀錄」之協作紀錄）。前言與文獻回顧中，有〈N〉句由我改寫。
+所有 DOI 均由我於 doi.org 逐一查證，未查證者標示「待查」，未納入引用。
+研究問題與結論由作者決定，作者對全文內容負責；Claude 不列為作者。
+本報告未將個人資料、未發表稿或受訪者資料提供給 AI。</div></div>
+<div class="tipbox"><b>寫聲明的三個要點：</b>①用了什麼工具、哪個版本、哪種模式 ②它做了什麼、你做了什麼（特別是驗證）③責任誰負（作者）。各期刊的揭露規定不同，投稿前以該期刊最新規定為準。</div></section>
+<section id="fin" style="--uc:var(--accent)"><h2><span class="num" style="background:var(--accent)">附錄 C</span>投稿前總檢核表</h2><p class="sub">五類：格式、AI 使用聲明、引用查證、個資與機密、簡體字。全部勾完才算可以投稿；沒過的寫在報告末尾「待補」。　完成 <b id="fin-n">0 / 0</b></p>
+<div class="fgrp">格式</div><ul class="chk">
+<li><input type="checkbox" class="fin" data-k="fin1"><span>十節標題齊全、順序與模板相同（題目、摘要、關鍵詞在最前）。</span></li>
+<li><input type="checkbox" class="fin" data-k="fin2"><span>摘要 200–300 字，只含正文有的內容；關鍵詞 3–5 個。</span></li>
+<li><input type="checkbox" class="fin" data-k="fin3"><span>用 Markdown 預覽或貼進 Word 看過，標題層級與表格沒有跑掉。</span></li>
+<li><input type="checkbox" class="fin" data-k="fin4"><span>參考文獻格式一致，並已對照目標期刊的格式規定。</span></li>
+</ul>
+<div class="fgrp">AI 使用聲明</div><ul class="chk">
+<li><input type="checkbox" class="fin" data-k="fin5"><span>寫了用的工具、版本與模式（手動）。</span></li>
+<li><input type="checkbox" class="fin" data-k="fin6"><span>寫了 Claude 做了什麼、我做了什麼，以及我怎麼驗證。</span></li>
+<li><input type="checkbox" class="fin" data-k="fin7"><span>寫明責任由作者負，Claude 不列為作者。</span></li>
+<li><input type="checkbox" class="fin" data-k="fin8"><span>已對照目標期刊最新的 AI 揭露規定。</span></li>
+</ul>
+<div class="fgrp">引用查證</div><ul class="chk">
+<li><input type="checkbox" class="fin" data-k="fin9"><span>每一條參考文獻都標了 DOI 查證狀態（已查證／待查），沒有未查證的被當成已查證。</span></li>
+<li><input type="checkbox" class="fin" data-k="fin10"><span>前言與文獻回顧每個論斷都有出處；沒有依據的句子已刪。</span></li>
+<li><input type="checkbox" class="fin" data-k="fin11"><span>讀取程度如實寫：只讀摘要的沒有寫成全文。</span></li>
+<li><input type="checkbox" class="fin" data-k="fin12"><span>協作紀錄每一列的「我怎麼驗證」都是我自己寫的，且有抽查結果。</span></li>
+</ul>
+<div class="fgrp">個資與機密</div><ul class="chk">
+<li><input type="checkbox" class="fin" data-k="fin13"><span>整份檔案沒有個人資料、受訪者資料、學生名單。</span></li>
+<li><input type="checkbox" class="fin" data-k="fin14"><span>沒有未發表稿或他人尚未公開的內容。</span></li>
+<li><input type="checkbox" class="fin" data-k="fin15"><span>沒有密碼、金鑰、token，也沒有開啟任何分享連結。</span></li>
+<li><input type="checkbox" class="fin" data-k="fin16"><span>虛構的題目或資料，已在報告裡明講是虛構。</span></li>
+</ul>
+<div class="fgrp">簡體字</div><ul class="chk">
+<li><input type="checkbox" class="fin" data-k="fin17"><span>全文是繁體中文，用語依臺灣用法（軟體、網路、資料、品質）。</span></li>
+<li><input type="checkbox" class="fin" data-k="fin18"><span>已請 Claude 掃過一輪簡體字並列出位置，我逐一確認改掉。</span></li>
+<li><input type="checkbox" class="fin" data-k="fin19"><span>引用的簡體原文（書名、逐字稿）若要保留，已標「原文照錄」。</span></li>
+</ul>
+<div class="promptbox"><span class="plabel">請 Claude 先掃一輪簡體字（你再逐一確認）</span><button class="copybtn" type="button">複製</button><div class="ptxt">請檢查「報告.md」全文，列出所有簡體中文字或大陸用語，每一處寫出所在的小節與建議改成的臺灣用法。只列出，不要自己修改檔案。若有我標明「原文照錄」的引用，請跳過。</div></div>
+<p class="note">這是自我檢查，不計分，不繳交。</p></section>
+
+<section id="after" style="--uc:var(--accent)"><h2><span class="num" style="background:var(--accent)">課後</span>想繼續走下去</h2><p class="sub">這些今天不在六小時內做，只需要知道有。</p>
+<details class="dd"><summary>連接器（Gmail 只存草稿）</summary><div class="body"><p style="font-size:14px;margin:6px 0">要先把所有會對外送出的工具（寄信、回信、轉寄）設為「封鎖」，模式維持「手動」，並自己回信箱確認草稿匣與寄件匣。課堂不實作，講師口述。</p></div></details>
+<details class="dd"><summary>子 session（把大任務分出去）</summary><div class="body"><p style="font-size:14px;margin:6px 0">一件事變大時，分出去做、主對話保持乾淨。做完要抽查，不要直接相信「完成」；封存不是刪除。</p></div></details>
+<details class="dd"><summary>終端機版 Claude Code</summary><div class="body"><p style="font-size:14px;margin:6px 0">命令列版需要 Git 與 PowerShell，今天不用；做法見 11-10 版學習單附錄。</p></div></details>
+<details class="dd"><summary>課後把報告再推一步</summary><div class="body"><p style="font-size:14px;margin:6px 0">補全文、補缺的 DOI、請同儕當「挑錯人」，再依目標期刊改格式與揭露規定。</p></div></details>
+</section>
+<div class="foot">大同學習單成品 v8（草稿）· 2026-11-11 · 介面文字依 2026-11-10 在兩台 Windows 筆電上的實錄；標「待實測」或「當場帶」的部分尚無實錄。</div>
+</div><script>
+(function(){
+  var KEY='dt-ws-v8-1116';
+  var st={},tk=KEY+'-t',tt={},canStore=true;
+  try{st=JSON.parse(localStorage.getItem(KEY)||'{}')||{};tt=JSON.parse(localStorage.getItem(tk)||'{}')||{}}catch(e){st={};tt={};canStore=false}
+  try{localStorage.setItem(KEY+'-probe','1');localStorage.removeItem(KEY+'-probe')}catch(e){canStore=false}
+  if(!canStore){var nb=document.getElementById('nostore');if(nb)nb.style.display='block'}
+  function save(){try{localStorage.setItem(KEY,JSON.stringify(st))}catch(e){canStore=false;var nb=document.getElementById('nostore');if(nb)nb.style.display='block'}}
+  function saveT(){try{localStorage.setItem(tk,JSON.stringify(tt))}catch(e){}}
+  var boxes=[].slice.call(document.querySelectorAll('input[data-k]'));
+  boxes.forEach(function(b){
+    var k=b.getAttribute('data-k');
+    if(b.type==='radio'){ if(st[b.name]===b.value) b.checked=true; }
+    else if(st[k]) b.checked=true;
+    b.addEventListener('change',function(){
+      if(b.type==='radio') st[b.name]=b.value; else st[k]=b.checked?1:0;
+      save();upd();
+    });
+  });
+  function upd(){
+    var cs=[].slice.call(document.querySelectorAll('input.stepchk,input.gatechk,input.fin'));
+    var d=cs.filter(function(x){return x.checked}).length;
+    document.getElementById('pn').textContent=d;
+    document.getElementById('pt').textContent=cs.length;
+    document.getElementById('pf').style.width=(cs.length?100*d/cs.length:0)+'%';
+    cs.forEach(function(x){var li=x.closest('li');if(li&&li.classList.contains('stp'))li.classList.toggle('done',x.checked)});
+    [].slice.call(document.querySelectorAll('input.rchk')).forEach(function(x){
+      var u=x.getAttribute('data-u');
+      [].slice.call(document.querySelectorAll('.cell[data-u="'+u+'"]')).forEach(function(c){c.classList.toggle('on',x.checked)});
+    });
+    [].slice.call(document.querySelectorAll('.gate')).forEach(function(g){
+      var n=g.getAttribute('data-gate'),all=g.querySelectorAll('input.gatechk'),dn=g.querySelectorAll('input.gatechk:checked').length;
+      var gs=g.querySelector('.gs');g.classList.toggle('pass',dn===all.length);
+      gs.textContent=(dn===all.length)?('過關：單元 '+n+' 的證據都齊了 ✓'):(dn+' / '+all.length+'　全部勾完才進下一單元；沒過的，回到上面對應步驟或備案。');
+    });
+    (function(){var host=document.getElementById('uprog');if(!host)return;
+      var secs=[['pre','開始前'],['u1','單元 1'],['u2','單元 2'],['u3','單元 3'],['u4','單元 4'],['u5','單元 5'],['u6','單元 6'],['fin','總檢核']];
+      var cum=0,cumT=0,html='';
+      secs.forEach(function(s,i){var sec=document.getElementById(s[0]);if(!sec)return;
+        var all=[].slice.call(sec.querySelectorAll('input.stepchk,input.gatechk,input.fin'));
+        var d=all.filter(function(x){return x.checked}).length;cum+=d;cumT+=all.length;
+        var uc=(s[0].charAt(0)==='u')?'var(--'+s[0]+')':'var(--accent)';
+        html+='<div class="urow'+(all.length&&d===all.length?' done':'')+'" style="--uc:'+uc+'"><span class="un">'+s[1]+'</span><span class="ub"><i style="width:'+(all.length?100*d/all.length:0)+'%"></i></span><span class="ur">'+d+' / '+all.length+'</span><span class="uc">累計 '+cum+' / '+cumT+'</span></div>';
+      });host.innerHTML=html})();
+    var se=document.getElementById('secn');if(se){var sn=0;[].slice.call(document.querySelectorAll('.cell')).forEach(function(c){if(c.classList.contains('on'))sn++});se.textContent=sn}
+    var c2=[].slice.call(document.querySelectorAll('input.fin'));
+    var f=c2.filter(function(x){return x.checked}).length;
+    var fe=document.getElementById('fin-n'); if(fe) fe.textContent=f+' / '+c2.length;
+  }
+  (function(){var pc=document.getElementById('pcard');if(!pc)return;var K=KEY+'-pcard';
+    try{if(localStorage.getItem(K)==='0')pc.removeAttribute('open')}catch(e){}
+    pc.addEventListener('toggle',function(){try{localStorage.setItem(K,pc.open?'1':'0')}catch(e){}})})();
+  upd();
+  var MARK=['','✓','卡','追'];
+  function sums(){for(var c=1;c<=6;c++){var ok=0,sk=0;[].slice.call(document.querySelectorAll('#ptb button[data-c="'+c+'"]')).forEach(function(b){var v=b.getAttribute('data-s');if(v==='1')ok++;if(v==='2'||v==='3')sk++});
+    var a=document.querySelector('[data-sum="'+c+'"]'),d=document.querySelector('[data-stuck="'+c+'"]');if(a)a.textContent=ok;if(d)d.textContent=sk}}
+  [].slice.call(document.querySelectorAll('#ptb [data-t]')).forEach(function(el){
+    var k=el.getAttribute('data-t');
+    if(el.tagName==='INPUT'){if(tt[k])el.value=tt[k];el.addEventListener('input',function(){tt[k]=el.value;saveT()})}
+    else{var v=tt[k]||'0';el.setAttribute('data-s',v);el.textContent=MARK[+v];
+      el.addEventListener('click',function(){var n=((+el.getAttribute('data-s'))+1)%4;el.setAttribute('data-s',n);el.textContent=MARK[n];tt[k]=String(n);saveT();sums()})}
+  });
+  sums();
+  [].slice.call(document.querySelectorAll('a.lost')).forEach(function(a){
+    a.addEventListener('click',function(ev){
+      var id=a.getAttribute('href').slice(1),t=document.getElementById(id);if(!t)return;
+      var d=t.closest('details')||t;if(d.tagName==='DETAILS')d.open=true;
+      ev.preventDefault();t.scrollIntoView({behavior:'smooth',block:'center'});
+      t.classList.remove('flash');void t.offsetWidth;t.classList.add('flash');
+    });
+  });
+  [].slice.call(document.querySelectorAll('.copybtn')).forEach(function(btn){
+    btn.addEventListener('click',function(){
+      var t=btn.parentNode.querySelector('.ptxt');if(!t)return;
+      var txt=t.textContent;
+      function ok(){var o=btn.textContent;btn.textContent='已複製';setTimeout(function(){btn.textContent=o},1400)}
+      function fb(){var ta=document.createElement('textarea');ta.value=txt;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();try{document.execCommand('copy');ok()}catch(e){btn.textContent='請手動複製'}document.body.removeChild(ta)}
+      if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(ok,fb)}else fb();
+    });
+  });
+  var tb=document.getElementById('tb');
+  if('IntersectionObserver' in window){
+    var links={};[].slice.call(tb.querySelectorAll('a')).forEach(function(a){links[a.getAttribute('href').slice(1)]=a});
+    var io=new IntersectionObserver(function(es){es.forEach(function(en){
+      if(en.isIntersecting){[].slice.call(tb.querySelectorAll('a')).forEach(function(a){a.classList.remove('on')});
+        var a=links[en.target.id];if(a){a.classList.add('on');try{a.scrollIntoView({block:'nearest',inline:'center'})}catch(e){}}}
+    })},{rootMargin:'-20% 0px -70% 0px'});
+    [].slice.call(document.querySelectorAll('section[id]')).forEach(function(s){io.observe(s)});
+  }
+  var root=document.documentElement;
+  try{var th=localStorage.getItem(KEY+'-theme');if(th)root.setAttribute('data-theme',th)}catch(e){}
+  document.getElementById('theme').addEventListener('click',function(){
+    var cur=root.getAttribute('data-theme');
+    var dark=cur?cur==='dark':window.matchMedia('(prefers-color-scheme: dark)').matches;
+    var nx=dark?'light':'dark';root.setAttribute('data-theme',nx);
+    try{localStorage.setItem(KEY+'-theme',nx)}catch(e){}
+  });
+  document.getElementById('reset').addEventListener('click',function(){
+    if(!confirm('清除這個瀏覽器裡的勾選與自評？（只影響你自己）'))return;
+    st={};save();boxes.forEach(function(b){b.checked=false});upd();
+  });
+})();
+</script><script>window.TA_CFG={"db": "https://gen-lang-client-0556836042-default-rtdb.asia-southeast1.firebasedatabase.app", "sess": "DT-20261116", "waitSec": 45, "auth": {"apiKey": "AIzaSyDD0t3h27gEkfNhdbiTqu4cqn2YAU3LaLg", "authDomain": "gen-lang-client-0556836042.firebaseapp.com", "projectId": "gen-lang-client-0556836042", "sdk": "10.12.2"}};</script>
+<style id="ta-style">
+.askbtn{font:inherit;font-size:12.5px;font-weight:600;color:var(--accent);background:var(--accent-soft);border:1px solid var(--accent2);border-radius:99px;padding:3px 11px;cursor:pointer}
+.askbtn:hover{filter:brightness(.96)}
+.askbtn:focus-visible,#ta-fab:focus-visible,#ta-panel button:focus-visible,#ta-panel textarea:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+#ta-fab{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:60;font:inherit;font-weight:700;font-size:14px;color:var(--onbrand);background:var(--accent);border:0;border-radius:99px;padding:11px 18px;box-shadow:var(--shadow);cursor:pointer}
+#ta-panel{position:fixed;right:16px;bottom:calc(68px + env(safe-area-inset-bottom,0px));z-index:61;width:min(400px,calc(100vw - 32px));max-height:min(78vh,640px);display:none;flex-direction:column;background:var(--surface);color:var(--ink);border:1px solid var(--hair);border-radius:14px;box-shadow:var(--shadow);font-family:var(--sans)}
+#ta-panel.open{display:flex}
+#ta-panel header{display:flex;align-items:center;gap:8px;padding:11px 14px;border-bottom:1px solid var(--hair)}
+#ta-panel header b{font-size:15px}
+#ta-panel header .ctx{font-size:12px;color:var(--muted);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#ta-x{font:inherit;background:none;border:0;color:var(--muted);font-size:20px;line-height:1;cursor:pointer;padding:2px 6px}
+#ta-login{display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid var(--hair);font-size:13px}
+#ta-login[hidden]{display:none}
+#ta-signin{font:inherit;font-weight:700;font-size:13px;color:var(--onbrand);background:var(--accent);border:0;border-radius:8px;padding:6px 12px;cursor:pointer}
+#ta-who{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+#ta-body{padding:12px 14px;overflow:auto;flex:1;min-height:90px;font-size:14px;line-height:1.65}
+#ta-body .rule{font-size:12.5px;color:var(--muted);margin:0 0 8px}
+#ta-body .msg{margin:0 0 10px;padding:9px 11px;border-radius:10px;white-space:pre-wrap;overflow-wrap:anywhere}
+#ta-body .me{background:var(--surface2)}
+#ta-body .ai{background:var(--accent-soft);border-left:4px solid var(--accent)}
+#ta-body .ai .vf{display:block;margin-top:7px;font-size:12.5px;font-weight:700;color:var(--warn)}
+#ta-body .err{background:color-mix(in srgb,var(--warn) 12%,var(--surface));border-left:4px solid var(--warn)}
+#ta-form{padding:10px 14px 12px;border-top:1px solid var(--hair)}
+#ta-q{width:100%;min-height:60px;max-height:140px;resize:vertical;font:inherit;font-size:14px;color:var(--ink);background:var(--bg);border:1px solid var(--hair);border-radius:8px;padding:8px 10px}
+#ta-form .row{display:flex;align-items:center;gap:8px;margin-top:8px}
+#ta-form .cnt{font-size:12px;color:var(--muted);flex:1}
+#ta-send{font:inherit;font-weight:700;font-size:13.5px;color:var(--onbrand);background:var(--accent);border:0;border-radius:8px;padding:7px 16px;cursor:pointer}
+#ta-send[disabled]{opacity:.5;cursor:default}
+@media(max-width:480px){#ta-panel{right:8px;left:8px;width:auto;bottom:calc(64px + env(safe-area-inset-bottom,0px))}}
+</style>
+<button id="ta-fab" type="button" aria-expanded="false" aria-controls="ta-panel">問助教</button>
+<div id="ta-panel" role="dialog" aria-label="AI 助教">
+<header><b>AI 助教</b><span class="ctx" id="ta-ctx"></span><button id="ta-x" type="button" aria-label="關閉助教">×</button></header>
+<div id="ta-login" hidden><button type="button" id="ta-signin">用 Google 登入</button><span id="ta-who"></span></div>
+<div id="ta-body"><p class="rule">只回答這份學習單和 Claude 桌面版的操作。不會幫你寫報告，也不會給 DOI。每個答案都要你自己對照畫面或原文驗證。</p></div>
+<form id="ta-form"><textarea id="ta-q" maxlength="300" placeholder="卡在哪一步？看到什麼畫面？（不要貼帳號、密碼、個資）"></textarea>
+<div class="row"><span class="cnt" id="ta-cnt">0 / 300　今天剩 <span id="ta-left">15</span> 次</span><button id="ta-send" type="submit">送出</button></div></form>
+</div>
+<script id="ta-script">
+(function(){
+  var TA={endpoint:'',dayLimit:15,maxQ:300};
+  var SYS='你是「大同大學博士班設計學特論工作營」學習單的 AI 助教。學習單主題：用 Claude 桌面版（程式碼分頁）完成一篇 AI 協作報告，共六個單元：1 安裝與第一次對話、2 讓 Claude 讀資料夾、3 規則檔／任務檔／進度檔、4 讀文獻：讀取程度與出處、5 DOI 查證與文獻 dashboard、6 研究問題與總檢核。\n你只回答兩類問題：（一）這份學習單某一步怎麼做、卡住怎麼辦；（二）Claude 桌面版的操作。其他問題（寫整份報告、論文內容、與課程無關的事、帳號密碼金鑰）一律婉拒，並請學員舉手問講師。\n硬性規則：1.一律繁體中文，台灣用語，短句，先給下一步動作，不超過 200 字，不用 markdown 符號。2.不替學員寫整份報告或整段正文，最多給句型或檢查清單。3.絕不編造 DOI、作者、年份、論文標題或網址；不確定就請學員到 doi.org 或出版商頁自己查。4.不要求也不接受帳號、密碼、金鑰、含個資的內容，看到就提醒移除。5.版本、按鈕名稱、費用、政策會變，要說「以你畫面上實際看到的為準」。6.最後一行固定寫：「這個答案請你自己驗證一次（對照畫面或原文），我可能說錯。」7.學員問「可以直接用／直接貼進報告／這樣對嗎」這類問題時，不要替他判斷，也不要說「可以直接用」；一律先說「先自己對照原文或畫面驗證，再用」，再依教材說這一步怎麼驗證。8.回答至少包含：下一步動作一句、依據教材的哪一步或備案；有影片可看才指到影片。';
+  var VF='這個答案請你自己驗證一次（對照畫面或原文），我可能說錯。';
+  var $=function(id){return document.getElementById(id)};
+  var store={get:function(k){try{return localStorage.getItem(k)}catch(e){return null}},set:function(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+  var sid=store.get('dt-ws-v9-sid');if(!sid){sid=Math.random().toString(36).slice(2,10)+Math.random().toString(36).slice(2,8);store.set('dt-ws-v9-sid',sid)}
+  var today=new Date().toISOString().slice(0,10),dk='dt-ws-v9-ask-'+today;
+  function used(){return parseInt(store.get(dk)||'0',10)||0}
+  function left(){return Math.max(0,TA.dayLimit-used())}
+  /* ---- 匿名事件：只記「哪個單元、哪一步、次數、字數」，不記姓名與提問全文 ---- */
+  var db=null,sample=null,queue=[],dbTried=false;
+  var AUTH=null,TOK='',CFG=window.TA_CFG||null,RT=(CFG&&CFG.db)?CFG.db.replace(/\/$/,'')+'/ta/'+CFG.sess:null;
+  function unitOf(el){var s=el&&el.closest?el.closest('section[id]'):null;return s?s.id:'top'}
+  function emit(ev){ev.t=Date.now();ev.sid=sid;queue.push(ev);flush()}
+  function qs(){return TOK?('?auth='+encodeURIComponent(TOK)):''}
+  function flush(){if(RT){if(CFG.auth&&!TOK){if(queue.length>200)queue.splice(0,queue.length-200);return}while(queue.length){var e=queue.shift();try{fetch(RT+'/ev.json'+qs(),{method:'POST',body:JSON.stringify(e),keepalive:true}).catch(function(){})}catch(x){}}return}if(!db){return}while(queue.length){var ev=queue.shift();try{db.collection('ev').add(ev).catch(function(){})}catch(e){}}}
+  (async function(){
+    try{if(!RT&&window.claude&&claude.use){db=await claude.use('db');sample=await claude.use('sample')}}catch(e){}
+    window.__taState={db:!!db,sample:!!sample,rtdb:!!RT};
+    flush();
+    emit({type:'open',unit:'top'});
+  })();
+  function loadJs(u){return new Promise(function(ok,no){var s=document.createElement('script');s.src=u;s.onload=ok;s.onerror=no;document.head.appendChild(s)})}
+  async function initAuth(){
+    if(!(CFG&&CFG.auth))return;
+    $('ta-login').hidden=false;$('ta-who').textContent='尚未登入';
+    try{
+      var v=CFG.auth.sdk||'10.12.2';
+      await loadJs('https://www.gstatic.com/firebasejs/'+v+'/firebase-app-compat.js');await loadJs('https://www.gstatic.com/firebasejs/'+v+'/firebase-auth-compat.js');
+      firebase.initializeApp({apiKey:CFG.auth.apiKey,authDomain:CFG.auth.authDomain,projectId:CFG.auth.projectId});AUTH=firebase.auth();
+      AUTH.onAuthStateChanged(async function(u){
+        if(u){TOK=await u.getIdToken();sid=u.uid;$('ta-who').textContent=u.email||'已登入';$('ta-signin').textContent='登出';flush();emit({type:'open',unit:'top'})}
+        else{TOK='';$('ta-who').textContent='尚未登入';$('ta-signin').textContent='用 Google 登入'}
+      });
+      setInterval(async function(){var u=AUTH.currentUser;if(u)TOK=await u.getIdToken()},50*60*1000);
+      $('ta-signin').addEventListener('click',function(){if(AUTH.currentUser)AUTH.signOut();else AUTH.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(function(e){add('err','登入沒有完成：'+(e&&e.code||'')+'。若是被瀏覽器擋住彈出視窗，請允許後再按一次。')})})
+    }catch(e){$('ta-who').textContent='登入功能載入失敗（網路？）'}
+  }
+  initAuth();
+  [].slice.call(document.querySelectorAll('input.stepchk,input.gatechk,input.fin')).forEach(function(b){
+    b.addEventListener('change',function(){
+      var cls=b.classList.contains('gatechk')?'gate':(b.classList.contains('fin')?'fin':'step');
+      emit({type:cls,unit:unitOf(b),key:b.getAttribute('data-k')||'',on:b.checked?1:0});
+    });
+  });
+  [].slice.call(document.querySelectorAll('a.lost')).forEach(function(a){
+    a.addEventListener('click',function(){var li=a.closest('li.stp');emit({type:'stuck',unit:unitOf(a),key:li?li.id:''})});
+  });
+  /* ---- 每個步驟旁的「問助教」鈕 ---- */
+  var ctx={unit:'',step:'',done:''};
+  function setCtx(el){
+    var sec=el.closest('section[id]');var h=sec&&sec.querySelector('h2');
+    var li=el.closest('li.stp');
+    ctx.unit=h?h.textContent.replace(/\s+/g,' ').trim():'';
+    ctx.step=li&&li.querySelector('.st')?li.querySelector('.st').textContent.trim():'';
+    var ok=li&&li.querySelector('label.ok span');ctx.done=ok?ok.textContent.trim():'';
+    ctx.id=li?li.id:'';ctx.u=sec?sec.id:'top';
+    $('ta-ctx').textContent=ctx.step?(ctx.unit+'・'+ctx.step):(ctx.unit||'');
+  }
+  [].slice.call(document.querySelectorAll('li.stp .nxt')).forEach(function(n){
+    var b=document.createElement('button');b.type='button';b.className='askbtn';b.textContent='問助教';
+    b.addEventListener('click',function(){setCtx(b);open(true);emit({type:'open',unit:unitOf(b),key:b.closest('li.stp').id});$('ta-q').focus()});
+    n.appendChild(b);
+  });
+  function open(on){$('ta-panel').classList.toggle('open',on);$('ta-fab').setAttribute('aria-expanded',on?'true':'false');if(on)$('ta-left').textContent=left()}
+  $('ta-fab').addEventListener('click',function(){var on=!$('ta-panel').classList.contains('open');if(on){var cur=document.querySelector('.tabs a.on');var t=cur?document.getElementById(cur.getAttribute('href').slice(1)):null;if(t&&!ctx.step)setCtx(t.querySelector('li.stp')||t)}open(on)});
+  $('ta-x').addEventListener('click',function(){open(false)});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')open(false)});
+  $('ta-q').addEventListener('input',function(){$('ta-cnt').firstChild.nodeValue=$('ta-q').value.length+' / '+TA.maxQ+'　今天剩 '});
+  function add(cls,text,vf){var d=document.createElement('div');d.className='msg '+cls;d.textContent=text;if(vf){var s=document.createElement('span');s.className='vf';s.textContent=VF;d.appendChild(s)}$('ta-body').appendChild(d);$('ta-body').scrollTop=1e9;return d}
+  function buildPrompt(q){
+    return SYS+'\n\n[學員目前位置] '+(ctx.unit||'未指定')+(ctx.step?'；步驟：'+ctx.step:'')+(ctx.done?'；這步做完的樣子：'+ctx.done:'')+'\n[學員問題] '+q;
+  }
+  function clean(t){t=String(t||'').replace(/\*\*|__|`{1,3}/g,'').trim();var i=t.indexOf(VF);return i>=0?t.slice(0,i).trim():t}
+  function sleep(ms){return new Promise(function(r){setTimeout(r,ms)})}
+  async function askRtdb(q){
+    if(CFG.auth&&!TOK){var le=new Error('login');le.shown='請先用 Google 登入（面板上方的按鈕），才能使用助教。';le.code='login';throw le}
+    var body={t:Date.now(),q:q,ctx:{id:ctx.id||'',u:ctx.u||'',unit:ctx.unit,step:ctx.step}};
+    var r=await fetch(RT+'/q/'+sid+'.json'+qs(),{method:'POST',body:JSON.stringify(body)});
+    if(r.status===401||r.status===403){var ne=new Error('notlisted');ne.shown='你的 Gmail 不在名單內，或登入已過期。請重新登入，仍不行就舉手問講師。';ne.code='notlisted';throw ne}
+    if(!r.ok)throw {code:'http_'+r.status};
+    var key=(await r.json()).name;
+    for(var i=0;i<(CFG.waitSec||45)/1.5;i++){
+      await sleep(1500);
+      var g=await fetch(RT+'/a/'+sid+'/'+key+'.json'+qs());
+      if(!g.ok)continue;var a=await g.json();
+      if(a){if(a.ok)return {text:a.text,src:'gemini'};var e=new Error(a.text||'denied');e.shown=a.text;e.code=a.err;throw e}
+    }
+    throw {code:'timeout'};
+  }
+  async function ask(q){
+    if(RT)return askRtdb(q);
+    if(TA.endpoint){
+      var r=await fetch(TA.endpoint,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({sid:sid,unit:ctx.u,step:ctx.id,q:q,ctx:{unit:ctx.unit,step:ctx.step}})});
+      if(!r.ok)throw {code:'http_'+r.status};var j=await r.json();return {text:j.text,src:'gemini'}
+    }
+    if(sample){var a=await sample(buildPrompt(q),{modelTier:'quick',cache:false});return {text:a.text,src:'claude'}}
+    throw {code:'no_backend'};
+  }
+  $('ta-form').addEventListener('submit',async function(ev){
+    ev.preventDefault();
+    var q=$('ta-q').value.trim();if(!q)return;
+    if(left()<=0){add('err','今天的提問次數用完了（每人每天 '+TA.dayLimit+' 次）。請舉手問講師。');return}
+    $('ta-send').disabled=true;add('me',q);$('ta-q').value='';$('ta-cnt').firstChild.nodeValue='0 / '+TA.maxQ+'　今天剩 ';
+    var wait=add('ai','助教想一下…');
+    var res=null,ok=false,src='none',lastErr=null;
+    try{res=await ask(q);ok=true;src=res.src}catch(e){ok=false;lastErr=e}
+    if(ok){var txt=clean(res.text);wait.textContent=txt;var s=document.createElement('span');s.className='vf';s.textContent=VF;wait.appendChild(s);store.set(dk,String(used()+1))}
+    else{wait.className='msg err';wait.textContent=(lastErr&&lastErr.shown)||'助教暫時不能用，請舉手問講師，或先看「卡住了？備案分流」。'}
+    $('ta-left').textContent=left();$('ta-send').disabled=false;
+    emit({type:'ask',unit:ctx.u||'top',key:ctx.id||'',qchars:q.length,achars:ok?clean(res.text).length:0,ok:ok?1:0,src:src,err:ok?'':String((lastErr&&lastErr.code)||'')});
+  });
+  window.__taDebug={emit:emit,get sid(){return sid},TA:TA};
+})();
+</script>
+</body></html>
