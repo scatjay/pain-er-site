@@ -177,7 +177,7 @@ details.pcard{padding:0}details.pcard>summary{list-style:none;cursor:pointer;pad
 <div class="cell" data-u="5" style="--cu:var(--u5)">參考文獻（DOI 查證）<small>單元 5</small></div>
 </div>
 <div class="tipbox" style="margin-top:16px"><b>全頁最重要的一件事：</b>新版桌面版預設是「自動」模式，Claude 會直接做事、不先問你。想讓它每一步都先問，要把模式切到「<b>手動</b>」，而且每次送出前看一眼底列。</div>
-<p class="sub" style="margin:10px 0 0">卡住時，每一步旁邊和畫面右下角都有「問助教」。助教只回答這份學習單和 Claude 桌面版的操作，不會幫你寫報告；它的答案要你自己驗證。</p></header>
+<p class="sub" style="margin:10px 0 0">卡住時，每一步旁邊和畫面右下角都有「問助教」。助教只回答這份學習單和 Claude 桌面版的操作，不會幫你寫報告；它的答案要你自己驗證。</p><p class="sub" id="ta-toplogin" hidden style="margin:8px 0 0"><button type="button" class="loginbtn" id="ta-top-signin">用 Google 登入</button> <span id="ta-top-who">登入後才能問助教，進度也才會記錄給講師看（只記勾了哪一步，不記姓名）。</span></p></header>
 <nav class="tabs" id="tb"><a href="#top">總覽</a><a href="#sched">時間表</a><a href="#pre">開始前</a><a href="#u1">單元1</a><a href="#u2">單元2</a><a href="#u3">單元3</a><a href="#u4">單元4</a><a href="#u5">單元5</a><a href="#u6">單元6</a><a href="#tpl">報告模板</a><a href="#decl">聲明範例</a><a href="#fin">總檢核</a><a href="#after">課後</a></nav>
 <section id="sched"><h2><span class="num" style="background:var(--accent)">時間</span>今天的時間表</h2><p class="sub">六個單元，每單元 50 分，加起來正好淨授課 300 分。</p><div class="sched-wrap"><table class="sched">
 <tr class="br"><td>09:40–10:00</td><td>到場、開機、連網、確認訂閱</td><td class="m">—</td></tr>
@@ -601,6 +601,8 @@ AI 起草的內容，均由我逐句對照原文；與原文不符者已改寫�
 <style id="ta-style">
 .askbtn{font:inherit;font-size:12.5px;font-weight:600;color:var(--accent);background:var(--accent-soft);border:1px solid var(--accent2);border-radius:99px;padding:3px 11px;cursor:pointer}
 .askbtn:hover{filter:brightness(.96)}
+.loginbtn{font:inherit;font-size:13.5px;font-weight:700;color:var(--onbrand);background:var(--accent);border:0;border-radius:8px;padding:7px 14px;cursor:pointer}
+#ta-top-who{font-size:13px;color:var(--muted)}
 .askbtn:focus-visible,#ta-fab:focus-visible,#ta-panel button:focus-visible,#ta-panel textarea:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 #ta-fab{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:60;font:inherit;font-weight:700;font-size:14px;color:var(--onbrand);background:var(--accent);border:0;border-radius:99px;padding:11px 18px;box-shadow:var(--shadow);cursor:pointer}
 #ta-panel{position:fixed;right:16px;bottom:calc(68px + env(safe-area-inset-bottom,0px));z-index:61;width:min(400px,calc(100vw - 32px));max-height:min(78vh,640px);display:none;flex-direction:column;background:var(--surface);color:var(--ink);border:1px solid var(--hair);border-radius:14px;box-shadow:var(--shadow);font-family:var(--sans)}
@@ -663,17 +665,17 @@ AI 起草的內容，均由我逐句對照原文；與原文不符者已改寫�
   function loadJs(u){return new Promise(function(ok,no){var s=document.createElement('script');s.src=u;s.onload=ok;s.onerror=no;document.head.appendChild(s)})}
   async function initAuth(){
     if(!(CFG&&CFG.auth))return;
-    $('ta-login').hidden=false;$('ta-who').textContent='尚未登入';
+    $('ta-login').hidden=false;$('ta-who').textContent='尚未登入';var tl=$('ta-toplogin');if(tl)tl.hidden=false;
     try{
       var v=CFG.auth.sdk||'10.12.2';
       await loadJs('https://www.gstatic.com/firebasejs/'+v+'/firebase-app-compat.js');await loadJs('https://www.gstatic.com/firebasejs/'+v+'/firebase-auth-compat.js');
       firebase.initializeApp({apiKey:CFG.auth.apiKey,authDomain:CFG.auth.authDomain,projectId:CFG.auth.projectId});AUTH=firebase.auth();
       AUTH.onAuthStateChanged(async function(u){
-        if(u){TOK=await u.getIdToken();sid=u.uid;$('ta-who').textContent=u.email||'已登入';$('ta-signin').textContent='登出';flush();emit({type:'open',unit:'top'})}
-        else{TOK='';$('ta-who').textContent='尚未登入';$('ta-signin').textContent='用 Google 登入'}
+        if(u){TOK=await u.getIdToken();sid=u.uid;$('ta-who').textContent=u.email||'已登入';$('ta-signin').textContent='登出';var tw=$('ta-top-who');if(tw){tw.textContent='已登入：'+(u.email||'')+'。進度與助教已啟用。';$('ta-top-signin').textContent='登出'}flush();emit({type:'open',unit:'top'})}
+        else{TOK='';$('ta-who').textContent='尚未登入';$('ta-signin').textContent='用 Google 登入';var tw2=$('ta-top-who');if(tw2){tw2.textContent='登入後才能問助教，進度也才會記錄給講師看（只記勾了哪一步，不記姓名）。';$('ta-top-signin').textContent='用 Google 登入'}}
       });
       setInterval(async function(){var u=AUTH.currentUser;if(u)TOK=await u.getIdToken()},50*60*1000);
-      $('ta-signin').addEventListener('click',function(){if(AUTH.currentUser)AUTH.signOut();else AUTH.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(function(e){add('err','登入沒有完成：'+(e&&e.code||'')+'。若是被瀏覽器擋住彈出視窗，請允許後再按一次。')})})
+      var doSign=function(){if(AUTH.currentUser)AUTH.signOut();else AUTH.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(function(e){add('err','登入沒有完成：'+(e&&e.code||'')+'。若是被瀏覽器擋住彈出視窗，請允許後再按一次。')})};$('ta-signin').addEventListener('click',doSign);if($('ta-top-signin'))$('ta-top-signin').addEventListener('click',doSign)
     }catch(e){$('ta-who').textContent='登入功能載入失敗（網路？）'}
   }
   initAuth();
