@@ -231,7 +231,7 @@
         '<div class="muted" id="holdNote" style="font-size:var(--fs-1)">⏸ 你在訪談，急診室的時間先暫停；切到別的分頁或走開就會繼續。</div></div>';
       var live = liveReady();
       if (sel.av.level !== 'blocked' && APP.online) html += '<div class="card" id="chatBox" style="margin-top:6px"><div class="row"><b style="flex:1">💬 即時訪談</b><span id="chatStat" class="muted" style="font-size:var(--fs-1)">' + (live ? '連線中' : '目前離線') + '</span></div>' +
-        '<div id="icBox"></div><div class="row" style="margin:2px 0"><button type="button" class="ghost" id="icAsk" style="font-size:var(--fs-1)">🧭 助教</button></div><div id="icChat"></div><div id="chatLog" style="max-height:260px;overflow:auto;font-size:var(--fs-3);margin:6px 0;padding:4px 0;border-top:var(--bw-s) dashed var(--line)"></div>' +
+        '<div id="icChip"></div><div id="icBox"></div><div class="row" style="margin:2px 0"><button type="button" class="ghost" id="icAsk" style="font-size:var(--fs-1)">🧭 助教</button><button type="button" class="ghost" id="icHowBtn" style="font-size:var(--fs-1)">📖 怎麼問</button><button type="button" class="ghost" id="icPracBtn" style="font-size:var(--fs-1)">🎓 練習一輪</button></div><div id="icHow"></div><div id="icChat"></div><div id="chatLog" style="max-height:260px;overflow:auto;font-size:var(--fs-3);margin:6px 0;padding:4px 0;border-top:var(--bw-s) dashed var(--line)"></div>' +
         '<div id="qrLive"></div>' +
         '<div class="row"><input id="chatIn" maxlength="300" placeholder="' + (live ? '問 ' + esc(ent.name) + ' 一個問題（Enter 送出）' : '即時訪談離線：老師的電腦沒開，請用下面的指令貼到 Gemini') + '"' + (live ? '' : ' disabled') + '><button id="chatSend"' + (live ? '' : ' disabled') + '>送出</button></div></div>';
       if (sel.av.level !== 'blocked') html += '<details' + (APP.online && live ? '' : ' open') + ' style="margin-top:6px"><summary id="genSum" title="' + (APP.online ? '連不上對話框時才用' : '') + '" style="cursor:pointer;display:flex;align-items:center;min-height:44px;padding:0 14px;font-size:var(--fs-3);font-weight:900;color:var(--ink-fixed,#1e1e1e);background:var(--sky,#a5d8ff);border:var(--bw-s) solid var(--ink);border-radius:var(--r-m,8px)">📋 產生訪談指令（貼到 Gemini）</summary><div class="muted" id="genPNote" style="font-size:var(--fs-1);margin-top:6px">上面的 💬 對話框就是訪談，直接問就好。只有對話框顯示離線、或不是上課開放時間時，才用這裡：按下去產生一段指令，複製後貼到你自己的 Gemini 新對話，聊完把對話的分享連結貼回下面的連結欄。</div><button id="genP" style="margin-top:6px">產生訪談指令</button><div id="pOut"></div></details>';
@@ -422,6 +422,14 @@
         if (b4) b4.onclick = function () { var s2 = icLoad(); s2.off = true; icSave(s2); icBoxEl().innerHTML = '<div class="muted" style="font-size:var(--fs-1);margin:4px 0">好，不再自動提醒。想看時隨時按「🧭 助教」。</div>'; };
       } catch (e) { /* 助教出錯不能影響訪談 */ }
     }
+    /* 11-12 專家版回饋：每問一題後，在輸入框上方留一行「上一題」的粗略判斷。沒有冷卻、不計次數、不寫資料庫、不呼叫模型；可關（記在這台瀏覽器）。 */
+    var icChipKey = 'erg_icchip_off_' + me();
+    function icChipRun() {
+      try {
+        var el = $('icChip'), IC = window.ERG_IC; if (!el || !IC || !IC.renderChip) return;
+        IC.renderChip(el, { rules: window.ERG_XG_RULES || window.ERG_IC_RULES, pid: ent.pid, key: icChipKey, turns: lastTurns.map(function (t) { return { role: t.role, text: t.text, t: Number(t.t) || 0 }; }) });
+      } catch (e) { /* 小提示出錯不能影響訪談 */ }
+    }
     /* 10-27 訪談階段的對話式助教：幫學生看懂、問得出口（不替寫）。名額與一般助教共用；只在線上模式有 */
     try {
       var icC = $('icChat');
@@ -436,6 +444,10 @@
         window.ERG_ICHAT.mount(icC, ctl, {});
       }
     } catch (e) { /* 助教出錯不能影響訪談 */ }
+    /* 11-12 這位使用者專家的建議：「怎麼問」閱讀頁與一對一練習（內容在規則檔 how 區塊；不呼叫模型、不寫資料庫） */
+    var hb = $('icHowBtn'), pb = $('icPracBtn'), hx = $('icHow'), HW = window.ERG_HOW, HR = window.ERG_XG_RULES || window.ERG_IC_RULES;
+    if (hb && hx && HW) hb.onclick = function () { if (hx.getAttribute('data-k') === 'how') { hx.innerHTML = ''; hx.setAttribute('data-k', ''); } else { HW.render(hx, HR); hx.setAttribute('data-k', 'how'); } };
+    if (pb && hx && HW) pb.onclick = function () { if (hx.getAttribute('data-k') === 'prac') { hx.innerHTML = ''; hx.setAttribute('data-k', ''); } else { HW.mountPractice(hx, HR, { key: 'erg_prac_done_' + me() }); hx.setAttribute('data-k', 'prac'); } };
     var tIc = $('icAsk'); if (tIc) tIc.onclick = function () { var s3 = icLoad(); s3.off = false; icSave(s3); icRun(1); };
     if (c._icT) { clearInterval(c._icT); c._icT = null; }
     c._icT = setInterval(function () { if (!$('icBox')) { clearInterval(c._icT); c._icT = null; return; } icRun(); }, 30000);
@@ -451,7 +463,7 @@
       }).join('') + (turns[turns.length - 1].role === 'u' ? '<div class="muted" style="font-size:var(--fs-1)">' + esc(ent.name) + ' 正在想……</div>' : '') : '<div class="muted" style="font-size:var(--fs-2)">還沒開始。先打招呼，或問一個開放式的問題。</div>';
       logEl.scrollTop = logEl.scrollHeight;
       if (recId && turns.some(function (t) { return t.role === 'a' && t.status === 'ok'; })) { var ix2 = recFor(ent.pid); if (ix2 >= 0 && !CORE.getLink(player().links, player().interviews[ix2].id)) { player().links[CORE.linkKey(player().interviews[ix2].id)] = liveLink(player().interviews[ix2].id); save(); var lk = $('lnk'); if (lk) lk.value = CORE.getLink(player().links, player().interviews[ix2].id); } }
-      icRun();
+      icRun(); icChipRun();
       try { if (window.ERG_QUOTA) window.ERG_QUOTA.refreshAll(); } catch (e) {}   /* 最後一則是額度用完的回覆 → 申請鈕變醒目 */
       var st = $('chatStat'); if (st) st.textContent = liveReady() ? ('連線中・' + turns.filter(function (t) { return t.role === 'u'; }).length + ' 題') : liveLabel();
     }
