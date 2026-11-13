@@ -369,36 +369,6 @@
       lines: items.map(function (i) { return i.text + '（' + i.evidence + '）'; }) };
   }
 
-  /* ───── 逐題小提示（專家版回饋：安妮 11-12 說「不知道當下問得對不對」）─────
-     只看學生最後一個真的提問的字面特徵，回一句話；沒有冷卻、不計次數、不寫資料、不呼叫模型。
-     句子放在規則檔 R.chip（可被專家指引覆蓋，見 xguide.js）。優先序：重複 > 照念檢核表 > 引導 > 是非題 > 撿詞 > 具體經驗 > 原因 > 開放。
-     回傳 { kind, text, i }；沒有真的提問（只有寒暄）時回 null。 */
-  function chipFor(turns, rules, pid) {
-    var R = loadRules(rules); if (!R || !R.chip) return null;
-    var qs = analyze(turns, R, pid).filter(function (q) { return !q.greet; }); if (!qs.length) return null;
-    var q = qs[qs.length - 1], ynAny = R.chip.ynAny ? new RegExp(R.chip.ynAny).test(q.text) : false, wh = R.chip.wh ? new RegExp(R.chip.wh).test(q.text) : false,
-      kind = q.dup ? 'dup' : q.tmpl ? 'tmpl' : q.lead ? 'lead' : (R.chip.maxLen && bareQ(q.text).length > R.chip.maxLen) ? 'long' : ((q.yn || (ynAny && !q.why)) && !wh) ? 'yn' : q.echo ? 'echo' : q.ev ? 'ev' : q.why ? 'why' : wh ? 'open' : '';
-    if (!kind) return null;   /* 看不出是問句（沒有疑問詞也不是是非題）：不說話，寧可少說也不亂誇 */
-    var t = R.chip[kind]; if (!t) return null;
-    return { kind: kind, text: (R.chip.prefix || '') + t, i: q.i, footer: R.chip.footer || '' };
-  }
-
-  /* 把逐題小提示畫進 el（學生訪談面板用）。opts：{ rules, turns, pid, key（記「已關」的 localStorage 鍵） }。出錯一律安靜，不能影響訪談。 */
-  function renderChip(el, opts) {
-    if (!el || typeof document === 'undefined') return null;
-    try {
-      var off = false; try { off = localStorage.getItem(opts.key) === '1'; } catch (e) {}
-      function esc(x) { return String(x).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
-      function again() { renderChip(el, opts); }
-      if (off) { el.innerHTML = '<button type="button" class="ghost icChipOn" style="font-size:var(--fs-1)">顯示「上一題」小提示</button>'; el.querySelector('.icChipOn').onclick = function () { try { localStorage.removeItem(opts.key); } catch (e) {} again(); }; return null; }
-      var r = chipFor(opts.turns, opts.rules, opts.pid);
-      if (!r) { el.innerHTML = ''; return null; }
-      el.innerHTML = '<div class="muted icChipTxt" role="status" style="font-size:var(--fs-1);margin:4px 0;display:flex;gap:6px;align-items:flex-start"><span style="flex:1">💡 ' + esc(r.text) + ' <span style="opacity:.8">（' + esc(r.footer) + '）</span></span><button type="button" class="ghost icChipOff" aria-label="關掉上一題小提示" style="font-size:var(--fs-1);min-height:32px">關</button></div>';
-      el.querySelector('.icChipOff').onclick = function () { try { localStorage.setItem(opts.key, '1'); } catch (e) {} again(); };
-      return r;
-    } catch (e) { return null; }
-  }
-
-  return { VERSION: VERSION, chipFor: chipFor, renderChip: renderChip, evaluate: evaluate, selfDone: selfDone, analyze: analyze, sentenceCount: sentenceCount, clipSentences: clipSentences, fill: fill, loadRules: loadRules,
+  return { VERSION: VERSION, evaluate: evaluate, selfDone: selfDone, analyze: analyze, sentenceCount: sentenceCount, clipSentences: clipSentences, fill: fill, loadRules: loadRules,
     ORDER: ORDER, echoGram: echoGram, bareQ: bareQ };
 });

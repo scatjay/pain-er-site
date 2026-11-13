@@ -27,7 +27,8 @@
     if ($('pxCoachCss')) return; var st = document.createElement('style'); st.id = 'pxCoachCss';
     st.textContent = '#coachBox .row{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}#coachBox textarea{min-height:44px}#coachBox .bub{border:2px solid var(--ink);border-radius:10px;padding:6px 8px;margin:6px 0;font-size:13px;background:var(--panel)}' +
       '#coachBox .bub.q{background:var(--soft-y)}#coachBox .bub.err{background:var(--soft-r)}#coachBox .meta{font-size:11px;color:var(--muted)}#coachBox .src{display:inline-block;border:2px solid var(--ink);border-radius:99px;padding:0 8px;margin:2px 2px 0 0;font-size:11px;background:var(--soft-g)}' +
-      '#coachBox ul.lv{margin:4px 0 6px;padding-left:18px;font-size:12px}';
+      '#coachBox ul.lv{margin:4px 0 6px;padding-left:18px;font-size:12px}' +
+      '#coachBox .preset{border:2px dashed var(--ink);border-radius:10px;padding:6px 8px;margin:6px 0}#coachBox .preset.fresh{border-style:solid;background:var(--soft-y)}#coachBox .preset .row button{text-align:left;white-space:normal}';
     document.head.appendChild(st);
   }
   function left() { return pure.left(A.S.coachUsed); }
@@ -37,6 +38,28 @@
       (m.srcs && m.srcs.length ? '<div>' + m.srcs.map(function (x) { return '<span class="src">〔' + esc(x.label) + '〕</span>'; }).join('') + '</div>' : '') +
       (m.filled ? '<div class="meta">已填進第 ' + m.n + ' 列，標成「🤖 助手示範」，請改成你自己的話。</div>' : '') + '</div>';
   }
+  /* 單元預設問題（proposal_prompts.js）：依「這一份」顯示 3–5 題，點了就送給助手；第一次切到新的一份會跳提示 */
+  var PP = (typeof window !== 'undefined' && window.ERG_PX_PROMPTS) || null, PRESET = [], seenUnit = '', FRESH = {};
+  function curUnit() {
+    try {
+      var W = window.ERG_WEEKLY, P = window.ERG_PROTO_UI;
+      if (W && P && P.unitCtx) { var u = W.unitNow(P.unitCtx()); if (u && u.id) return { id: u.id, name: u.name || u.id }; }
+    } catch (e) { }
+    return null;
+  }
+  function presetHtml() {
+    var u = curUnit(); PRESET = [];
+    if (!PP || !u) return '';
+    PRESET = PP.pick(A.S.caseId, u.id); if (!PRESET.length) return '';
+    if (seenUnit !== u.id) {   /* 這一頁第一次看到這一份：這台裝置沒看過就標成新的（整頁都維持醒目）並跳提示 */
+      seenUnit = u.id; var key = 'pxPromptSeen:' + u.id;
+      try { if (!window.localStorage.getItem(key)) { FRESH[u.id] = true; window.localStorage.setItem(key, '1'); } } catch (e) { }
+      if (FRESH[u.id]) { try { A.toast('換到「' + u.name + '」了：助手面板有幾個可以直接點的問題。'); } catch (e) { } }
+    }
+    var fresh = !!FRESH[u.id];
+    return '<div class="preset' + (fresh ? ' fresh' : '') + '" id="cPreset"><div class="meta">💡 不知道要問什麼？點一題（這一份：' + esc(u.name) + '）</div><div class="row">' +
+      PRESET.map(function (p, i) { return '<button class="mini" data-preset="' + i + '">' + esc(p.q) + '</button>'; }).join('') + '</div></div>';
+  }
   function whereOf(q) { return q.target === 'row' ? '第 ' + q.n + ' 列' : (q.target === 'real' ? '現實題' : '方向'); }
   function render() {
     if (!A) return; var box = $('coachBox'); if (!box) return;
@@ -44,6 +67,7 @@
       '<div class="muted">只看得到<b>你自己</b>的訪談、線索、結論和你寫的提案；每句附出處，訪談裡沒有的會叫你回去問。' + (A.local ? '<br><b>本機測試模式：答案是固定的示範，不是真的助手。</b>' : '') + '</div>' +
       '<ul class="lv">' + LEVELS.slice(1).map(function (l) { return '<li><b>' + KIND_NAME[l.kind] + '</b>：' + HELP[l.kind].replace('{n}', cfg.fillPerBoard) + '</li>'; }).join('') + '</ul>' +
       '<div class="meta">今天還能問助手 <b id="cLeft">' + left() + '</b> 次（提案室助手每天 ' + PX.COACH_PER_DAY + ' 次，明天 00:00 重算）。</div>' +
+      presetHtml() +
       '<label>想問什麼（可不填，≤' + ASK_MAX + ' 字）<textarea id="cAsk" maxlength="' + ASK_MAX + '" placeholder="例如：我選 LINE 的理由，訪談裡找得到依據嗎？"></textarea></label>' +
       '<div class="row"><span class="meta" style="align-self:center">問方向：</span><button class="mini" data-coach="hint" data-target="dir">提示</button><button class="mini" data-coach="check" data-target="dir">檢查</button><button class="mini" data-coach="pattern" data-target="dir">句型</button></div>' +
       '<div class="meta">每一列、每一題現實題底下也有同樣的鈕，會針對那一列問。</div><div id="cLog">' + LOG.slice(-8).map(bubble).join('') + '</div>';
@@ -94,6 +118,8 @@
       Object.keys(ans).sort().forEach(function (k) { if (pending[k]) onAnswer(k, pending[k], ans[k]); });
     });
     document.addEventListener('click', function (e) {
+      var pb = e.target.closest && e.target.closest('button[data-preset]');
+      if (pb) { var p = PRESET[Number(pb.dataset.preset)]; if (p) { if ($('cAsk')) $('cAsk').value = p.q; ask({ kind: p.kind, target: 'dir', ask: p.q }); } return; }
       var b = e.target.closest && e.target.closest('button[data-coach]'); if (!b) return;
       ask({ kind: b.dataset.coach, target: b.dataset.target || 'dir', n: Number(b.dataset.n) || 0, key: b.dataset.key || '' });
     });
