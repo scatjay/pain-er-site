@@ -15,11 +15,12 @@
   var UNIT_SESS = 'ER-20261013';
   function sess() { var ts = (location.search.match(/[?&]tsess=([A-Za-z0-9]{1,12})/) || [])[1]; return (ts && /^(127\.0\.0\.1|localhost)$/.test(location.hostname)) ? 'ER-TEST-' + ts : UNIT_SESS; }
   var NOW = function () { return Date.now(); };
-  var CASE = PX.liveCase(Q.get('case'));   /* 這一頁正在寫的提案屬於哪個案例；只開已上線的 */
+  var CASE = PX.caseForPage(Q.get('case'), LOCAL || /^ER-TEST/.test(sess()));   /* 這一頁正在寫的提案屬於哪個案例；一般只開已上線的，測試模式（?local=1 或本機 tsess 測試場次）可開還沒上線的案例走一遍 */
+  var CARDS_MODE = CASE !== PX.DEFAULT_CASE;   /* 非 sms 案例：證據是學生自己填的訪談卡，沒有急診室房間與故事板 */
   var MOBILE_UA = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
   var ASK_ORDER = ['patient', 'family', 'triage_nurse', 'nurse', 'clerk', 'doctor', 'volunteer', 'superintendent'];
 
-  var S = { caseId: CASE, sid: '', sess: '', DB: null, store: null, sbStore: null, doc: PX.emptyDoc(), rooms: [], evidence: [], evMap: {}, cells: [], cellMap: {}, boardW: {}, boards: {}, names: {}, st: null,
+  var S = { caseId: CASE, sid: '', sess: '', DB: null, store: null, sbStore: null, doc: PX.emptyDoc(), rooms: [], evidence: [], evMap: {}, cells: [], cellMap: {}, boardW: {}, boards: {}, cards: [], cardDraft: null, names: {}, st: null,
     cfg: SB.config(null), coachUsed: 0, subs: [], revs: [], dirHist: [], started: false, timers: {}, armed: {}, pendingRender: false, loaded: false, opened: false };
 
   window.ERG_PX_S = S;
@@ -65,6 +66,11 @@
     S.sid = sid; try { S.DB.attach && S.DB.attach(); } catch (e) {}
     $('gate').hidden = true; $('app').hidden = false;
     $('sidLine').textContent = '學號 ' + sid; bindStatic();
+    if (CARDS_MODE) {
+      var mt = document.querySelector('#top .line .muted'); if (mt) mt.textContent = PX.caseTitle(CASE) + '・提案室'; if ($('sbLink')) $('sbLink').hidden = true; if ($('reviseLink')) $('reviseLink').hidden = true;
+      var rm = document.querySelector('#secRows > .muted'); if (rm) rm.textContent = '每一列要回答：我決定什麼、依據是我哪一張訪談卡、對應哪位人物、跟哪個畫面有關、誰可能不同意、我取捨了什麼。依據找不到的列會標「指不回訪談」，到上面「我的訪談卡」再記一張就好。';
+      S.store.watchCards(sid, function (c) { S.cards = c; rebuild(); renderCards(); });
+    }
     S.store.watchDoc(sid, function (d) {
       if (S.loaded && sig(d) === sig(S.doc)) return;
       S.doc = d; var first = !S.loaded; S.loaded = true; if (first && !S.opened) { S.opened = true; logEvent('open', MOBILE_UA ? 'm' : 'pc'); }
@@ -102,14 +108,14 @@
   var rebuildT = null;
   function rebuild() {
     clearTimeout(rebuildT); rebuildT = setTimeout(function () {
-      S.names = pnameMap(); S.evidence = PX.buildEvidence(S.rooms, { names: S.names }); S.evMap = PX.evMap(S.evidence);
-      S.cells = PX.buildCells(S.rooms.map(function (r) { return { code: r.code, cells: S.boards[r.code] || [] }; }).filter(function (b) { return b.cells.length; }));
+      S.names = pnameMap(); S.evidence = CARDS_MODE ? PX.cardEvidence(S.cards, CASE) : PX.buildEvidence(S.rooms, { names: S.names }); S.evMap = PX.evMap(S.evidence);
+      S.cells = CARDS_MODE ? PX.cardCells(S.cards, CASE) : PX.buildCells(S.rooms.map(function (r) { return { code: r.code, cells: S.boards[r.code] || [] }; }).filter(function (b) { return b.cells.length; }));
       S.cellMap = {}; S.cells.forEach(function (c) { S.cellMap[c.id] = c; });
       if (S.loaded) { if (document.activeElement && /^(TEXTAREA|INPUT)$/.test(document.activeElement.tagName) && $('main').contains(document.activeElement)) { S.pendingRender = true; refreshLive(); } else renderAll(); }
     }, 30);
   }
   function sig(d) { var o = JSON.parse(JSON.stringify(d)); delete o.updatedAt; if (o.dir) delete o.dir.at; (o.rows || []).forEach(function (r) { delete r.t; }); return JSON.stringify(o); }
-  function compute() { S.st = PX.status(S.doc, S.evidence, S.cells); return S.st; }
+  function compute() { S.st = PX.status(S.doc, S.evidence, S.cells, CASE); return S.st; }
   function todayKey() { return PX.dayKey(NOW()); }
   function submittedToday() { var k = todayKey(); return S.subs.some(function (x) { return x.day === k; }); }
   function lastRev() { return S.revs.length ? S.revs[S.revs.length - 1] : null; }
@@ -127,13 +133,13 @@
   }
 
   /* ———— 畫面 ———— */
-  function renderAll() { S.pendingRender = false; if (!S.sid || !S.loaded) return; compute(); renderTop(); renderDir(); renderRows(); renderReal(); renderExport(); if (window.ERG_PROTO_UI) { try { window.ERG_PROTO_UI.render(); } catch (e) { console.warn('[proto]', e); } } }
+  function renderAll() { S.pendingRender = false; if (!S.sid || !S.loaded) return; compute(); renderTop(); renderCards(); renderDir(); renderRows(); renderReal(); renderExport(); if (window.ERG_PROTO_UI) { try { window.ERG_PROTO_UI.render(); } catch (e) { console.warn('[proto]', e); } } }
   function progressChips(st) {
     function chip(ok, t) { return '<span class="pchip ' + (ok ? 'ok' : 'bad') + '">' + (ok ? '✓ ' : '✗ ') + esc(t) + '</span>'; }
     return chip(st.dirOk, '方向') + chip(st.rowsDone >= PX.LIMITS.minRows, '對準表 ' + st.rowsDone + '／' + PX.LIMITS.minRows) + chip(st.gaps.length === 0 && st.rowsFilled > 0, st.gaps.length ? '指不回訪談 ' + st.gaps.length + ' 列' : '都有依據') + chip(st.realDone === 3, '現實題 ' + st.realDone + '／3');
   }
   function renderTop() {
-    var st = S.st || compute(), ns = PX.nextStep(S.doc, S.evidence, S.cells, st, { lastRev: lastRev(), submittedToday: submittedToday() }), act = '';
+    var st = S.st || compute(), ns = PX.nextStep(S.doc, S.evidence, S.cells, st, { lastRev: lastRev(), submittedToday: submittedToday(), caseId: CASE }), act = '';
     /* 每週送審（11-09 20:48 改節奏）：W10–W14 各份只交 flipclass，頂列「下一步」只講這一份交到 flipclass、最後版本到 W15 再來送審；只有最後版本（AI Studio 3/3）才講送審。
        最後版本沿用原本的下一步（要整套對準表）。 */
     try {
@@ -160,14 +166,14 @@
   function renderDir() {
     if (!S.loaded || !$('secDir')) return; var d = S.doc.dir, h = S.dirHist || [];
     var focus = document.activeElement && document.activeElement.closest && document.activeElement.closest('#secDir') ? document.activeElement : null; if (focus && /^(TEXTAREA|INPUT)$/.test(focus.tagName)) return;
-    $('secDir').innerHTML = '<h2>① 我選的方向</h2><div class="muted">三個方向都可以，沒有唯一解。要看經費，也要看你對關係人的判斷。也可以修改其中一個，或提出你自己的方向（選「我自己的方向」再寫一句話）。選好再寫一句為什麼；之後想法變了可以改，改的歷程會留著。</div>' +
-      '<div class="dirs">' + PX.DIRS.map(function (x) { return '<button class="dirbtn' + (d.pick === x.k ? ' on' : '') + '" data-act="pickdir" data-k="' + x.k + '"><b>' + esc(x.name) + '</b><span>' + esc(x.desc) + '</span></button>'; }).join('') + '</div>' +
-      (d.pick === 'mine' ? '<label>我的方向是什麼（一句話，可以是修改上面三個，也可以是你自己想的，≤' + PX.LIMITS.mine + ' 字）<input id="dirMine" data-sec="dir" data-f="mine" maxlength="' + PX.LIMITS.mine + '" value="' + esc(d.mine) + '"></label>' : '') +
+    $('secDir').innerHTML = '<h2>① ' + (CARDS_MODE ? '我的方向' : '我選的方向') + '</h2><div class="muted">' + (CARDS_MODE ? '用一句話寫出你這一份想改什麼、改給誰，再寫一句為什麼；之後想法變了可以改，改的歷程會留著。' : '三個方向都可以，沒有唯一解。要看經費，也要看你對關係人的判斷。也可以修改其中一個，或提出你自己的方向（選「我自己的方向」再寫一句話）。選好再寫一句為什麼；之後想法變了可以改，改的歷程會留著。') + '</div>' +
+      (CARDS_MODE ? '' : '<div class="dirs">' + PX.dirsFor(CASE).map(function (x) { return '<button class="dirbtn' + (d.pick === x.k ? ' on' : '') + '" data-act="pickdir" data-k="' + x.k + '"><b>' + esc(x.name) + '</b><span>' + esc(x.desc) + '</span></button>'; }).join('') + '</div>') +
+      (d.pick === 'mine' || CARDS_MODE ? '<label>' + (CARDS_MODE ? '我的方向是什麼（一句話，≤' : '我的方向是什麼（一句話，可以是修改上面三個，也可以是你自己想的，≤') + PX.LIMITS.mine + ' 字）<input id="dirMine" data-sec="dir" data-f="mine" maxlength="' + PX.LIMITS.mine + '" value="' + esc(d.mine) + '"></label>' : '') +
       '<label>為什麼選它（≤' + PX.LIMITS.why + ' 字）<textarea id="dirWhy" data-sec="dir" data-f="why" maxlength="' + PX.LIMITS.why + '" placeholder="例如：我訪談的家屬都說連結點不開，所以…">' + esc(d.why) + '</textarea></label>' +
       '<div class="cnt" id="dirCnt">' + Array.from(d.why).length + '／' + PX.LIMITS.why + '</div>' +
       '<div class="bar"><button class="mini" data-coach="hint" data-target="dir">🤖 提示</button><button class="mini" data-coach="check" data-target="dir">🤖 檢查</button><button class="mini" data-coach="pattern" data-target="dir">🤖 句型</button></div>' +
       (h.length > 1 ? '<details class="hist"><summary>方向改過 ' + (h.length - 1) + ' 次（歷程）</summary>' + h.slice(-5).reverse().map(function (x) {
-        var nm = (PX.DIRS.filter(function (y) { return y.k === x.pick; })[0] || {}).name || x.pick; return '<div class="hrow">' + esc(new Date(x.at).toLocaleString('zh-TW', { hour12: false })) + '　<b>' + esc(x.pick === 'mine' ? '我自己的方向：' + (x.mine || '') : nm) + '</b>　' + esc(clip(x.why, 40)) + '</div>'; }).join('') + '</details>' : '');
+        var nm = (PX.dirsFor(CASE).filter(function (y) { return y.k === x.pick; })[0] || {}).name || x.pick; return '<div class="hrow">' + esc(new Date(x.at).toLocaleString('zh-TW', { hour12: false })) + '　<b>' + esc(x.pick === 'mine' ? '我自己的方向：' + (x.mine || '') : nm) + '</b>　' + esc(clip(x.why, 40)) + '</div>'; }).join('') + '</details>' : '');
   }
 
   /* 2 對準表 */
@@ -179,10 +185,10 @@
   }
   function evOptions(r) {
     var chosen = {}; r.ev.forEach(function (x) { chosen[x] = 1; });
-    var groups = [['iv', '訪談卡'], ['mk', '線索與我記的卡片'], ['cc', '我的結論']], html = '<option value="">＋ 選一則依據…</option>';
+    var groups = CARDS_MODE ? [['ec', '我的訪談卡']] : [['iv', '訪談卡'], ['mk', '線索與我記的卡片'], ['cc', '我的結論']], html = '<option value="">＋ 選一則依據…</option>';
     groups.forEach(function (g) {
       var items = S.evidence.filter(function (e) { return e.kind === g[0] && !chosen[e.id]; }); if (!items.length) return;
-      html += '<optgroup label="' + esc(g[1]) + '">' + items.map(function (e) { return '<option value="' + esc(e.id) + '">' + esc((e.who ? e.who + '・' : '') + e.label + '：' + clip(e.text, 30) + '（' + e.room + '）') + '</option>'; }).join('') + '</optgroup>';
+      html += '<optgroup label="' + esc(g[1]) + '">' + items.map(function (e) { return '<option value="' + esc(e.id) + '">' + esc(e.kind === 'ec' ? '「' + e.who + '」' + clip(e.text, 36) : (e.who ? e.who + '・' : '') + e.label + '：' + clip(e.text, 30) + '（' + e.room + '）') + '</option>'; }).join('') + '</optgroup>';
     });
     return html;
   }
@@ -200,6 +206,7 @@
     if (!miss.length) html = '<span class="pchip ok">✓ 這一列齊了</span>';
     else html = '<span class="pchip bad">還缺：' + miss.filter(function (c, i, a) { return !(c === 'row-ev-lost' && a.indexOf('row-ev') >= 0); }).map(function (c) { return esc(PX.ROW_FIELD_NAME[c === 'row-ev-lost' ? 'row-ev' : c]); }).filter(function (x, i, a) { return a.indexOf(x) === i; }).join('、') + '</span>';
     if (miss.indexOf('row-ev') >= 0 || miss.indexOf('row-ev-lost') >= 0) {
+      if (CARDS_MODE) return html + '<div class="gap"><b>指不回訪談</b>：這個決定在你的訪談卡裡找不到依據。從上面「選一則依據」挑一張真的相關的，或到「我的訪談卡」再記一張。<button class="mini" data-goto="cards">＋ 去記一張</button></div>';
       var at = askTarget(r);
       html += '<div class="gap"><b>指不回訪談</b>：這個決定在你的訪談、線索、結論裡找不到依據。' + (miss.indexOf('row-ev-lost') >= 0 ? '（你之前選的依據已經不在紀錄裡了。）' : '') + '要嘛從上面「選一則依據」挑一則真的相關的，要嘛回去問：<a class="btn mini" data-act="askback" data-n="' + r.n + '" href="' + esc(gameHref(at.room)) + '">🩺 回去問 ' + esc(at.who) + '</a></div>';
     }
@@ -208,7 +215,7 @@
   function rowHtml(r) {
     var pers = PX.personaOptions(S.evidence, { names: S.names });
     var persOpts = '<option value="">（沒選）</option>' + pers.map(function (p) { return '<option value="' + esc(p.pid) + '"' + (r.persona.pid === p.pid ? ' selected' : '') + '>' + esc(p.name) + '</option>'; }).join('');
-    var cellOpts = S.cells.length ? '<option value="">（沒選）</option>' + S.cells.map(function (c) { return '<option value="' + esc(c.id) + '"' + (r.cell === c.id ? ' selected' : '') + '>' + esc(c.label) + '</option>'; }).join('') : '<option value="">（你還沒有故事板內容）</option>';
+    var cellOpts = S.cells.length ? '<option value="">（沒選）</option>' + S.cells.map(function (c) { return '<option value="' + esc(c.id) + '"' + (r.cell === c.id ? ' selected' : '') + '>' + esc(c.label) + '</option>'; }).join('') : (CARDS_MODE ? '<option value="">（訪談卡還沒有寫畫面）</option>' : '<option value="">（你還沒有故事板內容）</option>');
     function ai(k) { return r.ai && r.ai[k] ? ' <span class="ai-badge">🤖 助手示範</span>' : ''; }
     var L = PX.LIMITS;
     return '<section class="rowc" id="row-' + r.n + '" data-n="' + r.n + '"><header><span class="rno">' + r.n + '</span><b>第 ' + r.n + ' 列：一個設計決定</b><span style="flex:1"></span><button class="mini" data-act="delrow" data-n="' + r.n + '">刪掉這列</button></header>' +
@@ -216,9 +223,9 @@
       '<div class="lbl">依據哪些證據（從你自己的紀錄點選，會顯示出處）</div><div class="evs">' + (r.ev.length ? r.ev.map(evChip).join('') : '<span class="muted">還沒選依據</span>') + '</div>' +
       (r.ev.length < L.maxEv ? '<select data-act="addev" data-n="' + r.n + '" aria-label="選一則依據">' + evOptions(r) + '</select>' : '<div class="muted">最多 ' + L.maxEv + ' 則</div>') +
       '<div class="row2"><label>對應哪位人物<select data-act="persona" data-n="' + r.n + '">' + persOpts + '</select></label>' +
-      '<label>這位人物的關鍵特質（你還原人物誌時寫的一句話）<input data-sec="row" data-n="' + r.n + '" data-f="personaOwn" maxlength="' + L.personaOwn + '" value="' + esc(r.persona.own) + '" placeholder="系統沒有存你的人物誌，這裡自己填一句"></label></div>' +
-      '<label>解決故事板哪一格<select data-act="cell" data-n="' + r.n + '"' + (S.cells.length ? '' : ' disabled') + '>' + cellOpts + '</select></label>' +
-      (S.cells.length ? '' : '<div class="muted">先去 <a href="storyboard.html' + (latestBoardRoom() ? '?room=' + latestBoardRoom() + '&board=me' : '') + '">排你的故事板</a>，這裡才選得到格子。</div>') +
+      '<label>' + (CARDS_MODE ? '這位人物是誰、有什麼特質（一句話，例如：常漏看數字的新手）' : '這位人物的關鍵特質（你還原人物誌時寫的一句話）') + '<input data-sec="row" data-n="' + r.n + '" data-f="personaOwn" maxlength="' + L.personaOwn + '" value="' + esc(r.persona.own) + '" placeholder="系統沒有存你的人物誌，這裡自己填一句"></label></div>' +
+      '<label>' + (CARDS_MODE ? '跟哪個畫面有關' : '解決故事板哪一格') + '<select data-act="cell" data-n="' + r.n + '"' + (S.cells.length ? '' : ' disabled') + '>' + cellOpts + '</select></label>' +
+      (S.cells.length ? '' : CARDS_MODE ? '<div class="muted">到上面「我的訪談卡」，在「跟哪個畫面有關」寫一個畫面名稱，這裡才選得到。</div>' : '<div class="muted">先去 <a href="storyboard.html' + (latestBoardRoom() ? '?room=' + latestBoardRoom() + '&board=me' : '') + '">排你的故事板</a>，這裡才選得到格子。</div>') +
       '<label>誰可能不同意（≤' + L.dissent + ' 字）' + ai('dissent') + '<input data-sec="row" data-n="' + r.n + '" data-f="dissent" maxlength="' + L.dissent + '" value="' + esc(r.dissent) + '" placeholder="例如：櫃台人員，因為每張單要多一個步驟"></label>' +
       '<label>我的取捨（≤' + L.tradeoff + ' 字）' + ai('tradeoff') + '<textarea data-sec="row" data-n="' + r.n + '" data-f="tradeoff" maxlength="' + L.tradeoff + '" placeholder="我選了…，放掉了…，因為…">' + esc(r.tradeoff) + '</textarea></label>' +
       '<div class="rstat" data-n="' + r.n + '">' + rowStat(r) + '</div>' +
@@ -427,11 +434,12 @@
       setTimeout(function () { var t = document.querySelector('#row-' + n + ' textarea[data-f=decide]'); if (t) { t.scrollIntoView({ block: 'center' }); t.focus(); } }, 50);
     });
     $('sbLink').addEventListener('click', function () { flushAll(); });
+    bindCards();
     var main = $('main');
     main.addEventListener('input', function (e) {
       var t = e.target, sec = t.dataset && t.dataset.sec; if (!sec) return;
       if (sec === 'dir') {
-        S.doc.dir[t.dataset.f] = clip(t.value, t.dataset.f === 'mine' ? PX.LIMITS.mine : PX.LIMITS.why); if ($('dirCnt') && t.dataset.f === 'why') $('dirCnt').textContent = Array.from(S.doc.dir.why).length + '／' + PX.LIMITS.why;
+        S.doc.dir[t.dataset.f] = clip(t.value, t.dataset.f === 'mine' ? PX.LIMITS.mine : PX.LIMITS.why); if (CARDS_MODE && !S.doc.dir.pick) S.doc.dir.pick = 'mine'; if ($('dirCnt') && t.dataset.f === 'why') $('dirCnt').textContent = Array.from(S.doc.dir.why).length + '／' + PX.LIMITS.why;
         saveSoon('dir', function () { saveDir('text'); });
       } else if (sec === 'row') {
         var n = Number(t.dataset.n), f = t.dataset.f;
@@ -472,8 +480,63 @@
     document.addEventListener('click', function (e) { var f = e.target.closest && e.target.closest('#coachFab'); if (f) document.body.classList.add('coach-open'); var c = e.target.closest && e.target.closest('#cClose'); if (c) document.body.classList.remove('coach-open'); });
     window.addEventListener('pagehide', flushAll);
   }
+
+  /* 0 我的訪談卡（非 sms 案例：自己找人聊，一張卡記一句話；只有本人與老師帳號看得到） */
+  function cardHtml(c) {
+    var L = PX.LIMITS;
+    return '<div class="ecard" data-ec-id="' + esc(c.id) + '"><label>誰（代號）<input data-ec="who" maxlength="' + L.cardWho + '" value="' + esc(c.who) + '"></label>' +
+      '<label>他說了什麼<textarea data-ec="said" maxlength="' + L.cardSaid + '">' + esc(c.said) + '</textarea></label>' +
+      '<label>跟哪個畫面有關（可以空著）<input data-ec="screen" maxlength="' + L.cardScreen + '" value="' + esc(c.screen) + '"></label>' +
+      '<div class="bar"><button class="mini" data-ec-act="del" data-ec-id="' + esc(c.id) + '">刪掉這張</button></div></div>';
+  }
+  function renderCards() {
+    var el = $('secCards'); if (!el) return; if (!CARDS_MODE) { el.hidden = true; return; } el.hidden = false;
+    var foc = document.activeElement; if (foc && el.contains(foc) && /^(TEXTAREA|INPUT)$/.test(foc.tagName)) return;
+    var L = PX.LIMITS, left = L.maxCards - S.cards.length, keep = S.cardDraft || { who: '', said: '', screen: '' };
+    el.innerHTML = '<h2>⓪ 我的訪談卡</h2><div class="muted">找一個人聊聊你想改的這個東西，回來記一句他說的話。每張卡大約 1 分鐘，這一堂記 1～3 張就夠。只有你自己和老師看得到。</div>' +
+      (S.cards.length ? S.cards.map(cardHtml).join('') : '<p class="muted">先去找一個人聊聊，回來記一句他說的話。</p>') +
+      (left > 0 ? '<div class="ecard new"><b>新增一張</b>' +
+        '<label>誰（代號就好，例如「室友 A」「常玩這類遊戲的學長」；不要寫真名、不要留聯絡方式，≤' + L.cardWho + ' 字）<input id="ecWho" maxlength="' + L.cardWho + '" value="' + esc(keep.who) + '"></label>' +
+        '<label>他說了什麼（一句原話，或你聽完記下的重點，越接近他當時的說法越好，≤' + L.cardSaid + ' 字）<textarea id="ecSaid" maxlength="' + L.cardSaid + '">' + esc(keep.said) + '</textarea></label>' +
+        '<label>跟哪個畫面有關（他講的事發生在哪個畫面？寫一個畫面名稱就好，可以先空著，≤' + L.cardScreen + ' 字）<input id="ecScreen" maxlength="' + L.cardScreen + '" value="' + esc(keep.screen) + '"></label>' +
+        '<div class="bar"><button id="ecAdd" data-ec-act="add">＋ 記下這張</button><span class="muted">還能記 ' + left + ' 張</span></div></div>' : '<div class="muted">這個主題最多 ' + L.maxCards + ' 張卡，想再記先刪掉一張。</div>');
+  }
+  function saveCardNow(id) {
+    var c = S.cards.filter(function (x) { return x.id === id; })[0]; if (!c) return;
+    if (!tr(c.who) || !tr(c.said)) { toast('這張卡要有「誰」和「他說了什麼」才存得進去。'); return; }
+    if (PX.cardHasContact(c)) { toast('卡片裡有像信箱、手機或學號的字，請拿掉再存（用代號就好）。'); return; }
+    S.store.saveCard(S.sid, c).then(saved, failSave);
+  }
+  function bindCards() {
+    var el = $('secCards'); if (!el || !CARDS_MODE) return;
+    el.addEventListener('input', function (e) {
+      var t = e.target, f = t.dataset && t.dataset.ec, box = t.closest && t.closest('[data-ec-id]'); if (!f || !box) return;
+      var id = box.dataset.ecId, c = S.cards.filter(function (x) { return x.id === id; })[0]; if (!c) return;
+      c[f] = clip(t.value, f === 'who' ? PX.LIMITS.cardWho : f === 'said' ? PX.LIMITS.cardSaid : PX.LIMITS.cardScreen);
+      if (tr(c.who) && tr(c.said)) saveSoon('card' + id, function () { saveCardNow(id); });
+    });
+    el.addEventListener('focusout', function (e) {
+      var box = e.target.closest && e.target.closest('[data-ec-id]');
+      if (box && box.dataset.ecId && S.flushers['card' + box.dataset.ecId]) flushKey('card' + box.dataset.ecId);
+      else if (box && e.target.dataset && e.target.dataset.ec) { var c = S.cards.filter(function (x) { return x.id === box.dataset.ecId; })[0]; if (c && (!tr(c.who) || !tr(c.said))) toast('這張卡要有「誰」和「他說了什麼」才存得進去。'); }
+      var n = e.target.closest && e.target.closest('.ecard.new'); if (n) S.cardDraft = { who: ($('ecWho') || {}).value || '', said: ($('ecSaid') || {}).value || '', screen: ($('ecScreen') || {}).value || '' };
+    });
+    el.addEventListener('click', function (e) {
+      var b = e.target.closest && e.target.closest('[data-ec-act]'); if (!b) return; var act = b.dataset.ecAct;
+      if (act === 'add') {
+        var c = { who: tr($('ecWho').value), said: tr($('ecSaid').value), screen: tr($('ecScreen').value), t: NOW() };
+        if (!c.who || !c.said) { toast('「誰」和「他說了什麼」都要寫。'); return; }
+        if (PX.cardHasContact(c)) { toast('卡片裡有像信箱、手機或學號的字，請拿掉再存（用代號就好）。'); return; }
+        if (S.cards.length >= PX.LIMITS.maxCards) { toast('這個主題最多 ' + PX.LIMITS.maxCards + ' 張卡。'); return; }
+        b.disabled = true;
+        S.store.saveCard(S.sid, c).then(function (rec) { S.cardDraft = null; saved(); toast('已記下這張訪談卡。'); }, function (er) { failSave(er); }).then(function () { b.disabled = false; });
+      } else if (act === 'del') {
+        var id = b.dataset.ecId; twoStep(b, 'ecdel' + id, function () { S.cards = S.cards.filter(function (x) { return x.id !== id; }); S.store.removeCard(S.sid, id).then(saved, failSave); rebuild(); renderCards(); }, '再按一次刪掉');
+      }
+    });
+  }
   function goTo(where) {
-    var id = where === 'dir' ? 'secDir' : where === 'real' ? 'secReal' : where === 'proto' ? 'secProto' : (where === 'export' || where === 'rev') ? 'secExport' : /^row-\d+$/.test(where) ? where : 'secRows';
+    var id = where === 'cards' ? 'secCards' : where === 'dir' ? 'secDir' : where === 'real' ? 'secReal' : where === 'proto' ? 'secProto' : (where === 'export' || where === 'rev') ? 'secExport' : /^row-\d+$/.test(where) ? where : 'secRows';
     var el = $(id) || $('secRows'); if (el) { el.scrollIntoView({ block: 'start', behavior: 'smooth' }); var f = el.querySelector('textarea,input,select'); if (f && where !== 'export' && where !== 'rev') setTimeout(function () { f.focus({ preventScroll: true }); }, 350); }
   }
 

@@ -30,10 +30,18 @@
   var CASES = [
     { k: 'sms', name: '離院衛教簡訊', title: '衛教簡訊再設計', live: true },
     { k: 'bike', name: '公路車', title: '公路車', live: false },
-    { k: 'trash', name: '垃圾車', title: '垃圾車', live: false }
+    { k: 'trash', name: '垃圾車', title: '垃圾車', live: false },
+    /* 11-14 擇優自主再設計五案（_ux_redesign_cases/）：遊戲三案只預留代碼，學生看到的是虛構名 */
+    { k: 'ftl', name: '星際逃亡船', title: '星際逃亡船', live: false },
+    { k: 'itb', name: '機甲防衛戰', title: '機甲防衛戰', live: false },
+    { k: 'sts', name: '爬塔卡牌', title: '爬塔卡牌', live: false }
   ];
   var DEFAULT_CASE = 'sms';
-  var LIMITS = { why: 200, mine: 80, decide: 120, personaOwn: 60, dissent: 120, tradeoff: 160, real: 200, askWho: 60, maxRows: 8, minRows: 3, maxEv: 6, ask: 300, textShow: 140 };
+  var LIMITS = { why: 200, mine: 80, decide: 120, personaOwn: 60, dissent: 120, tradeoff: 160, real: 200, askWho: 60, maxRows: 8, minRows: 3, maxEv: 6, ask: 300, textShow: 140,
+    cardWho: 20, cardSaid: 120, cardScreen: 60, maxCards: 12 };   /* 外部訪談證據卡：誰≤20、說了什麼≤120、畫面≤60、每案最多 12 張；Firebase 規則 evi 區塊與 tools/prx_common.py 同值（tests 對帳） */
+  /* 非 sms 案例沒有「簡訊三方向」：方向只留「我的方向」一項（自己寫一句話）；sms 不變 */
+  var DIRS_OTHER = [{ k: 'mine', name: '我的方向', desc: '用一句話寫出你這一份想改什麼、改給誰。' }];
+  function dirsFor(caseId) { return caseId && caseId !== 'sms' ? DIRS_OTHER : DIRS; }
   /* 提案室助手自己的每日名額（楊老師 11-01 裁示：和故事板助教分開算，先設每天 30 次）。要改只改這一處；
      tools/prx_common.py 的 COACH_PER_DAY 必須同值（tools/test_prx_common.py 逐字比對這一行）。 */
   var COACH_PER_DAY = 30;
@@ -62,19 +70,29 @@
     'real-cost': '現實題「大概花多少？」還沒回答。不知道也可以寫「我不知道，但會去問誰」。',
     'real-blame': '現實題「出錯誰負責？」還沒回答。不知道也可以寫「我不知道，但會去問誰」。'
   };
+  /* 非 sms 案例的幾句不同的問題訊息（沒列在這裡的沿用 PROBLEM_MSG）；tools/prx_common.py 的 PROBLEM_MSG_OTHER 逐字對帳 */
+  var PROBLEM_MSG_OTHER = {
+    'dir-none': '還沒寫「我的方向」。',
+    'dir-mine': '請用一句話寫出「我的方向」。',
+    'row-ev': '第 {n} 列指不回訪談：還沒選任何一張訪談卡。',
+    'row-ev-lost': '第 {n} 列選的訪談卡找不到了，請重新選。',
+    'row-cell': '第 {n} 列還沒選「跟哪個畫面有關」（訪談卡的「畫面」那一格有寫，這裡才選得到）。'
+  };
   var ROW_FIELD_NAME = { 'row-decide': '我決定什麼', 'row-ev': '依據', 'row-persona': '對應人物', 'row-cell': '故事板哪一格', 'row-dissent': '誰可能不同意', 'row-tradeoff': '我的取捨' };
 
   var arr = SB.arr, esc = SB.esc, clip = SB.clip;
   function s(x) { return typeof x === 'string' ? x : (x == null ? '' : String(x)); }
   function tr(x) { return s(x).trim(); }
   function copy(v) { return v === undefined ? undefined : JSON.parse(JSON.stringify(v)); }
-  function msg(code, n) { return (PROBLEM_MSG[code] || code).replace('{n}', n == null ? '' : n); }
+  function msg(code, n, caseId) { var m = caseId && caseId !== 'sms' && PROBLEM_MSG_OTHER[code] ? PROBLEM_MSG_OTHER[code] : (PROBLEM_MSG[code] || code); return m.replace('{n}', n == null ? '' : n); }
   function pname(pid, extra) { return (extra && extra[pid]) || PNAMES[pid] || pid || '?'; }
   /* ———— 案例（提案按案例分開存、證據按案例篩選） ———— */
   function caseDef(k) { for (var i = 0; i < CASES.length; i += 1) if (CASES[i].k === k) return CASES[i]; return null; }
   function isCase(k) { return !!caseDef(k); }
   function caseOf(k) { return isCase(k) ? k : DEFAULT_CASE; }              /* 不認得的案例代碼一律當預設案例 */
   function liveCase(k) { var d = caseDef(k); return d && d.live ? k : DEFAULT_CASE; }   /* 畫面只開已上線的案例 */
+  /* 網址 ?case= 要開哪一個案例：測試模式（本機 ?local=1、或本機網址帶 tsess 的測試場次）可以開還沒上線的案例，一般學生只開已上線的；上線只改 CASES 的 live 一行 */
+  function caseForPage(k, testMode) { return testMode && isCase(k) ? k : liveCase(k); }
   function caseTitle(k) { var d = caseDef(k) || caseDef(DEFAULT_CASE); return d.title; }
   /* 只留房間案例 ＝ 指定案例的房間（rooms 是 roomInput 的結果）；不指定案例就全留 */
   function roomsOfCase(rooms, caseId) { return caseId ? arr(rooms).filter(function (r) { return r && r.caseId === caseId; }) : arr(rooms); }
@@ -101,10 +119,10 @@
     return o;
   }
   function normReal1(x) { x = x && typeof x === 'object' ? x : {}; return { text: s(x.text), unknown: !!x.unknown, askWho: s(x.askWho) }; }
-  function normDoc(raw) {
+  function normDoc(raw, caseId) {
     var d = emptyDoc(); if (!raw || typeof raw !== 'object') return d;
     var dr = raw.dir && typeof raw.dir === 'object' ? raw.dir : {};
-    d.dir = { pick: DIRS.some(function (x) { return x.k === dr.pick; }) ? dr.pick : '', mine: s(dr.mine), why: s(dr.why), at: Number(dr.at) || 0 };
+    d.dir = { pick: dirsFor(caseId).some(function (x) { return x.k === dr.pick; }) ? dr.pick : '', mine: s(dr.mine), why: s(dr.why), at: Number(dr.at) || 0 };
     var rr = raw.rows, rows = [];
     if (Array.isArray(rr)) rows = rr.map(function (r, i) { return normRow(r, i); });
     else if (rr && typeof rr === 'object') rows = Object.keys(rr).map(function (k, i) { var m = /^r(\d+)$/.exec(k); return normRow(Object.assign({}, rr[k], m ? { n: Number(m[1]) } : {}), i + 1); });
@@ -222,6 +240,43 @@
     });
     return out;
   }
+
+  /* ———— 外部訪談證據卡（非 sms 案例：學生自己找人聊，一張卡記一句話）————
+     三格：誰（代號）、他說了什麼、跟哪個畫面有關（可空）。證據編號 ec:{案例}:{卡id}；有填「畫面」的卡同時是對準表可選的「畫面」。
+     tools/prx_common.py 的 build_card_evidence／build_card_cells 與這裡逐字對帳（tools/prx_fixtures.json 的 ec_cards）。 */
+  var CARD_ID_RE = /^[a-z0-9]{4,12}$/;
+  function normCard(raw, id) {
+    if (!raw || typeof raw !== 'object' || !CARD_ID_RE.test(s(id))) return null;
+    var o = { id: s(id), who: clip(tr(raw.who), LIMITS.cardWho), said: clip(tr(raw.said), LIMITS.cardSaid), screen: clip(tr(raw.screen), LIMITS.cardScreen), t: Number(raw.t) || 0 };
+    return o.who && o.said ? o : null;      /* 誰與他說了什麼都要有，才算一張卡 */
+  }
+  /* raw：資料庫 evi/{學號}/{案例} 底下的物件（或 {id: 卡} 的物件／陣列）→ 依時間排好的卡片陣列 */
+  function normCards(raw) {
+    var out = [];
+    if (raw && typeof raw === 'object') Object.keys(raw).forEach(function (k) { var c = normCard(raw[k], k); if (c) out.push(c); });
+    out.sort(function (a, b) { return a.t - b.t || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0); });
+    return out.slice(0, LIMITS.maxCards);
+  }
+  function cardForWrite(c) { return { who: clip(tr(c.who), LIMITS.cardWho), said: clip(tr(c.said), LIMITS.cardSaid), screen: clip(tr(c.screen), LIMITS.cardScreen), t: Number(c.t) || 0 }; }
+  function newCardId(now, rnd) { return 'c' + (Number(now) || Date.now()).toString(36).slice(-6) + Math.floor((rnd == null ? Math.random() : rnd) * 1296).toString(36).padStart(2, '0'); }
+  /* 學生寫的字裡有信箱、手機號碼、學號：不存（卡片只用代號，不留聯絡方式）；真名這裡抓不到，靠欄位說明與助手／審核送模型前的遮蔽 */
+  var CONTACT_RE = /[\w.+-]+@[\w-]+(\.[\w-]+)+|(^|[^0-9])0?9[0-9]{2}[- ]?[0-9]{3}[- ]?[0-9]{3}([^0-9]|$)|[0-9][A-Za-z][0-9][A-Za-z][0-9]{4}/;
+  function cardHasContact(c) { return CONTACT_RE.test(s(c && c.who) + ' ' + s(c && c.said) + ' ' + s(c && c.screen)); }
+  function cardEvidence(cards, caseId) {
+    var cn = caseName(caseId);
+    return arr(cards).map(function (c) {
+      return { id: 'ec:' + caseId + ':' + c.id, kind: 'ec', room: '', caseId: caseId, ref: c.id, pid: '', who: c.who, label: '訪談卡：' + c.who, text: c.said,
+        src: '訪談卡「' + c.who + '」（案例：' + cn + '）' };
+    });
+  }
+  function cardCells(cards, caseId) {
+    var out = [];
+    arr(cards).forEach(function (c, i) {
+      if (!c.screen) return;
+      out.push({ id: caseId + ':e' + c.id, room: '', n: i + 1, title: clip(c.screen, 24), text: clip(c.said, 60), label: '畫面「' + clip(c.screen, 14) + '」（訪談卡「' + clip(c.who, 8) + '」）' });
+    });
+    return out;
+  }
   /* 對應人物：只列自己訪談過的人；系統沒有存人物誌內容，所以再讓學生自己填一句 */
   function personaOptions(evidence, opts) {
     var seen = {}, out = [];
@@ -246,9 +301,9 @@
     return miss;
   }
   /* 與 tools/prx_common.py 的 alignment() 一模一樣（fixtures 兩邊對帳）。回傳 { ok, problems:[{code,row,msg}] } */
-  function alignment(doc, evSet, cellSet) {
+  function alignment(doc, evSet, cellSet, caseId) {
     var P = [];
-    function add(code, row) { P.push({ code: code, row: row || 0, msg: msg(code, row) }); }
+    function add(code, row) { P.push({ code: code, row: row || 0, msg: msg(code, row, caseId) }); }
     var d = doc.dir;
     if (!d.pick) add('dir-none');
     else {
@@ -266,9 +321,9 @@
   }
   function problemsByRow(al, n) { return al.problems.filter(function (p) { return p.row === n; }); }
 
-  function status(doc, evidence, cells) {
+  function status(doc, evidence, cells, caseId) {
     var evSet = {}, cellSet = {}; evidence.forEach(function (e) { evSet[e.id] = true; }); cells.forEach(function (c) { cellSet[c.id] = true; });
-    var al = alignment(doc, evSet, cellSet), filled = doc.rows.filter(rowFilled);
+    var al = alignment(doc, evSet, cellSet, caseId), filled = doc.rows.filter(rowFilled);
     var done = filled.filter(function (r) { return rowMissing(r, evSet, cellSet).length === 0; });
     var gaps = filled.filter(function (r) { var m = rowMissing(r, evSet, cellSet); return m.indexOf('row-ev') >= 0 || m.indexOf('row-ev-lost') >= 0; }).map(function (r) { return r.n; });
     var dirOk = !!doc.dir.pick && !!tr(doc.dir.why) && (doc.dir.pick !== 'mine' || !!tr(doc.dir.mine));
@@ -280,7 +335,10 @@
   /* 頂部一句話：下一步做什麼（先講最前面卡住的那一件） */
   function nextStep(doc, evidence, cells, st, ctx) {
     ctx = ctx || {}; st = st || status(doc, evidence, cells);
+    var other = !!ctx.caseId && ctx.caseId !== 'sms';
+    if (!evidence.length && other) return { text: '先去找一個人聊聊，回來記一句他說的話：在「我的訪談卡」新增一張。', go: 'cards' };
     if (!evidence.length) return { text: '先回急診室訪談一位關係人。提案要用你自己問來的內容，現在紀錄裡還沒有。', go: 'game' };
+    if (other && !doc.dir.pick) return { text: '先用一句話寫出「我的方向」，再寫一句為什麼。', go: 'dir' };
     if (!doc.dir.pick) return { text: '先選一個方向（簡訊改網頁、接 LINE、整合進 App，或你自己的），再寫一句為什麼。', go: 'dir' };
     if (doc.dir.pick === 'mine' && !tr(doc.dir.mine)) return { text: '你選了「我自己的方向」，先用一句話寫出你的方向。', go: 'dir' };
     if (!tr(doc.dir.why)) return { text: '方向選好了，接著寫一句「為什麼選它」。', go: 'dir' };
@@ -290,12 +348,12 @@
     for (var i = 0; i < order.length; i += 1) {
       var r = order[i]; if (!rowFilled(r)) continue;
       var miss = rowMissing(r, st.evSet, st.cellSet);
-      if (miss.indexOf('row-ev') >= 0 || miss.indexOf('row-ev-lost') >= 0) return { text: '第 ' + r.n + ' 列指不回訪談：點選一則依據，或按「回去問」再問一個人。', go: 'row', row: r.n };
+      if (miss.indexOf('row-ev') >= 0 || miss.indexOf('row-ev-lost') >= 0) return { text: other ? '第 ' + r.n + ' 列指不回訪談：點選一張訪談卡，或到「我的訪談卡」再記一張。' : '第 ' + r.n + ' 列指不回訪談：點選一則依據，或按「回去問」再問一個人。', go: 'row', row: r.n };
     }
     for (var j = 0; j < order.length; j += 1) {
       var r2 = order[j]; if (!rowFilled(r2)) continue;
       var m2 = rowMissing(r2, st.evSet, st.cellSet);
-      if (m2.length) return { text: '第 ' + r2.n + ' 列還缺「' + ROW_FIELD_NAME[m2[0]] + '」。', go: 'row', row: r2.n };
+      if (m2.length) return { text: '第 ' + r2.n + ' 列還缺「' + (other && m2[0] === 'row-cell' ? '跟哪個畫面有關' : ROW_FIELD_NAME[m2[0]]) + '」。', go: 'row', row: r2.n };
     }
     if (st.realDone < 3) return { text: '現實題還有 ' + (3 - st.realDone) + ' 題沒答。不知道也可以寫「我不知道，但會去問誰」。', go: 'real' };
     if (ctx.lastRev && ctx.lastRev.ok === false) return { text: '上次送審有地方要補，照審核建議改完再送一次。', go: 'rev' };
@@ -367,7 +425,7 @@
     '.row{break-inside:avoid;border:1px solid #000;border-top:6px solid #3d6fe0;padding:6px 10px;margin:8px 0}.ev{margin:2px 0;padding-left:8px;border-left:3px solid #999}.ai{background:#fff0c2;padding:0 4px;border-radius:3px;font-size:10px}';
   function printHtml(doc, ctx) {
     ctx = ctx || {}; var evs = ctx.evMap || {}, cells = ctx.cellMap || {}, P = ctx.personaNames || {}, st = ctx.status || null, parts = [];
-    var dir = DIRS.filter(function (x) { return x.k === doc.dir.pick; })[0];
+    var dir = dirsFor(ctx.caseId).filter(function (x) { return x.k === doc.dir.pick; })[0], otherCase = !!ctx.caseId && ctx.caseId !== 'sms';
     parts.push('<h1>' + esc(caseTitle(ctx.caseId)) + '提案</h1><div class="note">學號 ' + esc(ctx.sid || '') + '　' + esc(ctx.date || '') + '　呼呼醫院（虛構的教學情境）</div>');
     if (st && !st.complete) parts.push('<p class="warn">這份提案還沒完成：' + st.alignment.problems.slice(0, 6).map(function (p) { return esc(p.msg); }).join(' ') + '</p>');
     parts.push('<h2>1. 我選的方向</h2><p><b>' + esc(dir ? (doc.dir.pick === 'mine' ? '我自己的方向：' + doc.dir.mine : dir.name) : '（還沒選）') + '</b></p><p>為什麼：' + esc(doc.dir.why || '（還沒寫）') + '</p>');
@@ -379,7 +437,7 @@
       var c = r.cell ? cells[r.cell] : null;
       function ai(k) { return r.ai && r.ai[k] ? ' <span class="ai">助手示範</span>' : ''; }
       parts.push('<div class="row"><b>第 ' + r.n + ' 列　我決定：</b>' + esc(r.decide || '（空）') + ai('decide') + '<table><tr><th style="width:22%">依據</th><td>' + evh + '</td></tr>' +
-        '<tr><th>對應人物</th><td>' + (pn || '（沒選）') + own + '</td></tr><tr><th>解決故事板哪一格</th><td>' + (c ? esc(c.label) + (c.text ? '：' + esc(c.text) : '') : '（沒選）') + '</td></tr>' +
+        '<tr><th>對應人物</th><td>' + (pn || '（沒選）') + own + '</td></tr><tr><th>' + (otherCase ? '跟哪個畫面有關' : '解決故事板哪一格') + '</th><td>' + (c ? esc(c.label) + (c.text ? '：' + esc(c.text) : '') : '（沒選）') + '</td></tr>' +
         '<tr><th>誰可能不同意</th><td>' + esc(r.dissent || '（空）') + ai('dissent') + '</td></tr><tr><th>我的取捨</th><td>' + esc(r.tradeoff || '（空）') + ai('tradeoff') + '</td></tr></table></div>');
     });
     parts.push('<h2>3. 現實題</h2><table>' + REAL_KEYS.map(function (k) {
@@ -388,7 +446,7 @@
     return '<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + esc(caseTitle(ctx.caseId)) + '提案</title><style>' + PRINT_CSS + '</style></head><body>' + parts.join('') + '</body></html>';
   }
 
-  return { DIRS: DIRS, CASES: CASES, DEFAULT_CASE: DEFAULT_CASE, caseDef: caseDef, isCase: isCase, caseOf: caseOf, liveCase: liveCase, caseTitle: caseTitle, caseName: caseName, roomsOfCase: roomsOfCase, LIMITS: LIMITS, COACH_PER_DAY: COACH_PER_DAY, coachLeft: coachLeft, submitNote: submitNote, REAL_KEYS: REAL_KEYS, REAL_Q: REAL_Q, ITEM_LABEL: ITEM_LABEL, PNAMES: PNAMES, EVENT_KINDS: EVENT_KINDS, PX_KINDS: PX_KINDS, PROBLEM_MSG: PROBLEM_MSG, ROW_FIELD_NAME: ROW_FIELD_NAME,
+  return { DIRS: DIRS, DIRS_OTHER: DIRS_OTHER, dirsFor: dirsFor, PROBLEM_MSG_OTHER: PROBLEM_MSG_OTHER, caseForPage: caseForPage, cardHasContact: cardHasContact, normCard: normCard, normCards: normCards, cardForWrite: cardForWrite, newCardId: newCardId, cardEvidence: cardEvidence, cardCells: cardCells, CASES: CASES, DEFAULT_CASE: DEFAULT_CASE, caseDef: caseDef, isCase: isCase, caseOf: caseOf, liveCase: liveCase, caseTitle: caseTitle, caseName: caseName, roomsOfCase: roomsOfCase, LIMITS: LIMITS, COACH_PER_DAY: COACH_PER_DAY, coachLeft: coachLeft, submitNote: submitNote, REAL_KEYS: REAL_KEYS, REAL_Q: REAL_Q, ITEM_LABEL: ITEM_LABEL, PNAMES: PNAMES, EVENT_KINDS: EVENT_KINDS, PX_KINDS: PX_KINDS, PROBLEM_MSG: PROBLEM_MSG, ROW_FIELD_NAME: ROW_FIELD_NAME,
     arr: arr, tr: tr, copy: copy, msg: msg, pname: pname, emptyRow: emptyRow, emptyDoc: emptyDoc, normRow: normRow, normDoc: normDoc, rowKey: rowKey, nextRowN: nextRowN, rowByN: rowByN, rowForWrite: rowForWrite,
     editRatio: editRatio, applyEdit: applyEdit, applyFill: applyFill, aiFilledRows: aiFilledRows, aiFieldShare: aiFieldShare,
     markersFromScene: markersFromScene, roomInput: roomInput, buildEvidence: buildEvidence, evMap: evMap, buildCells: buildCells, personaOptions: personaOptions,

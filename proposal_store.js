@@ -23,7 +23,15 @@
 
     return {
       caseId: CASE,
-      watchDoc: function (sid, cb) { return on(docRef(sid), function (v) { cb(PX.normDoc(v)); }); },
+      watchDoc: function (sid, cb) { return on(docRef(sid), function (v) { cb(PX.normDoc(v, CASE)); }); },
+      /* 外部訪談證據卡（非 sms 案例）：evi/{學號}/{案例}/{卡id}，只有本人與老師帳號讀得到；欄位長度規則與 PX.LIMITS.card* 同值 */
+      watchCards: function (sid, cb) { return on(root.child('evi/' + sid + '/' + CASE), function (v) { cb(PX.normCards(v)); }); },
+      saveCard: function (sid, card) {
+        if (!PX.tr(card.who) || !PX.tr(card.said)) return Promise.reject(new Error('卡片要寫「誰」和「他說了什麼」'));
+        var id = card.id && /^[a-z0-9]{4,12}$/.test(card.id) ? card.id : PX.newCardId(now(), rnd()), o = PX.cardForWrite(Object.assign({}, card, { t: card.t || now() }));
+        return Promise.resolve(root.child('evi/' + sid + '/' + CASE + '/' + id).set(clean(o))).then(function () { return Object.assign({ id: id }, o); });
+      },
+      removeCard: function (sid, id) { return Promise.resolve(root.child('evi/' + sid + '/' + CASE + '/' + id).remove()); },
       saveDir: function (sid, dir) {
         var t = now(), d = { pick: dir.pick, mine: dir.mine || '', why: dir.why || '', at: t };
         return Promise.all([docRef(sid).child('dir').set(clean(d)), docRef(sid).child('updatedAt').set(t)]).then(function () { return d; });
