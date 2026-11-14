@@ -29,8 +29,8 @@
      tools/prx_common.py 的 CASE_NAMES／LIVE_CASES 必須同步（tools/test_prx_common.py 對帳）。 */
   var CASES = [
     { k: 'sms', name: '離院衛教簡訊', title: '衛教簡訊再設計', live: true },
-    { k: 'bike', name: '公路車', title: '公路車', live: true },
-    { k: 'trash', name: '垃圾車', title: '垃圾車', live: true },
+    { k: 'bike', name: '騎行夥伴', title: '騎行夥伴', live: true },
+    { k: 'trash', name: '垃圾車快報', title: '垃圾車快報', live: true },
     /* 11-14 擇優自主再設計五案（_ux_redesign_cases/）：遊戲三案只預留代碼，學生看到的是虛構名 */
     { k: 'ftl', name: '星際逃亡船', title: '星際逃亡船', live: true },
     { k: 'itb', name: '機甲防衛戰', title: '機甲防衛戰', live: true },
