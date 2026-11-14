@@ -29,12 +29,12 @@
      tools/prx_common.py 的 CASE_NAMES／LIVE_CASES 必須同步（tools/test_prx_common.py 對帳）。 */
   var CASES = [
     { k: 'sms', name: '離院衛教簡訊', title: '衛教簡訊再設計', live: true },
-    { k: 'bike', name: '公路車', title: '公路車', live: false },
-    { k: 'trash', name: '垃圾車', title: '垃圾車', live: false },
+    { k: 'bike', name: '公路車', title: '公路車', live: true },
+    { k: 'trash', name: '垃圾車', title: '垃圾車', live: true },
     /* 11-14 擇優自主再設計五案（_ux_redesign_cases/）：遊戲三案只預留代碼，學生看到的是虛構名 */
-    { k: 'ftl', name: '星際逃亡船', title: '星際逃亡船', live: false },
-    { k: 'itb', name: '機甲防衛戰', title: '機甲防衛戰', live: false },
-    { k: 'sts', name: '爬塔卡牌', title: '爬塔卡牌', live: false }
+    { k: 'ftl', name: '星際逃亡船', title: '星際逃亡船', live: true },
+    { k: 'itb', name: '機甲防衛戰', title: '機甲防衛戰', live: true },
+    { k: 'sts', name: '爬塔卡牌', title: '爬塔卡牌', live: true }
   ];
   var DEFAULT_CASE = 'sms';
   var LIMITS = { why: 200, mine: 80, decide: 120, personaOwn: 60, dissent: 120, tradeoff: 160, real: 200, askWho: 60, maxRows: 8, minRows: 3, maxEv: 6, ask: 300, textShow: 140,

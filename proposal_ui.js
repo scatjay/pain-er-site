@@ -31,6 +31,18 @@
     S.armed[label] = setTimeout(function () { delete S.armed[label]; btn.textContent = old; btn.classList.remove('armed'); }, 6000);
   }
   function gameHref(code) { return (MOBILE_UA ? 'm.html' : 'index.html') + (code ? '#room=' + code : ''); }
+  /* 換案例（11-14 楊老師「做好就可以開」：五案對學生開放，從這裡切換；每個案例的提案分開存） */
+  function mountCasePicker() {
+    if ($('caseSel')) return;
+    var testMode = LOCAL || /^ER-TEST/.test(sess());
+    var list = PX.CASES.filter(function (c) { return c.live || testMode; }); if (list.length < 2) return;
+    var h1 = document.querySelector('#top .line h1'); if (!h1) return;
+    var sel = document.createElement('select'); sel.id = 'caseSel'; sel.setAttribute('aria-label', '換案例');
+    sel.style.cssText = 'margin-left:8px;font-size:13px;border:2px solid var(--ink);border-radius:8px;padding:2px 6px;background:var(--panel);color:var(--ink)';
+    list.forEach(function (c) { var o = document.createElement('option'); o.value = c.k; o.textContent = c.title; if (c.k === CASE) o.selected = true; sel.appendChild(o); });
+    sel.onchange = function () { var q = new URLSearchParams(location.search); q.set('case', sel.value); logEvent('dir', 'case:' + sel.value); location.search = q.toString(); };
+    h1.parentNode.insertBefore(sel, h1.nextSibling);
+  }
   function logEvent(k, d) { if (S.store && S.sid) S.store.logEvent(S.sid, k, d); }
 
   /* ———— 啟動 ———— */
@@ -66,6 +78,7 @@
     S.sid = sid; try { S.DB.attach && S.DB.attach(); } catch (e) {}
     $('gate').hidden = true; $('app').hidden = false;
     $('sidLine').textContent = '學號 ' + sid; bindStatic();
+    mountCasePicker();
     if (CARDS_MODE) {
       var mt = document.querySelector('#top .line .muted'); if (mt) mt.textContent = PX.caseTitle(CASE) + '・提案室'; if ($('sbLink')) $('sbLink').hidden = true; if ($('reviseLink')) $('reviseLink').hidden = true;
       var rm = document.querySelector('#secRows > .muted'); if (rm) rm.textContent = '每一列要回答：我決定什麼、依據是我哪一張訪談卡、對應哪位人物、跟哪個畫面有關、誰可能不同意、我取捨了什麼。依據找不到的列會標「指不回訪談」，到上面「我的訪談卡」再記一張就好。';
