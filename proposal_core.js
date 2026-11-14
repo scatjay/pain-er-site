@@ -34,7 +34,10 @@
     /* 11-14 擇優自主再設計五案（_ux_redesign_cases/）：遊戲三案只預留代碼，學生看到的是虛構名 */
     { k: 'ftl', name: '星際逃亡船', title: '星際逃亡船', live: true },
     { k: 'itb', name: '機甲防衛戰', title: '機甲防衛戰', live: true },
-    { k: 'sts', name: '爬塔卡牌', title: '爬塔卡牌', live: true }
+    { k: 'sts', name: '爬塔卡牌', title: '爬塔卡牌', live: true },
+    /* 11-14 交通訂票兩案（_ux_redesign_cases/thsr、hoshin）：主軸是「在好用的訂票流程裡加入 AI 代理人助理」，學生看到的是虛構名 */
+    { k: 'hsr', name: '快鐵訂位', title: '快鐵訂位', live: true },
+    { k: 'bus', name: '客運快訂', title: '客運快訂', live: true }
   ];
   var DEFAULT_CASE = 'sms';
   var LIMITS = { why: 200, mine: 80, decide: 120, personaOwn: 60, dissent: 120, tradeoff: 160, real: 200, askWho: 60, maxRows: 8, minRows: 3, maxEv: 6, ask: 300, textShow: 140,
