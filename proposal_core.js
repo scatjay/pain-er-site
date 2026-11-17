@@ -37,7 +37,13 @@
     { k: 'sts', name: '爬塔卡牌', title: '爬塔卡牌', live: true },
     /* 11-14 交通訂票兩案（_ux_redesign_cases/thsr、hoshin）：主軸是「在好用的訂票流程裡加入 AI 代理人助理」，學生看到的是虛構名 */
     { k: 'hsr', name: '快鐵訂位', title: '快鐵訂位', live: true },
-    { k: 'bus', name: '客運快訂', title: '客運快訂', live: true }
+    { k: 'bus', name: '客運快訂', title: '客運快訂', live: true },
+    /* 11-17 遊戲線新逆向的遊戲案例（_ux_redesign_cases/poker）：學生看到的是虛構名 */
+    { k: 'poker', name: '撲克闖關', title: '撲克闖關', live: true },
+    /* 11-17 遊戲線新逆向的遊戲案例（_ux_redesign_cases/dice）：學生看到的是虛構名 */
+    { k: 'dice', name: '擲骰闖關', title: '擲骰闖關', live: true },
+    /* 11-17 遊戲線新逆向的遊戲案例（_ux_redesign_cases/colony）：學生看到的是虛構名 */
+    { k: 'colony', name: '荒星聚落', title: '荒星聚落', live: true }
   ];
   var DEFAULT_CASE = 'sms';
   var LIMITS = { why: 200, mine: 80, decide: 120, personaOwn: 60, dissent: 120, tradeoff: 160, real: 200, askWho: 60, maxRows: 8, minRows: 3, maxEv: 6, ask: 300, textShow: 140,
