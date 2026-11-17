@@ -16,6 +16,7 @@
   function sess() { var ts = (location.search.match(/[?&]tsess=([A-Za-z0-9]{1,12})/) || [])[1]; return (ts && /^(127\.0\.0\.1|localhost)$/.test(location.hostname)) ? 'ER-TEST-' + ts : UNIT_SESS; }
   var NOW = function () { return Date.now(); };
   var CASE = PX.caseForPage(Q.get('case'), LOCAL || /^ER-TEST/.test(sess()));   /* 這一頁正在寫的提案屬於哪個案例；一般只開已上線的，測試模式（?local=1 或本機 tsess 測試場次）可開還沒上線的案例走一遍 */
+  window.ERG_DEV = PX.deviceOf(CASE);   /* 11-17：這一頁的畫面裝置（手機 390×844／電腦 1280×720），原型工作台與步驟助教讀它 */
   var CARDS_MODE = CASE !== PX.DEFAULT_CASE;   /* 非 sms 案例：證據是學生自己填的訪談卡，沒有急診室房間與故事板 */
   var MOBILE_UA = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
   var ASK_ORDER = ['patient', 'family', 'triage_nurse', 'nurse', 'clerk', 'doctor', 'volunteer', 'superintendent'];
@@ -78,6 +79,40 @@
     var main = $('main'), first = main && main.firstElementChild;
     if (main && !$('hello')) { var hi = document.createElement('div'); hi.id = 'hello'; hi.textContent = d.hello; main.insertBefore(hi, first); }
   }
+  /* H3：學習單單元的助教（proposal.html?unit=w3&step=步驟名稱）。建議提問是規則式（unit_coach.js，不呼叫模型）；按建議提問只是把題目放進輸入框，
+     按「問」才送出、才算每天的名額（和提案室助手同一份，所有單元合計）。回答由 tools/prx_coach.py 的 answer_unit 寫回。 */
+  var UNIT = (function () { try { var u = Q.get('unit'); return (window.UnitCoach && window.TUTOR_UNITS_DATA && UnitCoach.CODES.indexOf(u) >= 0) ? u : ''; } catch (e) { return ''; } })();
+  function mountUnitPanel() {
+    if (!UNIT || $('unitPanel') || !window.UnitCoach) return;
+    UnitCoach.init(window.TUTOR_UNITS_DATA); var U = UnitCoach.unit(UNIT), main = $('main'); if (!U || !main) return;
+    var step = tr(Q.get('step') || ''), UP = { used: 0, key: '', t0: Date.now(), shown: {} };
+    /* step 參數可以是步驟 id（s1、s2…，學習單步驟卡順序）或步驟名稱 */
+    var box = document.createElement('section'); box.className = 'card'; box.id = 'unitPanel';
+    box.innerHTML = '<h2>問助教：' + esc(U.title) + '</h2><div class="muted">按下面的問題，會把它放進輸入框；按「問」才會送出（算今天的名額）。</div><div class="bar" id="uSug"></div>' +
+      '<div id="uNudge"></div><textarea id="uAsk" rows="3" maxlength="300" placeholder="也可以自己打你的問題（300 字內，不要寫電話或姓名）" aria-label="你的問題" style="width:100%"></textarea>' +
+      '<div class="bar"><button id="uSend" type="button">問</button> <span class="muted" id="uLeft"></span></div><div id="uAns" role="status" aria-live="polite"></div>';
+    main.insertBefore(box, main.firstElementChild);
+    $('uSug').innerHTML = UnitCoach.suggest(UNIT, step).map(function (q, i) { return '<button type="button" class="chip" data-uq="' + i + '">' + esc(q) + '</button>'; }).join('');
+    var sug = UnitCoach.suggest(UNIT, step);
+    function left() { var n = UnitCoach.typedLeft(UP.used); $('uLeft').textContent = n > 0 ? '今天還能問 ' + n + ' 次（所有單元合計每天 ' + UnitCoach.COACH_PER_DAY + ' 次，明天 00:00 重算）' : '今天的次數用完了，明天 00:00 再問。'; $('uSend').disabled = n <= 0 || !!UP.key; }
+    $('uSug').onclick = function (e) { var b = e.target.closest && e.target.closest('button[data-uq]'); if (!b) return; $('uAsk').value = sug[Number(b.dataset.uq)] || ''; $('uAsk').focus(); };
+    try { S.store.watchCoachUsed(S.sid, function (n) { UP.used = n; left(); }); } catch (e) {}
+    try { S.store.watchCoachAnswers(S.sid, function (a) { var r = UP.key && a[UP.key]; if (!r) return; UP.key = ''; $('uAns').textContent = r.text || '（助教沒有回答，請再試一次）'; left(); }); } catch (e) {}
+    $('uSend').onclick = function () {
+      var ask = tr($('uAsk').value); if (!ask) { toast('先打出你的問題再送出'); return; } if (UP.key || UnitCoach.typedLeft(UP.used) <= 0) return;
+      UP.key = 'pending'; left(); $('uAns').textContent = '助教想一下…';
+      S.store.reserveCoach(S.sid).then(function (r) {
+        if (!r.ok) { UP.key = ''; $('uAns').textContent = '今天的次數用完了，明天 00:00 再問。'; UP.used = UnitCoach.COACH_PER_DAY; left(); return; }
+        var key = String(Date.now()), q = UnitCoach.typedPayload(UNIT, step, ask); q.t = Number(key); UP.key = key;
+        return S.store.putCoachQ(S.sid, key, q).then(function () { try { logEvent('ask', 'unit:' + UNIT); } catch (e) {} $('uAsk').value = ''; setTimeout(function () { if (UP.key === key) { UP.key = ''; $('uAns').textContent = '助教現在忙不過來，稍後再試。'; left(); } }, 60000); });
+      }).catch(function (e) { UP.key = ''; $('uAns').textContent = '送不出去：' + ((e && e.message) || '請稍後再試'); left(); });
+    };
+    setInterval(function () {
+      var m = (Date.now() - UP.t0) / 60000;
+      UnitCoach.nudges(UNIT, step, m).forEach(function (x) { if (x.cond || UP.shown[x.id]) return;   /* 有附加條件（例如「便條還沒有內容」）的提醒，這個頁面看不到學生的內容，不自己出 */ UP.shown[x.id] = 1; var d = document.createElement('div'); d.className = 'nudge'; d.textContent = '💡 ' + x.text; $('uNudge').appendChild(d); });
+    }, 30000);
+    left();
+  }
   function logEvent(k, d) { if (S.store && S.sid) S.store.logEvent(S.sid, k, d); }
 
   /* ———— 啟動 ———— */
@@ -115,6 +150,7 @@
     $('gate').hidden = true; $('app').hidden = false;
     $('sidLine').textContent = '學號 ' + sid; bindStatic();
     mountCasePicker(); try { mountDeco(); } catch (e) { console.warn('[deco]', e); }
+    try { mountUnitPanel(); } catch (e) { console.warn('[unit]', e); }
     if (CARDS_MODE) {
       var mt = document.querySelector('#top .line .muted'); if (mt) mt.textContent = PX.caseTitle(CASE) + '・提案室'; if ($('sbLink')) $('sbLink').hidden = true; if ($('reviseLink')) $('reviseLink').hidden = true;
       var rm = document.querySelector('#secRows > .muted'); if (rm) rm.textContent = '每一列要回答：我決定什麼、依據是我哪一張訪談卡、對應哪位人物、跟哪個畫面有關、誰可能不同意、我取捨了什麼。依據找不到的列會標「指不回訪談」，到上面「我的訪談卡」再記一張就好。';

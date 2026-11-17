@@ -466,6 +466,13 @@
     return '<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + esc(caseTitle(ctx.caseId)) + '提案</title><style>' + PRINT_CSS + '</style></head><body>' + parts.join('') + '</body></html>';
   }
 
+  /* ———— 11-17：畫面裝置。桌機案（機甲防衛戰、撲克闖關、擲骰闖關、荒星聚落）畫面是 1280×720 橫的，其餘手機 390×844。
+     tools/prx_common.py 的 DEVICE_PC 必須同值（tools/test_prx_common.py 對帳）。作業說明與學習單的「寬 390」另由母線與學習單那邊處理。 ———— */
+  var DEVICES = { mobile: { key: 'mobile', w: 390, h: 844, frame: '手機畫面', name: '手機' }, pc: { key: 'pc', w: 1280, h: 720, frame: '電腦畫面（橫的）', name: '電腦' } };
+  var DEVICE_PC = ['itb', 'poker', 'dice', 'colony'];
+  function deviceOf(caseId) { return DEVICE_PC.indexOf(caseId) >= 0 ? DEVICES.pc : DEVICES.mobile; }
+  /* 把字串裡的 {w}、{h}、{frame} 換成這個案例（或裝置物件）的寬、高、畫面說法 */
+  function fmtDev(str, caseOrDev) { var d = caseOrDev && typeof caseOrDev === 'object' ? caseOrDev : deviceOf(caseOrDev); return String(str == null ? '' : str).replace(/\{w\}/g, d.w).replace(/\{h\}/g, d.h).replace(/\{frame\}/g, d.frame); }
   /* ———— H1（11-17）：案例細節區分。每個案例自己的主色（亮／暗各一）、符號、一句話與開場語；主色換掉後，頂列色條、卡片上緣、按鈕、對準表編號一次到位（proposal.html 都用 --ct）。
      色票用 test_proposal_core.js 量對比：亮色白字 ≥ 4.5、暗色主色對暗板（#18262e）≥ 4.5 且深字（#10191f）疊在主色上 ≥ 4.5。學生看得到的字不提原作名。
      不改資料結構與資料庫路徑，只放在這張表（k＝案例代碼）。 ———— */
@@ -524,7 +531,7 @@
     });
     return out;
   }
-  return { DECO: DECO, decoOf: decoOf, decoColors: decoColors, contrastHex: contrastHex, STAGES: STAGES, caseProgress: caseProgress, attemptsSummary: attemptsSummary, DIRS: DIRS, DIRS_OTHER: DIRS_OTHER, dirsFor: dirsFor, PROBLEM_MSG_OTHER: PROBLEM_MSG_OTHER, caseForPage: caseForPage, cardHasContact: cardHasContact, normCard: normCard, normCards: normCards, cardForWrite: cardForWrite, newCardId: newCardId, cardEvidence: cardEvidence, cardCells: cardCells, CASES: CASES, GROUPS: GROUPS, groupName: groupName, caseCode: caseCode, DEFAULT_CASE: DEFAULT_CASE, caseDef: caseDef, isCase: isCase, caseOf: caseOf, liveCase: liveCase, caseTitle: caseTitle, caseName: caseName, roomsOfCase: roomsOfCase, LIMITS: LIMITS, COACH_PER_DAY: COACH_PER_DAY, coachLeft: coachLeft, submitNote: submitNote, REAL_KEYS: REAL_KEYS, REAL_Q: REAL_Q, ITEM_LABEL: ITEM_LABEL, PNAMES: PNAMES, EVENT_KINDS: EVENT_KINDS, PX_KINDS: PX_KINDS, PROBLEM_MSG: PROBLEM_MSG, ROW_FIELD_NAME: ROW_FIELD_NAME,
+  return { DEVICES: DEVICES, DEVICE_PC: DEVICE_PC, deviceOf: deviceOf, fmtDev: fmtDev, DECO: DECO, decoOf: decoOf, decoColors: decoColors, contrastHex: contrastHex, STAGES: STAGES, caseProgress: caseProgress, attemptsSummary: attemptsSummary, DIRS: DIRS, DIRS_OTHER: DIRS_OTHER, dirsFor: dirsFor, PROBLEM_MSG_OTHER: PROBLEM_MSG_OTHER, caseForPage: caseForPage, cardHasContact: cardHasContact, normCard: normCard, normCards: normCards, cardForWrite: cardForWrite, newCardId: newCardId, cardEvidence: cardEvidence, cardCells: cardCells, CASES: CASES, GROUPS: GROUPS, groupName: groupName, caseCode: caseCode, DEFAULT_CASE: DEFAULT_CASE, caseDef: caseDef, isCase: isCase, caseOf: caseOf, liveCase: liveCase, caseTitle: caseTitle, caseName: caseName, roomsOfCase: roomsOfCase, LIMITS: LIMITS, COACH_PER_DAY: COACH_PER_DAY, coachLeft: coachLeft, submitNote: submitNote, REAL_KEYS: REAL_KEYS, REAL_Q: REAL_Q, ITEM_LABEL: ITEM_LABEL, PNAMES: PNAMES, EVENT_KINDS: EVENT_KINDS, PX_KINDS: PX_KINDS, PROBLEM_MSG: PROBLEM_MSG, ROW_FIELD_NAME: ROW_FIELD_NAME,
     arr: arr, tr: tr, copy: copy, msg: msg, pname: pname, emptyRow: emptyRow, emptyDoc: emptyDoc, normRow: normRow, normDoc: normDoc, rowKey: rowKey, nextRowN: nextRowN, rowByN: rowByN, rowForWrite: rowForWrite,
     editRatio: editRatio, applyEdit: applyEdit, applyFill: applyFill, aiFilledRows: aiFilledRows, aiFieldShare: aiFieldShare,
     markersFromScene: markersFromScene, roomInput: roomInput, buildEvidence: buildEvidence, evMap: evMap, buildCells: buildCells, personaOptions: personaOptions,

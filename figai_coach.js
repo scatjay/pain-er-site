@@ -9,6 +9,11 @@
 var FigCoach = (function () {
   'use strict';
   var COACH_PER_DAY = 30, FILL_CAP = { novice: 4, mid: 0, expert: 0 };
+  /* 11-17：畫面裝置。桌機案（機甲防衛戰、撲克闖關、擲骰闖關、荒星聚落）畫面是 1280×720 橫的，其餘手機 390×844。載入時兩種軌道都建；
+     頁面用 window.ERG_DEV（proposal_ui.js 依案例設定）決定新狀態用哪一種，沒有就當手機。欄位代號 frame390 沿用（舊進度相容），文字依裝置。 */
+  var DEVICES = { mobile: { key: 'mobile', w: 390, h: 844, frame: '手機畫面' }, pc: { key: 'pc', w: 1280, h: 720, frame: '電腦畫面（橫的）' } };
+  var D = DEVICES.mobile;   /* 建立軌道時的目前裝置（載入時依序切換，之後固定回手機） */
+  function devKey() { try { var d = typeof window !== 'undefined' && window.ERG_DEV; return d && DEVICES[d.key] ? d.key : 'mobile'; } catch (e) { return 'mobile'; } }
   var MODES = { novice: { name: '新手' }, mid: { name: '中級' }, expert: { name: '專家' } };
   var CAPS = { 1: 70, 2: 110, 3: 130, 4: 90, review: 70, fillBody: 260, intro: 300 };   /* 助教文字字數上限（算字元）；fillBody＝代填進欄位的指令本文；intro＝頁首三句 */
   var LEVEL_NAME = { 1: '方向', 2: '例子', 3: '示範', 4: '代填' };
@@ -22,7 +27,7 @@ var FigCoach = (function () {
           deliver: 'Figma 連結（確認別人打得開）', time: '30～40 分鐘', nextNote: '只用老師樣板 D 畫面的圖，不用等自己的畫面' },
     a1: { n: 2, tool: 'AI Studio', name: 'AI Studio 1/3', week: 'W11', title: '把畫面還原成網頁', modes: false, next: 'f2', done: '有一條打得開的 AI Studio 連結和一張預覽截圖',
           deliver: 'AI Studio 作品連結（設成別人打得開），加上一張預覽截圖', time: '30～40 分鐘；第一次生成約 4 分鐘', nextNote: 'W13 的 AI Studio 2/3 會用到你在那一份畫好的畫面' },
-    f2: { n: 3, tool: 'Figma', name: 'Figma 2/3', week: 'W12', title: '畫自己的一頁', modes: true, next: 'a2', done: '寬 390 的畫面、便條、Claude 整合截圖',
+    f2: { n: 3, tool: 'Figma', name: 'Figma 2/3', week: 'W12', title: '畫自己的一頁', modes: true, next: 'a2', done: '寬 {w} 的畫面、便條、Claude 整合截圖',
           deliver: 'Figma 連結（同一個檔，新增你自己的畫面；Share（分享）視窗裡 Anyone 那一列是 can view），加上一張 Claude 整合的截圖（看得到它的建議，以及你決定改或不改的理由）', time: '50～60 分鐘（Claude 整合約 10～15 分鐘）', nextNote: '會用到你這一份畫好的畫面',
           extra: { mid: '中級加做：把畫面拆成區塊、互動、狀態，每個狀態畫成一個畫面。', expert: '專家加做：先寫一份自己的設計規則，再畫多個畫面。' } },
     a2: { n: 4, tool: 'AI Studio', name: 'AI Studio 2/3', week: 'W13', title: '加一個互動', modes: true, next: 'f3', done: '互動能用、連結打得開、兩張 Claude 整合截圖',
@@ -37,7 +42,9 @@ var FigCoach = (function () {
   };
   var LV_OF = { novice: 1, mid: 2, expert: 3 };
 
-  var P1 = '請照著這張手機畫面做一個網頁，寬度 390。每一句文字都要照圖上的原文，不要改寫、不要增加內容。顏色和排版盡量和圖一樣。不要照圖上的換行位置硬斷行，讓文字自己排版。不要接任何外部服務。';
+  var P1_TAIL = '每一句文字都要照圖上的原文，不要改寫、不要增加內容。顏色和排版盡量和圖一樣。不要照圖上的換行位置硬斷行，讓文字自己排版。不要接任何外部服務。';
+  function p1Of(dev) { var d = DEVICES[dev] || DEVICES.mobile; return '請照著這張' + d.frame + '做一個網頁，寬度 ' + d.w + '。' + P1_TAIL; }
+  var P1 = p1Of('mobile');
   var OPTS = { 1: ['有問題　回急診', '請馬上帶他回呼呼醫院急診室，告訴護理師他一直吐、叫不醒或手腳沒力'], 2: ['一鍵傳給家人', '一則要傳給家人的訊息：今天要做的三件事'] };   /* 按鈕名字中間是全形空格，照畫面上的字 */
   function p2(o) { return '在目前的畫面上只加一個互動：點「' + OPTS[o][0] + '」會出現「' + OPTS[o][1] + '」。點整個區塊都能觸發，不只是文字。其他地方都不要動。不要真的傳送任何資料。'; }
   var FIX2 = '版面跑掉了。請只調整間距和字級，讓它和我給的圖一樣；文字、顏色、功能都不要動。下面是 Figma 量到的字級：＿＿';   /* 學習單 AI Studio 1/3 的「版面跑掉時」；尾巴「下面是 Figma 量到的字級」是母線 11-09 12:20 決定先加，等 F② 發布後對字 */
@@ -69,7 +76,7 @@ var FigCoach = (function () {
   var IMG_DIR = 'demo_data/figai_img/';
   var MEDIA = {
     figma_start: 'Figma 裡的樣板畫面，左邊是圖層、右邊是屬性欄', figma_select: 'Figma：左側圖層點選整個畫面，畫面出現藍框', figma_export: 'Figma 右邊屬性欄最下面的 Export 區，選 PNG、1x',
-    figma_exported: '匯出後得到的 PNG 圖片（要交給 AI Studio 的那張）', figma_screen: '你在 Figma 畫好的手機畫面（寬 390）',
+    figma_exported: '匯出後得到的 PNG 圖片（要交給 AI Studio 的那張）', figma_screen: '你在 Figma 畫好的畫面（手機寬 390、電腦寬 1280）',
     ais_home: 'Google AI Studio 首頁的輸入框', ais_upload: 'AI Studio 上傳圖片後，圖片出現在輸入框上方', ais_prompt: 'AI Studio 貼好指令、附好圖，準備送出',
     ais_done: 'AI Studio 生成完成', ais_preview: 'AI Studio 右邊的預覽，應該和 Figma 畫面一樣', ais_second: 'AI Studio 第二段互動做完',
     ais_try1: '試用前：畫面上的選項還沒勾', ais_try3: '勾了三項之後的畫面', ais_try4: '按下按鈕後跳出的視窗', ais_try5: '按下「知道了」後視窗關閉',
@@ -124,7 +131,7 @@ var FigCoach = (function () {
       stuck: { noconn: NOCONN_K, whoami: WHOAMI_K, claude: CLAUDE_K, disagree: DISAGREE_K, limit: LIM } });
   }
   function claudeA2a() {
-    return St('Claude 整合（一）：請 Claude 依你的 PNG 寫第一段指令', ['claudeShot1'], { dir: '開新對話，上傳你的 PNG，請 Claude 寫一段給 AI Studio 的指令；把這一輪截一張圖。', l2: '指令要求：寬度 390、每一句文字照原文、顏色排版盡量一樣、不接外部服務；只要指令本身。',
+    return St('Claude 整合（一）：請 Claude 依你的 PNG 寫第一段指令', ['claudeShot1'], { dir: '開新對話，上傳你的 PNG，請 Claude 寫一段給 AI Studio 的指令；把這一輪截一張圖。', l2: '指令要求：寬度 ' + D.w + '、每一句文字照原文、顏色排版盡量一樣、不接外部服務；只要指令本身。',
       m: [['ais_prompt'], '上傳 PNG 加指令給 Claude，拿到一段可以貼到 AI Studio 的指令。'], req: [['claudeShot1', '還沒放上這一輪的截圖（Claude 寫的指令）。']], stuck: { limit: LIM } });
   }
   function claudeA2b() {
@@ -177,8 +184,8 @@ var FigCoach = (function () {
         St('先開一個檔案', ['renamed'], { dir: '兩種挑一種：按檔名旁的 ▾ 選 Duplicate（複製）樣板，或自己開新檔案；檔名改成「班級＋你的提案」。', l2: '找不到連結先用「自己開新檔案」開始，不要停下來等；免費版就夠用。',
           m: [['figma_start'], '樣板是並排的手機畫面，左邊是圖層、右邊是屬性。'], req: [['renamed', '檔名改成「班級＋你的提案」了嗎？']],
           stuck: { nolink: K('找不到樣板連結', '先用「自己開新檔案」開始，不要停下來等。', '樣板打不開，先確認連結有完整複製，還是不行就告訴老師。', ['figma_start'], '複製好會在新分頁開出「檔名 (Copy)」，之後都在這一份改。'), limit: LIM } }),
-        St('畫一個手機畫面', ['frame390'], { dir: '按 F 拉出一個框，右邊把 W 設成 390、H 設成 844，左邊 Layers（圖層）取名「首頁」。', l2: '框歪掉或大小不對，直接改右邊的數字，不用重拉。寬剛好 390，AI Studio 之後用這個寬度還原。',
-          m: [['figma_select'], '選到畫面後，右側面板會顯示寬 W 與高 H。'], req: [['frame390', '寬剛好是 390 嗎？點畫面，看右側的 W。']], stuck: { wrongsize: K('拉出來的框歪掉或大小不對', '直接改右邊的數字，不用重拉。', 'W 設 390、H 設 844，按 Enter。', ['figma_select'], '選到畫面後，右側面板會顯示寬 W 與高 H。') } }),
+        St('畫一個' + D.frame, ['frame390'], { dir: '按 F 拉出一個框，右邊把 W 設成 ' + D.w + '、H 設成 ' + D.h + '，左邊 Layers（圖層）取名「首頁」。', l2: '框歪掉或大小不對，直接改右邊的數字，不用重拉。寬剛好 ' + D.w + '，AI Studio 之後用這個寬度還原。',
+          m: [['figma_select'], '選到畫面後，右側面板會顯示寬 W 與高 H。'], req: [['frame390', '寬剛好是 ' + D.w + ' 嗎？點畫面，看右側的 W。']], stuck: { wrongsize: K('拉出來的框歪掉或大小不對', '直接改右邊的數字，不用重拉。', 'W 設 ' + D.w + '、H 設 ' + D.h + '，按 Enter。', ['figma_select'], '選到畫面後，右側面板會顯示寬 W 與高 H。') } }),
         St('先放最重要的三樣，其他先不放', ['three', 'btn48'], { dir: '畫面只放三樣：①現在要做什麼的一句話 ②危險要回急診的訊息 ③一顆主要按鈕。', l2: '字級預設 12 太小，改成 14 以上；方框預設是灰色，按鈕＝方框加一行字疊起來，字色改白色。',
           m: [['figma_screen'], '上面一句大字，中間一張醒目的警示卡，下面一顆滿版按鈕。'], req: [['three', '三樣都在畫面上了嗎？'], ['btn48', '按鈕高度至少 48 了嗎？']], stuck: { noidea: K('不知道放哪一句話', '回去看故事板那一格「最卡」寫了什麼。', '把它改成一句「你現在要做的是……」。', ['figma_screen'], '不知道放哪一句話，就回去看故事板那一格「最卡」寫了什麼。') } }),
         St('把字放大、把間隔拉開', ['font14'], { dir: '內文 16～18、標題 22～26、按鈕高度至少 48、卡片之間留 16 的空白。', l2: '字太多放不下就刪字，不要縮小字體；Shift＋A 自動排版選錯東西，就按 Ctrl＋Z 復原。',
@@ -243,8 +250,21 @@ var FigCoach = (function () {
 
   var TRACKS = {};
   PART_ORDER.forEach(function (k) { if (PARTS[k].modes) ['novice', 'mid', 'expert'].forEach(function (m) { TRACKS[k + '.' + m] = buildTrack(k, m); }); else TRACKS[k] = buildTrack(k, 'novice'); });
+  var TRACKS_PC = {};   /* 電腦畫面版的軌道（鍵與 TRACKS 相同，步驟代號 id 也相同，只有文字裡的寬高與「電腦畫面」不同；測試與覆蓋檢查仍只看 TRACKS） */
+  D = DEVICES.pc;
+  PART_ORDER.forEach(function (k) { if (PARTS[k].modes) ['novice', 'mid', 'expert'].forEach(function (m) { TRACKS_PC[k + '.' + m] = buildTrack(k, m); }); else TRACKS_PC[k] = buildTrack(k, 'novice'); });
+  D = DEVICES.mobile;
   function trackKey(S) { return S.part + (PARTS[S.part].modes ? '.' + S.mode : ''); }
-  function stepsOf(S) { return TRACKS[trackKey(S)] || []; }
+  /* 11-17：每個軌道步驟對應學習單步驟卡的 id（tutor_units.json v2 的 byStep.id：s1、s2…，順序同學習單步驟卡；null＝學習單沒有對應的步驟卡，例如「Claude 整合」補充步驟、中級加做、專家規則檔）。
+     後端與 UnitCoach 都用這個 id 對步驟，不靠中文標題比對。 */
+  var SHEET_IDS = {
+    f1: ['s1', 's2', 's3', 's4', 's5'], a1: ['s1', 's2', 's3', 's4', 's5'],
+    'f2.novice': ['s1', 's2', 's3', 's4', 's5', 's6', 's7', null], 'f2.mid': [null, 's1', 's2', 's3', 's4', 's5', 's6', 's7', null], 'f2.expert': [null, null, 's5', 's6', 's7', null],
+    a2: ['s1', 's2', 's3', 's4', 's5', 's7', 's8'], f3: ['s1', 's2', 's3', 's4'],
+    'a3.novice': ['s1', 's2', 's3', 's4', 's5'], 'a3.mid': ['s1', 's2', 's3', 's4', 's5'], 'a3.expert': ['s1', 's2', null, 's3', 's4', 's5']
+  };
+  [TRACKS, TRACKS_PC].forEach(function (T) { Object.keys(T).forEach(function (k) { var ids = SHEET_IDS[k] || SHEET_IDS[k.split('.')[0]] || []; (T[k] || []).forEach(function (st, i) { st.sheetId = ids[i] || null; }); }); });
+  function stepsOf(S) { var k = trackKey(S); return (S.dev === 'pc' && TRACKS_PC[k]) || TRACKS[k] || []; }
   function stepOf(S, n) { return stepsOf(S)[n - 1]; }
   function tid(S, n, tail) { return trackKey(S) + '.' + n + '.' + tail; }
 
@@ -253,9 +273,9 @@ var FigCoach = (function () {
   function isBlank(v) { return v === undefined || v === null || v === false || tr(v) === ''; }
   function lines(v) { return tr(v).split(/\n+/).map(tr).filter(Boolean); }
   function privacyHit(S) { return Object.keys(S.f).some(function (k) { return typeof S.f[k] === 'string' && PRIVACY.test(S.f[k]); }); }
-  function newState(mode, part) {
+  function newState(mode, part, dev) {
     part = PARTS[part] ? part : 'f1';
-    return { mode: PARTS[part].modes && MODES[mode] ? mode : 'novice', part: part, f: {}, ai: {}, used: { stuck: 0, level: 0, fill: 0, review: 0, auto: 0 }, fillsDone: 0, stuckN: {} };
+    return { dev: DEVICES[dev] ? dev : devKey(), mode: PARTS[part].modes && MODES[mode] ? mode : 'novice', part: part, f: {}, ai: {}, used: { stuck: 0, level: 0, fill: 0, review: 0, auto: 0 }, fillsDone: 0, stuckN: {} };
   }
   function quotaUsed(S) { return S.used.stuck + S.used.level + S.used.fill; }
   function out(id, level, text, extra) { var r = { ok: true, id: id, level: level, text: text }; if (extra) Object.keys(extra).forEach(function (k) { r[k] = extra[k]; }); return r; }
@@ -332,7 +352,7 @@ var FigCoach = (function () {
       if (s.kind === 'fill1') {
         if (!isBlank(S.f.prompt1)) { S.used.auto += 1; return out(tid(S, n, 'back'), 1, '第一段指令已經填好了，確認後再複製；想重填請按「代填」。'); }   /* 再回到這一步不重填、不多扣代填次數 */
         if (quotaUsed(S) >= COACH_PER_DAY) return no('quota', '今天助教的次數用完了，明天再問。', 'quota');
-        var e = doFill(S, 'prompt1', P1); if (e) return e;
+        var e = doFill(S, 'prompt1', p1Of(S.dev)); if (e) return e;
         return attach(out(tid(S, n, 'fill'), 4, '指令幫你填好了，確認內容再複製。生成完預覽若是空白，再等 15 秒。', { fill: { prompt1: P1 } }), S, n, 'enter');
       }
       S.used.auto += 1; return attach(out(tid(S, n, 'enter'), 1, s.dir), S, n, 'enter');
@@ -393,7 +413,7 @@ var FigCoach = (function () {
       var e7 = fixFill(S, ITEM[it].fill); if (e7) return e7;
       return out(tid(S, n, 'fill.' + it), 4, '救火指令幫你填好了，確認後再複製。', { fill: { fixPrompt: S.f.fixPrompt } });
     }
-    if (s.kind === 'fill1') { var e5 = doFill(S, 'prompt1', P1); if (e5) return e5; return out(tid(S, n, 'fill'), 4, '指令幫你填好了，確認內容再複製。', { fill: { prompt1: P1 } }); }
+    if (s.kind === 'fill1') { var e5 = doFill(S, 'prompt1', p1Of(S.dev)); if (e5) return e5; return out(tid(S, n, 'fill'), 4, '指令幫你填好了，確認內容再複製。', { fill: { prompt1: P1 } }); }
     if (!OPTS[S.f.opt]) return no('fill.needinfo', S.f.opt === '3' ? '自己畫面的按鈕名字只有你知道，請把範本裡的【　】換成你的內容。' : '先選一個互動，我才能幫你填。', 'needinfo');
     var e6 = doFill(S, 'prompt2', p2(S.f.opt)); if (e6) return e6;
     return out(tid(S, n, 'fill'), 4, '互動指令幫你填好了，確認內容再複製。', { fill: { prompt2: S.f.prompt2 } });
@@ -486,7 +506,7 @@ var FigCoach = (function () {
   IDS = IDS.filter(function (x, i) { return IDS.indexOf(x) === i; });
 
   return { MODES: MODES, PARTS: PARTS, PART_ORDER: PART_ORDER, TRACKS: TRACKS, CAPS: CAPS, LEVEL_NAME: LEVEL_NAME, FORBIDDEN: FORBIDDEN, COACH_PER_DAY: COACH_PER_DAY, FILL_CAP: FILL_CAP, IDS: IDS, ITEM: ITEM,
-           OPTS: OPTS, P1: P1, FIX2: FIX2, IMG_DIR: IMG_DIR, UI_TERMS: UI_TERMS, UI_TERMS_SRC: UI_TERMS_SRC, POS_WORDS: POS_WORDS, CLAUDE_LIMIT: CLAUDE_LIMIT, MEDIA: MEDIA, MEDIA_GAPS: MEDIA_GAPS, PENDING_VERIFY: PENDING_VERIFY, START_MEDIA: START_MEDIA, mediaList: mediaList, MEDIA_ON: MEDIA_ON,
+           OPTS: OPTS, P1: P1, p1Of: p1Of, DEVICES: DEVICES, SHEET_IDS: SHEET_IDS, FIX2: FIX2, IMG_DIR: IMG_DIR, UI_TERMS: UI_TERMS, UI_TERMS_SRC: UI_TERMS_SRC, POS_WORDS: POS_WORDS, CLAUDE_LIMIT: CLAUDE_LIMIT, MEDIA: MEDIA, MEDIA_GAPS: MEDIA_GAPS, PENDING_VERIFY: PENDING_VERIFY, START_MEDIA: START_MEDIA, mediaList: mediaList, MEDIA_ON: MEDIA_ON,
            stepsOf: stepsOf, stepOf: stepOf, trackKey: trackKey, avail: avail, partIntro: partIntro, reviewTypes: reviewTypes, stepMedia: stepMedia, showMedia: showMedia, resume: resume, p2: p2,
            newState: newState, enter: enter, sent: sent, idle: idle, stuck: stuck, level: level, next: next, review: review,
            confirm: acceptFill, copy: copy, edit: function (S, k, v) { S.f[k] = v; delete S.ai[k]; return S; }, len: len, quotaUsed: quotaUsed };

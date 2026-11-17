@@ -26,6 +26,8 @@
     heur: '啟發式十項（序號|符合/不符合/不適用|輕微/中等/嚴重|理由）', verX: '版本（改了什麼|依據|結果）', trialX: '試用紀錄（每位試用者一份）', note: '便條（三行：每個元素對得回訪談的哪一句話）', revNote: '這一版改了什麼、為什麼', trialNote: '試用紀錄（試用的人卡在哪、你改了什麼、為什麼）' };
 
   /* ———— 面板狀態 ———— */
+  function devFmt(s) { var d = (typeof window !== 'undefined' && window.ERG_DEV) || { w: 390, h: 844, frame: '手機畫面' }; return String(s).replace(/\{w\}/g, d.w).replace(/\{h\}/g, d.h).replace(/\{frame\}/g, d.frame); }
+  function checkText(k) { var d = typeof window !== 'undefined' ? window.ERG_DEV : null; return k === 'frame390' && d && d.key === 'pc' ? '畫面寬 ' + d.w + '、高 ' + d.h + '（橫的），圖層取名「首頁」' : CHECK[k]; }
   function create(lv, part) { lv = lvOf(lv); part = C.PARTS[part] ? part : 'f1'; return { lv: lv, part: part, S: C.newState(modeOf(lv), part), step: 1, log: [], askStuck: false, item: 1, note: '', last: 0, idled: false }; }
   function panelKey(lv, part) { return part + (C.PARTS[part] && C.PARTS[part].modes ? ':' + lvOf(lv) : ''); }
   /* 份或模式變了就重開一個面板（今天的助教次數帶過來，不能靠換份重置名額）；兩個 1/3 換模式不會重開；沒變就原樣回傳 */
@@ -71,7 +73,7 @@
   /* ———— HTML ———— */
   function field(p, k) {
     var S = p.S, v = S.f[k] === undefined ? '' : S.f[k], tag = S.ai[k] ? ' <span class="fg-tag">🤖 助教示範</span>' : '', cls = S.ai[k] ? 'fg-ai' : '';
-    if (CHECK[k]) return '<label class="fg-l"' + LBC + '><input type="checkbox"' + CK + ' data-ff="' + k + '"' + (S.f[k] ? ' checked' : '') + '> ' + esc(CHECK[k]) + '</label>';
+    if (CHECK[k]) return '<label class="fg-l"' + LBC + '><input type="checkbox"' + CK + ' data-ff="' + k + '"' + (S.f[k] ? ' checked' : '') + '> ' + esc(checkText(k)) + '</label>';
     if (k === 'opt') return '<label class="fg-l"' + LB + '>' + esc(LABEL[k]) + '<select' + IN + ' data-ff="opt"><option value="">請選</option><option value="1"' + (v == 1 ? ' selected' : '') + '>樣板 D 畫面：「有問題　回急診」（紅色按鈕）</option><option value="2"' + (v == 2 ? ' selected' : '') + '>樣板 D 畫面：「一鍵傳給家人」（綠色按鈕）</option><option value="3"' + (v == 3 ? ' selected' : '') + '>我自己畫面上的按鈕（助教不代填）</option></select></label>';
     if (AREA[k]) return '<label class="fg-l"' + LB + '>' + esc(LABEL[k] || k) + tag + '<textarea' + IN + ' class="' + cls + '" rows="4" data-ff="' + k + '">' + esc(v) + '</textarea></label>' +
       (S.ai[k] && /^prompt|^fix/.test(k) ? '<div class="fg-row"><button data-fg="confirm" data-k="' + k + '">確認這段指令</button><button data-fg="copy" data-k="' + k + '">複製</button></div>' : '');
@@ -119,7 +121,7 @@
   /* ———— 六份進度條與 Figma 2/3 的起點區塊（P＝ERG_PROTO） ———— */
   function partBar(P, cur) {
     return '<div class="pt-gates" role="group" aria-label="六份">' + P.PARTS.map(function (g) { return '<button class="pt-gate' + (cur === g.n ? ' on' : '') + '" data-pt="part" data-n="' + g.n + '"><b>' + esc(g.week + ' ' + g.name) + '</b><span style="display:block;font-size:14px">' + esc(g.title) + '</span></button>'; }).join('') + '</div>' +
-      '<div class="pt-note">做完的樣子：' + esc(P.PARTS[cur - 1].done) + (P.PARTS[cur - 1].modes ? '' : '（這一份全班同一套，不分新手、中級、專家）') + '</div>';
+      '<div class="pt-note">做完的樣子：' + esc(devFmt(P.PARTS[cur - 1].done)) + (P.PARTS[cur - 1].modes ? '' : '（這一份全班同一套，不分新手、中級、專家）') + '</div>';
   }
   var START_OPTS = [
     { k: 'tpl', name: '用老師的樣板改', note: '老師會在 flipclass 教材區給樣板連結。複製成你自己的草稿再改，不要改到原本的那份。' },

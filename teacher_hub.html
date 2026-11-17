@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>老師後台入口</title>
+<style>
+  :root{--bg:#eef5fa;--ink:#1e1e1e;--muted:#59656d;--accent:#1f5f8f;--hair:#cfd8de;--surface:#fff}
+  @media (prefers-color-scheme:dark){:root{--bg:#10191f;--ink:#e8eef1;--muted:#a3b0b6;--accent:#7fb8e6;--hair:#34444c;--surface:#18242b}}
+  html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Sans TC",system-ui,-apple-system,"Microsoft JhengHei",sans-serif}
+  body{display:flex;flex-direction:column}
+  nav{display:flex;gap:6px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--hair);background:var(--surface);flex:0 0 auto}
+  nav b{font-size:14px;margin-right:8px;color:var(--muted)}
+  nav button{font:inherit;font-size:14px;padding:6px 14px;border:1px solid var(--hair);background:var(--surface);color:var(--ink);border-radius:8px;cursor:pointer}
+  nav button[aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+  nav a{margin-left:auto;font-size:12px;color:var(--muted)}
+  main{flex:1 1 auto;position:relative;min-height:0}
+  iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:var(--bg)}
+  iframe[hidden]{display:none}
+</style>
+</head>
+<body>
+<nav role="tablist" aria-label="老師後台">
+  <b>老師後台</b>
+  <button role="tab" data-t="iv" aria-selected="false">訪談監看</button>
+  <button role="tab" data-t="sb" aria-selected="false">故事板</button>
+  <button role="tab" data-t="px" aria-selected="false">提案室</button>
+  <a id="newtab" href="#" target="_blank" rel="noopener">在新分頁開這一頁</a>
+</nav>
+<main id="main"></main>
+<script>
+/* 單一入口：分頁點了才建立 iframe（沒點的頁面不載入、不連 Firebase）；原本三個網址不動。
+   場次與其他參數（?sess=…）原樣帶進去；#iv／#sb／#px 可深連結。 */
+(function () {
+  var PAGES = { iv: 'teacher.html', sb: 'sb_dashboard.html', px: 'proposal_dashboard.html' };
+  var main = document.getElementById('main'), frames = {};
+  var qs = String(location.search || '');
+  function url(t) { return PAGES[t] + qs; }
+  function show(t) {
+    if (!PAGES[t]) t = 'px';
+    Array.prototype.forEach.call(document.querySelectorAll('nav [role=tab]'), function (b) { b.setAttribute('aria-selected', b.dataset.t === t ? 'true' : 'false'); });
+    Object.keys(frames).forEach(function (k) { frames[k].hidden = k !== t; });
+    if (!frames[t]) { var f = document.createElement('iframe'); f.src = url(t); f.title = t; main.appendChild(f); frames[t] = f; }
+    document.getElementById('newtab').href = url(t);
+    try { history.replaceState(null, '', location.pathname + qs + '#' + t); } catch (e) {}
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('nav [role=tab]'), function (b) { b.addEventListener('click', function () { show(b.dataset.t); }); });
+  window.addEventListener('hashchange', function () { show((location.hash || '').replace('#', '')); });
+  show((location.hash || '').replace('#', ''));
+})();
+</script>
+</body>
+</html>

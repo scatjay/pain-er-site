@@ -124,6 +124,19 @@
     var R = { now: now, sess: raw.sess || DEFAULT_SESS, caseId: CASE, prof: raw.profiles || {}, docs: caseSlice(raw.docs, CASE, anom, '提案'), dirh: caseSlice(raw.dirh, CASE, anom, '方向歷程'), subs: caseSlice(raw.subs, CASE, anom, '送審'), revs: caseSlice(raw.revs, CASE, anom, '審核結果'), evs: evSlice(raw.evs, CASE, anom), usage: raw.usage || {}, coachq: raw.coachq || {}, reviewUsage: raw.reviewUsage || {} };
     /* H2：案例嘗試（所有案例；測試帳號不算）。用的是本來就讀進來的 docs／evs／subs，沒有新增讀取 */
     function omitTest(o) { var r = {}; Object.keys(o || {}).forEach(function (x) { if (!isTestSid(x)) r[x] = o[x]; }); return r; }
+    /* H3：單元助教用量（單元代號、日期、次數、人數；不含提問內容）。來自 usage/{日}/byUnit、unitUsers，usage 本來就讀，沒有新增讀取 */
+    var UNIT_CODES = (typeof UnitCoach !== 'undefined' && UnitCoach.CODES) || ['w12', 'w2', 'w3', 'w5', 'w8', 'f1', 'f2', 'f3', 'a1', 'a2', 'a3', 'ref', 'aref', 'a4', 'w16'];
+    var uDays = Object.keys(raw.usage || {}).filter(function (d) { return /^\d{8}$/.test(d); }).sort(), uToday = PX.dayKey(now);
+    R.unitUsage = UNIT_CODES.map(function (u) {
+      var tot = 0, ppl = {}, today = { n: 0, p: 0 }, week = [];
+      uDays.forEach(function (d) {
+        var x = raw.usage[d] || {}, n = num((x.byUnit || {})[u]), pp = Object.keys((x.unitUsers || {})[u] || {}).filter(function (s) { return !isTestSid(s); });
+        tot += n; pp.forEach(function (s) { ppl[s] = 1; });
+        if (d === uToday) today = { n: n, p: pp.length };
+        if (n) week.push({ d: d, n: n, p: pp.length });
+      });
+      return { unit: u, total: tot, people: Object.keys(ppl).length, today: today, days: week.slice(-7) };
+    });
     R.attempts = PX.attemptsSummary(omitTest(raw.docs), omitTest(raw.evs), omitTest(raw.subs));
     var ctx = { raw: R, prof: R.prof, anom: anom }, ids = {};
     Object.keys(R.prof).forEach(function (s) { ids[s] = 1; });
@@ -194,7 +207,7 @@
     var weekly = null;
     if (UN) { weekly = { '全部': weeklyOf(students) }; clsList.forEach(function (cl) { weekly[cl] = weeklyOf(students.filter(function (s) { return s.cls === cl; })); }); }
     errors.forEach(function (e) { anom.push({ sid: '', kind: 'read', text: '讀不到' + e + '：那一塊先不顯示。' }); });
-    return { attempts: R.attempts, weekly: weekly, now: now, sess: R.sess, caseId: CASE, caseName: PX.caseName(CASE), students: students, byId: students.reduce(function (o, s) { o[s.sid] = s; return o; }, {}), alias: alias, classes: clsList, agg: agg, dist: dist, usage: usage, cares: cares, anomalies: anom, errors: errors };
+    return { unitUsage: R.unitUsage, attempts: R.attempts, weekly: weekly, now: now, sess: R.sess, caseId: CASE, caseName: PX.caseName(CASE), students: students, byId: students.reduce(function (o, s) { o[s.sid] = s; return o; }, {}), alias: alias, classes: clsList, agg: agg, dist: dist, usage: usage, cares: cares, anomalies: anom, errors: errors };
   }
 
   /* ———— 依據核對（點開某位學生才做）：每列選的依據是否真的在他現在的紀錄裡 ————
@@ -324,9 +337,15 @@
     return '<section class="card" id="pxAttempts"><h3>案例嘗試：每個案例有幾位學生試過</h3><div class="muted small">「試過」＝有存檔，或開過那個案例。階段由提案內容算出（方向、對準表、現實題、原型連結、送審），測試帳號不算。</div>' + table(head, rows) + '</section>' +
       '<section class="card" id="pxAttemptsBy"><h3>每位學生試過的案例（' + list.length + ' 人' + (ui.cls === '全部' ? '' : '・' + esc(ui.cls)) + '）</h3>' + (list.length ? table(['學生', '試過', '各案例做到哪'], srows) : '<div class="empty">還沒有學生開過案例。</div>') + '</section>';
   }
+  function htmlUnitUsage(m) {
+    var U = m.unitUsage || [], any = U.some(function (x) { return x.total > 0; });
+    var rows = U.map(function (x) { return '<tr><td><b>' + esc(x.unit) + '</b></td><td>' + x.today.n + ' 次／' + x.today.p + ' 人</td><td>' + x.total + '</td><td>' + x.people + '</td><td>' + (x.days.length ? esc(x.days.map(function (d) { return d.d.slice(4, 6) + '/' + d.d.slice(6) + '：' + d.n + '次' + d.p + '人'; }).join('　')) : '—') + '</td></tr>'; });
+    return '<section class="card" id="pxUnitUsage"><h3>學習單單元助教用量</h3><div class="muted small">只記單元代號、日期、次數、人數，不含學生提問內容。w12＝學習單的 W1（不是第 12 週）。每人每天 ' + PX.COACH_PER_DAY + ' 次是所有單元合計。</div>' +
+      (any ? '' : '<div class="empty">還沒有單元助教的提問。</div>') + table(['單元', '今天', '累計次數', '累計人數', '近 7 個有用量的日子'], rows) + '</section>';
+  }
   function html(m, ui) {
     ui = Object.assign({ cls: '全部', q: '', deid: true, tab: 'case' }, ui || {});
-    if (ui.tab === 'att') return htmlSummary(m) + tabBar(m, ui) + htmlAttempts(m, ui);
+    if (ui.tab === 'att') return htmlSummary(m) + tabBar(m, ui) + htmlAttempts(m, ui) + htmlUnitUsage(m);
     return htmlSummary(m) + tabBar(m, ui) + htmlCase(m) + kpOf(m, ui.cls) + htmlCompare(m, ui.cls) + htmlDirs(m, ui.cls) + htmlCare(m, ui.cls, ui.deid) + htmlWeekly(m, ui.cls, ui.deid) + '<div id="pxDetail"></div>' + htmlStudents(m, ui) + htmlUsage(m);
   }
 
