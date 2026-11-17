@@ -34,6 +34,7 @@
     return out;
   }
   function stepOf(code, ref) { var a = stepsOf(code, ref); return a.length ? a[0] : null; }
+  function doOf(code, ref) { var x = stepOf(code, ref); return x && x['do'] ? tr(x['do']) : ''; }   /* v3：這一步做什麼、貼什麼、按哪裡的一句話（學習單步驟卡） */
   function facts(code) { var u = unit(code); return u && Array.isArray(u.facts) ? u.facts.map(tr).filter(Boolean) : []; }
   /* 建議提問：目前這一步的題目（有的話）→ 固定兩題 → 結尾題；最多 4 題，不重複 */
   function suggest(code, stepTitle) {
@@ -71,5 +72,5 @@
   function typedPayload(code, stepTitle, ask) {   /* 寫進 prx/{場次}/coach/{學號}/q/{時間} 的內容；kind 固定 hint */
     return { kind: 'hint', level: 1, target: 'dir', n: 0, key: '', unit: code, step: tr(stepTitle).slice(0, 40), ask: tr(ask).slice(0, 300), t: Date.now() };
   }
-  return { CODES: CODES, COACH_PER_DAY: COACH_PER_DAY, init: init, unit: unit, normStep: normStep, stepOf: stepOf, stepsOf: stepsOf, facts: facts, isId: isId, suggest: suggest, parseWhen: parseWhen, nudges: nudges, typedLeft: typedLeft, typedPayload: typedPayload };
+  return { CODES: CODES, COACH_PER_DAY: COACH_PER_DAY, init: init, unit: unit, normStep: normStep, stepOf: stepOf, stepsOf: stepsOf, doOf: doOf, facts: facts, isId: isId, suggest: suggest, parseWhen: parseWhen, nudges: nudges, typedLeft: typedLeft, typedPayload: typedPayload };
 });
