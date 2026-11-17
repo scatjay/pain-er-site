@@ -23,6 +23,12 @@
 
     return {
       caseId: CASE,
+      /* H2：我所有案例的提案（doc/{學號} 整個節點，本人最多 11 案、約 16 KB），讀一次就好，不監聽；給案例選單標「做到哪一步」。回傳 Promise＜{案例: 原始doc}＞ */
+      readMyCases: function (sid) {
+        var r = root.child('doc/' + sid);
+        if (typeof r.once === 'function') return Promise.resolve(r.once('value')).then(function (s) { return val(s) || {}; }, function () { return {}; });
+        return new Promise(function (res) { var h = r.on('value', function (s) { try { r.off('value', h); } catch (e) {} res(val(s) || {}); }, function () { res({}); }); });
+      },
       watchDoc: function (sid, cb) { return on(docRef(sid), function (v) { cb(PX.normDoc(v, CASE)); }); },
       /* 外部訪談證據卡（非 sms 案例）：evi/{學號}/{案例}/{卡id}，只有本人與老師帳號讀得到；欄位長度規則與 PX.LIMITS.card* 同值 */
       watchCards: function (sid, cb) { return on(root.child('evi/' + sid + '/' + CASE), function (v) { cb(PX.normCards(v)); }); },

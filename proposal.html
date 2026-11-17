@@ -27,7 +27,7 @@ h1{font-size:22px;margin:0;font-weight:900}h2{font-size:17px;margin:4px 0 6px;fo
 #top{position:sticky;top:0;z-index:5;background:var(--panel);border-bottom:var(--bw) solid var(--ink);border-top:8px solid var(--ct);padding:8px 16px}
 #top .line{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
 #nextLine{flex:1 1 100%;background:var(--soft-y);border:var(--bw-s) solid var(--ink);border-radius:var(--r-m);padding:6px 12px;font-size:16px;font-weight:700;margin-top:6px}
-#nextLine .nl{background:var(--ct);color:#fff;border-radius:99px;padding:0 10px;font-size:13px;margin-right:6px}
+#nextLine .nl{background:var(--ct);color:var(--ct-on,#fff);border-radius:99px;padding:0 10px;font-size:13px;margin-right:6px}
 #progress{flex:1 1 100%;margin-top:4px}
 .pchip{display:inline-block;border:var(--bw-s) solid var(--ink);border-radius:99px;padding:0 10px;margin:2px 4px 2px 0;font-size:12px;font-weight:700;background:var(--panel)}
 .pchip.ok{background:var(--soft-g);color:var(--fg)}.pchip.bad{background:var(--soft-r);color:var(--fg)}
@@ -37,11 +37,11 @@ aside{align-self:start;position:sticky;top:160px;max-height:calc(100vh - 176px);
 .dirs{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin:8px 0}
 .dirbtn{text-align:left;background:var(--panel);color:var(--fg);box-shadow:none;display:flex;flex-direction:column;gap:2px;padding:8px 12px}
 .dirbtn span{font-weight:400;font-size:12px;color:var(--muted)}
-.dirbtn.on{background:var(--ct);color:#fff}.dirbtn.on span{color:#fff}
+.dirbtn.on{background:var(--ct);color:var(--ct-on,#fff)}.dirbtn.on span{color:var(--ct-on,#fff)}
 .hist{margin-top:8px;font-size:13px}.hrow{padding:2px 0;border-bottom:1px dashed var(--line)}
 .rowc{border:var(--bw) solid var(--ink);border-top:8px solid var(--ct);border-radius:var(--r-m);padding:10px 12px;margin:14px 0;background:var(--panel);box-shadow:var(--sh-l) var(--sh-l) 0 var(--ink)}
 .rowc header{display:flex;gap:8px;align-items:center}
-.rowc .rno{background:var(--ct);color:#fff;border:2px solid var(--ink);border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:900;flex:none}
+.rowc .rno{background:var(--ct);color:var(--ct-on,#fff);border:2px solid var(--ink);border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:900;flex:none}
 label{display:block;font-size:12px;font-weight:700;margin-top:8px}
 .lbl{font-size:12px;font-weight:700;margin-top:8px}
 .row2{display:grid;grid-template-columns:1fr 1.4fr;gap:8px}
@@ -73,7 +73,7 @@ label{display:block;font-size:12px;font-weight:700;margin-top:8px}
 .pt-pre{margin:10px 0;padding:10px 14px;border:3px solid var(--ink,#111);border-radius:10px;background:#fff6cc;line-height:1.7}.pt-pre ul{margin:6px 0 0;padding-left:20px}.pt-pre a{font-weight:700}
 .pt-miss{margin:8px 0;font-weight:700}.pt-miss.bad{color:var(--bad)}.pt-miss.ok{color:var(--ok)}.pt-ck{display:flex;gap:8px;align-items:center;min-height:44px}
 .pt-h2{font-weight:700;margin:10px 0 4px}.pt-chip{display:inline-block;margin:2px 4px 0 0;padding:1px 8px;border-radius:99px;background:var(--bg);border:1px solid var(--line);font-size:12px}
-.pt-chip.got{background:var(--ct,#3d6fe0);color:#fff;border-color:var(--ct,#3d6fe0)}.pt-ach{margin:8px 0}.pt-vers{margin-top:10px;border-top:1px dashed var(--line);padding-top:8px}
+.pt-chip.got{background:var(--ct,#3d6fe0);color:var(--ct-on,#fff);border-color:var(--ct,#3d6fe0)}.pt-ach{margin:8px 0}.pt-vers{margin-top:10px;border-top:1px dashed var(--line);padding-top:8px}
 #lvBar{display:flex;gap:8px;align-items:center;margin-top:6px}#lvBar[hidden]{display:none}.pt-lbl{font-size:13px;color:var(--muted)}#lvBar .pt-mode{margin:0;flex:1;max-width:320px}
 body.lv1 .dirbtn[data-k=mine],body.lv1 #nextLine~#progress{display:none}
 body.lv1 #secProto .pt-mode{display:none}
@@ -110,6 +110,16 @@ body.lv1 #secProto .pt-mode{display:none}
   #coachBox .only-m{display:inline-block}
   #toast{bottom:84px;max-width:92vw}
 }
+
+/* H1：案例細節區分（顏色變數由頁面程式依案例設定：--ct 主色、--ct-soft 淡底、--ct-on 主色上的字） */
+#caseChip{display:inline-flex;align-items:center;gap:6px;margin-left:8px;font-size:13px}
+#caseChip .cc{font-weight:900;border:2px solid var(--ink);border-radius:8px;padding:0 8px;background:var(--ct);color:var(--ct-on,#fff)}
+#caseChip .ci{font-size:1.25em;color:var(--ct)}
+#hello{background:var(--ct-soft,#e7efff);border:2px solid var(--ct);border-radius:12px;padding:8px 12px;margin:10px 0;color:var(--fg);font-weight:600}
+#secCards h2::before{content:var(--su0,'');color:var(--ct)}#secDir h2::before{content:var(--su1,'');color:var(--ct)}#secRows h2::before{content:var(--su2,'');color:var(--ct)}
+#secReal h2::before{content:var(--su3,'');color:var(--ct)}#secProto h2::before{content:var(--su4,'');color:var(--ct)}#secExport h2::before{content:var(--su5,'');color:var(--ct)}
+body[data-mood="card"] .card{outline:2px solid var(--ct-soft);outline-offset:-8px}
+body[data-mood="card"] .chip{border-color:var(--ct)}
 </style>
 </head>
 <body>
@@ -147,29 +157,29 @@ body.lv1 #secProto .pt-mode{display:none}
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-<script src="er_firebase.js?v=202611171005"></script>
-<script src="local_db.js?v=202611171005"></script>
-<script src="remote_db.js?v=202611171005"></script>
-<script src="personas_inclusive.js?v=202611171005"></script>
-<script src="personas.js?v=202611171005"></script>
-<script src="case_tone.js?v=202611171005"></script>
-<script src="sb_core.js?v=202611171005"></script>
-<script src="sb_store.js?v=202611171005"></script>
-<script src="sb_coach.js?v=202611171005"></script>
-<script src="proposal_core.js?v=202611171005"></script>
-<script src="proposal_proto.js?v=202611171005"></script>
-<script src="proposal_units_data.js?v=202611171005"></script>
-<script src="proposal_units.js?v=202611171005"></script>
-<script src="proposal_weekly.js?v=202611171005"></script>
-<script src="proposal_store.js?v=202611171005"></script>
-<script src="proposal_prompts.js?v=202611171005"></script>
-<script src="proposal_coach.js?v=202611171005"></script>
-<script src="ui_level.js?v=202611171005"></script>
-<script src="figai_coach.js?v=202611171005"></script>
-<script src="figai_coach_ui.js?v=202611171005"></script>
-<script src="proposal_proto_ui.js?v=202611171005"></script>
-<script src="proposal_wall.js?v=202611171005"></script>
-<script src="wall_store.js?v=202611171005"></script>
-<script src="proposal_ui.js?v=202611171005"></script>
+<script src="er_firebase.js?v=202611171458"></script>
+<script src="local_db.js?v=202611171458"></script>
+<script src="remote_db.js?v=202611171458"></script>
+<script src="personas_inclusive.js?v=202611171458"></script>
+<script src="personas.js?v=202611171458"></script>
+<script src="case_tone.js?v=202611171458"></script>
+<script src="sb_core.js?v=202611171458"></script>
+<script src="sb_store.js?v=202611171458"></script>
+<script src="sb_coach.js?v=202611171458"></script>
+<script src="proposal_core.js?v=202611171458"></script>
+<script src="proposal_proto.js?v=202611171458"></script>
+<script src="proposal_units_data.js?v=202611171458"></script>
+<script src="proposal_units.js?v=202611171458"></script>
+<script src="proposal_weekly.js?v=202611171458"></script>
+<script src="proposal_store.js?v=202611171458"></script>
+<script src="proposal_prompts.js?v=202611171458"></script>
+<script src="proposal_coach.js?v=202611171458"></script>
+<script src="ui_level.js?v=202611171458"></script>
+<script src="figai_coach.js?v=202611171458"></script>
+<script src="figai_coach_ui.js?v=202611171458"></script>
+<script src="proposal_proto_ui.js?v=202611171458"></script>
+<script src="proposal_wall.js?v=202611171458"></script>
+<script src="wall_store.js?v=202611171458"></script>
+<script src="proposal_ui.js?v=202611171458"></script>
 </body>
 </html>

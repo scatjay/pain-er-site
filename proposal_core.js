@@ -28,23 +28,34 @@
      證據只取「房間案例 ＝ 這個提案的案例」的紀錄，所以三個主題各有各的證據清單，互不混在一起。
      tools/prx_common.py 的 CASE_NAMES／LIVE_CASES 必須同步（tools/test_prx_common.py 對帳）。 */
   var CASES = [
-    { k: 'sms', name: '離院衛教簡訊', title: '衛教簡訊再設計', live: true },
-    { k: 'bike', name: '騎行夥伴', title: '騎行夥伴', live: true },
-    { k: 'trash', name: '垃圾車快報', title: '垃圾車快報', live: true },
+    { k: 'sms', g: 'H', code: 'H1', name: '離院衛教簡訊', title: '衛教簡訊再設計', live: true },
+    { k: 'bike', g: 'M', code: 'M1', name: '騎行夥伴', title: '騎行夥伴', live: true },
+    { k: 'trash', g: 'M', code: 'M2', name: '垃圾車快報', title: '垃圾車快報', live: true },
     /* 11-14 擇優自主再設計五案（_ux_redesign_cases/）：遊戲三案只預留代碼，學生看到的是虛構名 */
-    { k: 'ftl', name: '星際逃亡船', title: '星際逃亡船', live: true },
-    { k: 'itb', name: '機甲防衛戰', title: '機甲防衛戰', live: true },
-    { k: 'sts', name: '爬塔卡牌', title: '爬塔卡牌', live: true },
+    { k: 'ftl', g: 'G', code: 'G2', name: '星際逃亡船', title: '星際逃亡船', live: true },
+    { k: 'itb', g: 'G', code: 'G1', name: '機甲防衛戰', title: '機甲防衛戰', live: true },
+    { k: 'sts', g: 'G', code: 'G3', name: '爬塔卡牌', title: '爬塔卡牌', live: true },
     /* 11-14 交通訂票兩案（_ux_redesign_cases/thsr、hoshin）：主軸是「在好用的訂票流程裡加入 AI 代理人助理」，學生看到的是虛構名 */
-    { k: 'hsr', name: '快鐵訂位', title: '快鐵訂位', live: true },
-    { k: 'bus', name: '客運快訂', title: '客運快訂', live: true },
+    { k: 'hsr', g: 'T', code: 'T1', name: '快鐵訂位', title: '快鐵訂位', live: true },
+    { k: 'bus', g: 'T', code: 'T2', name: '客運快訂', title: '客運快訂', live: true },
     /* 11-17 遊戲線新逆向的遊戲案例（_ux_redesign_cases/poker）：學生看到的是虛構名 */
-    { k: 'poker', name: '撲克闖關', title: '撲克闖關', live: true },
+    { k: 'poker', g: 'G', code: 'G4', name: '撲克闖關', title: '撲克闖關', live: true },
     /* 11-17 遊戲線新逆向的遊戲案例（_ux_redesign_cases/dice）：學生看到的是虛構名 */
-    { k: 'dice', name: '擲骰闖關', title: '擲骰闖關', live: true },
+    { k: 'dice', g: 'G', code: 'G5', name: '擲骰闖關', title: '擲骰闖關', live: true },
     /* 11-17 遊戲線新逆向的遊戲案例（_ux_redesign_cases/colony）：學生看到的是虛構名 */
-    { k: 'colony', name: '荒星聚落', title: '荒星聚落', live: true }
+    { k: 'colony', g: 'G', code: 'G6', name: '荒星聚落', title: '荒星聚落', live: true }
   ];
+  /* 11-17 楊老師「案例有點多，分類去編碼」：四大類＋編碼（H 健康與醫療、M 生活與移動、T 交通訂票、G 遊戲）；
+     編碼只是顯示用（選單、後台），資料庫路徑與程式裡的案例代碼 k 不變（改 k 會讓學生已存的提案對不上）。
+     遊戲類編碼順序：G1 機甲防衛戰（格狀戰術）、G2 星際逃亡船（即時管理）、G3–G5 卡牌與骰子（爬塔卡牌、撲克闖關、擲骰闖關）、G6 荒星聚落（經營）。 */
+  var GROUPS = [
+    { g: 'H', name: '健康與醫療' },
+    { g: 'M', name: '生活與移動' },
+    { g: 'T', name: '交通訂票' },
+    { g: 'G', name: '遊戲' }
+  ];
+  function groupName(g) { for (var i = 0; i < GROUPS.length; i += 1) if (GROUPS[i].g === g) return GROUPS[i].name; return ''; }
+  function caseCode(k) { var d = caseDef(k); return d ? d.code : ''; }
   var DEFAULT_CASE = 'sms';
   var LIMITS = { why: 200, mine: 80, decide: 120, personaOwn: 60, dissent: 120, tradeoff: 160, real: 200, askWho: 60, maxRows: 8, minRows: 3, maxEv: 6, ask: 300, textShow: 140,
     cardWho: 20, cardSaid: 120, cardScreen: 60, maxCards: 12 };   /* 外部訪談證據卡：誰≤20、說了什麼≤120、畫面≤60、每案最多 12 張；Firebase 規則 evi 區塊與 tools/prx_common.py 同值（tests 對帳） */
@@ -455,7 +466,65 @@
     return '<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + esc(caseTitle(ctx.caseId)) + '提案</title><style>' + PRINT_CSS + '</style></head><body>' + parts.join('') + '</body></html>';
   }
 
-  return { DIRS: DIRS, DIRS_OTHER: DIRS_OTHER, dirsFor: dirsFor, PROBLEM_MSG_OTHER: PROBLEM_MSG_OTHER, caseForPage: caseForPage, cardHasContact: cardHasContact, normCard: normCard, normCards: normCards, cardForWrite: cardForWrite, newCardId: newCardId, cardEvidence: cardEvidence, cardCells: cardCells, CASES: CASES, DEFAULT_CASE: DEFAULT_CASE, caseDef: caseDef, isCase: isCase, caseOf: caseOf, liveCase: liveCase, caseTitle: caseTitle, caseName: caseName, roomsOfCase: roomsOfCase, LIMITS: LIMITS, COACH_PER_DAY: COACH_PER_DAY, coachLeft: coachLeft, submitNote: submitNote, REAL_KEYS: REAL_KEYS, REAL_Q: REAL_Q, ITEM_LABEL: ITEM_LABEL, PNAMES: PNAMES, EVENT_KINDS: EVENT_KINDS, PX_KINDS: PX_KINDS, PROBLEM_MSG: PROBLEM_MSG, ROW_FIELD_NAME: ROW_FIELD_NAME,
+  /* ———— H1（11-17）：案例細節區分。每個案例自己的主色（亮／暗各一）、符號、一句話與開場語；主色換掉後，頂列色條、卡片上緣、按鈕、對準表編號一次到位（proposal.html 都用 --ct）。
+     色票用 test_proposal_core.js 量對比：亮色白字 ≥ 4.5、暗色主色對暗板（#18262e）≥ 4.5 且深字（#10191f）疊在主色上 ≥ 4.5。學生看得到的字不提原作名。
+     不改資料結構與資料庫路徑，只放在這張表（k＝案例代碼）。 ———— */
+  var DECO = {
+    sms:    { ct: '#3d6fe0', ctDark: '#648ce6', icon: '💬', suits: ['💬'], line: '病人回家後，只剩這則簡訊', hello: '病人回家後只剩這則簡訊可以看，它要讓人知道下一步該做什麼。', unit: '步', mood: 'soft' },
+    bike:   { ct: '#2f7d32', ctDark: '#639e65', icon: '🚴', suits: ['🚴'], line: '騎到一半，低頭看一眼', hello: '騎到一半低頭看一眼手機，哪個數字應該最先被看到？', unit: '步', mood: 'soft' },
+    trash:  { ct: '#b8570d', ctDark: '#c6793d', icon: '🚛', suits: ['🚛'], line: '車快到了，要不要出門', hello: '垃圾車快到了，你要在幾秒內知道該不該出門。', unit: '步', mood: 'soft' },
+    hsr:    { ct: '#0b6e8a', ctDark: '#549aad', icon: '🚄', suits: ['🚄'], line: '付款前，最後一步', hello: '付款前的最後一步，使用者最不放心的是什麼？', unit: '步', mood: 'soft' },
+    bus:    { ct: '#6a4bb5', ctDark: '#9781cb', icon: '🚌', suits: ['🚌'], line: '選班次、確認座位', hello: '選班次、確認座位，哪一步會讓人猶豫？', unit: '步', mood: 'soft' },
+    itb:    { ct: '#3a5f8a', ctDark: '#758fad', icon: '♟', suits: ['♟'], line: '玩家第一眼看盤面', hello: '玩家第一眼看盤面，哪裡看不懂、找不到或按錯？', unit: '格', mood: 'card' },
+    ftl:    { ct: '#7b3fa0', ctDark: '#a982c1', icon: '🚀', suits: ['🚀'], line: '警報一直響的時候', hello: '船艙警報一直響，玩家要先看哪個數字？', unit: '步', mood: 'card' },
+    sts:    { ct: '#9b2d4a', ctDark: '#be7689', icon: '🃏', suits: ['🃏'], line: '牌上的數字，是真的嗎', hello: '牌上寫的數字，和這回合真正打出去的一樣嗎？', unit: '張', mood: 'card' },
+    poker:  { ct: '#1f6b4a', ctDark: '#629780', icon: '♠', suits: ['♠', '♥', '♦', '♣'], line: '玩家每一手都在算分', hello: '玩家每一手都在算分：他在哪個畫面卡住？你怎麼改？', unit: '張', mood: 'card' },
+    dice:   { ct: '#8c5a00', ctDark: '#ae8c4c', icon: '🎲', suits: ['🎲'], line: '骰子拖下去之前', hello: '骰子拖下去之前，玩家怎麼知道會發生什麼？', unit: '顆', mood: 'card' },
+    colony: { ct: '#4f7a14', ctDark: '#7b9b4f', icon: '🏕', suits: ['🏕'], line: '警報一堆，先處理哪件', hello: '警報一堆，玩家要先處理哪一件？畫面有告訴他嗎？', unit: '件', mood: 'card' }
+  };
+  function decoOf(k) { return DECO[k] || DECO[DEFAULT_CASE]; }
+  function hexRgb(h) { h = String(h).replace('#', ''); return [0, 2, 4].map(function (i) { return parseInt(h.substr(i, 2), 16); }); }
+  function mixHex(a, b, t) { var x = hexRgb(a), y = hexRgb(b); return '#' + [0, 1, 2].map(function (i) { var v = Math.round(x[i] * (1 - t) + y[i] * t).toString(16); return v.length < 2 ? '0' + v : v; }).join(''); }
+  function lumHex(h) { var a = hexRgb(h).map(function (c) { c /= 255; return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); }); return 0.2126 * a[0] + 0.7152 * a[1] + 0.0722 * a[2]; }
+  function contrastHex(a, b) { var x = lumHex(a), y = lumHex(b), hi = Math.max(x, y), lo = Math.min(x, y); return (hi + 0.05) / (lo + 0.05); }
+  /* 這個案例在亮色／暗色下的三個顏色：主色 ct、淡底色 soft、疊在主色上的字色 on */
+  function decoColors(k, dark) { var d = decoOf(k); return dark ? { ct: d.ctDark, soft: mixHex(d.ctDark, '#18262e', 0.78), on: '#10191f' } : { ct: d.ct, soft: mixHex(d.ct, '#ffffff', 0.86), on: '#ffffff' }; }
+  /* ———— H2（11-17）：案例嘗試。學生可以在 11 個案例間切換，每案的提案分開存（doc/{學號}/{案例}）；這裡把每案「做到哪一步」算出來，
+     學生端選單與老師後台共用同一份算法，不新增任何讀取（資料都是本來就讀的 doc／ev／sub）。 ———— */
+  var STAGES = ['還沒開始', '① 方向', '② 對準表', '③ 現實題', '③′ 原型', '④ 送審'];
+  /* rawDoc＝doc/{學號}/{案例} 的原始值（或 normDoc 的結果）；hasSub＝這個案例有送審紀錄。回傳 { stage 0–5, name, rows（填了「我決定什麼」的列數）, at（最後更新）, has（資料庫裡有這一份） } */
+  function caseProgress(rawDoc, caseId, hasSub) {
+    var has = !!(rawDoc && typeof rawDoc === 'object' && Object.keys(rawDoc).length), d = normDoc(has ? rawDoc : null, caseId);
+    var rows = d.rows.filter(function (r) { return !!tr(r.decide); }).length;
+    var real = REAL_KEYS.filter(function (k) { var x = d.real[k]; return x && (tr(x.text) || x.unknown); }).length;
+    var pr = has && rawDoc.proto && typeof rawDoc.proto === 'object' ? rawDoc.proto : null, protoOn = !!(pr && ((pr.links && Object.keys(pr.links).some(function (k) { return tr(pr.links[k]); })) || pr.vers));
+    var st = hasSub ? 5 : protoOn ? 4 : real > 0 ? 3 : rows > 0 ? 2 : (d.dir.pick || tr(d.dir.mine)) ? 1 : 0;
+    return { stage: st, name: STAGES[st], rows: rows, at: d.updatedAt || 0, has: has };
+  }
+  /* docs＝{學號:{案例:原始doc}}；evs＝{學號:{事件id:{c,k,t}}}；subs＝{學號:{案例:{日期:…}}}。
+     回傳 { byCase: {案例: {students, stages:[0–5 各幾人], opened, last}}, bySid: {學號: [{k, stage, name, rows, at, opens}]（只含試過的案例，依最近更新排序）} }。
+     「試過」＝有存檔，或開過那個案例（ev 的 open 事件帶 c）。 */
+  function attemptsSummary(docs, evs, subs) {
+    docs = docs || {}; evs = evs || {}; subs = subs || {};
+    var out = { byCase: {}, bySid: {} };
+    CASES.forEach(function (c) { out.byCase[c.k] = { students: 0, stages: [0, 0, 0, 0, 0, 0], opened: 0, last: 0 }; });
+    var sids = {}; [docs, evs, subs].forEach(function (o) { Object.keys(o).forEach(function (x) { sids[x] = 1; }); });
+    Object.keys(sids).forEach(function (sid) {
+      var opens = {}, lastOpen = {};
+      Object.keys(evs[sid] || {}).forEach(function (k) { var e = evs[sid][k] || {}; if (isCase(e.c) && (e.k === 'open' || e.k === 'dir')) { opens[e.c] = (opens[e.c] || 0) + 1; lastOpen[e.c] = Math.max(lastOpen[e.c] || 0, Number(e.t) || 0); } });
+      var list = [];
+      CASES.forEach(function (c) {
+        var raw = (docs[sid] || {})[c.k], hasSub = !!(subs[sid] && subs[sid][c.k] && Object.keys(subs[sid][c.k]).length), p = caseProgress(raw, c.k, hasSub);
+        if (!p.has && !opens[c.k] && !hasSub) return;
+        var at = Math.max(p.at, lastOpen[c.k] || 0);
+        list.push({ k: c.k, stage: p.stage, name: p.name, rows: p.rows, at: at, opens: opens[c.k] || 0 });
+        var b = out.byCase[c.k]; b.students += 1; b.stages[p.stage] += 1; if (opens[c.k]) b.opened += 1; b.last = Math.max(b.last, at);
+      });
+      if (list.length) out.bySid[sid] = list.sort(function (a, b) { return b.at - a.at; });
+    });
+    return out;
+  }
+  return { DECO: DECO, decoOf: decoOf, decoColors: decoColors, contrastHex: contrastHex, STAGES: STAGES, caseProgress: caseProgress, attemptsSummary: attemptsSummary, DIRS: DIRS, DIRS_OTHER: DIRS_OTHER, dirsFor: dirsFor, PROBLEM_MSG_OTHER: PROBLEM_MSG_OTHER, caseForPage: caseForPage, cardHasContact: cardHasContact, normCard: normCard, normCards: normCards, cardForWrite: cardForWrite, newCardId: newCardId, cardEvidence: cardEvidence, cardCells: cardCells, CASES: CASES, GROUPS: GROUPS, groupName: groupName, caseCode: caseCode, DEFAULT_CASE: DEFAULT_CASE, caseDef: caseDef, isCase: isCase, caseOf: caseOf, liveCase: liveCase, caseTitle: caseTitle, caseName: caseName, roomsOfCase: roomsOfCase, LIMITS: LIMITS, COACH_PER_DAY: COACH_PER_DAY, coachLeft: coachLeft, submitNote: submitNote, REAL_KEYS: REAL_KEYS, REAL_Q: REAL_Q, ITEM_LABEL: ITEM_LABEL, PNAMES: PNAMES, EVENT_KINDS: EVENT_KINDS, PX_KINDS: PX_KINDS, PROBLEM_MSG: PROBLEM_MSG, ROW_FIELD_NAME: ROW_FIELD_NAME,
     arr: arr, tr: tr, copy: copy, msg: msg, pname: pname, emptyRow: emptyRow, emptyDoc: emptyDoc, normRow: normRow, normDoc: normDoc, rowKey: rowKey, nextRowN: nextRowN, rowByN: rowByN, rowForWrite: rowForWrite,
     editRatio: editRatio, applyEdit: applyEdit, applyFill: applyFill, aiFilledRows: aiFilledRows, aiFieldShare: aiFieldShare,
     markersFromScene: markersFromScene, roomInput: roomInput, buildEvidence: buildEvidence, evMap: evMap, buildCells: buildCells, personaOptions: personaOptions,

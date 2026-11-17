@@ -39,9 +39,44 @@
     var h1 = document.querySelector('#top .line h1'); if (!h1) return;
     var sel = document.createElement('select'); sel.id = 'caseSel'; sel.setAttribute('aria-label', '換案例');
     sel.style.cssText = 'margin-left:8px;font-size:13px;border:2px solid var(--ink);border-radius:8px;padding:2px 6px;background:var(--panel);color:var(--ink)';
-    list.forEach(function (c) { var o = document.createElement('option'); o.value = c.k; o.textContent = c.title; if (c.k === CASE) o.selected = true; sel.appendChild(o); });
+    PX.GROUPS.forEach(function (gr) {
+      var og = document.createElement('optgroup'); og.label = gr.g + '　' + gr.name;
+      list.filter(function (c) { return c.g === gr.g; }).sort(function (a, b) { return a.code < b.code ? -1 : 1; }).forEach(function (c) { var o = document.createElement('option'); o.value = c.k; o.textContent = c.code + '　' + c.title; if (c.k === CASE) o.selected = true; og.appendChild(o); });
+      if (og.childNodes.length) sel.appendChild(og);
+    });
     sel.onchange = function () { var q = new URLSearchParams(location.search); q.set('case', sel.value); logEvent('dir', 'case:' + sel.value); location.search = q.toString(); };
     h1.parentNode.insertBefore(sel, h1.nextSibling);
+    markTried(sel);
+  }
+  /* H2：選單裡每個案例標「做到哪一步」，後面加「試過 n 案」。讀一次 doc/{學號}（本人整個節點），讀不到就維持原樣 */
+  function markTried(sel) {
+    if (!S.store || !S.store.readMyCases || !S.sid) return;
+    S.store.readMyCases(S.sid).then(function (raw) {
+      var n = 0;
+      Array.prototype.forEach.call(sel.querySelectorAll('option'), function (o) {
+        var c = PX.caseDef(o.value); if (!c) return; var p = PX.caseProgress(raw[o.value], o.value, false), base = c.code + '　' + c.title;
+        if (p.has && (p.stage > 0 || p.rows > 0)) { n += 1; o.textContent = base + '　✓ ' + p.name + (p.rows ? '（' + p.rows + ' 列）' : ''); } else o.textContent = base + '　○';
+      });
+      var tag = $('caseTried'); if (!tag) { tag = document.createElement('span'); tag.id = 'caseTried'; tag.className = 'muted'; tag.style.cssText = 'margin-left:6px;font-size:12px'; sel.parentNode.insertBefore(tag, sel.nextSibling); }
+      tag.textContent = '試過 ' + n + ' 案';
+    }, function () {});
+  }
+  /* H1：案例細節區分。依案例設定主色（亮暗各一，跟著系統切換）、符號、開場語；頂列色條、卡片上緣、按鈕、對準表編號都用 --ct，一次換掉 */
+  function applyDeco() {
+    var d = PX.decoOf(CASE), mq = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null, root = document.documentElement.style;
+    function paint() { var c = PX.decoColors(CASE, !!(mq && mq.matches)); root.setProperty('--ct', c.ct); root.setProperty('--ct-soft', c.soft); root.setProperty('--ct-on', c.on); }
+    paint(); if (mq && mq.addEventListener) mq.addEventListener('change', paint);
+    document.body.setAttribute('data-mood', d.mood);
+    ['secCards', 'secDir', 'secRows', 'secReal', 'secProto', 'secExport'].forEach(function (id, i) { root.setProperty('--su' + i, '"' + d.suits[i % d.suits.length] + ' "'); });
+  }
+  function mountDeco() {
+    if ($('caseChip')) return;
+    var d = PX.decoOf(CASE), def = PX.caseDef(CASE) || {}, h1 = document.querySelector('#top .line h1'); if (!h1) return;
+    var chip = document.createElement('span'); chip.id = 'caseChip'; chip.innerHTML = '<span class="cc">' + esc(def.code || '') + '</span><span class="ci" aria-hidden="true">' + esc(d.icon) + '</span>';
+    h1.parentNode.insertBefore(chip, h1.nextSibling);
+    if (CASE !== 'sms') { var mt = document.querySelector('#top .line .muted'); if (mt) mt.textContent = (def.title || '') + '・' + d.line; }
+    var main = $('main'), first = main && main.firstElementChild;
+    if (main && !$('hello')) { var hi = document.createElement('div'); hi.id = 'hello'; hi.textContent = d.hello; main.insertBefore(hi, first); }
   }
   function logEvent(k, d) { if (S.store && S.sid) S.store.logEvent(S.sid, k, d); }
 
@@ -49,6 +84,7 @@
   function boot() {
     if (S.started) return; S.started = true;
     var color = (CT && CT.get('sms') || {}).ct || '#3d6fe0'; document.documentElement.style.setProperty('--ct', color);
+    try { applyDeco(); } catch (e) { console.warn('[deco]', e); }
     if (LOCAL) {
       var sid = (Q.get('sid') || '').trim(); try { if (sid) localStorage.setItem('erg:pxsid', sid); else sid = localStorage.getItem('erg:pxsid') || ''; } catch (e) {}
       S.sess = 'LOCAL'; S.DB = window.ERG_DB.makeLocalDb({ storage: window.localStorage, notify: function () { onData(); }, now: NOW, rnd: Math.random });
@@ -78,7 +114,7 @@
     S.sid = sid; try { S.DB.attach && S.DB.attach(); } catch (e) {}
     $('gate').hidden = true; $('app').hidden = false;
     $('sidLine').textContent = '學號 ' + sid; bindStatic();
-    mountCasePicker();
+    mountCasePicker(); try { mountDeco(); } catch (e) { console.warn('[deco]', e); }
     if (CARDS_MODE) {
       var mt = document.querySelector('#top .line .muted'); if (mt) mt.textContent = PX.caseTitle(CASE) + '・提案室'; if ($('sbLink')) $('sbLink').hidden = true; if ($('reviseLink')) $('reviseLink').hidden = true;
       var rm = document.querySelector('#secRows > .muted'); if (rm) rm.textContent = '每一列要回答：我決定什麼、依據是我哪一張訪談卡、對應哪位人物、跟哪個畫面有關、誰可能不同意、我取捨了什麼。依據找不到的列會標「指不回訪談」，到上面「我的訪談卡」再記一張就好。';

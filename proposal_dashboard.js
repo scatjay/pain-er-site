@@ -122,6 +122,9 @@
     raw = raw || {}; var now = num(raw.now) || Date.now();
     var errors = arr(raw.errors || []), anom = [], CASE = PX.caseOf(raw['case']);
     var R = { now: now, sess: raw.sess || DEFAULT_SESS, caseId: CASE, prof: raw.profiles || {}, docs: caseSlice(raw.docs, CASE, anom, '提案'), dirh: caseSlice(raw.dirh, CASE, anom, '方向歷程'), subs: caseSlice(raw.subs, CASE, anom, '送審'), revs: caseSlice(raw.revs, CASE, anom, '審核結果'), evs: evSlice(raw.evs, CASE, anom), usage: raw.usage || {}, coachq: raw.coachq || {}, reviewUsage: raw.reviewUsage || {} };
+    /* H2：案例嘗試（所有案例；測試帳號不算）。用的是本來就讀進來的 docs／evs／subs，沒有新增讀取 */
+    function omitTest(o) { var r = {}; Object.keys(o || {}).forEach(function (x) { if (!isTestSid(x)) r[x] = o[x]; }); return r; }
+    R.attempts = PX.attemptsSummary(omitTest(raw.docs), omitTest(raw.evs), omitTest(raw.subs));
     var ctx = { raw: R, prof: R.prof, anom: anom }, ids = {};
     Object.keys(R.prof).forEach(function (s) { ids[s] = 1; });
     ['docs', 'dirh', 'subs', 'revs', 'evs'].forEach(function (k) { Object.keys(R[k]).forEach(function (s) { ids[s] = 1; }); });
@@ -191,7 +194,7 @@
     var weekly = null;
     if (UN) { weekly = { '全部': weeklyOf(students) }; clsList.forEach(function (cl) { weekly[cl] = weeklyOf(students.filter(function (s) { return s.cls === cl; })); }); }
     errors.forEach(function (e) { anom.push({ sid: '', kind: 'read', text: '讀不到' + e + '：那一塊先不顯示。' }); });
-    return { weekly: weekly, now: now, sess: R.sess, caseId: CASE, caseName: PX.caseName(CASE), students: students, byId: students.reduce(function (o, s) { o[s.sid] = s; return o; }, {}), alias: alias, classes: clsList, agg: agg, dist: dist, usage: usage, cares: cares, anomalies: anom, errors: errors };
+    return { attempts: R.attempts, weekly: weekly, now: now, sess: R.sess, caseId: CASE, caseName: PX.caseName(CASE), students: students, byId: students.reduce(function (o, s) { o[s.sid] = s; return o; }, {}), alias: alias, classes: clsList, agg: agg, dist: dist, usage: usage, cares: cares, anomalies: anom, errors: errors };
   }
 
   /* ———— 依據核對（點開某位學生才做）：每列選的依據是否真的在他現在的紀錄裡 ————
@@ -298,11 +301,33 @@
   }
   function caseHref(k) { try { var q = String(location.search || '').replace(/^\?/, '').split('&').filter(function (x) { return x && x.indexOf('case=') !== 0; }); q.push('case=' + k); return '?' + q.join('&'); } catch (e) { return '?case=' + k; } }   /* 保留網址上其他參數（班級、測試用的 test／variant 等） */
   function htmlCase(m) {
-    return '<div class="line" id="pxCase"><b>案例</b>　' + PX.CASES.map(function (c) { return c.k === m.caseId ? '<span class="chip">' + esc(c.name) + '（目前看的）</span>' : '<a class="chip" href="' + esc(caseHref(c.k)) + '">' + esc(c.name) + (c.live ? '' : '（預留・學生端還沒開）') + '</a>'; }).join('') + '<span class="muted small">提案按案例分開存；下面所有數字只算這個案例。助手名額是每人每天合計，不分案例。</span></div>';
+    function chip(c) { return c.k === m.caseId ? '<span class="chip cc-' + c.g + ' cur">' + esc(c.code + ' ' + c.name) + '（目前看的）</span>' : '<a class="chip cc-' + c.g + '" href="' + esc(caseHref(c.k)) + '">' + esc(c.code + ' ' + c.name) + (c.live ? '' : '（預留・學生端還沒開）') + '</a>'; }
+    return '<div class="line" id="pxCase"><b>案例</b>' + PX.GROUPS.map(function (gr) { return '<div class="cgrp cc-' + gr.g + '"><span class="cgn">' + esc(gr.g + '　' + gr.name) + '</span>' + PX.CASES.filter(function (c) { return c.g === gr.g; }).sort(function (a, b) { return a.code < b.code ? -1 : 1; }).map(chip).join('') + '</div>'; }).join('') + '<span class="muted small">提案按案例分開存；下面所有數字只算這個案例。助手名額是每人每天合計，不分案例。</span></div>';
+  }
+  /* H2：後台分頁「這個案例」／「案例嘗試」。案例嘗試＝每個案例幾位學生試過、做到哪一步，以及每位學生試過哪些案例（資料來自本來就讀的 doc／ev／sub） */
+  function tabBar(m, ui) {
+    var A = m.attempts || { bySid: {} }, multi = Object.keys(A.bySid).filter(function (s) { return A.bySid[s].length >= 2; }).length;
+    function b(k, label) { return '<button class="sm' + (ui.tab === k ? '' : ' ghost') + '" data-tab="' + k + '" aria-pressed="' + (ui.tab === k) + '">' + esc(label) + '</button> '; }
+    return '<div class="line" id="pxTabs">' + b('case', '這個案例') + b('att', '案例嘗試（' + multi + ' 人試過 2 案以上）') + '</div>';
+  }
+  function htmlAttempts(m, ui) {
+    var A = m.attempts || { byCase: {}, bySid: {} }, deid = ui.deid !== false;
+    var head = ['編碼', '案例', '試過'].concat(PX.STAGES, ['最近更新']);
+    var rows = PX.CASES.map(function (c) {
+      var b = A.byCase[c.k] || { students: 0, stages: [0, 0, 0, 0, 0, 0], last: 0 };
+      return '<tr class="cc-' + c.g + '"><td><b style="color:var(--cc)">' + esc(c.code) + '</b></td><td style="white-space:nowrap">' + esc(c.title) + '</td><td><b>' + b.students + '</b></td>' + b.stages.map(function (n) { return '<td>' + (n || '·') + '</td>'; }).join('') + '<td>' + (b.last ? esc(fmtDT(b.last)) : '—') + '</td></tr>';
+    });
+    var list = Object.keys(A.bySid).filter(function (sid) { var s = m.byId[sid]; return ui.cls === '全部' || (s && s.cls === ui.cls); }).sort(function (a, b) { return A.bySid[b].length - A.bySid[a].length || (A.bySid[b][0].at - A.bySid[a][0].at); });
+    var srows = list.map(function (sid) {
+      return '<tr><td>' + esc(who(m, sid, deid)) + '</td><td>' + A.bySid[sid].length + '</td><td>' + A.bySid[sid].map(function (x) { var c = PX.caseDef(x.k) || {}; return '<span class="chip cc-' + (c.g || 'H') + '" style="border-color:var(--cc)">' + esc((c.code || x.k) + ' ' + x.name + (x.rows ? '（' + x.rows + ' 列）' : '')) + '</span>'; }).join('') + '</td></tr>';
+    });
+    return '<section class="card" id="pxAttempts"><h3>案例嘗試：每個案例有幾位學生試過</h3><div class="muted small">「試過」＝有存檔，或開過那個案例。階段由提案內容算出（方向、對準表、現實題、原型連結、送審），測試帳號不算。</div>' + table(head, rows) + '</section>' +
+      '<section class="card" id="pxAttemptsBy"><h3>每位學生試過的案例（' + list.length + ' 人' + (ui.cls === '全部' ? '' : '・' + esc(ui.cls)) + '）</h3>' + (list.length ? table(['學生', '試過', '各案例做到哪'], srows) : '<div class="empty">還沒有學生開過案例。</div>') + '</section>';
   }
   function html(m, ui) {
-    ui = Object.assign({ cls: '全部', q: '', deid: true }, ui || {});
-    return htmlSummary(m) + htmlCase(m) + kpOf(m, ui.cls) + htmlCompare(m, ui.cls) + htmlDirs(m, ui.cls) + htmlCare(m, ui.cls, ui.deid) + htmlWeekly(m, ui.cls, ui.deid) + '<div id="pxDetail"></div>' + htmlStudents(m, ui) + htmlUsage(m);
+    ui = Object.assign({ cls: '全部', q: '', deid: true, tab: 'case' }, ui || {});
+    if (ui.tab === 'att') return htmlSummary(m) + tabBar(m, ui) + htmlAttempts(m, ui);
+    return htmlSummary(m) + tabBar(m, ui) + htmlCase(m) + kpOf(m, ui.cls) + htmlCompare(m, ui.cls) + htmlDirs(m, ui.cls) + htmlCare(m, ui.cls, ui.deid) + htmlWeekly(m, ui.cls, ui.deid) + '<div id="pxDetail"></div>' + htmlStudents(m, ui) + htmlUsage(m);
   }
 
   /* 一位學生的完整提案。ver＝verifyRows 的結果（null＝還在讀或讀不到） */
@@ -368,14 +393,17 @@
     '.tw{overflow-x:auto;-webkit-overflow-scrolling:touch}td.cur,th.cur{background:var(--infobg)}.care{border-top:1px dashed var(--line);padding:6px 0}.care .big2{font-size:1.6em;font-weight:900;font-variant-numeric:tabular-nums}.bad{color:var(--bad)}' +
     '.prow{border:2px solid var(--ink);border-radius:10px;padding:6px 10px;margin:6px 0;background:var(--panel)}.ev{margin:3px 0;padding-left:8px;border-left:3px solid var(--line);overflow-wrap:anywhere}.revc{border:2px dashed var(--ink);border-radius:10px;padding:6px 10px;margin:6px 0}.hrow{margin:3px 0;font-size:.9em}' +
     '.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:8px}.empty{padding:12px;color:var(--muted);text-align:center}.detail{border-width:3px}' +
+    '.cc-H{--cc:#c92a2a}.cc-M{--cc:#2b8a3e}.cc-T{--cc:#1864ab}.cc-G{--cc:#862e9c}@media (prefers-color-scheme:dark){.cc-H{--cc:#ff8787}.cc-M{--cc:#69db7c}.cc-T{--cc:#74c0fc}.cc-G{--cc:#e599f7}}' +
+    '#pxCase .cgrp{display:flex;flex-wrap:wrap;align-items:center;gap:4px 0;margin:4px 0}#pxCase .cgn{min-width:110px;font-weight:700;color:var(--cc);margin-right:6px}' +
+    '#pxCase .chip{border-left:8px solid var(--cc);background:var(--panel)}#pxCase .chip.cur{background:var(--cc);color:var(--bg);font-weight:700;border-color:var(--cc)}.pxd>.tabs,.pxd .card{box-shadow:inset 0 5px 0 var(--cc)}.pxd .card{padding-top:14px}' +
     '#pxCase a.chip{display:inline-flex;align-items:center;min-height:36px;text-decoration:none}@media (max-width:760px){#pxCase a.chip{min-height:44px}}' +
     '@media (max-width:560px){.card{padding:10px 10px}.fr{grid-template-columns:1fr;gap:2px;margin:8px 0}.fn{text-align:left}}';
 
   function mount(el, opts) {
-    opts = opts || {}; var ui = { cls: opts.cls || '全部', q: '', deid: opts.deid !== false, sel: '' }, model = null, timer = null, inflight = false, ver = null, loadState = '', verFor = '';
+    opts = opts || {}; var ui = { cls: opts.cls || '全部', q: '', deid: opts.deid !== false, sel: '', tab: 'case' }, model = null, timer = null, inflight = false, ver = null, loadState = '', verFor = '';
     function draw() {
       var keep = el.querySelector('#pxQ') === document.activeElement, pos = keep ? el.querySelector('#pxQ').selectionStart : 0;
-      el.innerHTML = '<style>' + CSS + '</style><div class="pxd">' + (model ? html(model, ui) : '<div class="empty">讀取中…</div>') + '</div>';
+      el.innerHTML = '<style>' + CSS + '</style><div class="pxd cc-' + (model ? (PX.caseDef(model.caseId) || {}).g || 'H' : 'H') + '">' + (model ? html(model, ui) : '<div class="empty">讀取中…</div>') + '</div>';
       drawDetail();
       if (keep) { var q = el.querySelector('#pxQ'); if (q) { q.focus(); try { q.setSelectionRange(pos, pos); } catch (e) {} } }
       if (opts.onDraw) opts.onDraw(model, ui);
@@ -394,7 +422,8 @@
     }
     el.addEventListener('click', function (e) {
       var b = e.target.closest ? e.target.closest('button') : null; if (!b) return;
-      if (b.dataset.sel) openStudent(b.dataset.sel);
+      if (b.dataset.tab) { ui.tab = b.dataset.tab; draw(); }
+      else if (b.dataset.sel) openStudent(b.dataset.sel);
       else if (b.dataset.close) { ui.sel = ''; var box = el.querySelector('#pxDetail'); if (box) box.innerHTML = ''; }
     });
     el.addEventListener('input', function (e) { if (e.target && e.target.id === 'pxQ') { ui.q = e.target.value; var st = el.querySelector('#pxStudents'); if (st && model) { st.outerHTML = htmlStudents(model, ui); var q = el.querySelector('#pxQ'); if (q) { q.focus(); try { q.setSelectionRange(ui.q.length, ui.q.length); } catch (x) {} } } } });
