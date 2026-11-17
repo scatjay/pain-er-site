@@ -18,7 +18,7 @@
     return null;
   }
   /* 步驟名稱比對：取「：」前面的主標題、去空白；括號的（一）（二）留著，兩次 Claude 整合才分得開。與 tools/prx_common.py 的 norm_step 同規則 */
-  function normStep(x) { return tr(x).split(/[：:]/)[0].replace(/\s+/g, ''); }
+  function normStep(x) { var s = tr(x), h = s.split(/[：:]/)[0]; return (h.trim().length >= 4 ? h : s).replace(/\s+/g, ''); }
   /* 步驟參照可以是 id（v2：s1、s2… 對應學習單步驟卡順序；t1、t2… 是參考題與卡關題）或步驟名稱；id 優先。
      回傳全部對到的項目（v2 起單元內 id 與名稱都不重複，舊資料同名時仍相容）；名稱完全相同就算對到，一方是另一方開頭要兩邊都 ≥ 4 字 */
   function isId(x) { return /^[st]\d{1,2}$/.test(tr(x)); }
