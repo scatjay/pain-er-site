@@ -162,7 +162,7 @@
    "n": 3,
    "week": "W12",
    "name": "Figma 2/3",
-   "title": "畫自己的一頁",
+   "title": "用 Claude 連接器改你的樣板",
    "modes": true,
    "lights": [
     "min",

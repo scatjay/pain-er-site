@@ -17,7 +17,7 @@
   var CHECK = { figmaIn: '我登入 Figma 了', copied: '新分頁的檔名後面有「(Copy)」', renamed: '檔名改成「班級＋你的提案」了', chg1: '改了標題', chg2: '改了一句引導的話', chg3: '危險訊息挪到最上面', ans1: '這句話有告訴人現在該做什麼', ans2: '看到的人知道做完這一步之後要做什麼', ans3: '危險訊息一眼看得到',
     share1: 'Figma 連結已開分享（can view）', share2: 'AI Studio 連結已開分享（Public）', incog: '我用無痕視窗貼上連結，打得開',
     frame390: '畫面寬 390、高 844，圖層取名「首頁」', three: '三樣都在：一句話、危險訊息、一顆主要按鈕', btn48: '按鈕高度至少 48，危險訊息一眼看得到', font14: '每段文字的字級都在 14 以上', gem: 'Gemini 挑的毛病我處理掉一個（或寫下為什麼不改）',
-    cConn: 'Figma 連接器接好了（顯示已連接）', cWho: 'whoami 回的帳號和我登入 Figma 的一樣', claudeShot: '我放上了 Claude 整合的截圖（看得到它的回覆和我的決定）', claudeShot1: '我截了 Claude 寫第一段指令的那一輪', claudeShot2: '我截了 Claude 找出漏洞的那一輪',
+    cConn: 'Figma 連接器接好了（顯示已連接）', sentCmd: '我把連結和固定指令貼給 Claude 了', claudeEdited: 'Claude 改完了，畫面框外有「Claude 修改紀錄」', reEdit: '我用一句話再叫 Claude 改了一次', cWho: 'whoami 回的帳號和我登入 Figma 的一樣', claudeShot: '我放上了 Claude 整合的截圖（看得到它的回覆和我的決定）', claudeShot1: '我截了 Claude 寫第一段指令的那一輪', claudeShot2: '我截了 Claude 找出漏洞的那一輪',
     pngReady: '我有一張匯出的 PNG（不是自己截螢幕）', uploaded: '輸入框上方出現我的圖的縮圖', confirmed1: '我確認這段指令', sent1: '我附上圖並送出了', restored: '右側預覽看起來和我的圖一樣', confirmed2: '我確認這段指令',
     c1: '每一句話都在畫面上', c2: '標題和卡片文字的大小，和 Figma 並排看起來差不多', c3: '按鈕結果和我寫的一樣', c4: '只有練習資料', saved: '成功的指令我存起來了', pngBefore: '我輸出了改前那張 PNG', pngAfter: '我輸出了改完那張 PNG', pdf: '我從提案室匯出了 PDF', delivered: '我把 PDF 和截圖交到 flipclass 了' };
   var LABEL = { prompt1: '第一段指令（助教填好，確認後才能複製）', opt: '互動選項', prompt2: '互動指令', fixPrompt: '救火指令', secs: '秒數', taps: '點擊數', stopAt: '停在哪一句',

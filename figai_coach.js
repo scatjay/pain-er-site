@@ -27,9 +27,9 @@ var FigCoach = (function () {
           deliver: 'Figma 連結（確認別人打得開）', time: '30～40 分鐘', nextNote: '只用老師樣板 D 畫面的圖，不用等自己的畫面' },
     a1: { n: 2, tool: 'AI Studio', name: 'AI Studio 1/3', week: 'W11', title: '把畫面還原成網頁', modes: false, next: 'f2', done: '有一條打得開的 AI Studio 連結和一張預覽截圖',
           deliver: 'AI Studio 作品連結（設成別人打得開），加上一張預覽截圖', time: '30～40 分鐘；第一次生成約 4 分鐘', nextNote: 'W13 的 AI Studio 2/3 會用到你在那一份畫好的畫面' },
-    f2: { n: 3, tool: 'Figma', name: 'Figma 2/3', week: 'W12', title: '畫自己的一頁', modes: true, next: 'a2', done: '寬 {w} 的畫面、便條、Claude 整合截圖',
-          deliver: 'Figma 連結（同一個檔，新增你自己的畫面；Share（分享）視窗裡 Anyone 那一列是 can view），加上一張 Claude 整合的截圖（看得到它的建議，以及你決定改或不改的理由）', time: '50～60 分鐘（Claude 整合約 10～15 分鐘）', nextNote: '會用到你這一份畫好的畫面',
-          extra: { mid: '中級加做：把畫面拆成區塊、互動、狀態，每個狀態畫成一個畫面。', expert: '專家加做：先寫一份自己的設計規則，再畫多個畫面。' } },
+    f2: { n: 3, tool: 'Figma', name: 'Figma 2/3', week: 'W12', title: '用 Claude 連接器改你的樣板', modes: true, next: 'a2', done: '改好的畫面、Claude 修改紀錄、Claude 對話截圖',
+          deliver: 'Figma 連結（你 W10 複製的樣板，已讓 Claude 改過；Share（分享）視窗裡 Anyone 那一列是 can view），加上一張 Claude 對話截圖', time: '約 30 分鐘', nextNote: '下週 W13 會匯出你改好的畫面，接著做互動',
+          extra: { mid: '中級加做：選做裡挑 2 項以上，每一項都讓 Claude 改完後截一張圖。', expert: '專家加做：選做裡挑 3 項以上，每一項都截圖並寫下你怎麼下指令。' } },
     a2: { n: 4, tool: 'AI Studio', name: 'AI Studio 2/3', week: 'W13', title: '加一個互動', modes: true, next: 'f3', done: '互動能用、連結打得開、兩張 Claude 整合截圖',
           deliver: 'AI Studio 作品連結（你自己的畫面，已加上互動；設成別人打得開），加上兩張 Claude 整合的截圖（它寫的指令；它找出的漏洞和你的決定）', time: '60～70 分鐘（還原約 30 分鐘，互動約 15 分鐘，Claude 整合共約 20 分鐘）',
           extra: { mid: '中級加做：至少 2 個互動，每個都對得回訪談的一句話。', expert: '專家加做：多個畫面之間能跳轉，風格一致。' } },
@@ -58,8 +58,8 @@ var FigCoach = (function () {
   /* ———— 英文介面字樣表：Figma 與 AI Studio 都沒有中文介面，學生會怕英文，所以助教每次提到按鈕都寫「英文（中文意思）」並說位置。
      字樣與中文意思照 _figma_mcp/英文按鈕中文對照_1108.md（只收實測看到的字）；測試會檢查每則提示的寫法。 */
   var UI_TERMS = { 'Export': '匯出', 'Layers': '圖層', 'Preview': '預覽', 'Restore': '還原', 'Upload Files': '上傳檔案', 'Acknowledge': '我知道了', 'Drafts': '草稿', 'Design': '設計',
-    'Duplicate': '複製', 'Share': '分享', 'Copy link': '複製連結', 'General access': '一般存取權', 'Public': '公開', 'Restricted': '限制存取', 'Default mode': '預設模式', "I'm feeling lucky": '手氣不錯', 'Move to trash': '移到垃圾桶' };
-  var UI_TERMS_SRC = { 'Duplicate': '學生視角走一遍_W12_1109.md', 'General access': '學生視角走一遍_W12_1109.md', 'Public': '學生視角走一遍_W12_1109.md', 'Restricted': '學生視角走一遍_W12_1109.md', 'Default mode': '學生視角走一遍_W12_1109.md', "I'm feeling lucky": '學生視角走一遍_W12_1109.md', 'Move to trash': '學生視角走一遍_W12_1109.md' };
+    'Duplicate': '複製', 'Share': '分享', 'Copy link': '複製連結', 'General access': '一般存取權', 'Public': '公開', 'Restricted': '限制存取', 'Default mode': '預設模式', "I'm feeling lucky": '手氣不錯', 'Move to trash': '移到垃圾桶', 'Copy/Paste as': '複製／貼上為', 'Copy link to selection': '複製所選畫面的連結' };
+  var UI_TERMS_SRC = { 'Duplicate': '學生視角走一遍_W12_1109.md', 'General access': '學生視角走一遍_W12_1109.md', 'Public': '學生視角走一遍_W12_1109.md', 'Restricted': '學生視角走一遍_W12_1109.md', 'Default mode': '學生視角走一遍_W12_1109.md', "I'm feeling lucky": '學生視角走一遍_W12_1109.md', 'Move to trash': '學生視角走一遍_W12_1109.md', 'Copy/Paste as': '教材草稿_W12到W15_1109.md', 'Copy link to selection': '教材草稿_W12到W15_1109.md' };
   var POS_WORDS = /左邊|右邊|左側|右側|左下|右下|右上|左上|最下面|最上面|輸入框|下方|上方|旁|視窗|回覆|面板|灰字/;
   /* Claude 免費帳號有 5 小時用量上限：先想好再送，不要一直重試（原文提示例：您的 5 小時限制已使用超過 90% · 將於 上午1:00 重設） */
   var CLAUDE_LIMIT = {
@@ -87,9 +87,8 @@ var FigCoach = (function () {
   var START_MEDIA = { gen: [['dsg_gen', 'dsg_d1', 'dsg_edit', 'claude_limit'], '用一句話生成草稿畫板，再用一句話修改；一次只改一處。'] };
   /* 目前沒有專屬截圖、先用相近的圖頂著的步驟（part.步驟號：缺什麼圖）。補好圖就把這裡的項目刪掉。 */
   var MEDIA_GAPS = {
-    'f1.1': 'Figma 登入頁／檔案首頁', 'f1.3': '點檔名後可輸入的狀態', 'f2.1': '新增設計檔的畫面', 'f2.2': '按 F 拉框後右側 W／H 欄位', 'f2.3': '右側 Typography（文字）與 Fill（填色）區', 'f2.4': 'Shift＋A 之前後的畫面',
-    'f2.5': '畫面旁邊放便條的樣子', 'f2.6': 'Gemini 挑毛病的對話', 'f3.1': '同學試用的紀錄表', 'f3.2': '改前改後並排', 'a3.3': '提案室「提交」與匯出 PDF 的畫面', 'a3.4': 'flipclass 作業的繳交欄位',
-    'Claude 整合（f2 第 8 步、a2 第 2／5 步、f3 第 2 步、a3 第 3 步）': '學習單第 79 版沒附專屬截圖，先用連接器頁與相近的圖頂著；F⑨ 實測後補' };
+    'f1.1': 'Figma 登入頁／檔案首頁', 'f1.3': '點檔名後可輸入的狀態', 'f2.2': '右鍵 Copy/Paste as → Copy link to selection 的選單，和「Claude 想要使用 Figma」的允許視窗', 'f3.1': '同學試用的紀錄表', 'f3.2': '改前改後並排', 'a3.3': '提案室「提交」與匯出 PDF 的畫面', 'a3.4': 'flipclass 作業的繳交欄位',
+    'Claude 整合（a2 第 2／5 步、f3 第 2 步、a3 第 3 步）': '學習單第 79 版沒附專屬截圖，先用連接器頁與相近的圖頂著；F⑨ 實測後補' };
   var LIMIT_MEDIA = [['claude_limit'], '有時會先出現「已使用超過 90%」這個提示，但不一定；沒看到也可能直接到上限。先停手，去做 Figma 手動調整與匯出，等重設時間再繼續。'];
 
   /* ———— 卡點選項 {t:[選項文字, 等級1, 等級2], m:[圖 id 們, 一句指示]} ———— */
@@ -125,6 +124,8 @@ var FigCoach = (function () {
   var WHOAMI_K = K('whoami 回的帳號不一樣', '新對話叫 Claude 執行 whoami，它回的 Figma 帳號要和你登入 Figma 的帳號一樣。', '不一樣就回到連接器重新連，連到你自己的帳號。', ['free_connector'], '連接器頁看到 Figma 已連接；帳號要和你登入 Figma 的一樣。');
   var DISAGREE_K = K('Claude 的建議我不同意', 'Claude 的建議不一定對；你決定改或不改，寫下理由就算完成。', '在畫面旁的便條多寫一行「Claude 建議了什麼、我改／不改、因為什麼」。', ['free_read'], 'Claude 的建議不一定對，你決定改或不改，把理由寫在便條上就算完成。');
   var SHOT_MEDIA = [['free_connector', 'free_read'], 'Claude 設定的連接器頁看到 Figma 打勾，再貼畫面連結請它讀（只能讀）。'];
+  var POPUP_K = K('跳出「Claude 想要使用 Figma」視窗', '這是正常的，通常會跳兩次：讀一次、改一次。', '每次都按「允許一次」，Claude 才會繼續；沒按它就停在那裡。', ['free_connector'], '跳出「Claude 想要使用 Figma」時，每次都按「允許一次」。');
+  var NOPERM_K = K('Claude 說沒有權限或改不了', '先確認 Claude 設定→連接器裡 Figma 那一列有打勾，而且貼的是你自己檔案裡畫面的連結。', '還是不行，請 Claude「只讀這個畫面、給我一個建議」，自己在 Figma 動手改，一樣可以交。', ['free_connector'], '設定的連接器頁看到 Figma 打勾；改不了就請 Claude 只讀畫面、給建議，自己改。');
   function claudeF2() {
     return St('Claude 整合：請 Claude 看你這一頁，給一個修改建議', ['cConn', 'cWho', 'claudeShot'], { dir: '接上 Figma 連接器、用 whoami 確認帳號，貼畫面連結，請 Claude 只給「一個」建議；你決定改不改並截圖。', l2: '畫面連結要是「畫面」的連結，不是整個檔案的連結；Claude 不能改你的檔案。',
       m: SHOT_MEDIA, req: [['cConn', 'Figma 連接器接好了嗎？連接器清單裡要顯示已連接。'], ['cWho', 'whoami 回的帳號和你登入 Figma 的一樣嗎？'], ['claudeShot', '還沒放上 Claude 整合的截圖（建議和你的決定、理由）。']],
@@ -143,7 +144,7 @@ var FigCoach = (function () {
       m: [['ais_preview'], '把三項和你的內容貼給 Claude，它每項回一句；缺什麼就補什麼。'], req: [['claudeShot', '還沒放上截圖（它列的缺漏和你補了什麼）。']], stuck: { limit: LIM } });
   }
   /* 初版、待 F⑨ 實測校字的步驟（軌道.步驟號）；補好實測的字樣後從這裡刪掉 */
-  var PENDING_VERIFY = ['f2.novice.8', 'a2.novice.2', 'a2.novice.5', 'f3.novice.2', 'a3.novice.3'];
+  var PENDING_VERIFY = ['f2.novice.2', 'a2.novice.2', 'a2.novice.5', 'f3.novice.2', 'a3.novice.3'];
   var PNG_MEDIA = [['figma_select', 'figma_export', 'figma_exported'], '先在左側 Layers（圖層）點整個畫面，看到藍框，再按右側最下面 Export（匯出）旁的 ＋，選 PNG、1x；匯出就會下載一張 PNG。'];
   var EXPORT_L2 = '找不到 Export（匯出）：先點整個畫面，不要點裡面的小方塊，右側面板最下面就是 Export（匯出）。';
 
@@ -179,29 +180,21 @@ var FigCoach = (function () {
         St('設成別人打得開，複製連結', ['share2', 'incog', 'c4'], { dir: '按右上 Share（分享），General access（一般存取權）改成 Public（公開），再按 Copy link（複製連結）。', l2: '用無痕視窗貼上連結，打得開才算；畫面上只能有練習資料。',
           m: [['ais_share'], 'AI Studio 右側 Share（分享）面板，General access（一般存取權）下拉有 Public（公開）與 Restricted（限制存取）。'], req: [['share2', '在 Share（分享）面板，General access（一般存取權）改成 Public（公開）了嗎？'], ['incog', '用無痕視窗貼上連結，打得開了嗎？'], ['c4', '畫面上只有練習資料嗎？']], stuck: { share: SHARE_AIS_K } })
       ];
-    } else if (part === 'f2') {
-      var common = [
-        St('先開一個檔案', ['renamed'], { dir: '兩種挑一種：按檔名旁的 ▾ 選 Duplicate（複製）樣板，或自己開新檔案；檔名改成「班級＋你的提案」。', l2: '找不到連結先用「自己開新檔案」開始，不要停下來等；免費版就夠用。',
-          m: [['figma_start'], '樣板是並排的手機畫面，左邊是圖層、右邊是屬性。'], req: [['renamed', '檔名改成「班級＋你的提案」了嗎？']],
-          stuck: { nolink: K('找不到樣板連結', '先用「自己開新檔案」開始，不要停下來等。', '樣板打不開，先確認連結有完整複製，還是不行就告訴老師。', ['figma_start'], '複製好會在新分頁開出「檔名 (Copy)」，之後都在這一份改。'), limit: LIM } }),
-        St('畫一個' + D.frame, ['frame390'], { dir: '按 F 拉出一個框，右邊把 W 設成 ' + D.w + '、H 設成 ' + D.h + '，左邊 Layers（圖層）取名「首頁」。', l2: '框歪掉或大小不對，直接改右邊的數字，不用重拉。寬剛好 ' + D.w + '，AI Studio 之後用這個寬度還原。',
-          m: [['figma_select'], '選到畫面後，右側面板會顯示寬 W 與高 H。'], req: [['frame390', '寬剛好是 ' + D.w + ' 嗎？點畫面，看右側的 W。']], stuck: { wrongsize: K('拉出來的框歪掉或大小不對', '直接改右邊的數字，不用重拉。', 'W 設 ' + D.w + '、H 設 ' + D.h + '，按 Enter。', ['figma_select'], '選到畫面後，右側面板會顯示寬 W 與高 H。') } }),
-        St('先放最重要的三樣，其他先不放', ['three', 'btn48'], { dir: '畫面只放三樣：①現在要做什麼的一句話 ②危險要回急診的訊息 ③一顆主要按鈕。', l2: '字級預設 12 太小，改成 14 以上；方框預設是灰色，按鈕＝方框加一行字疊起來，字色改白色。',
-          m: [['figma_screen'], '上面一句大字，中間一張醒目的警示卡，下面一顆滿版按鈕。'], req: [['three', '三樣都在畫面上了嗎？'], ['btn48', '按鈕高度至少 48 了嗎？']], stuck: { noidea: K('不知道放哪一句話', '回去看故事板那一格「最卡」寫了什麼。', '把它改成一句「你現在要做的是……」。', ['figma_screen'], '不知道放哪一句話，就回去看故事板那一格「最卡」寫了什麼。') } }),
-        St('把字放大、把間隔拉開', ['font14'], { dir: '內文 16～18、標題 22～26、按鈕高度至少 48、卡片之間留 16 的空白。', l2: '字太多放不下就刪字，不要縮小字體；Shift＋A 自動排版選錯東西，就按 Ctrl＋Z 復原。',
-          m: [['figma_screen'], '點每一段文字，看右側面板 Typography 裡的字級，都要 14 以上。'], req: [['font14', '每段文字的字級都在 14 以上了嗎？']], stuck: { toomuch: K('字太多放不下', '刪字，不要縮小字體；先留最重要的那一句。', 'Shift＋A 選錯東西變怪了，按 Ctrl＋Z 復原，用手排也可以。', ['figma_screen'], '字太多放不下，就刪字，不要縮小字體。') } }),
-        St('每個元素對得回你問到的話', ['note'], { dir: '畫面旁邊放一張便條，三個元素各寫一行：這個字、這顆按鈕，是因為訪談聽到哪一句話？', l2: '想不起來原話，回急診室翻自己的訪談紀錄，不要自己編；還沒訪談的先寫「（還沒訪談）」。',
-          m: [['figma_screen'], '畫面右邊放一張便條，三行各對應畫面上的一個地方。'], req: [['note', '便條還沒寫，三個元素各一行。']], stuck: { norec: K('想不起來原話', '回急診室翻自己的訪談紀錄，不要自己編。', '還沒訪談的同學，先在那一行寫「（還沒訪談）」，之後補上。', ['figma_screen'], '找不到對應原話的元素，就想一想要不要拿掉。') } }),
-        St('自己檢查三題，再請 Gemini 挑毛病', ['ans1', 'ans2', 'ans3', 'gem'], { dir: '三題自己先答，再把畫面匯出貼給 Gemini，請它只挑毛病、不要幫你重畫。', l2: '右側面板最下面用 Export（匯出）輸出，不要自己截螢幕；Gemini 的毛病至少處理掉一個，並在便條寫下「改了什麼」。',
-          m: [['figma_export', 'figma_exported'], '左邊 Layers（圖層）點畫面，右側最下面 Export（匯出）旁按 ＋ 匯出，再貼給 Gemini。'], req: [['ans3', '三個問題都答了嗎？'], ['gem', '還沒處理 Gemini 挑的毛病（或寫下為什麼不改）。']],
-          stuck: { disagree: K('Gemini 說的我不同意', '沒關係，在便條寫下為什麼不改，這也算完成。', '練習用畫面可以貼給 Gemini，不要上傳真實截圖。', ['figma_export'], '右側面板最下面 Export（匯出）旁按 ＋ 匯出，再貼給 Gemini。') } }),
-        St('存好，設成老師打得開', ['share1', 'incog'], { dir: '按右上角 Share（分享），Anyone 那列要是 can view，再按 Copy link（複製連結）。', l2: '用無痕視窗貼上連結，打得開才算；打不開視同沒有交。', m: [['figma_share'], '按右上角 Share（分享），確認 Anyone 那一列寫的是 can view，不是 can edit。'],
-          req: [['share1', 'Anyone 那一列是 can view 嗎？'], ['incog', '用無痕視窗貼上連結，打得開了嗎？']], stuck: { perm: K('看到「需要權限」', '回去檢查 Share（分享）視窗裡 Anyone 那一列是不是不見了。', '右邊要是 can view；改好再用無痕視窗試一次。', ['figma_share'], '按右上角 Share（分享），確認 Anyone 那一列寫的是 can view，不是 can edit。') } })
+    } else if (part === 'f2') {   /* 11-24：W12 改成「Claude 免費版接 Figma 連接器，直接改你 W10 複製的樣板」；步驟 id 與標題對 tutor_units.json 的 f2（s1–s3、t1–t3）。三種模式同一條軌道，加做放在「選做」 */
+      L = [
+        St('接上連接器（第一次才做）', ['cConn'], { dir: '到 claude.ai 設定→連接器，找 Figma 按「連接」，到授權頁按「允許」。', l2: '網址 claude.ai/settings/connectors；Figma 那一列打勾就是接好了，以前接過就不用再接。免費帳號只能接 1 個連接器。',
+          m: [['free_connector'], '到設定的連接器頁，Figma 那一列打勾就是接好了。'], req: [['cConn', 'Figma 連接器接好了嗎？連接器清單裡 Figma 那一列要打勾。']], stuck: { noconn: NOCONN_K, limit: LIM } }),
+        St('貼樣板讓 Claude 改', ['sentCmd', 'claudeEdited'], { dir: '點樣板裡要改的畫面，複製它的連結，到 claude.ai 開新對話貼上，再貼學習單的固定指令。', l2: '右鍵選 Copy/Paste as（複製／貼上為），再選 Copy link to selection（複製所選畫面的連結）；跳出視窗每次按「允許一次」。',
+          m: [['figma_select'], '在 Figma 畫布上點要改的那個畫面，右側面板會跟著顯示；按右鍵選 Copy/Paste as（複製／貼上為），連結就會指到那個畫面。'], req: [['sentCmd', '連結和固定指令都貼給 Claude 了嗎？'], ['claudeEdited', 'Claude 改完了嗎？畫面框外要多一個「Claude 修改紀錄」文字框。']], stuck: { popup: POPUP_K, noperm: NOPERM_K, limit: LIM } }),
+        St('用一句話再叫它改一次', ['reEdit'], { dir: '在同一個對話裡，用一句話再叫 Claude 改一次；改壞了，在 Figma 按 Ctrl＋Z 還原。', l2: '為什麼這樣改，之後到提案室寫，這裡不用寫。',
+          m: [['figma_screen'], '改完回到 Figma 看你的畫面；不喜歡就按 Ctrl＋Z 退回上一步。'], req: [['reEdit', '再叫 Claude 改一次了嗎？']], stuck: { limit: LIM } }),
+        St('交件', ['share1', 'incog', 'claudeShot'], { dir: '到 flipclass 貼上 Figma 連結，並上傳 Claude 對話截圖。', l2: 'Share（分享）視窗裡 Anyone 那一列要是 can view，用無痕視窗貼上連結，打得開才算。', m: [['figma_share'], '按右上角 Share（分享），確認 Anyone 那一列寫的是 can view，不是 can edit。'],
+          req: [['share1', 'Anyone 那一列是 can view 嗎？'], ['incog', '用無痕視窗貼上連結，打得開了嗎？'], ['claudeShot', '還沒放上 Claude 對話截圖。']], stuck: { noanyone: SHARE_FIG_K } }),
+        St('卡住了（沒有權限或用量到了）', [], { dir: '請 Claude「只讀這個畫面、給我一個建議」，自己在 Figma 動手改，一樣可以交。', l2: '用量到了就先停手，看提示裡寫的重設時間，等的時候在 Figma 手動改。',
+          m: LIMIT_MEDIA, stuck: { limit: LIM, noperm: NOPERM_K } }),
+        St('選做：讓 Claude 再改', [], { dir: '還想改就請 Claude 再改：長者大字版、深色模式、補下一個畫面、文字口語化、畫流程圖、按鈕樣式表。', l2: '都是請 Claude 透過連接器改，不是手動，一次只請它做一件事。下週 W13（AI Studio 2/3）會匯出改好的畫面接著做互動。',
+          m: [['figma_screen'], '一次只請 Claude 做一件事，做完回 Figma 看結果。'], stuck: { limit: LIM } })
       ];
-      if (mode === 'novice') L = common.concat([claudeF2()]);
-      else if (mode === 'mid') L = [St('中級加做：把畫面拆成區塊、互動、狀態', ['blocks', 'inter', 'states'], { dir: '先寫出：有幾個區塊、點了會怎樣、有哪幾個狀態；每個狀態畫成一個畫面。', l2: '狀態例如提醒開／關、說明展開／收起；畫面名稱寫清楚。', m: [['figma_start'], '先在紙上寫出區塊、互動、狀態，再動手。'], req: [['blocks', '還沒寫區塊。'], ['inter', '還沒寫互動。'], ['states', '還沒寫狀態。']] })].concat(common, [claudeF2()]);
-      else L = [St('專家加做：先寫設計規則檔', ['rules'], { dir: '', m: [['figma_select'], '規則裡的色碼、字級、間距，在 Figma 右側面板的 Design（設計）分頁都量得到。'] }),
-                St('依規則畫多個畫面', ['screensX'], { dir: '', m: [['figma_start'], '依規則畫多個畫面，全部用同一組樣式。'] }), common[4], common[5], common[6], claudeF2()];
     } else if (part === 'a2') {
       var NOREACT = K('按鈕點了沒反應', '重看你選的互動，點哪個、出現什麼。', '把「點哪個」寫得更明確，並寫「點整個區塊都能觸發」，再重送一次。', ['ais_try4'], '按鈕沒反應：把「點哪個、出現什麼」寫得更明確再送一次。');
       var png2 = St('輸出你自己的畫面（PNG）', ['pngReady'], { fast: true, dir: '在 Figma 輸出 W12 畫好的那一頁：左側 Layers（圖層）點畫面，右側最下面 Export（匯出）旁按 ＋。', l2: EXPORT_L2, m: PNG_MEDIA, req: [['pngReady', '還沒有匯出的 PNG 圖（不要自己截螢幕）。']], stuck: { export: EXPORT_K, nodraw: K('我的畫面還沒畫完', '先用老師樣板 D 畫面的圖，照做一遍。', '畫完之後再回來換成你自己的畫面。', ['figma_start'], '還沒畫完的同學，先用老師樣板 D 畫面的圖。') } });
@@ -259,7 +252,7 @@ var FigCoach = (function () {
      後端與 UnitCoach 都用這個 id 對步驟，不靠中文標題比對。 */
   var SHEET_IDS = {
     f1: ['s1', 's2', 's3', 's4', 's5'], a1: ['s1', 's2', 's3', 's4', 's5'],
-    'f2.novice': ['s1', 's2', 's3', 's4', 's5', 's6', 's7', null], 'f2.mid': [null, 's1', 's2', 's3', 's4', 's5', 's6', 's7', null], 'f2.expert': [null, null, 's5', 's6', 's7', null],
+    'f2.novice': ['s1', 's2', 's3', 't1', 't2', 't3'], 'f2.mid': ['s1', 's2', 's3', 't1', 't2', 't3'], 'f2.expert': ['s1', 's2', 's3', 't1', 't2', 't3'],
     a2: ['s1', 's2', 's3', 's4', 's5', 's7', 's8'], f3: ['s1', 's2', 's3', 's4'],
     'a3.novice': ['s1', 's2', 's3', 's4', 's5'], 'a3.mid': ['s1', 's2', 's3', 's4', 's5'], 'a3.expert': ['s1', 's2', null, 's3', 's4', 's5']
   };

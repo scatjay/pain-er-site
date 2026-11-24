@@ -32,7 +32,7 @@
   var PARTS = [
     { n: 1, k: 'f1', week: 'W10', name: 'Figma 1/3', title: '開始用 Figma', modes: false, done: '有一條打得開的 Figma 連結' },
     { n: 2, k: 'a1', week: 'W11', name: 'AI Studio 1/3', title: '把畫面還原成網頁', modes: false, done: '有一條打得開的 AI Studio 連結和一張預覽截圖' },
-    { n: 3, k: 'f2', week: 'W12', name: 'Figma 2/3', title: '畫自己的一頁', modes: true, done: '寬 {w} 的畫面、便條、Claude 整合截圖' },
+    { n: 3, k: 'f2', week: 'W12', name: 'Figma 2/3', title: '用 Claude 連接器改你的樣板', modes: true, done: '改好的畫面、Claude 修改紀錄、Claude 對話截圖' },
     { n: 4, k: 'a2', week: 'W13', name: 'AI Studio 2/3', title: '加一個互動', modes: true, done: '互動能用、連結打得開、兩張 Claude 整合截圖' },
     { n: 5, k: 'f3', week: 'W14', name: 'Figma 3/3', title: '試用並改一版', modes: true, done: '改前、改後兩張 PNG、試用紀錄、Claude 整合截圖' },
     { n: 6, k: 'a3', week: 'W15', name: 'AI Studio 3/3', title: '試用、改版、提交', modes: true, done: '提案室匯出的 PDF 已交到 flipclass、Claude 整合截圖' }
