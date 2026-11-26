@@ -117,7 +117,7 @@ body.proj .priv{display:none!important}
   var TM = window.ERG_TMODEL, SD = window.ERG_SBDASH, esc = TM.esc;
   var qs = new URLSearchParams(location.search), isLocal = /^(127\.0\.0\.1|localhost)$/.test(location.hostname);
   var SESS = /^ER-\d{8}$/.test(qs.get('sess') || '') ? qs.get('sess') : SD.DEFAULT_SESS;
-  var TEACHER_EMAILS = ['scatjay@gmail.com', 'prof.chwu@mx.nthu.edu.tw', 'nthuchwu@gapp.nthu.edu.tw'];   /* 與 teacher.html 同一份名單；資料庫規則只讓第一個帳號讀 sbx，其他人會看到「讀不到」 */
+  var TEACHER_EMAILS = ['scatjay@gmail.com', 'chihchiehyang@stust.edu.tw', 'prof.chwu@mx.nthu.edu.tw', 'nthuchwu@gapp.nthu.edu.tw'];   /* 與 teacher.html 同一份名單；資料庫規則只讓第一個帳號讀 sbx，其他人會看到「讀不到」 */
   var NOWO = null, fixedNow = 0; (function () { var m = isLocal && qs.get('now'); if (m) { var t = Date.parse(m); if (isFinite(t)) NOWO = { base: t, at: Date.now() }; } })();
   function clk() { return NOWO ? NOWO.base + (Date.now() - NOWO.at) : (fixedNow || Date.now()); }
   /* 去識別化：與 teacher.html 同一個記憶鍵（erg_t_deid），預設開 */
